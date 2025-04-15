@@ -2,6 +2,8 @@
 
 use Illuminate\Support\Facades\Route;
 
+use App\Http\Controllers\DLSiteScraperController;
+
 /*
 |--------------------------------------------------------------------------
 | Web Routes
@@ -17,3 +19,9 @@ use Illuminate\Support\Facades\Route;
 Route::view('/', 'Index')->name('index');
 Route::view('/index', 'Index');
 Route::view('/Index', 'Index');
+
+
+Route::get('/Scrape', [DLSiteScraperController::class, 'Scrape']);
+
+Route::view('/Edit', 'Edit');
+Route::view('/edit', 'Edit');
