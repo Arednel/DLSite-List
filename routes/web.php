@@ -2,6 +2,7 @@
 
 use Illuminate\Support\Facades\Route;
 
+use App\Http\Controllers\ProductController;
 use App\Http\Controllers\DLSiteScraperController;
 
 /*
@@ -16,12 +17,12 @@ use App\Http\Controllers\DLSiteScraperController;
 */
 
 //Main Page
-Route::view('/', 'Index')->name('index');
-Route::view('/index', 'Index');
-Route::view('/Index', 'Index');
+Route::get('/', [ProductController::class, 'Index'])->name('index');
+Route::get('/index', [ProductController::class, 'Index']);
+Route::get('/Index', [ProductController::class, 'Index']);
 
-
-Route::get('/Scrape', [DLSiteScraperController::class, 'Scrape']);
-
-Route::view('/Edit', 'Edit');
-Route::view('/edit', 'Edit');
+Route::get('/create', [ProductController::class, 'create']);
+Route::post('/store', [ProductController::class, 'store']);
+Route::get('/edit/{id}', [ProductController::class, 'edit']);
+Route::post('/update/{id}', [ProductController::class, 'update']);
+Route::post('/destroy/{id}', [ProductController::class, 'destroy']);

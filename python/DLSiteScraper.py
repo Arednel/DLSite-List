@@ -6,6 +6,7 @@ import json
 from dlsite_async import DlsiteAPI
 
 storageDir = sys.argv[2]
+workID = sys.argv[3]
 
 # Set the log file path and name
 log_file = os.path.join(f"{storageDir}\\logs\\DLSiteScraper.log")
@@ -33,12 +34,12 @@ def to_serializable(obj):
     
 async def japaneseDLsite():
     async with DlsiteAPI() as api:
-        return await api.get_work("RJ01103906")
+        return await api.get_work(workID)
 
 
 async def englishDLsite():
     async with DlsiteAPI(locale="en_US") as api:
-        return await api.get_work("RJ01103906")
+        return await api.get_work(workID)
 
 try:
     workJapanese = asyncio.run(japaneseDLsite())

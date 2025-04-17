@@ -25,11 +25,15 @@
                                         Edit Work
                                     </div>
                                     <div style="text-align: left;">
-                                        <form name="edit_work" method="post" id="main-form"
-                                            action="/update/{{ $product->id }}">
+                                        <form name="edit_work" method="post" id="main-form" action="/store">
                                             @csrf
                                             <div id="top-submit-buttons" class="mt8 mb8" style="text-align: center;">
                                                 <input type="submit" class="inputButton main_submit" value="Submit">
+                                                {{-- <form style="display: inline-block;" id="delete-form" method="POST"
+                                                    action="/123">
+                                                    <input type="submit" class="inputButton ml8 delete_submit"
+                                                        value="Delete">
+                                                </form> --}}
                                             </div>
                                             <table cellpadding="5" cellspacing="0" width="100%">
                                                 <tbody>
@@ -38,8 +42,7 @@
                                                         </td>
                                                         <td class="borderClass">
                                                             <strong>
-                                                                {{-- <a href="#" target="_top"> </a> --}}
-                                                                {{ $product->id }} - {{ $product->work_name }}
+                                                                <input id="id" name="id" class="inputtext">
                                                             </strong>
                                                         </td>
                                                     </tr>
@@ -47,14 +50,11 @@
                                                         <td class="borderClass">Status</td>
                                                         <td class="borderClass">
                                                             <select id="progress" name="progress" class="inputtext">
-                                                                <option value="Listening"
-                                                                    {{ $product->progress == 'Listening' ? 'selected' : '' }}>
+                                                                <option value="Listening">
                                                                     Listening</option>
-                                                                <option value="Completed"
-                                                                    {{ $product->progress == 'Completed' ? 'selected' : '' }}>
+                                                                <option value="Completed">
                                                                     Completed</option>
-                                                                <option value="Plan to Listen"
-                                                                    {{ $product->progress == 'Plan to Listen' ? 'selected' : '' }}>
+                                                                <option value="Plan to Listen">
                                                                     Plan to Listen</option>
                                                             </select>
                                                         </td>
@@ -63,38 +63,27 @@
                                                         <td class="borderClass">Your Score</td>
                                                         <td class="borderClass">
                                                             <select id="score" name="score" class="inputtext">
-                                                                <option value=""
-                                                                    {{ $product->score == null ? 'selected' : '' }}>
+                                                                <option value="">
                                                                     Select score</option>
-                                                                <option value="10"
-                                                                    {{ $product->score == 10 ? 'selected' : '' }}>(10)
+                                                                <option value="10">(10)
                                                                     Masterpiece</option>
-                                                                <option value="9"
-                                                                    {{ $product->score == 9 ? 'selected' : '' }}>(9)
+                                                                <option value="9">(9)
                                                                     Great</option>
-                                                                <option value="8"
-                                                                    {{ $product->score == 8 ? 'selected' : '' }}>(8)
+                                                                <option value="8">(8)
                                                                     Very Good</option>
-                                                                <option value="7"
-                                                                    {{ $product->score == 7 ? 'selected' : '' }}>(7)
+                                                                <option value="7">(7)
                                                                     Good</option>
-                                                                <option value="6"
-                                                                    {{ $product->score == 6 ? 'selected' : '' }}>(6)
+                                                                <option value="6">(6)
                                                                     Fine</option>
-                                                                <option value="5"
-                                                                    {{ $product->score == 5 ? 'selected' : '' }}>(5)
+                                                                <option value="5">(5)
                                                                     Average</option>
-                                                                <option value="4"
-                                                                    {{ $product->score == 4 ? 'selected' : '' }}>(4)
+                                                                <option value="4">(4)
                                                                     Bad</option>
-                                                                <option value="3"
-                                                                    {{ $product->score == 3 ? 'selected' : '' }}>(3)
+                                                                <option value="3">(3)
                                                                     Very Bad</option>
-                                                                <option value="2"
-                                                                    {{ $product->score == 2 ? 'selected' : '' }}>(2)
+                                                                <option value="2">(2)
                                                                     Horrible</option>
-                                                                <option value="1"
-                                                                    {{ $product->score == 1 ? 'selected' : '' }}>(1)
+                                                                <option value="1">(1)
                                                                     Appalling</option>
                                                             </select>
 
@@ -317,32 +306,27 @@
                                                     <tr>
                                                         <td width="130" class="borderClass">Custom Tags</td>
                                                         <td class="borderClass">
-                                                            <textarea id="genre_custom" name="genre_custom" class="textarea" rows="3" cols="45">{{ is_array(json_decode($product->genre_custom)) ? implode(', ', json_decode($product->genre_custom)) : '' }}
-</textarea>
+                                                            <textarea id="genre_custom" name="genre_custom" class="textarea" rows="3" cols="45"></textarea>
                                                         </td>
                                                     </tr>
 
                                                     <tr>
                                                         <td class="borderClass" valign="top">Title English</td>
                                                         <td class="borderClass">
-                                                            <textarea id="add_manga_comments" name="work_name_english" class="inputtext" rows="5" cols="45">{{ $product->work_name_english }}</textarea>
+                                                            <textarea id="add_manga_comments" name="work_name_english" class="inputtext" rows="5" cols="45"></textarea>
                                                         </td>
                                                     </tr>
                                                 </tbody>
                                             </table>
                                             <div class="mt8 mb8" style="text-align: center;">
                                                 <input type="submit" class="inputButton main_submit" value="Submit">
-
+                                                {{-- <form style="display: inline-block;" id="delete-form" method="POST"
+                                                    action="/123">
+                                                    <input type="submit" class="inputButton ml8 delete_submit"
+                                                        value="Delete">
+                                                </form> --}}
                                             </div>
                                         </form>
-                                        <div style="text-align: right;">
-                                            <form style="display: inline-block;" id="delete-form" method="POST"
-                                                action="/destroy/{{ $product->id }}">
-                                                @csrf
-                                                <input type="submit" class="inputButton ml8 delete_submit"
-                                                    value="Delete">
-                                            </form>
-                                        </div>
                                     </div>
                                 </td>
                             </tr>

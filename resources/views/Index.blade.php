@@ -15,7 +15,7 @@
     <div class="header"></div>
 
     <div class="list-menu-float">
-        <a class="icon-menu quick-add List_LightBox" href="#">
+        <a class="icon-menu quick-add List_LightBox" href="/create">
             <svg class="icon icon-quick-add" width="22px" height="20px" viewBox="0 0 22 20" version="1.1">
                 <g>
                     <path
@@ -94,7 +94,7 @@
                     <tbody>
                         <tr class="list-table-header">
                             <th class="header-title status"></th>
-                            <th class="header-title number">#</th>
+                            <th class="header-title number"></th>
                             <th class="header-title image">Image</th>
                             <th class="header-title title">Title </th>
                             <th class="header-title score">Score</th>
@@ -106,54 +106,66 @@
                     </tbody>
 
                     <tbody class="list-item">
-                        <tr class="list-table-data">
-                            <td class="data status completed"></td>
-                            <td class="data number">1</td>
-                            <td class="data image"><a
-                                    href="https://www.dlsite.com/maniax/work/=/product_id/RJ01103906.html"
-                                    class="link sort">
-                                    <img src="https://img.dlsite.jp/modpub/images2/work/doujin/RJ01104000/RJ01103906_img_main.jpg"
-                                        class="image"></a>
-                            </td>
-                            <td class="data title clearfix">
-                                RJ01103906 - 【低音】王子様系エルフの雑魚まんこ秒イキ潮噴き連続アクメ ～僕だけが知っている性欲が強すぎる彼女のお下品な本性～
-                                <div class="notes"><br>
-                                    <div class="text notes">
-                                        [Low volume] Prince-like elf's small pussy squirts in seconds and
-                                        has continuous orgasms - Only I know her vulgar true nature with her strong
-                                        sexual desire -
+                        @foreach ($products as $product)
+                            <tr class="list-table-data">
+                                <td
+                                    class="data status {{ $product->progress == 'Listening' ? 'watching' : '' }} {{ $product->progress == 'Completed' ? 'completed' : '' }} {{ $product->progress == 'Plan to Listen' ? 'plantowatch' : '' }}">
+                                </td>
+                                <td class="data number"></td>
+                                <td class="data image"><a
+                                        href="https://www.dlsite.com/maniax/work/=/product_id/{{ $product->id }}.html"
+                                        class="link sort" target="_blank">
+                                        <img src="{{ $product->work_image }}" class="image"></a>
+                                </td>
+                                <td class="data title clearfix">
+                                    {{ $product->id }} - {{ $product->work_name }}
+                                    <div class="notes"><br>
+                                        <div class="text notes">
+                                            @if ($product->work_name != $product->work_name_english && $product->work_name_english)
+                                                {{ $product->id }} - {{ $product->work_name_english }}
+                                            @endif
+                                        </div>
                                     </div>
-                                </div>
 
-                            </td>
+                                </td>
 
-                            <td class="data score">
-                                <span class="score-label score-na">9</span>
-                            </td>
-                            <td class="data type">
-                                R18
-                            </td>
-                            <td class="data progress">
-                                <div class="progress"><span>Completed</span> </div>
-                            </td>
-                            <td id="tags" class="data tags">
-                                <div class="tags">
-                                    <span>Binaural</span>,
-                                    <span>Asmr</span>,
-                                    <span>Elf / Fairy</span>,
-                                    <span>Breast Sex</span>,
-                                    <span>Irrumatio</span>,
-                                    <span>Ear Licking</span>,
-                                    <span>Squirting / Gushing</span>,
-                                    <span>Vulgar Moans</span>
-                                </div>
-                            </td>
-                            <td class="data">
-                                <div class="add-edit-more">
-                                    <span class="edit"> <a href="#" class="List_LightBox">Edit</a></span>
-                                </div>
-                            </td>
-                        </tr>
+                                <td class="data score">
+                                    <span class="score-label score-na">
+                                        @if ($product->score == null)
+                                            -
+                                        @endif
+                                        {{ $product->score }}
+                                    </span>
+                                </td>
+                                <td class="data type">
+                                    {{ $product->age_category }}
+                                </td>
+                                <td class="data progress">
+                                    <div class="progress"><span>{{ $product->progress }}</span> </div>
+                                </td>
+                                <td id="tags" class="data tags">
+                                    <div class="tags">
+                                        @foreach (json_decode($product->genre_custom) as $genre_custom)
+                                            <span>{{ $genre_custom }}</span>,
+                                        @endforeach
+
+                                        @foreach (json_decode($product->genre_english) as $genre_english)
+                                            @if (!$loop->last)
+                                                <span>{{ $genre_english }}</span>,
+                                            @else
+                                                <span>{{ $genre_english }}</span>
+                                            @endif
+                                        @endforeach
+                                    </div>
+                                </td>
+                                <td class="data">
+                                    <div class="add-edit-more">
+                                        <span class="edit"> <a href="/edit/{{ $product->id }}"
+                                                class="List_LightBox">Edit</a></span>
+                                    </div>
+                                </td>
+                            </tr>
+                        @endforeach
                     </tbody>
                 </table>
             </div>
