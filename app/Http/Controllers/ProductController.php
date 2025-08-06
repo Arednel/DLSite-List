@@ -13,16 +13,25 @@ class ProductController extends Controller
     /**
      * Display a listing of the resource.
      */
-    public function index()
+    public function index(Request $request)
     {
-        $products = Product::all();
+        // Define allowed status values
+        $allowedProgress = ['Currently Listening', 'Completed', 'Plan to Listen'];
 
-        return view('Index', ['products' => $products]);
+        // Get status from query parameter
+        $progress = $request->query('progress');
+
+        if (in_array($progress, $allowedProgress)) {
+            // Valid progress — filter by it
+            $products = Product::where('progress', $progress)->get();
+        } else {
+            $progress = 'All ASMR';
+            $products = Product::all();
+        }
+
+        return view('Index', ['products' => $products, 'progress' => $progress]);
     }
 
-    /**
-     * Show the form for creating a new resource.
-     */
     public function create()
     {
         return view('Create');
@@ -33,10 +42,18 @@ class ProductController extends Controller
      */
     public function store(Request $request)
     {
-        //Remove any spaces
-        $workID = trim($request->id);
+        //  Return back if null
+        if ($request->id == null) {
+            return redirect('/');
+        }
 
-        if ($workID == null) {
+        // Get RJ Code
+        if (preg_match('/RJ\d+/', $request->id, $matches)) {
+            $workID = $matches[0];
+        }
+
+        // Check if already exists
+        if (Product::where('id', $workID)->exists()) {
             return redirect('/');
         }
 
@@ -46,34 +63,40 @@ class ProductController extends Controller
         //Get JSON info
         $extractedWorkDataPath = storage_path('app/Works/' . $workID);
         $json = File::get("$extractedWorkDataPath.json");
-        $workhData = json_decode($json, true);
+        $workData = json_decode($json, true);
 
-        $dlsite_product_id = $workhData['japanese']['product_id'];
-        $maker_id = $workhData['japanese']['maker_id'];
-        $work_name = $workhData['japanese']['work_name'];
+        $dlsite_product_id = $workData['japanese']['product_id'];
+        $maker_id = $workData['japanese']['maker_id'];
+        $work_name = $workData['japanese']['work_name'];
 
         //If user isn't specified english title
         if ($request->work_name_english == null) {
-            $work_name_english = $workhData['english']['work_name'];
+            $work_name_english = $workData['english']['work_name'];
             if ($work_name == $work_name_english) {
                 $work_name_english = null;
             }
+        } else {
+            $work_name_english = $request->work_name_english;
         }
 
-        $age_category = $workhData['japanese']['age_category']['_name_'];
-        $circle = $workhData['japanese']['circle'];
-        $work_image = $workhData['japanese']['work_image'];
-        $genre = $workhData['japanese']['genre'];
-        $genre_english = $workhData['english']['genre'];
+        $age_category = $workData['japanese']['age_category']['_name_'];
+        $circle = $workData['japanese']['circle'];
+        $work_image = $workData['japanese']['work_image'];
+        $genre = $workData['japanese']['genre'];
+        $genre_english = $workData['english']['genre'];
 
-        $genre_custom = $request->genre_custom;
-        if ($genre_custom == null) {
+        if ($request->genre_custom == null) {
             $genre_custom = '[]';
+        } else {
+            $genre_custom_input = $request->input('genre_custom'); // e.g. "tag1, tag2, , tag3"
+            $genre_custom_array = array_filter(array_map('trim', explode(',', $genre_custom_input)));
+            $genre_custom = json_encode($genre_custom_array);
         }
 
-        $description = $workhData['japanese']['description'];
-        $description_english = $workhData['english']['description'];
-        $sample_images = $workhData['japanese']['sample_images'];
+        $description = $workData['japanese']['description'];
+        $description_english = $workData['english']['description'];
+        $notes = $request->notes;
+        $sample_images = $workData['japanese']['sample_images'];
 
         $data = array(
             'id' => $dlsite_product_id,
@@ -88,6 +111,7 @@ class ProductController extends Controller
             'genre_custom' => $genre_custom,
             'description' => $description,
             'description_english' => $description_english,
+            'notes' => $notes,
             'sample_images' => json_encode($sample_images),
             'score' => $request->score,
             'created_at' => now(),
@@ -130,6 +154,7 @@ class ProductController extends Controller
             'score' => $request->score,
             'genre_custom' => json_encode($genre_custom_array),
             'work_name_english' => $request->work_name_english,
+            'notes' => $request->notes,
         ]);
 
         return redirect('/');

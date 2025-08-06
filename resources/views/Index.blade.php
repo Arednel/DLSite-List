@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 
 <head>
-    <title>Index</title>
+    <title>All</title>
 
     <meta name="viewport" content="initial-scale=1">
 
@@ -72,22 +72,30 @@
             </div>
         </div>
 
-        <div id="status-menu" class="status-menu-container">
-            <div class="status-menu">
-                <a href="#" class="status-button all_anime on">All
-                    ASMR</a>
-                <a href="#" class="status-button watching ">Currently Listening</a>
-                <a href="#" class="status-button completed ">Completed</a>
-                <a href="#" class="status-button plantowatch ">Plan to Listen</a>
+        <div id="progress-menu" class="progress-menu-container">
+            <div class="progress-menu">
+                <a href="/" class="progress-button all_anime {{ $progress == 'All ASM' ? 'on' : '' }}">
+                    All ASMR</a>
+                <a href="/?progress=Currently Listening"
+                    class="progress-button watching {{ $progress == 'Currently Listening' ? 'on' : '' }}">
+                    Currently Listening</a>
+                <a href="/?progress=Completed"
+                    class="progress-button completed {{ $progress == 'Completed' ? 'on' : '' }}">
+                    Completed</a>
+                <a href="/?progress=Plan to Listen"
+                    class="progress-button plantowatch {{ $progress == 'Plan to Listen' ? 'on' : '' }}">
+                    Plan to Listen</a>
             </div>
         </div>
 
 
-
         <div class="list-block">
             <div class="list-unit onhold">
+
                 <div class="list-status-title">
-                    <span class="text">ALL ASMR</span>
+                    <span class="text">
+                        {{ $progress }}
+                    </span>
                 </div>
 
                 <table class="list-table">
@@ -118,15 +126,28 @@
                                         <img src="{{ $product->work_image }}" class="image"></a>
                                 </td>
                                 <td class="data title clearfix">
-                                    {{ $product->id }} - {{ $product->work_name }}
+                                    {{-- Japanese title --}}
+                                    <a href="https://www.dlsite.com/maniax/work/=/product_id/{{ $product->id }}.html"
+                                        class="link sort" target="_blank">{{ $product->id }} -
+                                        {{ $product->work_name }}</a>
+                                    {{-- English title --}}
                                     <div class="notes"><br>
                                         <div class="text notes">
                                             @if ($product->work_name != $product->work_name_english && $product->work_name_english)
-                                                {{ $product->id }} - {{ $product->work_name_english }}
+                                                {{-- English title --}}
+                                                <a href="https://www.dlsite.com/maniax/work/=/product_id/{{ $product->id }}.html"
+                                                    class="link sort" target="_blank">
+                                                    {{ $product->id }} - {{ $product->work_name_english }}</a>
                                             @endif
                                         </div>
                                     </div>
 
+                                    {{-- Notes --}}
+                                    <div class="notes"><br>
+                                        <div class="text notes">
+                                            {{ $product->notes }}
+                                        </div>
+                                    </div>
                                 </td>
 
                                 <td class="data score">
@@ -137,23 +158,33 @@
                                         {{ $product->score }}
                                     </span>
                                 </td>
+
                                 <td class="data type">
-                                    {{ $product->age_category }}
+                                    @if ($product->age_category == 'ALL_AGES')
+                                        All Ages
+                                    @else
+                                        {{ $product->age_category }}
+                                    @endif
                                 </td>
                                 <td class="data progress">
                                     <div class="progress"><span>{{ $product->progress }}</span> </div>
                                 </td>
+
                                 <td id="tags" class="data tags">
                                     <div class="tags">
                                         @foreach (json_decode($product->genre_custom) as $genre_custom)
-                                            <span>{{ $genre_custom }}</span>,
+                                            {{--  Uppercase every word --}}
+                                            <span>{{ ucwords($genre_custom) }}</span>,
                                         @endforeach
 
-                                        @foreach (json_decode($product->genre_english) as $genre_english)
+                                        @php
+                                            $genres = json_decode($product->genre_english ?? '[]') ?: [];
+                                        @endphp
+
+                                        @foreach ($genres as $index => $genre_english)
+                                            <span>{{ $genre_english }}</span>
                                             @if (!$loop->last)
-                                                <span>{{ $genre_english }}</span>,
-                                            @else
-                                                <span>{{ $genre_english }}</span>
+                                                ,
                                             @endif
                                         @endforeach
                                     </div>

@@ -5744,3 +5744,8 @@ button[data-v-6d6432ac] {
 .root .affiliate__with[data-v-3b83b018] {
     color: #2e51a2 !important
 }
+
+.ignore-visited-link {
+    color: white !important;
+    text-decoration: none !important;
+}

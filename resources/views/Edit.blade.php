@@ -8,6 +8,50 @@
     <link rel="stylesheet" href="{{ asset('css/Edit/style-7a9b8b33de.css') }}">
 </head>
 
+<style>
+    /* Modal base styles */
+    .modal {
+        display: none;
+        position: fixed;
+        z-index: 999;
+        left: 0;
+        top: 0;
+        width: 100%;
+        height: 100%;
+        overflow: auto;
+        background-color: rgba(0, 0, 0, 0.5);
+    }
+
+    /* Modal inner box */
+    .modal-content {
+        background-color: #222;
+        color: white;
+        margin: 15% auto;
+        padding: 20px;
+        border-radius: 8px;
+        width: 350px;
+        box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+        text-align: center;
+    }
+
+    .modal-actions {
+        margin-top: 20px;
+    }
+
+    .inputButton.danger {
+        background-color: #e74c3c;
+        color: white;
+        border: none;
+        padding: 6px 14px;
+        cursor: pointer;
+        border-radius: 4px;
+    }
+
+    .inputButton.danger:hover {
+        background-color: #c0392b;
+    }
+</style>
+
 <body class="page-common  ownlist_manga_update" data-ms="false" data-country-code="KZ" data-time="1741691968">
     <div id="myanimelist">
         <div class="wrapper">
@@ -34,7 +78,8 @@
                                             <table cellpadding="5" cellspacing="0" width="100%">
                                                 <tbody>
                                                     <tr>
-                                                        <td width="130" class="borderClass" valign="top">Title
+                                                        <td width="130" class="borderClass" valign="top">RJ Code +
+                                                            Title
                                                         </td>
                                                         <td class="borderClass">
                                                             <strong>
@@ -47,12 +92,12 @@
                                                         <td class="borderClass">Status</td>
                                                         <td class="borderClass">
                                                             <select id="progress" name="progress" class="inputtext">
-                                                                <option value="Listening"
-                                                                    {{ $product->progress == 'Listening' ? 'selected' : '' }}>
-                                                                    Listening</option>
                                                                 <option value="Completed"
                                                                     {{ $product->progress == 'Completed' ? 'selected' : '' }}>
                                                                     Completed</option>
+                                                                <option value="Listening"
+                                                                    {{ $product->progress == 'Listening' ? 'selected' : '' }}>
+                                                                    Listening</option>
                                                                 <option value="Plan to Listen"
                                                                     {{ $product->progress == 'Plan to Listen' ? 'selected' : '' }}>
                                                                     Plan to Listen</option>
@@ -314,18 +359,25 @@
                                                             </small>
                                                         </td>
                                                     </tr> --}}
-                                                    <tr>
-                                                        <td width="130" class="borderClass">Custom Tags</td>
-                                                        <td class="borderClass">
-                                                            <textarea id="genre_custom" name="genre_custom" class="textarea" rows="3" cols="45">{{ is_array(json_decode($product->genre_custom)) ? implode(', ', json_decode($product->genre_custom)) : '' }}
-</textarea>
-                                                        </td>
-                                                    </tr>
 
                                                     <tr>
                                                         <td class="borderClass" valign="top">Title English</td>
                                                         <td class="borderClass">
-                                                            <textarea id="add_manga_comments" name="work_name_english" class="inputtext" rows="5" cols="45">{{ $product->work_name_english }}</textarea>
+                                                            <textarea id="add_manga_comments" name="work_name_english" class="inputtext" rows="2" cols="65">{{ $product->work_name_english }}</textarea>
+                                                        </td>
+                                                    </tr>
+
+                                                    <tr>
+                                                        <td width="130" class="borderClass">Custom Tags</td>
+                                                        <td class="borderClass">
+                                                            <textarea id="genre_custom" name="genre_custom" class="textarea" rows="5" cols="65">{{ implode(', ', json_decode($product->genre_custom, true)) }}</textarea>
+                                                        </td>
+                                                    </tr>
+
+                                                    <tr>
+                                                        <td class="borderClass" valign="top">Notes</td>
+                                                        <td class="borderClass">
+                                                            <textarea id="add_notes" name="notes" class="inputtext" rows="5" cols="65">{{ $product->notes }}</textarea>
                                                         </td>
                                                     </tr>
                                                 </tbody>
@@ -335,13 +387,19 @@
 
                                             </div>
                                         </form>
+
+                                        <form style="text-align: right;" id="delete-form" method="POST"
+                                            action="/destroy/{{ $product->id }}">
+                                            @csrf
+                                            <input type="submit" class="inputButton ml8 delete_submit" value="Delete"
+                                                onclick="return openDeleteModal(event);">
+                                        </form>
+
+                                        <br>
+
                                         <div style="text-align: right;">
-                                            <form style="display: inline-block;" id="delete-form" method="POST"
-                                                action="/destroy/{{ $product->id }}">
-                                                @csrf
-                                                <input type="submit" class="inputButton ml8 delete_submit"
-                                                    value="Delete">
-                                            </form>
+                                            <a href="/" class="inputButton ml8 ignore-visited-link">Go
+                                                back</a>
                                         </div>
                                     </div>
                                 </td>
@@ -352,6 +410,52 @@
             </div>
         </div>
     </div>
+
+    <div id="deleteModal" class="modal">
+        <div class="modal-content">
+            <p>Are you sure you want to delete this item?</p>
+            <div class="modal-actions">
+                <button class="inputButton danger" onclick="confirmDeletion()">Yes, Delete</button>
+                <button class="inputButton ml8" onclick="closeModal()">Cancel</button>
+            </div>
+        </div>
+    </div>
 </body>
+
+<script>
+    // Delete confirmation script
+    let deleteForm;
+
+    function openDeleteModal(event) {
+        event.preventDefault();
+        deleteForm = event.target.closest('form');
+        document.getElementById('deleteModal').style.display = 'block';
+        return false;
+    }
+
+    function closeModal() {
+        document.getElementById('deleteModal').style.display = 'none';
+    }
+
+    function confirmDeletion() {
+        if (deleteForm) {
+            deleteForm.submit();
+        }
+    }
+
+    // Optional: Close modal on ESC or outside click
+    window.onclick = function(event) {
+        const modal = document.getElementById('deleteModal');
+        if (event.target == modal) {
+            closeModal();
+        }
+    }
+
+    document.addEventListener('keydown', function(event) {
+        if (event.key === "Escape") {
+            closeModal();
+        }
+    });
+</script>
 
 </html>

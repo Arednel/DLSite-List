@@ -29,20 +29,17 @@
                                             @csrf
                                             <div id="top-submit-buttons" class="mt8 mb8" style="text-align: center;">
                                                 <input type="submit" class="inputButton main_submit" value="Submit">
-                                                {{-- <form style="display: inline-block;" id="delete-form" method="POST"
-                                                    action="/123">
-                                                    <input type="submit" class="inputButton ml8 delete_submit"
-                                                        value="Delete">
-                                                </form> --}}
                                             </div>
                                             <table cellpadding="5" cellspacing="0" width="100%">
                                                 <tbody>
                                                     <tr>
-                                                        <td width="130" class="borderClass" valign="top">Title
+                                                        <td width="130" class="borderClass" valign="top">RJ Code or
+                                                            Link
                                                         </td>
                                                         <td class="borderClass">
                                                             <strong>
-                                                                <input id="id" name="id" class="inputtext">
+                                                                <input id="id" name="id" class="inputtext"
+                                                                    size="65">
                                                             </strong>
                                                         </td>
                                                     </tr>
@@ -50,10 +47,10 @@
                                                         <td class="borderClass">Status</td>
                                                         <td class="borderClass">
                                                             <select id="progress" name="progress" class="inputtext">
-                                                                <option value="Listening">
-                                                                    Listening</option>
                                                                 <option value="Completed">
                                                                     Completed</option>
+                                                                <option value="Listening">
+                                                                    Listening</option>
                                                                 <option value="Plan to Listen">
                                                                     Plan to Listen</option>
                                                             </select>
@@ -304,29 +301,36 @@
                                                         </td>
                                                     </tr> --}}
                                                     <tr>
-                                                        <td width="130" class="borderClass">Custom Tags</td>
+                                                        <td class="borderClass" valign="top">Title English</td>
                                                         <td class="borderClass">
-                                                            <textarea id="genre_custom" name="genre_custom" class="textarea" rows="3" cols="45"></textarea>
+                                                            <textarea id="add_title_english" name="work_name_english" class="inputtext" rows="2" cols="65"></textarea>
                                                         </td>
                                                     </tr>
 
                                                     <tr>
-                                                        <td class="borderClass" valign="top">Title English</td>
+                                                        <td width="130" class="borderClass">Custom Tags</td>
                                                         <td class="borderClass">
-                                                            <textarea id="add_manga_comments" name="work_name_english" class="inputtext" rows="5" cols="45"></textarea>
+                                                            <textarea id="genre_custom" name="genre_custom" class="textarea" rows="5" cols="65"></textarea>
+                                                        </td>
+                                                    </tr>
+
+                                                    <tr>
+                                                        <td class="borderClass" valign="top">Notes</td>
+                                                        <td class="borderClass">
+                                                            <textarea id="add_notes" name="notes" class="inputtext" rows="5" cols="65"></textarea>
                                                         </td>
                                                     </tr>
                                                 </tbody>
                                             </table>
                                             <div class="mt8 mb8" style="text-align: center;">
                                                 <input type="submit" class="inputButton main_submit" value="Submit">
-                                                {{-- <form style="display: inline-block;" id="delete-form" method="POST"
-                                                    action="/123">
-                                                    <input type="submit" class="inputButton ml8 delete_submit"
-                                                        value="Delete">
-                                                </form> --}}
                                             </div>
                                         </form>
+
+                                        <div style="text-align: right;">
+                                            <a href="/" class="inputButton ml8 ignore-visited-link">Go
+                                                back</a>
+                                        </div>
                                     </div>
                                 </td>
                             </tr>

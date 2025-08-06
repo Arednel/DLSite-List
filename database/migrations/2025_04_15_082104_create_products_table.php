@@ -24,6 +24,7 @@ return new class extends Migration
             $table->json('genre_custom');
             $table->string('description', 1000)->nullable();
             $table->string('description_english', 1000)->nullable();
+            $table->string('notes', 1000)->nullable();
             $table->json('sample_images', 1000)->nullable();
             $table->integer('score')->nullable()->default(null);
             $table->string('progress', 200)->nullable()->default('Plan to Listen');

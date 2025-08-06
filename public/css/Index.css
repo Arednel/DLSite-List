@@ -716,7 +716,7 @@ a {
 /**
  * List Container - Status Menu
  */
-.status-menu-container {
+.progress-menu-container {
     width: 1058px;
     height: 46px;
     background-color: #FFFDF8 !important;
@@ -724,24 +724,24 @@ a {
     z-index: 1
 }
 
-.status-menu-container.fixed {
+.progress-menu-container.fixed {
     position: fixed;
     display: block;
     top: 0;
 }
 
-.status-menu-container.fixed+div.list-block {
+.progress-menu-container.fixed+div.list-block {
     margin-top: 62px;
 }
 
-.status-menu-container .status-menu {
+.progress-menu-container .progress-menu {
     display: table;
     margin: 0 auto;
     border-collapse: separate;
     border-spacing: 40px 0;
 }
 
-.status-menu-container .status-menu .status-button {
+.progress-menu-container .progress-menu .progress-button {
     position: relative;
     display: table-cell;
     padding: 12px 0;
@@ -753,16 +753,16 @@ a {
     color: #CCB3B3;
 }
 
-.status-menu-container .status-menu .status-button:hover {
+.progress-menu-container .progress-menu .progress-button:hover {
     color: #7D6A6A;
 }
 
-.status-menu-container .status-menu .status-button.on {
+.progress-menu-container .progress-menu .progress-button.on {
     color: #7D6A6A;
     font-weight: bold;
 }
 
-.status-menu-container .status-menu .status-button:after {
+.progress-menu-container .progress-menu .progress-button:after {
     position: absolute;
     bottom: 0px;
     left: 0px;
@@ -786,20 +786,20 @@ a {
     transition-timing-function: ease-in-out;
 }
 
-.status-menu-container .status-menu .status-button.on:after,
-.status-menu .status-button:hover:after {
+.progress-menu-container .progress-menu .progress-button.on:after,
+.progress-menu .progress-button:hover:after {
     opacity: 1
 }
 
 /**
  * List Container - Status Menu - Search
  */
-.status-menu-container .search-container {
+.progress-menu-container .search-container {
     position: absolute;
     right: 18px;
 }
 
-.status-menu-container .search-container #search-button {
+.progress-menu-container .search-container #search-button {
     display: inline-block;
     height: 22px;
     margin-top: 15px;
@@ -808,11 +808,11 @@ a {
     vertical-align: middle;
 }
 
-.status-menu-container .search-container #search-button:hover {
+.progress-menu-container .search-container #search-button:hover {
     color: #7D6A6A;
 }
 
-.status-menu-container .search-container #search-box {
+.progress-menu-container .search-container #search-box {
     display: inline-block;
     width: 0;
     height: 22px;
@@ -825,12 +825,12 @@ a {
     vertical-align: middle;
 }
 
-.status-menu-container .search-container #search-box.open {
+.progress-menu-container .search-container #search-box.open {
     display: inline-block;
     width: 100px;
 }
 
-.status-menu-container .search-container #search-box input {
+.progress-menu-container .search-container #search-box input {
     width: 100%;
     height: 100%;
     box-sizing: border-box;

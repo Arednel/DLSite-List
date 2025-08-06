@@ -18,8 +18,9 @@ use App\Http\Controllers\DLSiteScraperController;
 
 //Main Page
 Route::get('/', [ProductController::class, 'Index'])->name('index');
-Route::get('/index', [ProductController::class, 'Index']);
-Route::get('/Index', [ProductController::class, 'Index']);
+
+//Currently Listening
+Route::get('/Asmr/{status}', [ProductController::class, 'Index'])->name('index');
 
 Route::get('/create', [ProductController::class, 'create']);
 Route::post('/store', [ProductController::class, 'store']);

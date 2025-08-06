@@ -1,6 +1,6 @@
 <h2 align="center">DLSite list project based on MyAnimeList.net</h2>
 
-## Version 0.2.0
+## Version 0.3.0
 
 ## Requirements
 1. [Python 3.10.11](https://www.python.org/downloads/release/python-31011) (tested on this version) and [pip](https://pypi.org/project/pip) (for easier installation process) in path / globally 
