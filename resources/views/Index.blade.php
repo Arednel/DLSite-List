@@ -5,8 +5,6 @@
 
     <meta name="viewport" content="initial-scale=1">
 
-    <link rel="shortcut icon" href="https://cdn.myanimelist.net/images/favicon.ico">
-
     <link rel="stylesheet" href="{{ asset('css/Index.css') }}">
 </head>
 

@@ -2,6 +2,9 @@
 
 ## Development
 
+* 2025-08-15 -- 0.4.2 Custom favicon.ico
+  * Added favicon.ico
+
 * 2025-08-15 -- 0.4.1 Python fix
   * Fixed modules path
 
