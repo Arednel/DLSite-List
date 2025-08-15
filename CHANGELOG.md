@@ -2,6 +2,9 @@
 
 ## Development
 
+* 2025-08-15 -- 0.4.3 Sample images fix
+  * Sample images fix
+
 * 2025-08-15 -- 0.4.2 Custom favicon.ico
   * Added favicon.ico
 

@@ -84,9 +84,10 @@ class ProductController extends Controller
         $circle = $workData['japanese']['circle'];
 
         $work_image = "storage/Works/{$dlsite_product_id}/cover.jpg";
-        $sample_images = [];
-        foreach ($workData['japanese']['sample_images'] as $index => $img) {
-            $sample_images[] = "storage/Works/{$dlsite_product_id}/sample_" . ($index + 1) . ".jpg";
+        if (!empty($workData['japanese']['sample_images'])) {
+            foreach ($workData['japanese']['sample_images'] as $index => $img) {
+                $sample_images[] = "storage/Works/{$dlsite_product_id}/sample_" . ($index + 1) . ".jpg";
+            }
         }
 
         $genre = $workData['japanese']['genre'];
