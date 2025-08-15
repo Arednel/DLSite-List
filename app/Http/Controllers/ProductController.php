@@ -7,6 +7,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\File;
 use Symfony\Component\Process\Process;
 use Symfony\Component\Process\Exception\ProcessFailedException;
+use Illuminate\Support\Facades\Storage;
 
 class ProductController extends Controller
 {
@@ -81,7 +82,13 @@ class ProductController extends Controller
 
         $age_category = $workData['japanese']['age_category']['_name_'];
         $circle = $workData['japanese']['circle'];
-        $work_image = $workData['japanese']['work_image'];
+
+        $work_image = "storage/Works/{$dlsite_product_id}/cover.jpg";
+        $sample_images = [];
+        foreach ($workData['japanese']['sample_images'] as $index => $img) {
+            $sample_images[] = "storage/Works/{$dlsite_product_id}/sample_" . ($index + 1) . ".jpg";
+        }
+
         $genre = $workData['japanese']['genre'];
         $genre_english = $workData['english']['genre'];
 
@@ -114,6 +121,7 @@ class ProductController extends Controller
             'notes' => $notes,
             'sample_images' => json_encode($sample_images),
             'score' => $request->score,
+            'progress' => $request->progress,
             'created_at' => now(),
         );
 
@@ -165,7 +173,18 @@ class ProductController extends Controller
      */
     public function destroy(string $id)
     {
+        // Delete the product from DB
         Product::where('id', $id)->delete();
+
+        // Remove JSON file
+        $jsonPath = "app/Works/{$id}.json";
+        $storageJsonPath = storage_path($jsonPath);
+        if (file_exists($storageJsonPath)) {
+            unlink($storageJsonPath);
+        }
+
+        // Remove images directory in storage/app/public/Works/{id}
+        Storage::disk('public')->deleteDirectory("Works/{$id}");
 
         return redirect('/');
     }

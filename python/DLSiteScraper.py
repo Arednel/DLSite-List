@@ -4,6 +4,7 @@ import logging
 import asyncio
 import json
 from dlsite_async import DlsiteAPI
+import requests
 
 storageDir = sys.argv[2]
 workID = sys.argv[3]
@@ -41,6 +42,36 @@ async def englishDLsite():
     async with DlsiteAPI(locale="en_US") as api:
         return await api.get_work(workID)
 
+def download_image(url, save_path):
+    try:
+        # Fix protocol-relative URLs
+        if url.startswith("//"):
+            url = "https:" + url
+        elif url.startswith("/"):
+            url = "https://www.dlsite.com" + url
+
+        logging.debug(f"Attempting to download image: {url}")
+
+        headers = {
+            "User-Agent": (
+                "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
+                "AppleWebKit/537.36 (KHTML, like Gecko) "
+                "Chrome/115.0.0.0 Safari/537.36"
+            )
+        }
+
+        response = requests.get(url, stream=True, timeout=15, headers=headers)
+        response.raise_for_status()
+
+        # Save to file
+        with open(save_path, "wb") as f:
+            for chunk in response.iter_content(8192):
+                f.write(chunk)
+
+        logging.info(f"Downloaded {url} → {save_path}")
+    except Exception as e:
+        logging.error(f"Failed to download {url}: {e}")
+
 try:
     workJapanese = asyncio.run(japaneseDLsite())
 
@@ -64,7 +95,20 @@ try:
     # Save JSON
     with open(os.path.join(savePath, filename), "w", encoding="utf-8") as f:
         json.dump(combined, f, ensure_ascii=False, indent=2)
+    
+    # After saving JSON
+    images_dir = os.path.join(storageDir, "app", "public", "Works", workJapanese.product_id)
+    os.makedirs(images_dir, exist_ok=True)
 
+    # Main cover
+    cover_url = workJapanese_serialized["work_image"]
+    cover_path = os.path.join(images_dir, "cover.jpg")
+    download_image(cover_url, cover_path)
+
+    # Sample images
+    for idx, img_url in enumerate(workJapanese_serialized.get("sample_images", []), start=1):
+        img_path = os.path.join(images_dir, f"sample_{idx}.jpg")
+        download_image(img_url, img_path)
 
     logging.info(f""+workJapanese.product_id+" completed")
 except Exception as error:

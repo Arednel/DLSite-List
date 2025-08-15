@@ -2,7 +2,11 @@
 
 ## Development
 
-* 2025-08-17 -- 0.3.0 Progress Pages
+* 2025-08-15 -- 0.4.0 Local Images and Cleanup
+  * Save images locally
+  * Cleanup after work removal from database 
+
+* 2025-08-06 -- 0.3.0 Progress Pages
   * Added different progress for Asmr pagers
   * Added notes to titles
   * Delete confirmation
