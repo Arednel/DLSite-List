@@ -2,6 +2,9 @@
 
 ## Development
 
+* 2025-08-15 -- 0.4.1 Python fix
+  * Fixed modules path
+
 * 2025-08-15 -- 0.4.0 Local Images and Cleanup
   * Save images locally
   * Cleanup after work removal from database 
