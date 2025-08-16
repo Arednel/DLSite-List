@@ -16,19 +16,48 @@ class ProductController extends Controller
      */
     public function index(Request $request)
     {
-        // Define allowed status values
-        $allowedProgress = ['Currently Listening', 'Completed', 'Plan to Listen'];
+        // Define allowed values
+        $allowedProgress = ['Listening', 'Completed', 'Plan to Listen'];
 
-        // Get status from query parameter
+        // Start a query builder instead of immediately fetching all products
+        $query = Product::query();
+
+        // --- Filter by progress ---
         $progress = $request->query('progress');
-
         if (in_array($progress, $allowedProgress)) {
-            // Valid progress — filter by it
-            $products = Product::where('progress', $progress)->get();
+            $query->where('progress', $progress);
         } else {
             $progress = 'All ASMR';
-            $products = Product::all();
         }
+
+        // --- Filter by age (if given) ---
+        if ($request->has('age_category') && $request->age_category !== '') {
+            $query->where('age_category', $request->age_category);
+        }
+
+        // --- Filter by genre (search in both english + custom) ---
+        if ($request->has('genre') && $request->genre !== '') {
+            $genre = $request->genre;
+
+            $query->where(function ($q) use ($genre) {
+                $q->whereJsonContains('genre_english', $genre)
+                    ->orWhereJsonContains('genre_custom', $genre);
+            });
+        }
+
+        // --- Filter by custom genre (if given) ---
+        if ($request->has('genre_custom') && $request->genre_custom !== '') {
+            $query->whereJsonContains('genre_custom', $request->genre_custom);
+        }
+
+        // Get products
+        $products = $query->get();
+
+        //Sort by id (Biggest number first)
+        $products = $products->sortByDesc(function ($item) {
+            // Remove "RJ" prefix and cast to integer
+            return (int) substr($item->id, 2);
+        })->values();
 
         return view('Index', ['products' => $products, 'progress' => $progress]);
     }

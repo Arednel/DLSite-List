@@ -2,8 +2,12 @@
 
 ## Development
 
-* 2025-08-15 -- 0.4.3 Sample images fix
-  * Sample images fix
+* 2025-08-16 -- 0.5.0 Display by Age, Tags
+  * Default sort by id "RJ"
+  * Create page changes
+  * Index page changes and fixes
+  * Added custom Sakura image
+  * Added display by age, tags
 
 * 2025-08-15 -- 0.4.2 Custom favicon.ico
   * Added favicon.ico

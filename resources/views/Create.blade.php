@@ -1,7 +1,7 @@
 <html lang="en" class="appearance-none dark-mode cvonfc">
 
 <head>
-    <title>Edit</title>
+    <title>Add</title>
 
     <link rel="stylesheet" href="{{ asset('css/Edit/Edit.css') }}">
     <link rel="stylesheet" href="{{ asset('css/Edit/dark-14047f4f0c.css') }}">
@@ -13,7 +13,7 @@
         <div class="wrapper">
             <div id="contentWrapper">
                 <div>
-                    <h1 class="h1">Edit Work</h1>
+                    <h1 class="h1">Add Work</h1>
                 </div>
 
                 <div id="content">
@@ -22,7 +22,7 @@
                             <tr>
                                 <td>
                                     <div class="normal_header" style="margin-top: 0; text-align: left;">
-                                        Edit Work
+                                        Add Work
                                     </div>
                                     <div style="text-align: left;">
                                         <form name="edit_work" method="post" id="main-form" action="/store">

@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 
 <head>
-    <title>All</title>
+    <title>DLSite List</title>
 
     <meta name="viewport" content="initial-scale=1">
 
@@ -26,7 +26,7 @@
             </svg>
             <span class="text">Quick Add</span>
         </a>
-        <a class="icon-menu anime-list" href="#">
+        <a class="icon-menu anime-list" href="/?age_category=ALL_AGES">
             <svg class="icon icon-anime-list" width="22px" height="20px" viewBox="0 0 22 20" version="1.1">
                 <g>
                     <path
@@ -39,7 +39,16 @@
             </svg>
             <span class="text">All Ages</span>
         </a>
-        <a class="icon-menu manga-list" href="#">
+        <a class="icon-menu statistics" href="/?age_category=R15">
+            <svg class="icon icon-statistics" xmlns="http://www.w3.org/2000/svg" width="22px" height="20px"
+                viewBox="0 0 512 512">
+                <path
+                    d="M32 32c17.7 0 32 14.3 32 32V400c0 8.8 7.2 16 16 16H480c17.7 0 32 14.3 32 32s-14.3 32-32 32H80c-44.2 0-80-35.8-80-80V64C0 46.3 14.3 32 32 32zM160 224c17.7 0 32 14.3 32 32v64c0 17.7-14.3 32-32 32s-32-14.3-32-32V256c0-17.7 14.3-32 32-32zm128-64V320c0 17.7-14.3 32-32 32s-32-14.3-32-32V160c0-17.7 14.3-32 32-32s32 14.3 32 32zm64 32c17.7 0 32 14.3 32 32v96c0 17.7-14.3 32-32 32s-32-14.3-32-32V224c0-17.7 14.3-32 32-32zM480 96V320c0 17.7-14.3 32-32 32s-32-14.3-32-32V96c0-17.7 14.3-32 32-32s32 14.3 32 32z">
+                </path>
+            </svg>
+            <span class="text">R15</span>
+        </a>
+        <a class="icon-menu manga-list" href="/?age_category=R18">
             <svg class="icon icon-manga-list" width="22px" height="20px" viewBox="0 0 22 20" version="1.1">
                 <g>
                     <path
@@ -50,17 +59,9 @@
                         id="M"></path>
                 </g>
             </svg>
-            <span class="text">R15</span>
-        </a>
-        <a class="icon-menu statistics" href="#">
-            <svg class="icon icon-statistics" xmlns="http://www.w3.org/2000/svg" width="22px" height="20px"
-                viewBox="0 0 512 512">
-                <path
-                    d="M32 32c17.7 0 32 14.3 32 32V400c0 8.8 7.2 16 16 16H480c17.7 0 32 14.3 32 32s-14.3 32-32 32H80c-44.2 0-80-35.8-80-80V64C0 46.3 14.3 32 32 32zM160 224c17.7 0 32 14.3 32 32v64c0 17.7-14.3 32-32 32s-32-14.3-32-32V256c0-17.7 14.3-32 32-32zm128-64V320c0 17.7-14.3 32-32 32s-32-14.3-32-32V160c0-17.7 14.3-32 32-32s32 14.3 32 32zm64 32c17.7 0 32 14.3 32 32v96c0 17.7-14.3 32-32 32s-32-14.3-32-32V224c0-17.7 14.3-32 32-32zM480 96V320c0 17.7-14.3 32-32 32s-32-14.3-32-32V96c0-17.7 14.3-32 32-32s32 14.3 32 32z">
-                </path>
-            </svg>
             <span class="text">R18</span>
         </a>
+
     </div>
 
     <div id="list-container" class="list-container">
@@ -72,15 +73,16 @@
 
         <div id="progress-menu" class="progress-menu-container">
             <div class="progress-menu">
-                <a href="/" class="progress-button all_anime {{ $progress == 'All ASM' ? 'on' : '' }}">
+                <a href="/?age_category={{ request('age_category') }}"
+                    class="progress-button all_anime {{ $progress == 'All ASMR' ? 'on' : '' }}">
                     All ASMR</a>
-                <a href="/?progress=Currently Listening"
-                    class="progress-button watching {{ $progress == 'Currently Listening' ? 'on' : '' }}">
+                <a href="/?age_category={{ request('age_category') }}&progress=Listening"
+                    class="progress-button watching {{ $progress == 'Listening' ? 'on' : '' }}">
                     Currently Listening</a>
-                <a href="/?progress=Completed"
+                <a href="/?age_category={{ request('age_category') }}&progress=Completed"
                     class="progress-button completed {{ $progress == 'Completed' ? 'on' : '' }}">
                     Completed</a>
-                <a href="/?progress=Plan to Listen"
+                <a href="/?age_category={{ request('age_category') }}&progress=Plan to Listen"
                     class="progress-button plantowatch {{ $progress == 'Plan to Listen' ? 'on' : '' }}">
                     Plan to Listen</a>
             </div>
@@ -171,8 +173,11 @@
                                 <td id="tags" class="data tags">
                                     <div class="tags">
                                         @foreach (json_decode($product->genre_custom) as $genre_custom)
-                                            {{--  Uppercase every word --}}
-                                            <span>{{ ucwords($genre_custom) }}</span>,
+                                            <a
+                                                href="/?age_category={{ request('age_category') }}&progress={{ request('progress') }}&genre={{ ucwords($genre_custom) }}">
+                                                {{--  Uppercase every word --}}
+                                                {{ ucwords($genre_custom) }},
+                                            </a>
                                         @endforeach
 
                                         @php
@@ -180,10 +185,9 @@
                                         @endphp
 
                                         @foreach ($genres as $index => $genre_english)
-                                            <span>{{ $genre_english }}</span>
-                                            @if (!$loop->last)
-                                                ,
-                                            @endif
+                                            <a
+                                                href="/?age_category={{ request('age_category') }}&progress={{ request('progress') }}&genre={{ ucwords($genre_english) }}">
+                                                {{ $genre_english }}</a>{{ !$loop->last ? ',' : '' }}
                                         @endforeach
                                     </div>
                                 </td>
