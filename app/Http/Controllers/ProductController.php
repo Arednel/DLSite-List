@@ -17,26 +17,28 @@ class ProductController extends Controller
     public function index(Request $request)
     {
         // Define allowed values
+        $allowedAgeCategory = ['ALL_AGES', 'R15', 'R18'];
         $allowedProgress = ['Listening', 'Completed', 'Plan to Listen'];
 
         // Start a query builder instead of immediately fetching all products
         $query = Product::query();
-
-        // --- Filter by progress ---
-        $progress = $request->query('progress');
-        if (in_array($progress, $allowedProgress)) {
-            $query->where('progress', $progress);
-        } else {
-            $progress = 'All ASMR';
-        }
-
         // --- Filter by age (if given) ---
-        if ($request->has('age_category') && $request->age_category !== '') {
+        if ($request->has('age_category') && in_array($request->age_category, $allowedAgeCategory)) {
             $query->where('age_category', $request->age_category);
         }
 
+        // --- Filter by progress ---
+        if ($request->has('progress') && in_array($request->progress, $allowedProgress)) {
+            $query->where('progress', $request->progress);
+
+            $progress = $request->progress;
+        } else {
+            // Better text for the page
+            $progress = 'All ASMR';
+        }
+
         // --- Filter by genre (search in both english + custom) ---
-        if ($request->has('genre') && $request->genre !== '') {
+        if ($request->has('genre') && $request->genre !== null) {
             $genre = $request->genre;
 
             $query->where(function ($q) use ($genre) {
@@ -45,14 +47,13 @@ class ProductController extends Controller
             });
         }
 
-        // --- Filter by custom genre (if given) ---
-        if ($request->has('genre_custom') && $request->genre_custom !== '') {
-            $query->whereJsonContains('genre_custom', $request->genre_custom);
+        // --- Filter by series ---
+        if ($request->has('series') && $request->series !== null) {
+            $query->where('series', $request->series);
         }
 
         // Get products
         $products = $query->get();
-
         //Sort by id (Biggest number first)
         $products = $products->sortByDesc(function ($item) {
             // Remove "RJ" prefix and cast to integer
@@ -183,13 +184,13 @@ class ProductController extends Controller
      */
     public function update(Request $request, string $id)
     {
-
         $genre_custom_input = $request->input('genre_custom'); // e.g. "tag1, tag2, , tag3"
         $genre_custom_array = array_filter(array_map('trim', explode(',', $genre_custom_input)));
 
         Product::where('id', $id)->update([
             'progress' => $request->progress,
             'score' => $request->score,
+            'series' => $request->series,
             'genre_custom' => json_encode($genre_custom_array),
             'work_name_english' => $request->work_name_english,
             'notes' => $request->notes,

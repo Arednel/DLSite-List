@@ -6995,6 +6995,12 @@ button[data-v-6d6432ac] {
     overflow: hidden
 }
 
+.image-all-works {
+    position: absolute;
+    left: 11px;
+    top: 12px;
+}
+
 @keyframes fb_transform {
     from {
         opacity: 0;

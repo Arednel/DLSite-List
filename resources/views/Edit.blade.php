@@ -145,6 +145,14 @@
 
                                                         </td>
                                                     </tr>
+
+                                                    <tr>
+                                                        <td class="borderClass" valign="top">Series</td>
+                                                        <td class="borderClass">
+                                                            <textarea id="series" name="series" class="inputtext" rows="2" cols="65">{{ $product->series }}</textarea>
+                                                        </td>
+                                                    </tr>
+
                                                     {{-- <tr>
                                                         <td class="borderClass">Start Date</td>
                                                         <td class="borderClass">
@@ -391,8 +399,8 @@
                                         <form style="text-align: right;" id="delete-form" method="POST"
                                             action="/destroy/{{ $product->id }}">
                                             @csrf
-                                            <input type="submit" class="inputButton ml8 delete_submit" value="Delete"
-                                                onclick="return openDeleteModal(event);">
+                                            <input type="submit" class="inputButton ml8 delete_submit"
+                                                value="Delete" onclick="return openDeleteModal(event);">
                                         </form>
 
                                         <br>

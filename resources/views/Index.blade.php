@@ -26,6 +26,12 @@
             </svg>
             <span class="text">Quick Add</span>
         </a>
+        <a class="icon-menu anime-list" href="/">
+            <div class="image-all-works">
+                <img src="{{ asset('images/All Works.png') }}" width="25">
+            </div>
+            <span class="text">All Works</span>
+        </a>
         <a class="icon-menu anime-list" href="/?age_category=ALL_AGES">
             <svg class="icon icon-anime-list" width="22px" height="20px" viewBox="0 0 22 20" version="1.1">
                 <g>
@@ -106,6 +112,7 @@
                             <th class="header-title image">Image</th>
                             <th class="header-title title">Title </th>
                             <th class="header-title score">Score</th>
+                            <th class="header-title Series">Series</th>
                             <th class="header-title type">Age</th>
                             <th class="header-title progress">Progress</th>
                             <th class="header-title tags">Tags</th>
@@ -131,7 +138,7 @@
                                         class="link sort" target="_blank">{{ $product->id }} -
                                         {{ $product->work_name }}</a>
                                     {{-- English title --}}
-                                    <div class="notes"><br>
+                                    <div class="notes">
                                         <div class="text notes">
                                             @if ($product->work_name != $product->work_name_english && $product->work_name_english)
                                                 {{-- English title --}}
@@ -143,9 +150,9 @@
                                     </div>
 
                                     {{-- Notes --}}
-                                    <div class="notes"><br>
+                                    <div class="notes">
                                         <div class="text notes">
-                                            {{ $product->notes }}
+                                            {!! nl2br(e($product->notes)) !!}
                                         </div>
                                     </div>
                                 </td>
@@ -156,6 +163,17 @@
                                             -
                                         @endif
                                         {{ $product->score }}
+                                    </span>
+                                </td>
+
+                                <td class="data series">
+                                    <span class="score-label score-na">
+                                        @if ($product->series == null)
+                                            -
+                                        @endif
+                                        <a href="/?series={{ $product->series }}">
+                                            {{ $product->series }}
+                                        </a>
                                     </span>
                                 </td>
 
@@ -174,9 +192,8 @@
                                     <div class="tags">
                                         @foreach (json_decode($product->genre_custom) as $genre_custom)
                                             <a
-                                                href="/?age_category={{ request('age_category') }}&progress={{ request('progress') }}&genre={{ ucwords($genre_custom) }}">
-                                                {{--  Uppercase every word --}}
-                                                {{ ucwords($genre_custom) }},
+                                                href="/?age_category={{ request('age_category') }}&progress={{ request('progress') }}&genre={{ $genre_custom }}">
+                                                {{ $genre_custom }},
                                             </a>
                                         @endforeach
 
@@ -186,7 +203,7 @@
 
                                         @foreach ($genres as $index => $genre_english)
                                             <a
-                                                href="/?age_category={{ request('age_category') }}&progress={{ request('progress') }}&genre={{ ucwords($genre_english) }}">
+                                                href="/?age_category={{ request('age_category') }}&progress={{ request('progress') }}&genre={{ $genre_english }}">
                                                 {{ $genre_english }}</a>{{ !$loop->last ? ',' : '' }}
                                         @endforeach
                                     </div>

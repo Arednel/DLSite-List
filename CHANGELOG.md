@@ -2,6 +2,12 @@
 
 ## Development
 
+* 2025-08-17 -- 0.6.0 Display by series and fixes
+  * Removed Uppercase of tags (fixed diplay by tags)
+  * Button for displaying all works
+  * Series column and display by series
+  * New lines in notes
+
 * 2025-08-16 -- 0.5.0 Display by Age, Tags
   * Default sort by id "RJ"
   * Create page changes

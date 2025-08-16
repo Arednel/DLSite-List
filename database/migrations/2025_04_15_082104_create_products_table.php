@@ -27,6 +27,7 @@ return new class extends Migration
             $table->string('notes', 1000)->nullable();
             $table->json('sample_images', 1000)->nullable();
             $table->integer('score')->nullable()->default(null);
+            $table->string('series', 1000)->nullable();
             $table->string('progress', 200)->nullable()->default('Plan to Listen');
             $table->timestamps();
         });

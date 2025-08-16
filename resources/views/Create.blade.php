@@ -86,6 +86,14 @@
 
                                                         </td>
                                                     </tr>
+
+                                                    <tr>
+                                                        <td class="borderClass" valign="top">Series</td>
+                                                        <td class="borderClass">
+                                                            <textarea id="series" name="series" class="inputtext" rows="2" cols="65"></textarea>
+                                                        </td>
+                                                    </tr>
+
                                                     {{-- <tr>
                                                         <td class="borderClass">Start Date</td>
                                                         <td class="borderClass">
