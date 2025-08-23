@@ -13,7 +13,7 @@
     <div class="header"></div>
 
     <div class="list-menu-float">
-        <a class="icon-menu quick-add List_LightBox" href="/create">
+        <a class="icon-menu quick-add List_LightBox" href="/create?redirect={{ urlencode(request()->fullUrl()) }}">
             <svg class="icon icon-quick-add" width="22px" height="20px" viewBox="0 0 22 20" version="1.1">
                 <g>
                     <path
@@ -126,7 +126,7 @@
 
                     <tbody class="list-item">
                         @foreach ($products as $product)
-                            <tr class="list-table-data">
+                            <tr class="list-table-data" id="{{ $product->id }}">
                                 <td
                                     class="data status {{ $product->progress == 'Listening' ? 'watching' : '' }} {{ $product->progress == 'Completed' ? 'completed' : '' }} {{ $product->progress == 'Plan to Listen' ? 'plantowatch' : '' }}">
                                 </td>
@@ -213,8 +213,10 @@
                                 </td>
                                 <td class="data">
                                     <div class="add-edit-more">
-                                        <span class="edit"> <a href="/edit/{{ $product->id }}"
-                                                class="List_LightBox">Edit</a></span>
+                                        <span class="edit">
+                                            <a href="/edit/{{ $product->id }}?redirect={{ urlencode(request()->fullUrl()) }}#{{ $product->id }}"
+                                                class="List_LightBox">Edit</a>
+                                        </span>
                                     </div>
                                 </td>
                             </tr>
@@ -234,122 +236,10 @@
     </footer>
 
     <style>
-        .tb_button {
-            padding: 1px;
-            cursor: pointer;
-            border-right: 1px solid #8b8b8b;
-            border-left: 1px solid #FFF;
-            border-bottom: 1px solid #fff;
-        }
 
-        .tb_button.hover {
-            borer: 2px outset #def;
-            background-color: #f8f8f8 !important;
-        }
-
-        .ws_toolbar {
-            z-index: 100000
-        }
-
-        .ws_toolbar .ws_tb_btn {
-            cursor: pointer;
-            border: 1px solid #555;
-            padding: 3px
-        }
-
-        .tb_highlight {
-            background-color: yellow
-        }
-
-        .tb_hide {
-            visibility: hidden
-        }
-
-        .ws_toolbar img {
-            padding: 2px;
-            margin: 0px
-        }
-
-        th {
-            cursor: pointer;
-            user-select: none;
-        }
-
-        .sort-icon {
-            font-size: 1.4em;
-            vertical-align: middle;
-            /* keep aligned with text */
-        }
     </style>
 
-    <script>
-        document.addEventListener("DOMContentLoaded", () => {
-            const headers = document.querySelectorAll(".list-table-header th[data-column]");
-            let currentSort = {
-                column: null,
-                order: "asc"
-            };
-
-            headers.forEach(header => {
-                header.addEventListener("click", () => {
-                    const column = header.dataset.column;
-                    const table = header.closest("table");
-                    const rows = Array.from(table.querySelectorAll(
-                        "tbody tr:not(.list-table-header)"));
-
-                    // toggle order
-                    if (currentSort.column === column) {
-                        currentSort.order = currentSort.order === "asc" ? "desc" : "asc";
-                    } else {
-                        currentSort.column = column;
-                        currentSort.order = "asc";
-                    }
-
-                    // find index of clicked column
-                    const colIndex = Array.from(header.parentNode.children).indexOf(header);
-
-                    rows.sort((a, b) => {
-                        const aText = a.children[colIndex]?.innerText.trim() || "";
-                        const bText = b.children[colIndex]?.innerText.trim() || "";
-
-                        let aVal, bVal;
-
-                        if (column.toLowerCase() === "score") {
-                            // Score: treat "-" as 0, else parse as int
-                            aVal = aText === "-" ? 0 : parseInt(aText, 10);
-                            bVal = bText === "-" ? 0 : parseInt(bText, 10);
-                        } else if (column.toLowerCase() === "title") {
-                            // Title: extract RJ number
-                            const aMatch = aText.match(/rj(\d+)/i);
-                            const bMatch = bText.match(/rj(\d+)/i);
-                            aVal = aMatch ? parseInt(aMatch[1], 10) : 0;
-                            bVal = bMatch ? parseInt(bMatch[1], 10) : 0;
-                        } else {
-                            // Fallback: numeric if possible, else text compare
-                            aVal = isNaN(aText) ? aText.toLowerCase() : parseFloat(aText) ||
-                                0;
-                            bVal = isNaN(bText) ? bText.toLowerCase() : parseFloat(bText) ||
-                                0;
-                        }
-
-                        if (aVal < bVal) return currentSort.order === "asc" ? -1 : 1;
-                        if (aVal > bVal) return currentSort.order === "asc" ? 1 : -1;
-                        return 0;
-                    });
-
-                    // reattach sorted rows
-                    const tbody = table.querySelector("tbody");
-                    tbody.querySelectorAll("tr:not(.list-table-header)").forEach(r => r.remove());
-                    rows.forEach(r => tbody.appendChild(r));
-
-                    // update sort icons
-                    headers.forEach(h => h.querySelector(".sort-icon").textContent = "⇅");
-                    header.querySelector(".sort-icon").textContent = currentSort.order === "asc" ?
-                        "↑" : "↓";
-                });
-            });
-        });
-    </script>
+    <script src="{{ asset('scripts/tableSort.js') }}"></script>
 </body>
 
 </html>

@@ -336,8 +336,10 @@
                                         </form>
 
                                         <div style="text-align: right;">
-                                            <a href="/" class="inputButton ml8 ignore-visited-link">Go
-                                                back</a>
+                                            <a href="{{ request('redirect', '/') }}"
+                                                class="inputButton ml8 ignore-visited-link">
+                                                Go back
+                                            </a>
                                         </div>
                                     </div>
                                 </td>

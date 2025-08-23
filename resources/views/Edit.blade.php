@@ -72,6 +72,10 @@
                                         <form name="edit_work" method="post" id="main-form"
                                             action="/update/{{ $product->id }}">
                                             @csrf
+
+                                            <input type="hidden" name="redirect"
+                                                value="{{ request('redirect', url('/')) }}">
+
                                             <div id="top-submit-buttons" class="mt8 mb8" style="text-align: center;">
                                                 <input type="submit" class="inputButton main_submit" value="Submit">
                                             </div>
@@ -83,7 +87,6 @@
                                                         </td>
                                                         <td class="borderClass">
                                                             <strong>
-                                                                {{-- <a href="#" target="_top"> </a> --}}
                                                                 {{ $product->id }} - {{ $product->work_name }}
                                                             </strong>
                                                         </td>
@@ -399,6 +402,10 @@
                                         <form style="text-align: right;" id="delete-form" method="POST"
                                             action="/destroy/{{ $product->id }}">
                                             @csrf
+
+                                            <input type="hidden" name="redirect"
+                                                value="{{ request('redirect', url('/')) }}">
+
                                             <input type="submit" class="inputButton ml8 delete_submit"
                                                 value="Delete" onclick="return openDeleteModal(event);">
                                         </form>
@@ -406,8 +413,10 @@
                                         <br>
 
                                         <div style="text-align: right;">
-                                            <a href="/" class="inputButton ml8 ignore-visited-link">Go
-                                                back</a>
+                                            <a href="{{ $redirect }}#{{ $product->id }}"
+                                                class="inputButton ml8 ignore-visited-link">
+                                                Go back
+                                            </a>
                                         </div>
                                     </div>
                                 </td>
@@ -430,40 +439,6 @@
     </div>
 </body>
 
-<script>
-    // Delete confirmation script
-    let deleteForm;
-
-    function openDeleteModal(event) {
-        event.preventDefault();
-        deleteForm = event.target.closest('form');
-        document.getElementById('deleteModal').style.display = 'block';
-        return false;
-    }
-
-    function closeModal() {
-        document.getElementById('deleteModal').style.display = 'none';
-    }
-
-    function confirmDeletion() {
-        if (deleteForm) {
-            deleteForm.submit();
-        }
-    }
-
-    // Optional: Close modal on ESC or outside click
-    window.onclick = function(event) {
-        const modal = document.getElementById('deleteModal');
-        if (event.target == modal) {
-            closeModal();
-        }
-    }
-
-    document.addEventListener('keydown', function(event) {
-        if (event.key === "Escape") {
-            closeModal();
-        }
-    });
-</script>
+<script src="{{ asset('scripts/deleteConfirmation.js') }}"></script>
 
 </html>

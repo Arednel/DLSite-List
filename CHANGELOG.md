@@ -2,6 +2,15 @@
 
 ## Development
 
+* 2025-08-23 -- 0.8.0 Redirect and fixes
+  * Added redirect
+    * After editing, return to the same page and scroll to the edited work
+    * "Go back" link added to Edit page
+    * Redirect progress filter is updated only when progress value changes
+  * Moved scripts and to own files
+  * Product model fix
+  * Changed sort order to "desc"
+
 * 2025-08-23 -- 0.7.0 Sorting for columns and fixes
   * Removed ',' after custom tag being a link
   * Fixed series addition on work creation

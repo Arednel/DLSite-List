@@ -160,7 +160,10 @@ class ProductController extends Controller
 
         Product::insert($data);
 
-        return redirect('/');
+        // Build redirect target
+        $redirectUrl = $request->input('redirect', '/');
+
+        return redirect($redirectUrl . '#' . $dlsite_product_id);
     }
 
     /**
@@ -174,11 +177,14 @@ class ProductController extends Controller
     /**
      * Show the form for editing the specified resource.
      */
-    public function edit(string $id)
+    public function edit(Request $request, string $id)
     {
         $product = Product::where('id', $id)->first();
 
-        return view('Edit', ['product' => $product]);
+        return view('Edit', [
+            'product' => $product,
+            'redirect' => $request->input('redirect', '/'),
+        ]);
     }
 
     /**
@@ -186,6 +192,10 @@ class ProductController extends Controller
      */
     public function update(Request $request, string $id)
     {
+        $product = Product::findOrFail($id);
+
+        $oldProgress = $product->progress;
+
         $genre_custom_input = $request->input('genre_custom'); // e.g. "tag1, tag2, , tag3"
         $genre_custom_array = array_filter(array_map('trim', explode(',', $genre_custom_input)));
 
@@ -198,13 +208,21 @@ class ProductController extends Controller
             'notes' => $request->notes,
         ]);
 
-        return redirect('/');
+        $redirect = $request->input('redirect', '/');
+
+        // only replace ?progress= if value changed
+        if ($oldProgress !== $request->progress) {
+            $redirect = preg_replace('/([?&])progress=[^&]*/', '', $redirect);
+            $redirect .= (str_contains($redirect, '?') ? '&' : '?') . 'progress=' . urlencode($request->progress);
+        }
+
+        return redirect($redirect . "#{$id}");
     }
 
     /**
      * Remove the specified resource from storage.
      */
-    public function destroy(string $id)
+    public function destroy(Request $request, string $id)
     {
         // Delete the product from DB
         Product::where('id', $id)->delete();
@@ -219,7 +237,10 @@ class ProductController extends Controller
         // Remove images directory in storage/app/public/Works/{id}
         Storage::disk('public')->deleteDirectory("Works/{$id}");
 
-        return redirect('/');
+        $redirect = $request->input('redirect', '/');
+
+        // Return to same page but no anchor (work is gone)
+        return redirect($redirect);
     }
 
     private function Scrape($workID)

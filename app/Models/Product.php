@@ -7,11 +7,10 @@ use Illuminate\Database\Eloquent\Model;
 
 class Product extends Model
 {
-    protected $primaryKey = 'dlsite_product_id';
     public $incrementing = false;
 
     protected $fillable = [
-        'dlsite_product_id',
+        'id',
         'maker_id',
         'work_name',
         'work_name_english',
@@ -21,9 +20,12 @@ class Product extends Model
         'genre',
         'genre_english',
         'genre_custom',
+        'description',
         'description_english',
+        'notes',
         'sample_images',
         'score',
+        'series',
         'progress',
     ];
 }
