@@ -2,6 +2,14 @@
 
 ## Development
 
+* 2025-08-23 -- 0.7.0 Sorting for columns and fixes
+  * Removed ',' after custom tag being a link
+  * Fixed series addition on work creation
+  * Added sorting for **Score** column (numeric 1–10, "-" treated as 0)
+  * Added sorting for **Title** column by RJ id (e.g., RJ123456)
+  * Updated sort icons to show current order (⇅, ↑, ↓)
+  * Improved default sorting behavior for non-special columns
+
 * 2025-08-17 -- 0.6.0 Display by series and fixes
   * Removed Uppercase of tags (fixed diplay by tags)
   * Button for displaying all works

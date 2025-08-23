@@ -134,6 +134,7 @@ class ProductController extends Controller
         $description = $workData['japanese']['description'];
         $description_english = $workData['english']['description'];
         $notes = $request->notes;
+        $series = $request->series;
         $sample_images = $workData['japanese']['sample_images'];
 
         $data = array(
@@ -150,6 +151,7 @@ class ProductController extends Controller
             'description' => $description,
             'description_english' => $description_english,
             'notes' => $notes,
+            'series' => $series,
             'sample_images' => json_encode($sample_images),
             'score' => $request->score,
             'progress' => $request->progress,
