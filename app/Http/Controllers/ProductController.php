@@ -52,6 +52,21 @@ class ProductController extends Controller
             $query->where('series', $request->series);
         }
 
+        // --- Search by title / series / tags / RJ ---
+        if ($request->filled('search')) {
+            $search = mb_strtolower($request->search);
+
+            $query->where(function ($q) use ($search) {
+                $q->whereRaw('LOWER(id) LIKE ?', ["%{$search}%"])
+                    ->orWhereRaw('LOWER(work_name) LIKE ?', ["%{$search}%"])
+                    ->orWhereRaw('LOWER(work_name_english) LIKE ?', ["%{$search}%"])
+                    ->orWhereRaw('LOWER(series) LIKE ?', ["%{$search}%"])
+                    ->orWhereRaw('LOWER(genre) LIKE ?', ["%{$search}%"])
+                    ->orWhereRaw('LOWER(genre_english) LIKE ?', ["%{$search}%"])
+                    ->orWhereRaw('LOWER(genre_custom) LIKE ?', ["%{$search}%"]);
+            });
+        }
+
         // Get products
         $products = $query->get();
         //Sort by id (Biggest number first)

@@ -6,6 +6,7 @@
     <meta name="viewport" content="initial-scale=1">
 
     <link rel="stylesheet" href="{{ asset('css/Index.css') }}">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.6.0/css/all.min.css">
 </head>
 
 <body class="ownlist anime" data-work="anime">
@@ -69,7 +70,49 @@
         </a>
 
     </div>
+    <style>
+        .search-container {
+            margin-left: auto;
+            display: flex;
+            align-items: center;
+            margin-top: 8px;
+        }
 
+        .search-form {
+            position: relative;
+            width: 160px;
+        }
+
+        .search-input {
+            width: 100%;
+            padding: 6px 35px 6px 10px;
+            /* leave room for icon */
+            border: 1px solid #ccc;
+            border-radius: 20px;
+            font-size: 14px;
+            outline: none;
+        }
+
+        .search-input:focus {
+            border-color: #0079d3;
+        }
+
+        .search-button {
+            position: absolute;
+            right: -40px;
+            top: 50%;
+            transform: translateY(-50%);
+            border: none;
+            background: none;
+            cursor: pointer;
+            color: #555;
+            font-size: 16px;
+        }
+
+        .search-button:hover {
+            color: #0079d3;
+        }
+    </style>
     <div id="list-container" class="list-container">
         <div class="cover-block">
             <div id="cover-image-container" class="image-container">
@@ -91,9 +134,23 @@
                 <a href="/?age_category={{ request('age_category') }}&progress=Plan to Listen"
                     class="progress-button plantowatch {{ $progress == 'Plan to Listen' ? 'on' : '' }}">
                     Plan to Listen</a>
+
+                <!-- Search -->
+                <div class="search-container">
+                    <form method="GET" action="/" class="search-form">
+                        <input type="text" name="search" value="{{ request('search') }}" placeholder="Search..."
+                            class="search-input">
+                        <button type="submit" class="search-button">
+                            <i class="fa-solid fa-magnifying-glass"></i>
+                        </button>
+
+                        <!-- keep filters in URL -->
+                        <input type="hidden" name="age_category" value="{{ request('age_category') }}">
+                        <input type="hidden" name="progress" value="{{ request('progress') }}">
+                    </form>
+                </div>
             </div>
         </div>
-
 
         <div class="list-block">
             <div class="list-unit onhold">
@@ -114,7 +171,8 @@
                             </th>
                             <th class="header-title score" data-column="Score">Score <span class="sort-icon">⇅</span>
                             </th>
-                            <th class="header-title Series" data-column="Series">Series <span class="sort-icon">⇅</span>
+                            <th class="header-title Series" data-column="Series">Series <span
+                                    class="sort-icon">⇅</span>
                             </th>
                             <th class="header-title type" data-column="Age">Age <span class="sort-icon">⇅</span></th>
                             <th class="header-title progress" data-column="Progress">Progress <span

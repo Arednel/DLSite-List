@@ -2,6 +2,9 @@
 
 ## Development
 
+* 2025-09-02 -- 0.8.1 Search
+  * Added search to index page
+
 * 2025-08-23 -- 0.8.0 Redirect and fixes
   * Added redirect
     * After editing, return to the same page and scroll to the edited work

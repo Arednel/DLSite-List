@@ -792,52 +792,6 @@ a {
 }
 
 /**
- * List Container - Status Menu - Search
- */
-.progress-menu-container .search-container {
-    position: absolute;
-    right: 18px;
-}
-
-.progress-menu-container .search-container #search-button {
-    display: inline-block;
-    height: 22px;
-    margin-top: 15px;
-    color: #CCB3B3;
-    font-size: 1.6em;
-    vertical-align: middle;
-}
-
-.progress-menu-container .search-container #search-button:hover {
-    color: #7D6A6A;
-}
-
-.progress-menu-container .search-container #search-box {
-    display: inline-block;
-    width: 0;
-    height: 22px;
-    overflow: hidden;
-    margin-top: 13px;
-    -webkit-transition: width 0.3s;
-    -moz-transition: width 0.3s;
-    transition: width 0.3s;
-    -webkit-backface-visibility: hidden;
-    vertical-align: middle;
-}
-
-.progress-menu-container .search-container #search-box.open {
-    display: inline-block;
-    width: 100px;
-}
-
-.progress-menu-container .search-container #search-box input {
-    width: 100%;
-    height: 100%;
-    box-sizing: border-box;
-}
-
-
-/**
  * List Container - List Block
  */
 .list-block {
