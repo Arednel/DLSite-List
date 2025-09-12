@@ -5,6 +5,7 @@
 2. Python modules:
     - dlsite-async
     - requests
+    - pillow
 
 ## Installation process
 #### from project folder
@@ -16,4 +17,4 @@
 ### python modules/packages installation process
 #### from project folder
 
-1. pip install --target python/modules dlsite-async requests
+1. pip install --target python/modules dlsite-async requests pillow

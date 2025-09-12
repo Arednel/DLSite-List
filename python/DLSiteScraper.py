@@ -1,9 +1,12 @@
 import sys
 import os
 
-# Add local modules folder to Python path
+# Add local modules folder to Python path, before loading modules
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "modules"))
 
+from PIL import Image
+from io import BytesIO
+import time
 import logging
 import asyncio
 import json
@@ -23,6 +26,7 @@ logging.basicConfig(
     datefmt="[%Y-%m-%d] [%H:%M:%S]",
 )
 
+
 def to_serializable(obj):
     if isinstance(obj, dict):
         return {k: to_serializable(v) for k, v in obj.items()}
@@ -36,7 +40,8 @@ def to_serializable(obj):
         return obj
     else:
         return str(obj)  # Fallback for anything weird
-    
+
+
 async def japaneseDLsite():
     async with DlsiteAPI() as api:
         return await api.get_work(workID)
@@ -46,35 +51,61 @@ async def englishDLsite():
     async with DlsiteAPI(locale="en_US") as api:
         return await api.get_work(workID)
 
-def download_image(url, save_path):
-    try:
-        # Fix protocol-relative URLs
-        if url.startswith("//"):
-            url = "https:" + url
-        elif url.startswith("/"):
-            url = "https://www.dlsite.com" + url
 
-        logging.debug(f"Attempting to download image: {url}")
+def download_image(url, save_path, retries=5, delay=5):
+    # Fix protocol-relative URLs
+    if url.startswith("//"):
+        url = "https:" + url
+    elif url.startswith("/"):
+        url = "https://www.dlsite.com" + url
 
-        headers = {
-            "User-Agent": (
-                "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
-                "AppleWebKit/537.36 (KHTML, like Gecko) "
-                "Chrome/115.0.0.0 Safari/537.36"
-            )
-        }
+    headers = {
+        "User-Agent": (
+            "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
+            "AppleWebKit/537.36 (KHTML, like Gecko) "
+            "Chrome/115.0.0.0 Safari/537.36"
+        )
+    }
 
-        response = requests.get(url, stream=True, timeout=15, headers=headers)
-        response.raise_for_status()
+    for attempt in range(1, retries + 1):
+        try:
+            logging.debug(f"Attempt {attempt}/{retries}: downloading {url}")
 
-        # Save to file
-        with open(save_path, "wb") as f:
-            for chunk in response.iter_content(8192):
-                f.write(chunk)
+            response = requests.get(url, stream=True, timeout=15, headers=headers)
+            response.raise_for_status()
 
-        logging.info(f"Downloaded {url} → {save_path}")
-    except Exception as e:
-        logging.error(f"Failed to download {url}: {e}")
+            # Save to file
+            with open(save_path, "wb") as f:
+                for chunk in response.iter_content(8192):
+                    f.write(chunk)
+
+            # Check if file is not empty
+            if os.path.getsize(save_path) == 0:
+                os.remove(save_path)
+                raise IOError("Downloaded file is empty")
+
+            # Validate image
+            try:
+                with Image.open(save_path) as img:
+                    img.verify()  # quick integrity check
+                # Re-open to ensure it can actually be loaded
+                with Image.open(save_path) as img:
+                    img.load()
+            except Exception as e:
+                os.remove(save_path)
+                raise IOError(f"Corrupted or incomplete image: {e}")
+
+            logging.info(f"Downloaded {url} → {save_path}")
+            return True
+
+        except Exception as e:
+            logging.warning(f"Download failed ({attempt}/{retries}) for {url}: {e}")
+            if attempt < retries:
+                time.sleep(delay)
+            else:
+                logging.error(f"Giving up on {url} after {retries} attempts.")
+                return False
+
 
 try:
     workJapanese = asyncio.run(japaneseDLsite())
@@ -86,10 +117,7 @@ try:
     workEnglish_serialized = to_serializable(workEnglish)
 
     # Combine and save
-    combined = {
-        "japanese": workJapanese_serialized,
-        "english": workEnglish_serialized
-    }
+    combined = {"japanese": workJapanese_serialized, "english": workEnglish_serialized}
 
     # Define save path and filename
     savePath = f"{storageDir}\\app\\Works\\"
@@ -99,9 +127,11 @@ try:
     # Save JSON
     with open(os.path.join(savePath, filename), "w", encoding="utf-8") as f:
         json.dump(combined, f, ensure_ascii=False, indent=2)
-    
+
     # After saving JSON
-    images_dir = os.path.join(storageDir, "app", "public", "Works", workJapanese.product_id)
+    images_dir = os.path.join(
+        storageDir, "app", "public", "Works", workJapanese.product_id
+    )
     os.makedirs(images_dir, exist_ok=True)
 
     # Main cover
@@ -110,11 +140,12 @@ try:
     download_image(cover_url, cover_path)
 
     # Sample images
-    for idx, img_url in enumerate(workJapanese_serialized.get("sample_images", []), start=1):
+    for idx, img_url in enumerate(
+        workJapanese_serialized.get("sample_images", []), start=1
+    ):
         img_path = os.path.join(images_dir, f"sample_{idx}.jpg")
         download_image(img_url, img_path)
 
-    logging.info(f""+workJapanese.product_id+" completed")
+    logging.info(f"" + workJapanese.product_id + " completed")
 except Exception as error:
     logging.error(f"Error occurred:\n{error}")
-

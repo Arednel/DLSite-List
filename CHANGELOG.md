@@ -2,6 +2,10 @@
 
 ## Development
 
+* 2025-09-12 -- 0.8.2 Image download
+  * Image download retry and validation
+  * Changed default to progress to "Plan to Listen"
+
 * 2025-09-02 -- 0.8.1 Search
   * Added search to index page
 

@@ -47,12 +47,12 @@
                                                         <td class="borderClass">Status</td>
                                                         <td class="borderClass">
                                                             <select id="progress" name="progress" class="inputtext">
-                                                                <option value="Completed">
-                                                                    Completed</option>
-                                                                <option value="Listening">
-                                                                    Listening</option>
                                                                 <option value="Plan to Listen">
                                                                     Plan to Listen</option>
+                                                                <option value="Listening">
+                                                                    Listening</option>
+                                                                <option value="Completed">
+                                                                    Completed</option>
                                                             </select>
                                                         </td>
                                                     </tr>

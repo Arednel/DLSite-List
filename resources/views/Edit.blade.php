@@ -95,15 +95,15 @@
                                                         <td class="borderClass">Status</td>
                                                         <td class="borderClass">
                                                             <select id="progress" name="progress" class="inputtext">
-                                                                <option value="Completed"
-                                                                    {{ $product->progress == 'Completed' ? 'selected' : '' }}>
-                                                                    Completed</option>
-                                                                <option value="Listening"
-                                                                    {{ $product->progress == 'Listening' ? 'selected' : '' }}>
-                                                                    Listening</option>
                                                                 <option value="Plan to Listen"
                                                                     {{ $product->progress == 'Plan to Listen' ? 'selected' : '' }}>
                                                                     Plan to Listen</option>
+                                                                <option value="Listening"
+                                                                    {{ $product->progress == 'Listening' ? 'selected' : '' }}>
+                                                                    Listening</option>
+                                                                <option value="Completed"
+                                                                    {{ $product->progress == 'Completed' ? 'selected' : '' }}>
+                                                                    Completed</option>
                                                             </select>
                                                         </td>
                                                     </tr>
