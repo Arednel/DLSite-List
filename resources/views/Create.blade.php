@@ -39,8 +39,11 @@
                                                         <td class="borderClass">
                                                             <strong>
                                                                 <input id="id" name="id" class="inputtext"
-                                                                    size="65">
+                                                                    size="65" required>                                                                    
                                                             </strong>
+                                                            @if ($errors->has('id'))
+                                                                <div class="text-error">{{ $errors->first('id') }}</div>
+                                                            @endif
                                                         </td>
                                                     </tr>
                                                     <tr>
@@ -308,6 +311,14 @@
                                                             </small>
                                                         </td>
                                                     </tr> --}}
+
+                                                    <tr>
+                                                        <td class="borderClass" valign="top">Title Japanese</td>
+                                                        <td class="borderClass">
+                                                            <textarea id="work_name" name="work_name" class="inputtext" rows="3" cols="65" ></textarea>
+                                                        </td>                                                        
+                                                    </tr>
+
                                                     <tr>
                                                         <td class="borderClass" valign="top">Title English</td>
                                                         <td class="borderClass">

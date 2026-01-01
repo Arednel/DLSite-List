@@ -49,7 +49,7 @@
 
     .inputButton.danger:hover {
         background-color: #c0392b;
-    }
+    }    
 </style>
 
 <body class="page-common  ownlist_manga_update" data-ms="false" data-country-code="KZ" data-time="1741691968">
@@ -89,8 +89,9 @@
                                                             <strong>
                                                                 {{ $product->id }} - {{ $product->work_name }}
                                                             </strong>
-                                                        </td>
+                                                        </td>                                                    
                                                     </tr>
+
                                                     <tr>
                                                         <td class="borderClass">Status</td>
                                                         <td class="borderClass">
@@ -371,12 +372,22 @@
                                                         </td>
                                                     </tr> --}}
 
+                                                     <tr>
+                                                        <td class="borderClass" valign="top">Title Japanese</td>
+                                                        <td class="borderClass">
+                                                            <textarea id="work_name" name="work_name" class="inputtext" rows="3" cols="65" required>{{ $product->work_name }}</textarea>
+                                                            @if ($errors->has('work_name'))
+                                                                <div class="text-error">{{ $errors->first('work_name') }}</div>
+                                                            @endif
+                                                        </td>                                                        
+                                                    </tr>
+
                                                     <tr>
                                                         <td class="borderClass" valign="top">Title English</td>
                                                         <td class="borderClass">
-                                                            <textarea id="add_manga_comments" name="work_name_english" class="inputtext" rows="2" cols="65">{{ $product->work_name_english }}</textarea>
+                                                            <textarea id="work_name_english" name="work_name_english" class="inputtext" rows="3" cols="65">{{ $product->work_name_english }}</textarea>
                                                         </td>
-                                                    </tr>
+                                                    </tr>                                                
 
                                                     <tr>
                                                         <td width="130" class="borderClass">Custom Tags</td>

@@ -5749,3 +5749,7 @@ button[data-v-6d6432ac] {
     color: white !important;
     text-decoration: none !important;
 }
+
+.text-error{
+        color:red;
+}

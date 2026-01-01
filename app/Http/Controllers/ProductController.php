@@ -88,10 +88,9 @@ class ProductController extends Controller
      */
     public function store(Request $request)
     {
-        //  Return back if null
-        if ($request->id == null) {
-            return redirect('/');
-        }
+        $request->validate([
+            'id' => 'required',
+        ]);
 
         // Get RJ Code
         if (preg_match('/RJ\d+/', $request->id, $matches)) {
@@ -123,6 +122,11 @@ class ProductController extends Controller
             }
         } else {
             $work_name_english = $request->work_name_english;
+        }
+
+        //If user passed work name - store it instead
+        if($request->work_name!=null){
+            $work_name=$request->work_name;
         }
 
         $age_category = $workData['japanese']['age_category']['_name_'];
@@ -207,6 +211,10 @@ class ProductController extends Controller
      */
     public function update(Request $request, string $id)
     {
+        $request->validate([
+            'work_name' => 'required',
+        ]);
+
         $product = Product::findOrFail($id);
 
         $oldProgress = $product->progress;
@@ -219,6 +227,7 @@ class ProductController extends Controller
             'score' => $request->score,
             'series' => $request->series,
             'genre_custom' => json_encode($genre_custom_array),
+            'work_name'=> $request->work_name,
             'work_name_english' => $request->work_name_english,
             'notes' => $request->notes,
         ]);

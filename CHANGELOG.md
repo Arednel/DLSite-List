@@ -2,6 +2,10 @@
 
 ## Development
 
+* 2026-01-01 -- 0.8.3 Japanese title change
+  * Ability to change Japanese title
+  * Better validation
+
 * 2025-09-12 -- 0.8.2 Image download
   * Image download retry and validation
   * Changed default to progress to "Plan to Listen"
