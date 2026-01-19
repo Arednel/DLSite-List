@@ -129,22 +129,22 @@
                                                                     Good</option>
                                                                 <option value="6"
                                                                     {{ $product->score == 6 ? 'selected' : '' }}>(6)
-                                                                    Fine</option>
+                                                                    Nice</option>
                                                                 <option value="5"
                                                                     {{ $product->score == 5 ? 'selected' : '' }}>(5)
                                                                     Average</option>
                                                                 <option value="4"
                                                                     {{ $product->score == 4 ? 'selected' : '' }}>(4)
-                                                                    Bad</option>
+                                                                    Below Average</option>
                                                                 <option value="3"
                                                                     {{ $product->score == 3 ? 'selected' : '' }}>(3)
-                                                                    Very Bad</option>
+                                                                    Unremarkable</option>
                                                                 <option value="2"
                                                                     {{ $product->score == 2 ? 'selected' : '' }}>(2)
-                                                                    Horrible</option>
+                                                                    Subtle</option>
                                                                 <option value="1"
                                                                     {{ $product->score == 1 ? 'selected' : '' }}>(1)
-                                                                    Appalling</option>
+                                                                    Faint</option>
                                                             </select>
 
                                                         </td>

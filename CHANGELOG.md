@@ -2,6 +2,9 @@
 
 ## Development
 
+* 2026-01-01 -- 0.8.4 Rating change
+  * Changed rating words to sound less harsh
+
 * 2026-01-01 -- 0.8.3 Japanese title change
   * Ability to change Japanese title
   * Better validation

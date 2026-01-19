@@ -74,17 +74,17 @@
                                                                 <option value="7">(7)
                                                                     Good</option>
                                                                 <option value="6">(6)
-                                                                    Fine</option>
+                                                                    Nice</option>
                                                                 <option value="5">(5)
                                                                     Average</option>
                                                                 <option value="4">(4)
-                                                                    Bad</option>
+                                                                    Below Average</option>
                                                                 <option value="3">(3)
-                                                                    Very Bad</option>
+                                                                    Unremarkable</option>
                                                                 <option value="2">(2)
-                                                                    Horrible</option>
+                                                                    Subtle</option>
                                                                 <option value="1">(1)
-                                                                    Appalling</option>
+                                                                    Faint</option>
                                                             </select>
 
                                                         </td>
