@@ -8,6 +8,7 @@ use Illuminate\Support\Facades\File;
 use Symfony\Component\Process\Process;
 use Symfony\Component\Process\Exception\ProcessFailedException;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Validation\ValidationException;
 
 class ProductController extends Controller
 {
@@ -88,14 +89,19 @@ class ProductController extends Controller
      */
     public function store(Request $request)
     {
-        $request->validate([
-            'id' => 'required',
-        ]);
+        $request->validate(
+            [
+                'id' => ['required', 'regex:/RJ\d+/'],
+            ],
+            [
+                'id.required' => 'Please enter an RJ code or a DLSite link that contains it.',
+                'id.regex'    => 'Could not find an RJ code (format: RJ + numbers) in your input.',
+            ]
+        );
 
         // Get RJ Code
-        if (preg_match('/RJ\d+/', $request->id, $matches)) {
-            $workID = $matches[0];
-        }
+        preg_match('/RJ\d+/', $request->id, $matches);
+        $workID = $matches[0];
 
         // Check if already exists
         if (Product::where('id', $workID)->exists()) {
@@ -125,8 +131,8 @@ class ProductController extends Controller
         }
 
         //If user passed work name - store it instead
-        if($request->work_name!=null){
-            $work_name=$request->work_name;
+        if ($request->work_name != null) {
+            $work_name = $request->work_name;
         }
 
         $age_category = $workData['japanese']['age_category']['_name_'];
@@ -227,7 +233,7 @@ class ProductController extends Controller
             'score' => $request->score,
             'series' => $request->series,
             'genre_custom' => json_encode($genre_custom_array),
-            'work_name'=> $request->work_name,
+            'work_name' => $request->work_name,
             'work_name_english' => $request->work_name_english,
             'notes' => $request->notes,
         ]);
@@ -273,9 +279,15 @@ class ProductController extends Controller
 
         // Run DLSiteScraper download
         $path = base_path('python/DLSiteScraper.py');
-        $modulesPath = base_path('python\modules');
 
-        $process = new Process(['py', $path, $modulesPath, $storageDir, $workID]);
+        // Run the venv's Python (Windows vs Linux/macOS)
+        $pythonExe = base_path(
+            PHP_OS_FAMILY === 'Windows'
+                ? 'python/venv/Scripts/python.exe'
+                : 'python/venv/bin/python'
+        );
+
+        $process = new Process([$pythonExe, $path, $storageDir, $workID]);
 
         // Set infinite timeout
         $process->setTimeout(0);
@@ -283,6 +295,16 @@ class ProductController extends Controller
 
         // Show any errors
         if (!$process->isSuccessful()) {
+            $stderr = trim($process->getErrorOutput());
+
+            // Show error on the previos page
+            if ($process->getExitCode() === 2 && $stderr !== '') {
+                throw ValidationException::withMessages([
+                    'id' => $stderr,
+                ]);
+            }
+
+            // Show error in Laravel
             throw new ProcessFailedException($process);
         }
     }

@@ -1,9 +1,5 @@
 import sys
 import os
-
-# Add local modules folder to Python path, before loading modules
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), "modules"))
-
 from PIL import Image
 from io import BytesIO
 import time
@@ -12,9 +8,10 @@ import asyncio
 import json
 from dlsite_async import DlsiteAPI
 import requests
+import re
 
-storageDir = sys.argv[2]
-workID = sys.argv[3]
+storageDir = sys.argv[1]
+workID = sys.argv[2]
 
 # Set the log file path and name
 log_file = os.path.join(f"{storageDir}\\logs\\DLSiteScraper.log")
@@ -106,6 +103,24 @@ def download_image(url, save_path, retries=5, delay=5):
                 logging.error(f"Giving up on {url} after {retries} attempts.")
                 return False
 
+def map_known_error(error_message: str, work_id: str):
+    """
+    Returns (user_message, exit_code) for known errors, else None.
+    Keep user_message to ONE LINE so Laravel can display it cleanly.
+    """
+    msg = (error_message or "").strip()
+
+    patterns = [
+        (f"Failed to get product info for {work_id}", "GeoBlocked DLSite work", 2),
+        (f"Not Found", "Deleted or Non-existing DLSite work", 2),
+        (f"Bad Request", "Non-existing DLSite work", 2),
+    ]
+
+    for pattern, user_message, exit_code in patterns:
+        if re.search(pattern, msg, flags=re.IGNORECASE):
+            return user_message, exit_code
+
+    return None
 
 try:
     workJapanese = asyncio.run(japaneseDLsite())
@@ -140,12 +155,21 @@ try:
     download_image(cover_url, cover_path)
 
     # Sample images
-    for idx, img_url in enumerate(
-        workJapanese_serialized.get("sample_images", []), start=1
-    ):
+    for idx, img_url in enumerate(workJapanese_serialized.get("sample_images") or [], start=1):
         img_path = os.path.join(images_dir, f"sample_{idx}.jpg")
         download_image(img_url, img_path)
 
     logging.info(f"" + workJapanese.product_id + " completed")
 except Exception as error:
+    error_message = str(error).strip()
     logging.error(f"Error occurred:\n{error}")
+
+    mapped = map_known_error(error_message, workID)
+    if mapped:
+        user_message, exit_code = mapped
+        print(user_message, file=sys.stderr)
+        sys.exit(exit_code)
+
+    # Otherwise return the raw error and exit non-zero
+    print(error_message, file=sys.stderr)
+    sys.exit(1)

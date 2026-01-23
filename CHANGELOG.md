@@ -2,6 +2,13 @@
 
 ## Development
 
+* 2026-01-23 -- 1.0.0 Python venv and Improvements
+  * Moved python modules to .venv
+  * * Adjasted python logic accordingly
+  * Added error message in cases of: inputting wrong RJ Code, RJ Geo-blocking or Deleted work
+  * Imporved controller store logic
+  * Improved controller scrape logic
+
 * 2026-01-23 -- 0.9.1 Composer version
   * Updated composer api version to 2.6.0
 
