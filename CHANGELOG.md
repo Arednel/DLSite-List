@@ -2,7 +2,11 @@
 
 ## Development
 
-* 2026-01-01 -- 0.8.4 Rating change
+* 2026-01-23 -- 0.9.0 Laravel 12
+  * Project updated to Laravel 12
+  * Update with "composer update --with-all-dependencies"
+
+* 2026-01-19 -- 0.8.4 Rating change
   * Changed rating words to sound less harsh
 
 * 2026-01-01 -- 0.8.3 Japanese title change
@@ -11,7 +15,7 @@
 
 * 2025-09-12 -- 0.8.2 Image download
   * Image download retry and validation
-  * Changed default to progress to "Plan to Listen"
+  * Changed default progress to "Plan to Listen"
 
 * 2025-09-02 -- 0.8.1 Search
   * Added search to index page
