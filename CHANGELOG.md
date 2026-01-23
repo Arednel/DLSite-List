@@ -2,6 +2,9 @@
 
 ## Development
 
+* 2026-01-23 -- 0.9.1 Composer version
+  * Updated composer api version to 2.6.0
+
 * 2026-01-23 -- 0.9.0 Laravel 12
   * Project updated to Laravel 12
   * Update with "composer update --with-all-dependencies"
