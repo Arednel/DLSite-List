@@ -3,7 +3,7 @@
 <head>
     <title>Add</title>
 
-    <link rel="stylesheet" href="{{ asset('css/Edit/Edit.css') }}">
+    <link rel="stylesheet" href="{{ asset('css/Edit/edit.css') }}">
     <link rel="stylesheet" href="{{ asset('css/Edit/dark-14047f4f0c.css') }}">
     <link rel="stylesheet" href="{{ asset('css/Edit/style-7a9b8b33de.css') }}">
 </head>

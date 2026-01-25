@@ -250,10 +250,6 @@
         </div>
     </footer>
 
-    <style>
-
-    </style>
-
     <script src="{{ asset('scripts/tableSort.js') }}"></script>
 </body>
 

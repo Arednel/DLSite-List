@@ -3,54 +3,10 @@
 <head>
     <title>Edit</title>
 
-    <link rel="stylesheet" href="{{ asset('css/Edit/Edit.css') }}">
+    <link rel="stylesheet" href="{{ asset('css/Edit/edit.css') }}">
     <link rel="stylesheet" href="{{ asset('css/Edit/dark-14047f4f0c.css') }}">
     <link rel="stylesheet" href="{{ asset('css/Edit/style-7a9b8b33de.css') }}">
 </head>
-
-<style>
-    /* Modal base styles */
-    .modal {
-        display: none;
-        position: fixed;
-        z-index: 999;
-        left: 0;
-        top: 0;
-        width: 100%;
-        height: 100%;
-        overflow: auto;
-        background-color: rgba(0, 0, 0, 0.5);
-    }
-
-    /* Modal inner box */
-    .modal-content {
-        background-color: #222;
-        color: white;
-        margin: 15% auto;
-        padding: 20px;
-        border-radius: 8px;
-        width: 350px;
-        box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
-        text-align: center;
-    }
-
-    .modal-actions {
-        margin-top: 20px;
-    }
-
-    .inputButton.danger {
-        background-color: #e74c3c;
-        color: white;
-        border: none;
-        padding: 6px 14px;
-        cursor: pointer;
-        border-radius: 4px;
-    }
-
-    .inputButton.danger:hover {
-        background-color: #c0392b;
-    }    
-</style>
 
 <body class="page-common  ownlist_manga_update" data-ms="false" data-country-code="KZ" data-time="1741691968">
     <div id="myanimelist">
@@ -89,7 +45,7 @@
                                                             <strong>
                                                                 {{ $product->id }} - {{ $product->work_name }}
                                                             </strong>
-                                                        </td>                                                    
+                                                        </td>
                                                     </tr>
 
                                                     <tr>
@@ -372,14 +328,15 @@
                                                         </td>
                                                     </tr> --}}
 
-                                                     <tr>
+                                                    <tr>
                                                         <td class="borderClass" valign="top">Title Japanese</td>
                                                         <td class="borderClass">
                                                             <textarea id="work_name" name="work_name" class="inputtext" rows="3" cols="65" required>{{ $product->work_name }}</textarea>
                                                             @if ($errors->has('work_name'))
-                                                                <div class="text-error">{{ $errors->first('work_name') }}</div>
+                                                                <div class="text-error">
+                                                                    {{ $errors->first('work_name') }}</div>
                                                             @endif
-                                                        </td>                                                        
+                                                        </td>
                                                     </tr>
 
                                                     <tr>
@@ -387,7 +344,7 @@
                                                         <td class="borderClass">
                                                             <textarea id="work_name_english" name="work_name_english" class="inputtext" rows="3" cols="65">{{ $product->work_name_english }}</textarea>
                                                         </td>
-                                                    </tr>                                                
+                                                    </tr>
 
                                                     <tr>
                                                         <td width="130" class="borderClass">Custom Tags</td>

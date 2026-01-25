@@ -2,6 +2,10 @@
 
 ## Development
 
+* 2026-01-26 -- 1.0.2 CSS Cleanip
+  * Index CSS cleanup
+  * Edit CSS cleanup
+
 * 2026-01-26 -- 1.0.1 CSS Cleanip
   * Index CSS cleanup
 
