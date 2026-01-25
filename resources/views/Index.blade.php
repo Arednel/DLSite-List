@@ -5,7 +5,7 @@
 
     <meta name="viewport" content="initial-scale=1">
 
-    <link rel="stylesheet" href="{{ asset('css/Index.css') }}">
+    <link rel="stylesheet" href="{{ asset('css/index.css') }}">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.6.0/css/all.min.css">
 </head>
 
@@ -70,49 +70,6 @@
         </a>
 
     </div>
-    <style>
-        .search-container {
-            margin-left: auto;
-            display: flex;
-            align-items: center;
-            margin-top: 8px;
-        }
-
-        .search-form {
-            position: relative;
-            width: 160px;
-        }
-
-        .search-input {
-            width: 100%;
-            padding: 6px 35px 6px 10px;
-            /* leave room for icon */
-            border: 1px solid #ccc;
-            border-radius: 20px;
-            font-size: 14px;
-            outline: none;
-        }
-
-        .search-input:focus {
-            border-color: #0079d3;
-        }
-
-        .search-button {
-            position: absolute;
-            right: -40px;
-            top: 50%;
-            transform: translateY(-50%);
-            border: none;
-            background: none;
-            cursor: pointer;
-            color: #555;
-            font-size: 16px;
-        }
-
-        .search-button:hover {
-            color: #0079d3;
-        }
-    </style>
     <div id="list-container" class="list-container">
         <div class="cover-block">
             <div id="cover-image-container" class="image-container">

@@ -2,6 +2,9 @@
 
 ## Development
 
+* 2026-01-26 -- 1.0.1 CSS Cleanip
+  * Index CSS cleanup
+
 * 2026-01-23 -- 1.0.0 Python venv and Improvements
   * Moved python modules to .venv
   * * Adjasted python logic accordingly
