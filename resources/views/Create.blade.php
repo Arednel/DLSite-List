@@ -3,9 +3,7 @@
 <head>
     <title>Add</title>
 
-    <link rel="stylesheet" href="{{ asset('css/Edit/edit.css') }}">
-    <link rel="stylesheet" href="{{ asset('css/Edit/dark-14047f4f0c.css') }}">
-    <link rel="stylesheet" href="{{ asset('css/Edit/style-7a9b8b33de.css') }}">
+    <link rel="stylesheet" href="{{ asset('css/edit.css') }}">
 </head>
 
 <body class="page-common  ownlist_manga_update" data-ms="false" data-country-code="KZ" data-time="1741691968">

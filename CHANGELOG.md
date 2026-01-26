@@ -2,11 +2,14 @@
 
 ## Development
 
-* 2026-01-26 -- 1.0.2 CSS Cleanip
+* 2026-01-26 -- 1.0.3 CSS Cleanup
+  * Further Index.blade.php and Create.blade.php cleanup
+
+* 2026-01-26 -- 1.0.2 CSS Cleanup
   * Index CSS cleanup
   * Edit CSS cleanup
 
-* 2026-01-26 -- 1.0.1 CSS Cleanip
+* 2026-01-26 -- 1.0.1 CSS Cleanup
   * Index CSS cleanup
 
 * 2026-01-23 -- 1.0.0 Python venv and Improvements

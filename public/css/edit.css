@@ -1,0 +1,511 @@
+.ignore-visited-link {
+    color: white !important;
+    text-decoration: none !important;
+}
+
+.text-error {
+    color: red;
+}
+
+/* Modal base styles */
+.modal {
+    display: none;
+    position: fixed;
+    z-index: 999;
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: 100%;
+    overflow: auto;
+    background-color: rgba(0, 0, 0, 0.5);
+}
+
+/* Modal inner box */
+.modal-content {
+    background-color: #222;
+    color: white;
+    margin: 15% auto;
+    padding: 20px;
+    border-radius: 8px;
+    width: 350px;
+    box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+    text-align: center;
+}
+
+.modal-actions {
+    margin-top: 20px;
+}
+
+.dark-mode body:not(.ownlist) {
+    background-color: #121212;
+    color: #e0e0e0
+}
+
+.dark-mode body:not(.ownlist) input,
+.dark-mode body:not(.ownlist) textarea,
+.dark-mode body:not(.ownlist) select {
+    background-color: #333;
+    border-color: #353535;
+    color: #e0e0e0
+}
+
+.dark-mode .page-common .ml8 {
+    margin-left: 8px !important
+}
+
+.dark-mode .page-common .mt8 {
+    margin-top: 8px !important
+}
+
+.dark-mode .page-common .mb8 {
+    margin-bottom: 8px !important
+}
+
+.dark-mode body:not(.ownlist) {
+    background: transparent;
+    background-color: #121212;
+    font-family: Verdana, Arial;
+    font-size: 11px;
+    margin: 0;
+    text-align: center
+}
+
+.dark-mode .page-common html {
+    height: 100%
+}
+
+.dark-mode .page-common body {
+    background-color: #121212;
+    font-family: Verdana, Arial;
+    font-size: 11px;
+    height: 100%;
+    margin: 0;
+    text-align: center;
+    -webkit-text-size-adjust: 100%
+}
+
+.dark-mode .page-common #myanimelist {
+    margin-bottom: 0;
+    margin-left: auto;
+    margin-right: auto;
+    position: relative;
+    text-align: left;
+    width: 1060px
+}
+
+.dark-mode .page-common #contentWrapper {
+    background-color: #121212;
+    min-height: 555px;
+    padding-bottom: 30px;
+    position: relative
+}
+
+.dark-mode .page-common td {
+    font-size: 11px;
+    line-height: 1.5em
+}
+
+.dark-mode .page-common a,
+.dark-mode .page-common a:visited {
+    color: #abc4ed;
+    text-decoration: none
+}
+
+.dark-mode .page-common a:hover {
+    color: #abc4ed;
+    text-decoration: underline
+}
+
+.dark-mode .page-common #content {
+    background-color: #121212;
+    border-color: #272727;
+    border-style: solid;
+    border-width: 0 1px 1px;
+    padding: 5px 10px 10px;
+    position: relative
+}
+
+.dark-mode .page-common .inputButton {
+    background-color: #4065ba;
+    border: none;
+    border-radius: 2px;
+    color: #fff;
+    cursor: pointer;
+    font-family: lucida grande, tahoma, verdana, arial, sans-serif;
+    font-size: 11px;
+    padding: 4px 8px;
+    text-decoration: none
+}
+
+.dark-mode .page-common .inputButton:disabled {
+    background-color: #5676c2;
+    color: #fff;
+    cursor: default;
+    opacity: .5
+}
+
+.dark-mode .page-common .inputtext {
+    border-color: #353535;
+    border-style: solid;
+    border-width: 1px;
+    font-family: lucida grande, tahoma, verdana, arial, sans-serif;
+    font-size: 11px;
+    padding: 2px
+}
+
+.dark-mode .page-common .textarea {
+    border-color: #353535;
+    border-style: solid;
+    border-width: 1px;
+    font-family: lucida grande, tahoma, verdana, arial, sans-serif;
+    font-size: 11px;
+    padding: 2px
+}
+
+.dark-mode .page-common .normal_header {
+    border-color: #414141;
+    border-style: solid;
+    border-width: 0 0 1px;
+    color: #e0e0e0;
+    font-size: 12px;
+    font-weight: 700;
+    margin-bottom: 5px;
+    margin-top: 4px;
+    padding: 3px 0
+}
+
+.dark-mode .page-common .h1 {
+    background-color: #222;
+    border-bottom-color: #585858;
+    border-left-color: #272727;
+    border-right-color: #272727;
+    border-style: solid;
+    border-top-color: #222;
+    border-width: 1px;
+    color: #e0e0e0;
+    font-family: Verdana, Arial;
+    font-size: 16px;
+    font-weight: 700;
+    margin: 0;
+    padding: 5px 9px;
+    text-align: left
+}
+
+.dark-mode .page-common .borderClass {
+    border-color: #272727;
+    border-style: solid;
+    border-width: 0 0 1px;
+    padding: 3px
+}
+
+.dark-mode .page-common p {
+    line-height: 1.5em;
+    margin: 0;
+    padding: 0
+}
+
+.dark-mode .dark-mode .page-common .inputtext {
+    background-color: #333
+}
+
+.dark-mode #dialog {
+    border: 10px solid #353535;
+    margin: 10px auto;
+    width: 450px
+}
+
+.dark-mode #dialog td {
+    border: 1px solid #abc4ed;
+    padding: 7px
+}
+
+.dark-mode #dialog td td {
+    border-width: 0
+}
+
+.dark-mode #dialog .inputButton.submit {
+    -webkit-appearance: none;
+    -moz-appearance: none;
+    appearance: none;
+    background-color: #799ef3;
+    border: #799ef3 0 solid;
+    border-radius: 2px;
+    color: #121212 !important;
+    cursor: pointer;
+    font-family: Helvetica neue, Helvetica, lucida grande, tahoma, verdana, arial, sans-serif;
+    font-size: 14px;
+    letter-spacing: .03em;
+    padding: 6px 16px;
+    text-align: center
+}
+
+.dark-mode #dialog .inputButton.submit:hover {
+    background-color: #5676c2;
+    color: #121212;
+    text-decoration: none
+}
+
+.dark-mode #dialog .inputButton.submit:active {
+    background-color: #5676c2
+}
+
+.dark-mode #dialog .inputButton.submit.delete {
+    background-color: #5d6c91
+}
+
+.dark-mode #dialog .inputButton.submit.delete:hover {
+    background-color: rgba(93, 108, 145, .85);
+    text-decoration: none
+}
+
+.dark-mode #dialog .inputButton.submit.delete:active {
+    background-color: #5d6c91
+}
+
+.dark-mode .dark-mode #dialog {
+    background-color: #222;
+    border: 10px solid #222 !important
+}
+
+.dark-mode .dark-mode #dialog td {
+    border: none !important
+}
+
+.dark-mode #contentWrapper {
+    margin-bottom: 0
+}
+
+.page-common .ml8 {
+    margin-left: 8px !important
+}
+
+.page-common .mt8 {
+    margin-top: 8px !important
+}
+
+.page-common .mb8 {
+    margin-bottom: 8px !important
+}
+
+body:not(.ownlist) {
+    background: transparent;
+    background-color: #fff;
+    font-family: Verdana, Arial;
+    font-size: 11px;
+    margin: 0;
+    text-align: center
+}
+
+.page-common html {
+    height: 100%
+}
+
+.page-common body {
+    background-color: #fff;
+    font-family: Verdana, Arial;
+    font-size: 11px;
+    height: 100%;
+    margin: 0;
+    text-align: center;
+    -webkit-text-size-adjust: 100%
+}
+
+.page-common #myanimelist {
+    margin-bottom: 0;
+    margin-left: auto;
+    margin-right: auto;
+    position: relative;
+    text-align: left;
+    width: 1060px
+}
+
+.page-common #contentWrapper {
+    background-color: #fff;
+    min-height: 555px;
+    padding-bottom: 30px;
+    position: relative
+}
+
+.page-common td {
+    font-size: 11px;
+    line-height: 1.5em
+}
+
+.page-common a,
+.page-common a:visited {
+    color: #1c439b;
+    text-decoration: none
+}
+
+.page-common a:hover {
+    color: #1c439b;
+    text-decoration: underline
+}
+
+.page-common #content {
+    background-color: #fff;
+    border-color: #e5e5e5;
+    border-style: solid;
+    border-width: 0 1px 1px;
+    padding: 5px 10px 10px;
+    position: relative
+}
+
+.page-common .inputButton {
+    background-color: #4065ba;
+    border: none;
+    border-radius: 2px;
+    color: #fff;
+    cursor: pointer;
+    font-family: lucida grande, tahoma, verdana, arial, sans-serif;
+    font-size: 11px;
+    padding: 4px 8px;
+    text-decoration: none
+}
+
+.page-common .inputButton:disabled {
+    background-color: #5676c2;
+    color: #fff;
+    cursor: default;
+    opacity: .5
+}
+
+.page-common .inputtext {
+    border-color: #d8d8d8;
+    border-style: solid;
+    border-width: 1px;
+    font-family: lucida grande, tahoma, verdana, arial, sans-serif;
+    font-size: 11px;
+    padding: 2px
+}
+
+.page-common .textarea {
+    border-color: #d8d8d8;
+    border-style: solid;
+    border-width: 1px;
+    font-family: lucida grande, tahoma, verdana, arial, sans-serif;
+    font-size: 11px;
+    padding: 2px
+}
+
+.page-common .normal_header {
+    border-color: #bebebe;
+    border-style: solid;
+    border-width: 0 0 1px;
+    color: #000;
+    font-size: 12px;
+    font-weight: 700;
+    margin-bottom: 5px;
+    margin-top: 4px;
+    padding: 3px 0
+}
+
+.page-common .h1 {
+    background-color: #e1e7f5;
+    border-bottom-color: #1c439b;
+    border-left-color: #e5e5e5;
+    border-right-color: #e5e5e5;
+    border-style: solid;
+    border-top-color: #e5e5e5;
+    border-width: 1px;
+    color: #000;
+    font-family: Verdana, Arial;
+    font-size: 16px;
+    font-weight: 700;
+    margin: 0;
+    padding: 5px 9px;
+    text-align: left
+}
+
+.page-common .borderClass {
+    border-color: #e5e5e5;
+    border-style: solid;
+    border-width: 0 0 1px;
+    padding: 3px
+}
+
+.page-common p {
+    line-height: 1.5em;
+    margin: 0;
+    padding: 0
+}
+
+.dark-mode .page-common .inputtext {
+    background-color: #333
+}
+
+#dialog {
+    border: 10px solid #e1e7f5;
+    margin: 10px auto;
+    width: 450px
+}
+
+#dialog td {
+    border: 1px solid #1c439b;
+    padding: 7px
+}
+
+#dialog td td {
+    border-width: 0
+}
+
+#dialog .inputButton.submit {
+    -webkit-appearance: none;
+    -moz-appearance: none;
+    appearance: none;
+    background-color: #4065ba;
+    border: #4065ba 0 solid;
+    border-radius: 2px;
+    color: #fff !important;
+    cursor: pointer;
+    font-family: Helvetica neue, Helvetica, lucida grande, tahoma, verdana, arial, sans-serif;
+    font-size: 14px;
+    letter-spacing: .03em;
+    padding: 6px 16px;
+    text-align: center
+}
+
+#dialog .inputButton.submit:hover {
+    background-color: #6c8cd8;
+    color: #fff;
+    text-decoration: none
+}
+
+#dialog .inputButton.submit:active {
+    background-color: #6c8cd8
+}
+
+#dialog .inputButton.submit.delete {
+    background-color: #8594b9
+}
+
+#dialog .inputButton.submit.delete:hover {
+    background-color: rgba(133, 148, 185, .85);
+    text-decoration: none
+}
+
+#dialog .inputButton.submit.delete:active {
+    background-color: #8594b9
+}
+
+.dark-mode #dialog {
+    background-color: #222;
+    border: 10px solid #222 !important
+}
+
+.dark-mode #dialog td {
+    border: none !important
+}
+
+#contentWrapper {
+    margin-bottom: 0
+}
+
+.inputButton.danger {
+    background-color: #e74c3c !important;
+    cursor: pointer;
+}
+
+.inputButton.danger:hover {
+    background-color: #c0392b !important;
+}

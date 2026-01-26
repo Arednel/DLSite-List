@@ -1,4 +1,4 @@
-<h2 align="center">DLSite list project with design based on MyAnimeList.net theme</h2>
+<h2 align="center">DLSite list project with design inspired by MyAnimeList.net theme</h2>
 
 ## Requirements
 1. [Python 3.10.11](https://www.python.org/downloads/release/python-31011) (tested on this version) and [pip](https://pypi.org/project/pip) (for easier installation process) 
