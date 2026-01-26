@@ -209,7 +209,7 @@
 
                                 <td id="tags" class="data tags">
                                     <div class="tags">
-                                        @foreach (json_decode($product->genre_custom) as $genre_custom)
+                                        @foreach (($product->genre_custom ?? []) as $genre_custom)
                                             <a
                                                 href="/?age_category={{ request('age_category') }}&progress={{ request('progress') }}&genre={{ $genre_custom }}">
                                                 {{ $genre_custom }}</a>,

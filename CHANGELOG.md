@@ -2,6 +2,13 @@
 
 ## Development
 
+* 2026-01-26 -- 1.0.4 Listening fields and Form Refactor
+  * Added listening fields to products (start/end dates, re-listen times/value, priority)
+  * Added migration for listening fields
+  * Added create/edit UI for listening fields with validation (including date order)
+  * Refactored create/edit forms into reusable field components
+  * Improved request validation/normalization and RJ uniqueness
+
 * 2026-01-26 -- 1.0.3 CSS Cleanup
   * Further Index.blade.php and Create.blade.php cleanup
 
@@ -15,7 +22,7 @@
 * 2026-01-23 -- 1.0.0 Python venv and Improvements
   * Moved python modules to .venv
   * * Adjasted python logic accordingly
-  * Added error message in cases of: inputting wrong RJ Code, RJ Geo-blocking or Deleted work
+  * Added error message in cases of: inputting wrong RJ Code, RJ Geo-blocking orx Deleted work
   * Imporved controller store logic
   * Improved controller scrape logic
 

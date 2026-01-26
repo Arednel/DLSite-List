@@ -3,12 +3,15 @@
 namespace App\Http\Controllers;
 
 use App\Models\Product;
+use Illuminate\Support\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\File;
 use Symfony\Component\Process\Process;
 use Symfony\Component\Process\Exception\ProcessFailedException;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\ValidationException;
+use App\Http\Requests\UpdateProductRequest;
+use App\Http\Requests\StoreProductRequest;
 
 class ProductController extends Controller
 {
@@ -81,32 +84,30 @@ class ProductController extends Controller
 
     public function create()
     {
-        return view('Create');
+        $monthLabels = collect(range(1, 12))
+            ->mapWithKeys(fn($month) => [
+                $month => Carbon::create(2000, $month, 1)->translatedFormat('M'),
+            ])
+            ->all();
+        $years = range(now()->year, 1995);
+        $days = range(1, 31);
+
+        return view('Create', [
+            'monthLabels' => $monthLabels,
+            'days' => $days,
+            'years' => $years,
+        ]);
     }
 
     /**
      * Store a newly created resource in storage.
      */
-    public function store(Request $request)
+    public function store(StoreProductRequest $request)
     {
-        $request->validate(
-            [
-                'id' => ['required', 'regex:/RJ\d+/'],
-            ],
-            [
-                'id.required' => 'Please enter an RJ code or a DLSite link that contains it.',
-                'id.regex'    => 'Could not find an RJ code (format: RJ + numbers) in your input.',
-            ]
-        );
+        $validated = $request->validated();
 
         // Get RJ Code
-        preg_match('/RJ\d+/', $request->id, $matches);
-        $workID = $matches[0];
-
-        // Check if already exists
-        if (Product::where('id', $workID)->exists()) {
-            return redirect('/');
-        }
+        $workID = $validated['id'];
 
         //Get work info from DLSite
         $this->Scrape($workID);
@@ -148,18 +149,12 @@ class ProductController extends Controller
         $genre = $workData['japanese']['genre'];
         $genre_english = $workData['english']['genre'];
 
-        if ($request->genre_custom == null) {
-            $genre_custom = '[]';
-        } else {
-            $genre_custom_input = $request->input('genre_custom'); // e.g. "tag1, tag2, , tag3"
-            $genre_custom_array = array_filter(array_map('trim', explode(',', $genre_custom_input)));
-            $genre_custom = json_encode($genre_custom_array);
-        }
+        $genre_custom = $validated['genre_custom'] ?? [];
 
         $description = $workData['japanese']['description'];
         $description_english = $workData['english']['description'];
-        $notes = $request->notes;
-        $series = $request->series;
+        $notes = $validated['notes'] ?? null;
+        $series = $validated['series'] ?? null;
         $sample_images = $workData['japanese']['sample_images'];
 
         $data = array(
@@ -178,12 +173,16 @@ class ProductController extends Controller
             'notes' => $notes,
             'series' => $series,
             'sample_images' => json_encode($sample_images),
-            'score' => $request->score,
-            'progress' => $request->progress,
-            'created_at' => now(),
+            'score' => $validated['score'] ?? null,
+            'progress' => $validated['progress'] ?? null,
+            'start_date' => $validated['start_date'] ?? null,
+            'end_date' => $validated['end_date'] ?? null,
+            'num_re_listen_times' => $validated['num_re_listen_times'] ?? null,
+            're_listen_value' => $validated['re_listen_value'] ?? null,
+            'priority' => $validated['priority'] ?? null,
         );
 
-        Product::insert($data);
+        Product::create($data);
 
         // Build redirect target
         $redirectUrl = $request->input('redirect', '/');
@@ -206,37 +205,52 @@ class ProductController extends Controller
     {
         $product = Product::where('id', $id)->first();
 
+        $startDate = is_array($product->start_date ?? null) ? $product->start_date : [];
+        $endDate = is_array($product->end_date ?? null) ? $product->end_date : [];
+
+        $monthLabels = collect(range(1, 12))
+            ->mapWithKeys(fn($month) => [
+                $month => Carbon::create(2000, $month, 1)->translatedFormat('M'),
+            ])
+            ->all();
+        $years = range(now()->year, 1995);
+        $days = range(1, 31);
+
         return view('Edit', [
             'product' => $product,
             'redirect' => $request->input('redirect', '/'),
+            'monthLabels' => $monthLabels,
+            'days' => $days,
+            'years' => $years,
         ]);
     }
 
     /**
      * Update the specified resource in storage.
      */
-    public function update(Request $request, string $id)
+    public function update(UpdateProductRequest $request, string $id)
     {
-        $request->validate([
-            'work_name' => 'required',
-        ]);
-
         $product = Product::findOrFail($id);
 
         $oldProgress = $product->progress;
 
-        $genre_custom_input = $request->input('genre_custom'); // e.g. "tag1, tag2, , tag3"
-        $genre_custom_array = array_filter(array_map('trim', explode(',', $genre_custom_input)));
+        $data = $request->validated();
 
-        Product::where('id', $id)->update([
-            'progress' => $request->progress,
-            'score' => $request->score,
-            'series' => $request->series,
-            'genre_custom' => json_encode($genre_custom_array),
-            'work_name' => $request->work_name,
-            'work_name_english' => $request->work_name_english,
-            'notes' => $request->notes,
+        $product->fill([
+            'progress' => $data['progress'] ?? null,
+            'score' => $data['score'] ?? null,
+            'series' => $data['series'] ?? null,
+            'genre_custom' => $data['genre_custom'] ?? [],
+            'work_name' => $data['work_name'],
+            'work_name_english' => $data['work_name_english'] ?? null,
+            'notes' => $data['notes'] ?? null,
+            'start_date' => $data['start_date'] ?? null,
+            'end_date' => $data['end_date'] ?? null,
+            'num_re_listen_times' => $data['num_re_listen_times'] ?? null,
+            're_listen_value' => $data['re_listen_value'] ?? null,
+            'priority' => $data['priority'] ?? null,
         ]);
+        $product->save();
 
         $redirect = $request->input('redirect', '/');
 

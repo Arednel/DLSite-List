@@ -27,5 +27,16 @@ class Product extends Model
         'score',
         'series',
         'progress',
+        'start_date',
+        'end_date',
+        'num_re_listen_times',
+        're_listen_value',
+        'priority',
+    ];
+
+    protected $casts = [
+        'genre_custom' => 'array',
+        'start_date' => 'array',
+        'end_date' => 'array',
     ];
 }
