@@ -67,7 +67,8 @@ class ProductController extends Controller
                     ->orWhereRaw('LOWER(series) LIKE ?', ["%{$search}%"])
                     ->orWhereRaw('LOWER(genre) LIKE ?', ["%{$search}%"])
                     ->orWhereRaw('LOWER(genre_english) LIKE ?', ["%{$search}%"])
-                    ->orWhereRaw('LOWER(genre_custom) LIKE ?', ["%{$search}%"]);
+                    ->orWhereRaw('LOWER(genre_custom) LIKE ?', ["%{$search}%"])
+                    ->orWhereRaw('LOWER(notes) LIKE ?', ["%{$search}%"]);
             });
         }
 

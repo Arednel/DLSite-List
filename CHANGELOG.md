@@ -2,6 +2,9 @@
 
 ## Development
 
+* 2026-02-17 -- 1.0.7 Notes Search
+  * Search now also include user notes
+
 * 2026-02-17 -- 1.0.6 Docs and Tags
   * Added project docs
   * Added ability to add tags that have comma inside
