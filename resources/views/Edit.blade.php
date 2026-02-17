@@ -4,6 +4,7 @@
     <title>Edit</title>
 
     <link rel="stylesheet" href="{{ asset('css/edit.css') }}">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/7.0.1/css/all.min.css">
 </head>
 
 <body class="page-common  ownlist_manga_update" data-ms="false" data-country-code="KZ" data-time="1741691968">
@@ -41,15 +42,13 @@
                                                     <x-fields.series-field :value="$product->series" />
                                                     <x-fields.title-japanese :value="$product->work_name" required />
                                                     <x-fields.title-english :value="$product->work_name_english" />
-                                                    <x-fields.genre-custom :value="implode(', ', $product->genre_custom ?? [])" />
+                                                    <x-fields.genre-custom :value="$genreCustomInput" />
                                                     <x-fields.notes :value="$product->notes" />
-                                                    <x-fields.start-date :month-labels="$monthLabels" :days="$days" :years="$years"
-                                                        :month-value="data_get($product->start_date, 'month')"
-                                                        :day-value="data_get($product->start_date, 'day')"
+                                                    <x-fields.start-date :month-labels="$monthLabels" :days="$days"
+                                                        :years="$years" :month-value="data_get($product->start_date, 'month')" :day-value="data_get($product->start_date, 'day')"
                                                         :year-value="data_get($product->start_date, 'year')" />
-                                                    <x-fields.finish-date :month-labels="$monthLabels" :days="$days" :years="$years"
-                                                        :month-value="data_get($product->end_date, 'month')"
-                                                        :day-value="data_get($product->end_date, 'day')"
+                                                    <x-fields.finish-date :month-labels="$monthLabels" :days="$days"
+                                                        :years="$years" :month-value="data_get($product->end_date, 'month')" :day-value="data_get($product->end_date, 'day')"
                                                         :year-value="data_get($product->end_date, 'year')" />
                                                     <x-fields.num-re-listen-times :value="$product->num_re_listen_times" />
                                                     <x-fields.re-listen-value :value="$product->re_listen_value" />

@@ -142,7 +142,13 @@ abstract class BaseProductRequest extends FormRequest
             return [];
         }
 
-        $parts = array_map('trim', explode(',', $value));
+        $value = trim($value);
+        if ($value === '') {
+            return [];
+        }
+
+        // Use CSV parsing so quoted tags can safely contain commas.
+        $parts = array_map('trim', str_getcsv($value, ',', '"', '\\'));
 
         return array_values(array_filter($parts, fn($part) => $part !== ''));
     }

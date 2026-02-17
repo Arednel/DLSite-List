@@ -215,6 +215,7 @@ class ProductController extends Controller
 
         return view('Edit', [
             'product' => $product,
+            'genreCustomInput' => $this->formatGenreCustomForInput($product->genre_custom),
             'redirect' => $request->input('redirect', '/'),
             'monthLabels' => $monthLabels,
             'days' => $days,
@@ -324,5 +325,30 @@ class ProductController extends Controller
             // Show error in Laravel
             throw new ProcessFailedException($process);
         }
+    }
+
+    private function formatGenreCustomForInput(?array $tags): string
+    {
+        if (empty($tags)) {
+            return '';
+        }
+
+        return collect($tags)
+            ->map(fn($tag) => $this->quoteCsvTag((string) $tag))
+            ->implode(', ');
+    }
+
+    private function quoteCsvTag(string $tag): string
+    {
+        $needsQuotes = str_contains($tag, ',')
+            || str_contains($tag, '"')
+            || str_contains($tag, "\n")
+            || str_contains($tag, "\r");
+
+        if (!$needsQuotes) {
+            return $tag;
+        }
+
+        return '"' . str_replace('"', '""', $tag) . '"';
     }
 }

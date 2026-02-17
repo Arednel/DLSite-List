@@ -2,6 +2,10 @@
 
 ## Development
 
+* 2026-02-17 -- 1.0.6 Docs and Tags
+  * Added project docs
+  * Added ability to add tags that have comma inside
+
 * 2026-02-17 -- 1.0.5 Tests and Cleanup
   * Cleanup and Fixes
   * Changed default mysql engine to InnoDB

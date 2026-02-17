@@ -167,6 +167,19 @@ class ProductControllerTest extends TestCase
             ->assertSee('name="redirect"', false);
     }
 
+    public function test_edit_prefills_comma_custom_tags_as_quoted_csv(): void
+    {
+        $product = Product::factory()->create([
+            'work_name' => 'EDIT_TAG_PREFILL_TOKEN',
+            'genre_custom' => ['Junior / Senior (at work, school, etc)', 'Office Lady'],
+        ]);
+
+        $this->get("/edit/{$product->id}")
+            ->assertOk()
+            ->assertSee('name="genre_custom"', false)
+            ->assertSee('"Junior / Senior (at work, school, etc)", Office Lady');
+    }
+
     public function test_store_rejects_invalid_rj_code(): void
     {
         $response = $this->from('/create')->post('/store', [
@@ -357,6 +370,29 @@ class ProductControllerTest extends TestCase
         $this->assertSame(3, $product->num_re_listen_times);
         $this->assertSame(5, $product->re_listen_value);
         $this->assertSame(2, $product->priority);
+    }
+
+    public function test_update_parses_quoted_custom_tag_with_commas_as_single_tag(): void
+    {
+        $product = Product::factory()->create([
+            'work_name' => 'QUOTED_TAGS_WORK_TOKEN',
+            'genre_custom' => ['Old Tag'],
+        ]);
+
+        $response = $this->post("/update/{$product->id}", [
+            'work_name' => $product->work_name,
+            'progress' => $product->progress,
+            'genre_custom' => '"Junior / Senior (at work, school, etc)", Office Lady',
+        ]);
+
+        $response->assertSessionHasNoErrors();
+
+        $product->refresh();
+
+        $this->assertSame(
+            ['Junior / Senior (at work, school, etc)', 'Office Lady'],
+            $product->genre_custom
+        );
     }
 
     public function test_update_redirect_rewrites_progress_when_value_changes(): void
