@@ -203,10 +203,7 @@ class ProductController extends Controller
      */
     public function edit(Request $request, string $id)
     {
-        $product = Product::where('id', $id)->first();
-
-        $startDate = is_array($product->start_date ?? null) ? $product->start_date : [];
-        $endDate = is_array($product->end_date ?? null) ? $product->end_date : [];
+        $product = Product::findOrFail($id);
 
         $monthLabels = collect(range(1, 12))
             ->mapWithKeys(fn($month) => [
@@ -268,8 +265,16 @@ class ProductController extends Controller
      */
     public function destroy(Request $request, string $id)
     {
+        $redirect = $request->input('redirect', '/');
+        $product = Product::find($id);
+
+        // Missing records should be a safe no-op.
+        if (!$product) {
+            return redirect($redirect);
+        }
+
         // Delete the product from DB
-        Product::where('id', $id)->delete();
+        $product->delete();
 
         // Remove JSON file
         $jsonPath = "app/Works/{$id}.json";
@@ -280,8 +285,6 @@ class ProductController extends Controller
 
         // Remove images directory in storage/app/public/Works/{id}
         Storage::disk('public')->deleteDirectory("Works/{$id}");
-
-        $redirect = $request->input('redirect', '/');
 
         // Return to same page but no anchor (work is gone)
         return redirect($redirect);

@@ -20,3 +20,10 @@
 2. source python/venv/bin/activate  
 2.1 # On Windows use: python\venv\Scripts\activate
 3. pip install -r python/requirements.txt
+
+## Running tests
+#### Configure test environment
+Create `.env.testing` from template and set DB credentials
+
+#### Run commands from project folder
+1. php artisan test

@@ -2,6 +2,12 @@
 
 ## Development
 
+* 2026-02-17 -- 1.0.5 Tests and Cleanup
+  * Cleanup and Fixes
+  * Changed default mysql engine to InnoDB
+  * Added ProductFactory
+  * Added tests
+
 * 2026-01-26 -- 1.0.4 Listening fields and Form Refactor
   * Added listening fields to products (start/end dates, re-listen times/value, priority)
   * Added migration for listening fields

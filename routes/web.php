@@ -3,7 +3,6 @@
 use Illuminate\Support\Facades\Route;
 
 use App\Http\Controllers\ProductController;
-use App\Http\Controllers\DLSiteScraperController;
 
 /*
 |--------------------------------------------------------------------------
@@ -18,9 +17,6 @@ use App\Http\Controllers\DLSiteScraperController;
 
 //Main Page
 Route::get('/', [ProductController::class, 'Index'])->name('index');
-
-//Currently Listening
-Route::get('/Asmr/{status}', [ProductController::class, 'Index']);
 
 Route::get('/create', [ProductController::class, 'create']);
 Route::post('/store', [ProductController::class, 'store']);
