@@ -212,8 +212,7 @@ class ProductControllerTest extends TestCase
         $this->get('/create')
             ->assertOk()
             ->assertSee('Add Work')
-            ->assertSee('Additional Genres')
-            ->assertSee('Fetched Japanese and English genres stay attached automatically.')
+            ->assertSee('Custom Tags')
             ->assertSee('name="id"', false)
             ->assertSee('id="add_start_date_month"', false)
             ->assertSee('id="add_finish_date_month"', false);
@@ -237,7 +236,6 @@ class ProductControllerTest extends TestCase
             ->assertSee($product->id)
             ->assertSee($product->work_name)
             ->assertSee($product->work_name_english)
-            ->assertSee('Fetched JP Genres')
             ->assertSee('Fetched EN Genres')
             ->assertSee('Sleep Guidance')
             ->assertSee('Sleep Guidance EN')
@@ -686,7 +684,7 @@ class ProductControllerTest extends TestCase
     {
         $product->genres()->sync(
             collect($genres)
-                ->map(fn (Genre $genre) => $genre->getKey())
+                ->map(fn(Genre $genre) => $genre->getKey())
                 ->all()
         );
     }
