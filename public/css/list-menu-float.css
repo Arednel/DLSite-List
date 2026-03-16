@@ -1,3 +1,7 @@
+.list-menu-float-shell {
+    position: relative;
+}
+
 .list-menu-float {
     position: fixed;
     display: block;
@@ -6,6 +10,11 @@
     font-size: 11px;
     border: #ee9898 1px solid;
     z-index: 3;
+}
+
+.mobile-menu-toggle,
+.list-menu-float-overlay {
+    display: none;
 }
 
 .list-menu-float .icon-menu {
@@ -68,4 +77,107 @@
     position: absolute;
     left: 11px;
     top: 12px;
+}
+
+@media (max-width: 992px) {
+    body.list-menu-mobile-open {
+        overflow: hidden;
+    }
+
+    .mobile-menu-toggle {
+        position: fixed;
+        right: 24px;
+        bottom: 24px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        width: 56px;
+        height: 56px;
+        border: 1px solid #ee9898;
+        border-radius: 16px;
+        background: linear-gradient(135deg, #fffdf8 0%, #f9e0dc 100%);
+        color: #7d6a6a;
+        cursor: pointer;
+        box-shadow: 0 10px 28px rgba(125, 106, 106, 0.2);
+        z-index: 6;
+    }
+
+    .mobile-menu-toggle svg {
+        width: 24px;
+        height: 24px;
+    }
+
+    .list-menu-float-overlay {
+        position: fixed;
+        inset: 0;
+        background: rgba(61, 46, 46, 0.28);
+        opacity: 0;
+        pointer-events: none;
+        transition: opacity 0.28s ease;
+        z-index: 4;
+    }
+
+    .list-menu-float-overlay.is-visible {
+        display: block;
+        opacity: 1;
+        pointer-events: auto;
+    }
+
+    .list-menu-float {
+        top: 0;
+        left: 0;
+        bottom: 0;
+        width: min(270px, 82vw);
+        border-top: none;
+        border-left: none;
+        border-bottom: none;
+        border-right: #ee9898 1px solid;
+        background-color: #fffdf8;
+        box-shadow: 12px 0 36px rgba(125, 106, 106, 0.18);
+        transform: translateX(calc(-100% - 12px));
+        visibility: hidden;
+        pointer-events: none;
+        transition: transform 0.28s ease;
+        z-index: 5;
+    }
+
+    .list-menu-float.is-open {
+        transform: translateX(0);
+        visibility: visible;
+        pointer-events: auto;
+    }
+
+    .list-menu-float .icon-menu {
+        width: 100%;
+        height: 56px;
+        border-bottom: #ee9898 1px solid;
+    }
+
+    .list-menu-float .icon-menu:last-child {
+        border-bottom: none;
+    }
+
+    .list-menu-float .icon-menu:not(.profile):hover {
+        width: 100%;
+        background-color: #fdf3f3;
+    }
+
+    .list-menu-float .icon-menu.quick-add svg.icon-quick-add,
+    .list-menu-float .icon-menu.anime-list svg.icon-anime-list,
+    .list-menu-float .icon-menu.manga-list svg.icon-manga-list,
+    .list-menu-float .icon-menu.statistics svg.icon-statistics,
+    .list-menu-float .image-all-works,
+    .list-menu-float .image-tag-library {
+        left: 16px;
+        top: 15px;
+    }
+
+    .list-menu-float .icon-menu .text,
+    .list-menu-float .icon-menu:hover .text {
+        top: 18px;
+        left: 56px;
+        width: auto;
+        opacity: 1;
+        font-size: 1.2em;
+    }
 }

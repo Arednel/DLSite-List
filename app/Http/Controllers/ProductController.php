@@ -2,16 +2,17 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Requests\ProductIndexRequest;
 use App\Http\Requests\StoreProductRequest;
 use App\Http\Requests\UpdateProductRequest;
 use App\Models\Genre;
 use App\Models\Product;
-use Illuminate\Database\Eloquent\Builder;
-use Illuminate\Support\Collection;
-use Illuminate\Support\Carbon;
+use App\Support\ProductIndexFilters;
+use App\Support\ProductIndexResults;
+use App\Support\TagInput;
 use Illuminate\Http\Request;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\File;
-use Illuminate\Support\Facades\DB;
 use Symfony\Component\Process\Process;
 use Symfony\Component\Process\Exception\ProcessFailedException;
 use Illuminate\Support\Facades\Storage;
@@ -22,46 +23,17 @@ class ProductController extends Controller
     /**
      * Display a listing of the resource.
      */
-    public function index(Request $request)
+    public function index(ProductIndexRequest $request, ProductIndexResults $ProductIndexResults)
     {
-        $allowedAgeCategory = ['ALL_AGES', 'R15', 'R18'];
-        $allowedProgress = ['Listening', 'Completed', 'Plan to Listen'];
-        $progress = $request->filled('progress') && in_array($request->progress, $allowedProgress, true)
-            ? $request->progress
-            : 'All ASMR';
-
-        $products = Product::query()
-            ->when(
-                $request->filled('age_category') && in_array($request->age_category, $allowedAgeCategory, true),
-                fn (Builder $query) => $query->where('age_category', $request->age_category)
-            )
-            ->when(
-                $request->filled('progress') && in_array($request->progress, $allowedProgress, true),
-                fn (Builder $query) => $query->where('progress', $request->progress)
-            )
-            ->when(
-                $request->filled('genre'),
-                fn (Builder $query) => $this->applyGenreFilter($query, (string) $request->genre)
-            )
-            ->when(
-                $request->filled('series'),
-                fn (Builder $query) => $query->where('series', $request->series)
-            )
-            ->when(
-                $request->filled('search'),
-                fn (Builder $query) => $this->applySearchFilter($query, mb_strtolower($request->search))
-            )
-            ->get()
-            ->sortByDesc(function (Product $product) {
-            // Remove "RJ" prefix and cast to integer
-                return (int) substr($product->id, 2);
-            })
-            ->values();
+        $filters = $request->filters();
+        $products = $ProductIndexResults->getProducts($filters);
 
         return view('Index', [
             'products' => $products,
-            'productGenres' => $this->loadVisibleGenresForProducts($products->pluck('id')->all()),
-            'progress' => $progress,
+            'productGenres' => $ProductIndexResults->loadVisibleGenres($products->pluck('id')->all()),
+            'filters' => $filters,
+            'filterOptions' => ProductIndexFilters::optionSets(),
+            'progress' => $filters->progressHeading(),
         ]);
     }
 
@@ -308,27 +280,7 @@ class ProductController extends Controller
 
     private function formatGenreCustomForInput(?array $tags): string
     {
-        if (empty($tags)) {
-            return '';
-        }
-
-        return collect($tags)
-            ->map(fn($tag) => $this->quoteCsvTag((string) $tag))
-            ->implode(', ');
-    }
-
-    private function quoteCsvTag(string $tag): string
-    {
-        $needsQuotes = str_contains($tag, ',')
-            || str_contains($tag, '"')
-            || str_contains($tag, "\n")
-            || str_contains($tag, "\r");
-
-        if (!$needsQuotes) {
-            return $tag;
-        }
-
-        return '"' . str_replace('"', '""', $tag) . '"';
+        return TagInput::format($tags ?? []);
     }
 
     private function buildDateFieldOptions(): array
@@ -342,62 +294,6 @@ class ProductController extends Controller
             'days' => range(1, 31),
             'years' => range(now()->year, 1995),
         ];
-    }
-
-    private function loadVisibleGenresForProducts(array $productIds): Collection
-    {
-        if ($productIds === []) {
-            return collect();
-        }
-
-        // Index only needs visible EN/custom tags, so use one lightweight query
-        // instead of hydrating genre relationships for every listed product.
-        return DB::table('genre_product')
-            ->join('genres', 'genres.id', '=', 'genre_product.genre_id')
-            ->whereIn('genre_product.product_id', $productIds)
-            ->whereIn('genres.type', [
-                Genre::TYPE_AUTO_GENERATED_ENGLISH,
-                Genre::TYPE_CUSTOM,
-            ])
-            ->orderBy('genres.title')
-            ->get([
-                'genre_product.product_id',
-                'genres.id',
-                'genres.title',
-            ])
-            ->groupBy('product_id');
-    }
-
-    private function applyGenreFilter(Builder $query, string $genreFilter): void
-    {
-        $genreFilter = trim($genreFilter);
-
-        if ($genreFilter === '') {
-            return;
-        }
-
-        $query->whereHas('genres', function (Builder $genreQuery) use ($genreFilter): void {
-            if (ctype_digit($genreFilter)) {
-                $genreQuery->whereKey((int) $genreFilter);
-                return;
-            }
-
-            $genreQuery->where('title', $genreFilter);
-        });
-    }
-
-    private function applySearchFilter(Builder $query, string $search): void
-    {
-        $query->where(function (Builder $searchQuery) use ($search): void {
-            $searchQuery->whereRaw('LOWER(id) LIKE ?', ["%{$search}%"])
-                ->orWhereRaw('LOWER(work_name) LIKE ?', ["%{$search}%"])
-                ->orWhereRaw('LOWER(work_name_english) LIKE ?', ["%{$search}%"])
-                ->orWhereRaw('LOWER(series) LIKE ?', ["%{$search}%"])
-                ->orWhereRaw('LOWER(notes) LIKE ?', ["%{$search}%"])
-                ->orWhereHas('genres', function (Builder $genreQuery) use ($search): void {
-                    $genreQuery->whereRaw('LOWER(title) LIKE ?', ["%{$search}%"]);
-                });
-        });
     }
 
     private function syncProductGenres(Product $product, array $japaneseTitles, array $englishTitles, array $customTitles): void

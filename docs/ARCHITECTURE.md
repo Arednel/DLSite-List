@@ -27,6 +27,20 @@
 - UI field components: `resources/views/components/fields/*.blade.php`
 - Scripts/CSS: `public/scripts/*`, `public/css/*`
 
+Shared UI note:
+- `resources/views/components/list-menu-float.blade.php` is reused by index/tag library
+- desktop keeps the floating hover menu
+- mobile uses a toggle button that opens the same menu as a left-side drawer
+- `resources/views/Index.blade.php` keeps the desktop table on larger screens and switches to stacked cards on mobile so search/actions still fit
+- `resources/views/Create.blade.php` and `resources/views/Edit.blade.php` use `public/css/edit.css` for both desktop and mobile form layouts
+- `resources/views/components/index/advanced-filters.blade.php` owns the index filter/sort modal markup
+- `resources/views/components/index/*.blade.php` contains the smaller reusable filter/select/radio pieces used by the index modal
+- `app/Http/Requests/ProductIndexRequest.php` builds a typed `ProductIndexFilters` object from the query string
+- `app/Enums/*.php` holds enum-backed filter options for progress, priority, tag match, sort fields, and the numeric rating scales
+- `app/Models/Product.php` owns the Laravel 12 local scopes used by index filtering/search
+- `app/Support/ProductIndexResults.php` now focuses on orchestrating product loading/sorting and the lightweight visible-genre query
+- the advanced filter modal defaults to `All tags` matching and `Desc` sort direction until the user chooses something else
+
 ## Data Model
 `products` table stores:
 - DLSite identifiers and titles
@@ -53,6 +67,8 @@ Migration note:
 
 Runtime note:
 - `ProductController@index` shows English + custom genres through one lightweight grouped query from `genre_product` + `genres`
+- index filter state is normalized into `app/Support/ProductIndexFilters.php`, which is then reused by the controller, query layer, and Blade modal
+- switching progress tabs keeps the rest of the index request state, but intentionally drops the current `genre` filter
 - create/store resolves scraped/custom titles into `genres` rows and syncs the pivot
 - edit shows fetched Japanese/English genres as read-only and keeps them attached automatically
 - update reads user-added genres from the form and reuses an existing fetched genre row when the title already exists

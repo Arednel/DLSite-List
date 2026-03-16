@@ -3,6 +3,8 @@
 <head>
     <title>Edit</title>
 
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+
     <link rel="stylesheet" href="{{ asset('css/edit.css') }}">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/7.0.1/css/all.min.css">
 </head>
@@ -16,14 +18,14 @@
                 </div>
 
                 <div id="content">
-                    <table id="dialog" cellpadding="0" cellspacing="0" style="width: 650px;">
+                    <table id="dialog" class="dialog-table" cellpadding="0" cellspacing="0">
                         <tbody>
                             <tr>
                                 <td>
-                                    <div class="normal_header" style="margin-top: 0; text-align: left;">
+                                    <div class="normal_header dialog-header">
                                         Edit Work
                                     </div>
-                                    <div style="text-align: left;">
+                                    <div class="dialog-body">
                                         <form name="edit_work" method="post" id="main-form"
                                             action="/update/{{ $product->id }}">
                                             @csrf
@@ -31,10 +33,10 @@
                                             <input type="hidden" name="redirect"
                                                 value="{{ request('redirect', url('/')) }}">
 
-                                            <div id="top-submit-buttons" class="mt8 mb8" style="text-align: center;">
+                                            <div id="top-submit-buttons" class="mt8 mb8 dialog-submit-row">
                                                 <input type="submit" class="inputButton main_submit" value="Submit">
                                             </div>
-                                            <table cellpadding="5" cellspacing="0" width="100%">
+                                            <table class="form-fields-table" cellpadding="5" cellspacing="0" width="100%">
                                                 <tbody>
                                                     <x-fields.rj-display :id="$product->id" :work-name="$product->work_name" />
                                                     <x-fields.status-select :value="$product->progress" />
@@ -57,12 +59,12 @@
                                                     <x-fields.priority :value="$product->priority" />
                                                 </tbody>
                                             </table>
-                                            <div class="mt8 mb8" style="text-align: center;">
+                                            <div class="mt8 mb8 dialog-submit-row">
                                                 <input type="submit" class="inputButton main_submit" value="Submit">
                                             </div>
                                         </form>
 
-                                        <form style="text-align: right;" id="delete-form" method="POST"
+                                        <form class="dialog-actions dialog-actions-right" id="delete-form" method="POST"
                                             action="/destroy/{{ $product->id }}">
                                             @csrf
 
@@ -75,7 +77,7 @@
 
                                         <br>
 
-                                        <div style="text-align: right;">
+                                        <div class="dialog-actions dialog-actions-right">
                                             <a href="{{ $redirect }}#{{ $product->id }}"
                                                 class="inputButton ml8 ignore-visited-link">
                                                 Go back

@@ -167,6 +167,7 @@ class ProductControllerTest extends TestCase
             ->assertSee($product->work_name)
             ->assertSee('Resolved English Tag')
             ->assertSee('Resolved Custom Tag')
+            ->assertSee('data-list-menu-toggle', false)
             ->assertDontSee('Resolved Japanese Tag');
     }
 
@@ -189,6 +190,271 @@ class ProductControllerTest extends TestCase
             ->assertDontSee($noise->work_name);
     }
 
+    public function test_progress_links_drop_current_genre_filter_from_request(): void
+    {
+        $response = $this->get('/?genre=36&search=rain&series=SERIES_ALPHA');
+
+        $response->assertOk()
+            ->assertSee('href="/?search=rain&amp;series=SERIES_ALPHA"', false)
+            ->assertSee('href="/?search=rain&amp;series=SERIES_ALPHA&amp;progress=Listening"', false)
+            ->assertSee('href="/?search=rain&amp;series=SERIES_ALPHA&amp;progress=Completed"', false)
+            ->assertSee('href="/?search=rain&amp;series=SERIES_ALPHA&amp;progress=Plan%20to%20Listen"', false)
+            ->assertDontSee('progress=Listening&amp;genre=36', false)
+            ->assertDontSee('progress=Completed&amp;genre=36', false)
+            ->assertDontSee('progress=Plan%20to%20Listen&amp;genre=36', false);
+    }
+
+    public function test_index_filters_by_extended_server_side_filter_modal_fields(): void
+    {
+        $matching = Product::factory()->create([
+            'work_name' => 'FILTER_MODAL_MATCH_TOKEN',
+            'score' => 8,
+            'priority' => 2,
+            'series' => 'FILTER_MODAL_SERIES_TOKEN',
+            'notes' => 'FILTER_MODAL_NOTES_TOKEN',
+            'num_re_listen_times' => 3,
+            're_listen_value' => 4,
+        ]);
+
+        $wrongPriority = Product::factory()->create([
+            'work_name' => 'FILTER_MODAL_WRONG_PRIORITY_TOKEN',
+            'score' => 8,
+            'priority' => 1,
+            'series' => 'FILTER_MODAL_SERIES_TOKEN',
+            'notes' => 'FILTER_MODAL_NOTES_TOKEN',
+            'num_re_listen_times' => 3,
+            're_listen_value' => 4,
+        ]);
+
+        $wrongScore = Product::factory()->create([
+            'work_name' => 'FILTER_MODAL_WRONG_SCORE_TOKEN',
+            'score' => 7,
+            'priority' => 2,
+            'series' => 'FILTER_MODAL_SERIES_TOKEN',
+            'notes' => 'FILTER_MODAL_NOTES_TOKEN',
+            'num_re_listen_times' => 3,
+            're_listen_value' => 4,
+        ]);
+
+        $wrongNotes = Product::factory()->create([
+            'work_name' => 'FILTER_MODAL_WRONG_NOTES_TOKEN',
+            'score' => 8,
+            'priority' => 2,
+            'series' => 'FILTER_MODAL_SERIES_TOKEN',
+            'notes' => 'FILTER_MODAL_OTHER_NOTES_TOKEN',
+            'num_re_listen_times' => 3,
+            're_listen_value' => 4,
+        ]);
+
+        $wrongReListen = Product::factory()->create([
+            'work_name' => 'FILTER_MODAL_WRONG_RELISTEN_TOKEN',
+            'score' => 8,
+            'priority' => 2,
+            'series' => 'FILTER_MODAL_SERIES_TOKEN',
+            'notes' => 'FILTER_MODAL_NOTES_TOKEN',
+            'num_re_listen_times' => 1,
+            're_listen_value' => 2,
+        ]);
+
+        $this->get('/?title=filter_modal_match_token&series=FILTER_MODAL_SERIES_TOKEN&score=8&priority=2&notes=filter_modal_notes_token&num_re_listen_times=3&re_listen_value=4')
+            ->assertOk()
+            ->assertSee($matching->work_name)
+            ->assertDontSee($wrongPriority->work_name)
+            ->assertDontSee($wrongScore->work_name)
+            ->assertDontSee($wrongNotes->work_name)
+            ->assertDontSee($wrongReListen->work_name)
+            ->assertSee('data-index-filter-open', false)
+            ->assertSee('data-index-filter-modal', false)
+            ->assertSee('name="title"', false)
+            ->assertSee('name="notes"', false)
+            ->assertSee('name="score"', false)
+            ->assertSee('name="priority"', false)
+            ->assertSee('name="series"', false)
+            ->assertSee('name="num_re_listen_times"', false)
+            ->assertSee('name="re_listen_value"', false)
+            ->assertSee('name="tags"', false)
+            ->assertSee('name="sort_first_field"', false)
+            ->assertSee('scripts/index-filters.js', false);
+    }
+
+    public function test_index_filter_modal_defaults_to_all_tags_and_desc_sort_direction(): void
+    {
+        $this->get('/')
+            ->assertOk()
+            ->assertSee('name="tag_match" value="all"', false)
+            ->assertDontSee('name="tag_match" value="any" checked', false)
+            ->assertSee('name="sort_first_direction" value="desc"', false)
+            ->assertDontSee('name="sort_first_direction" value="asc" checked', false)
+            ->assertSee('name="sort_second_direction" value="desc"', false)
+            ->assertDontSee('name="sort_second_direction" value="asc" checked', false);
+    }
+
+    public function test_index_filters_by_priority_exactly_including_zero(): void
+    {
+        $lowPriority = Product::factory()->create([
+            'work_name' => 'PRIORITY_LOW_TOKEN',
+            'priority' => 0,
+        ]);
+
+        $mediumPriority = Product::factory()->create([
+            'work_name' => 'PRIORITY_MEDIUM_TOKEN',
+            'priority' => 1,
+        ]);
+
+        $highPriority = Product::factory()->create([
+            'work_name' => 'PRIORITY_HIGH_TOKEN',
+            'priority' => 2,
+        ]);
+
+        $noPriority = Product::factory()->create([
+            'work_name' => 'PRIORITY_NONE_TOKEN',
+            'priority' => null,
+        ]);
+
+        $this->get('/?priority=0')
+            ->assertOk()
+            ->assertSee($lowPriority->work_name)
+            ->assertDontSee($mediumPriority->work_name)
+            ->assertDontSee($highPriority->work_name)
+            ->assertDontSee($noPriority->work_name);
+
+        $this->get('/?priority=2')
+            ->assertOk()
+            ->assertSee($highPriority->work_name)
+            ->assertDontSee($lowPriority->work_name)
+            ->assertDontSee($mediumPriority->work_name)
+            ->assertDontSee($noPriority->work_name);
+    }
+
+    public function test_index_filters_by_score_exactly(): void
+    {
+        $scoreEight = Product::factory()->create([
+            'work_name' => 'SCORE_EIGHT_TOKEN',
+            'score' => 8,
+        ]);
+
+        $scoreSeven = Product::factory()->create([
+            'work_name' => 'SCORE_SEVEN_TOKEN',
+            'score' => 7,
+        ]);
+
+        $scoreNull = Product::factory()->create([
+            'work_name' => 'SCORE_NULL_TOKEN',
+            'score' => null,
+        ]);
+
+        $this->get('/?score=8')
+            ->assertOk()
+            ->assertSee($scoreEight->work_name)
+            ->assertDontSee($scoreSeven->work_name)
+            ->assertDontSee($scoreNull->work_name);
+    }
+
+    public function test_index_filters_tags_by_any_or_all_using_csv_input_rules(): void
+    {
+        $firstTag = $this->createGenre('Junior / Senior (at work, school, etc)', Genre::TYPE_CUSTOM);
+        $secondTag = $this->createGenre('Office Lady', Genre::TYPE_CUSTOM);
+
+        $matchingAll = Product::factory()->create([
+            'work_name' => 'FILTER_TAGS_ALL_TOKEN',
+        ]);
+        $this->attachGenres($matchingAll, [$firstTag, $secondTag]);
+
+        $matchingFirstOnly = Product::factory()->create([
+            'work_name' => 'FILTER_TAGS_FIRST_TOKEN',
+        ]);
+        $this->attachGenres($matchingFirstOnly, [$firstTag]);
+
+        $matchingSecondOnly = Product::factory()->create([
+            'work_name' => 'FILTER_TAGS_SECOND_TOKEN',
+        ]);
+        $this->attachGenres($matchingSecondOnly, [$secondTag]);
+
+        $tagsQuery = rawurlencode('"Junior / Senior (at work, school, etc)", Office Lady');
+
+        $this->get("/?tags={$tagsQuery}&tag_match=any")
+            ->assertOk()
+            ->assertSee($matchingAll->work_name)
+            ->assertSee($matchingFirstOnly->work_name)
+            ->assertSee($matchingSecondOnly->work_name);
+
+        $this->get("/?tags={$tagsQuery}&tag_match=all")
+            ->assertOk()
+            ->assertSee($matchingAll->work_name)
+            ->assertDontSee($matchingFirstOnly->work_name)
+            ->assertDontSee($matchingSecondOnly->work_name);
+    }
+
+    public function test_index_sorts_by_start_and_finish_date_with_primary_and_secondary_server_side_sort(): void
+    {
+        $beta = Product::factory()->create([
+            'work_name' => 'SORT_DATE_BETA_TOKEN',
+            'start_date' => ['year' => '2024', 'month' => '01', 'day' => '01'],
+            'end_date' => ['year' => '2024', 'month' => '01', 'day' => '05'],
+        ]);
+
+        $alpha = Product::factory()->create([
+            'work_name' => 'SORT_DATE_ALPHA_TOKEN',
+            'start_date' => ['year' => '2024', 'month' => '01', 'day' => '01'],
+            'end_date' => ['year' => '2024', 'month' => '01', 'day' => '03'],
+        ]);
+
+        $gamma = Product::factory()->create([
+            'work_name' => 'SORT_DATE_GAMMA_TOKEN',
+            'start_date' => ['year' => '2023', 'month' => '12', 'day' => '31'],
+            'end_date' => ['year' => '2024', 'month' => '02', 'day' => '01'],
+        ]);
+
+        $this->get('/?sort_first_field=start_date&sort_first_direction=asc&sort_second_field=end_date&sort_second_direction=desc')
+            ->assertOk()
+            ->assertSeeInOrder([
+                $gamma->work_name,
+                $beta->work_name,
+                $alpha->work_name,
+            ]);
+    }
+
+    public function test_index_sorts_by_re_listen_fields_with_primary_and_secondary_server_side_sort(): void
+    {
+        $beta = Product::factory()->create([
+            'work_name' => 'SORT_RELISTEN_BETA_TOKEN',
+            'num_re_listen_times' => 3,
+            're_listen_value' => 5,
+        ]);
+
+        $alpha = Product::factory()->create([
+            'work_name' => 'SORT_RELISTEN_ALPHA_TOKEN',
+            'num_re_listen_times' => 3,
+            're_listen_value' => 2,
+        ]);
+
+        $gamma = Product::factory()->create([
+            'work_name' => 'SORT_RELISTEN_GAMMA_TOKEN',
+            'num_re_listen_times' => 1,
+            're_listen_value' => 4,
+        ]);
+
+        $this->get('/?sort_first_field=num_re_listen_times&sort_first_direction=asc&sort_second_field=re_listen_value&sort_second_direction=desc')
+            ->assertOk()
+            ->assertSeeInOrder([
+                $gamma->work_name,
+                $beta->work_name,
+                $alpha->work_name,
+            ]);
+    }
+
+    public function test_index_shows_empty_state_when_filters_match_nothing(): void
+    {
+        Product::factory()->create([
+            'work_name' => 'EMPTY_STATE_EXISTING_TOKEN',
+        ]);
+
+        $this->get('/?title=DOES_NOT_EXIST_TOKEN')
+            ->assertOk()
+            ->assertSee('Nothing found for the current filters.')
+            ->assertDontSee('EMPTY_STATE_EXISTING_TOKEN');
+    }
+
     public function test_tag_library_lists_clickable_english_and_custom_genres(): void
     {
         $englishGenre = $this->createGenre('Library English Tag', Genre::TYPE_AUTO_GENERATED_ENGLISH);
@@ -203,6 +469,8 @@ class ProductControllerTest extends TestCase
             ->assertSee('Library English Tag')
             ->assertSee('Library Custom Tag')
             ->assertDontSee('Library Japanese Tag')
+            ->assertSee('data-list-menu-toggle', false)
+            ->assertSee('data-list-menu-overlay', false)
             ->assertSee('genre=' . $englishGenre->getKey(), false)
             ->assertSee('genre=' . $customGenre->getKey(), false)
             ->assertSee('href="/create?redirect=', false)
@@ -214,6 +482,7 @@ class ProductControllerTest extends TestCase
         $this->get('/create')
             ->assertOk()
             ->assertSee('Add Work')
+            ->assertSee('width=device-width, initial-scale=1', false)
             ->assertSee('Custom Tags')
             ->assertSee('name="id"', false)
             ->assertSee('id="add_start_date_month"', false)
@@ -235,6 +504,7 @@ class ProductControllerTest extends TestCase
         $this->get("/edit/{$product->id}?redirect=/?progress=Listening")
             ->assertOk()
             ->assertSee('Edit Work')
+            ->assertSee('width=device-width, initial-scale=1', false)
             ->assertSee($product->id)
             ->assertSee($product->work_name)
             ->assertSee($product->work_name_english)

@@ -2,6 +2,13 @@
 
 ## Development
 
+* 2026-03-16 -- 1.2.0 Mobile version
+  * Added mobile layouts for index, create, and edit views
+  * Added a mobile slide-in version of the shared floating menu
+  * Added an advanced server-side filter/sort modal for the index page
+  * Refactored index filtering into enums, a typed filter object, model scopes, and Blade components
+  * Progress tabs now drop the current genre filter when switching list status
+
 * 2026-03-16 -- 1.1.1 Query optimization
   * Simplified index tag loading to use one lightweight grouped query for visible EN/custom genres instead of eager-loading genre relations
 

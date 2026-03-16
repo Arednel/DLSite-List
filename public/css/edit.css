@@ -222,7 +222,7 @@
 .dark-mode #dialog {
     border: 10px solid #353535;
     margin: 10px auto;
-    width: 450px
+    width: 650px
 }
 
 .dark-mode #dialog td {
@@ -448,7 +448,29 @@ body:not(.ownlist) {
 #dialog {
     border: 10px solid #e1e7f5;
     margin: 10px auto;
-    width: 450px
+    width: 650px
+}
+
+.dialog-table {
+    width: 650px;
+    max-width: 100%;
+}
+
+.dialog-header,
+.dialog-body {
+    text-align: left;
+}
+
+.dialog-submit-row {
+    text-align: center;
+}
+
+.dialog-actions {
+    margin-top: 8px;
+}
+
+.dialog-actions-right {
+    text-align: right;
 }
 
 #dialog td {
@@ -519,4 +541,139 @@ body:not(.ownlist) {
 
 .inputButton.danger:hover {
     background-color: #c0392b !important;
+}
+
+.form-fields-table .inputtext,
+.form-fields-table .textarea,
+.form-fields-table textarea,
+.form-fields-table select {
+    max-width: 100%;
+    box-sizing: border-box;
+}
+
+@media (max-width: 768px) {
+
+    .page-common body,
+    .dark-mode .page-common body,
+    .page-common td,
+    .dark-mode .page-common td,
+    .page-common .inputtext,
+    .dark-mode .page-common .inputtext,
+    .page-common .textarea,
+    .dark-mode .page-common .textarea,
+    .page-common .field-helper,
+    .dark-mode .page-common .field-helper {
+        font-size: 12px;
+    }
+
+    .page-common #myanimelist,
+    .dark-mode .page-common #myanimelist {
+        width: 100%;
+    }
+
+    .page-common #content,
+    .dark-mode .page-common #content {
+        padding: 0 8px 12px;
+        border-left-width: 0;
+        border-right-width: 0;
+    }
+
+    .page-common .h1,
+    .dark-mode .page-common .h1 {
+        border-left-width: 0;
+        border-right-width: 0;
+        padding: 10px 12px;
+    }
+
+    #dialog,
+    .dark-mode #dialog,
+    .dialog-table {
+        width: 100% !important;
+        max-width: 100%;
+        margin: 8px auto;
+        border-width: 6px;
+        box-sizing: border-box;
+    }
+
+    .dialog-submit-row .inputButton,
+    .dialog-actions .inputButton {
+        width: 100%;
+        box-sizing: border-box;
+    }
+
+    .dialog-actions .ml8 {
+        margin-left: 0 !important;
+    }
+
+    .form-fields-table,
+    .form-fields-table tbody,
+    .form-fields-table tr,
+    .form-fields-table td {
+        display: block;
+        width: 100% !important;
+        box-sizing: border-box;
+    }
+
+    .form-fields-table tr {
+        border-bottom: 1px solid #e5e5e5;
+    }
+
+    .dark-mode .form-fields-table tr {
+        border-bottom: 1px solid #272727;
+    }
+
+    .form-fields-table td {
+        padding: 4px 0;
+        border-width: 0 !important;
+    }
+
+    .form-fields-table td:first-child {
+        font-weight: bold;
+        padding-bottom: 6px;
+    }
+
+    .form-fields-table .inputtext,
+    .form-fields-table .textarea,
+    .form-fields-table textarea,
+    .form-fields-table select {
+        width: 100%;
+        min-height: 36px;
+    }
+
+    .form-fields-table textarea {
+        min-height: 96px;
+    }
+
+    .form-fields-table small {
+        display: block;
+        margin-top: 8px;
+    }
+
+    .modal-content {
+        width: min(350px, calc(100% - 32px));
+        margin: 24vh auto;
+        box-sizing: border-box;
+    }
+
+    .dark-mode .page-common .ml8 {
+        margin-left: 0 !important;
+    }
+}
+
+@media (max-width: 480px) {
+
+    .page-common #content,
+    .dark-mode .page-common #content {
+        padding: 0 6px 10px;
+    }
+
+    #dialog,
+    .dark-mode #dialog {
+        border-width: 4px;
+    }
+
+    .page-common .inputButton,
+    .dark-mode .page-common .inputButton {
+        padding: 8px 10px;
+    }
 }

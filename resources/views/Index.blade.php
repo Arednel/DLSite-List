@@ -3,7 +3,7 @@
 <head>
     <title>DLSite List</title>
 
-    <meta name="viewport" content="initial-scale=1">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
 
     <link rel="stylesheet" href="{{ asset('css/index.css') }}">
     <link rel="stylesheet" href="{{ asset('css/list-menu-float.css') }}">
@@ -11,6 +11,9 @@
 </head>
 
 <body class="ownlist anime" data-work="anime">
+    @php($filterQuery = $filters->toQuery())
+    @php($allProgressQuery = collect($filterQuery)->except(['progress', 'genre'])->all())
+    @php($searchFormQuery = collect($filterQuery)->except('search')->all())
 
     <div class="header"></div>
 
@@ -25,31 +28,32 @@
 
         <div id="progress-menu" class="progress-menu-container">
             <div class="progress-menu">
-                <a href="/?age_category={{ request('age_category') }}"
+                <a href="{{ route('index', $allProgressQuery, false) }}"
                     class="progress-button all_anime {{ $progress == 'All ASMR' ? 'on' : '' }}">
                     All ASMR</a>
-                <a href="/?age_category={{ request('age_category') }}&progress=Listening"
+                <a href="{{ route('index', array_merge($allProgressQuery, ['progress' => 'Listening']), false) }}"
                     class="progress-button watching {{ $progress == 'Listening' ? 'on' : '' }}">
                     Currently Listening</a>
-                <a href="/?age_category={{ request('age_category') }}&progress=Completed"
+                <a href="{{ route('index', array_merge($allProgressQuery, ['progress' => 'Completed']), false) }}"
                     class="progress-button completed {{ $progress == 'Completed' ? 'on' : '' }}">
                     Completed</a>
-                <a href="/?age_category={{ request('age_category') }}&progress=Plan to Listen"
+                <a href="{{ route('index', array_merge($allProgressQuery, ['progress' => 'Plan to Listen']), false) }}"
                     class="progress-button plantowatch {{ $progress == 'Plan to Listen' ? 'on' : '' }}">
                     Plan to Listen</a>
 
                 <!-- Search -->
                 <div class="search-container">
-                    <form method="GET" action="/" class="search-form">
-                        <input type="text" name="search" value="{{ request('search') }}" placeholder="Search..."
+                    <form method="GET" action="{{ route('index') }}" class="search-form">
+                        <input type="text" name="search" value="{{ $filterQuery['search'] ?? '' }}"
+                            placeholder="Search..."
                             class="search-input">
                         <button type="submit" class="search-button">
                             <i class="fa-solid fa-magnifying-glass"></i>
                         </button>
 
-                        <!-- keep filters in URL -->
-                        <input type="hidden" name="age_category" value="{{ request('age_category') }}">
-                        <input type="hidden" name="progress" value="{{ request('progress') }}">
+                        @foreach ($searchFormQuery as $queryKey => $queryValue)
+                            <input type="hidden" name="{{ $queryKey }}" value="{{ $queryValue }}">
+                        @endforeach
                     </form>
                 </div>
             </div>
@@ -62,6 +66,7 @@
                     <span class="text">
                         {{ $progress }}
                     </span>
+                    <x-index.advanced-filters :filters="$filters" :filter-options="$filterOptions" />
                 </div>
 
                 <table class="list-table">
@@ -85,18 +90,18 @@
                     </tbody>
 
                     <tbody class="list-item">
-                        @foreach ($products as $product)
+                        @forelse ($products as $product)
                             <tr class="list-table-data" id="{{ $product->id }}">
                                 <td
                                     class="data status {{ $product->progress == 'Listening' ? 'watching' : '' }} {{ $product->progress == 'Completed' ? 'completed' : '' }} {{ $product->progress == 'Plan to Listen' ? 'plantowatch' : '' }}">
                                 </td>
                                 <td class="data number"></td>
-                                <td class="data image"><a
+                                <td class="data image" data-label="Image"><a
                                         href="https://www.dlsite.com/maniax/work/=/product_id/{{ $product->id }}.html"
                                         class="link sort" target="_blank">
                                         <img src="{{ $product->work_image }}" class="image"></a>
                                 </td>
-                                <td class="data title clearfix">
+                                <td class="data title clearfix" data-label="Title">
                                     {{-- Japanese title --}}
                                     <a href="https://www.dlsite.com/maniax/work/=/product_id/{{ $product->id }}.html"
                                         class="link sort" target="_blank">{{ $product->id }} -
@@ -121,7 +126,7 @@
                                     </div>
                                 </td>
 
-                                <td class="data score">
+                                <td class="data score" data-label="Score">
                                     <span class="score-label score-na">
                                         @if ($product->score == null)
                                             -
@@ -130,38 +135,40 @@
                                     </span>
                                 </td>
 
-                                <td class="data series">
+                                <td class="data series" data-label="Series">
                                     <span class="score-label score-na">
                                         @if ($product->series == null)
                                             -
+                                        @else
+                                            <a
+                                                href="{{ route('index', array_merge($filterQuery, ['series' => $product->series]), false) }}">
+                                                {{ $product->series }}
+                                            </a>
                                         @endif
-                                        <a href="/?series={{ $product->series }}">
-                                            {{ $product->series }}
-                                        </a>
                                     </span>
                                 </td>
 
-                                <td class="data type">
+                                <td class="data type" data-label="Age">
                                     @if ($product->age_category == 'ALL_AGES')
                                         All Ages
                                     @else
                                         {{ $product->age_category }}
                                     @endif
                                 </td>
-                                <td class="data progress">
+                                <td class="data progress" data-label="Progress">
                                     <div class="progress"><span>{{ $product->progress }}</span> </div>
                                 </td>
 
-                                <td id="tags" class="data tags">
+                                <td id="tags" class="data tags" data-label="Tags">
                                     <div class="tags">
                                         @foreach ($productGenres->get($product->id, collect()) as $genre)
                                             <a
-                                                href="/?age_category={{ request('age_category') }}&progress={{ request('progress') }}&genre={{ $genre->id }}">
+                                                href="{{ route('index', array_merge($filterQuery, ['genre' => $genre->id]), false) }}">
                                                 {{ $genre->title }}</a>{{ !$loop->last ? ',' : '' }}
                                         @endforeach
                                     </div>
                                 </td>
-                                <td class="data">
+                                <td class="data actions" data-label="Actions">
                                     <div class="add-edit-more">
                                         <span class="edit">
                                             <a href="/edit/{{ $product->id }}?redirect={{ urlencode(request()->fullUrl()) }}#{{ $product->id }}"
@@ -170,7 +177,13 @@
                                     </div>
                                 </td>
                             </tr>
-                        @endforeach
+                        @empty
+                            <tr class="list-table-empty-row">
+                                <td class="list-table-empty" colspan="10">
+                                    Nothing found for the current filters.
+                                </td>
+                            </tr>
+                        @endforelse
                     </tbody>
                 </table>
             </div>
