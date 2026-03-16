@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use App\Models\Genre;
 use App\Models\Product;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
@@ -16,33 +17,36 @@ class ProductControllerTest extends TestCase
         $alphaName = "FILTER_ALPHA_{$token}";
         $betaName = "FILTER_BETA_{$token}";
         $gammaName = "FILTER_GAMMA_{$token}";
+        $calmFocus = $this->createGenre('CalmFocus', Genre::TYPE_CUSTOM);
+        $nightTag = $this->createGenre('NightTag', Genre::TYPE_CUSTOM);
+        $dayTag = $this->createGenre('DayTag', Genre::TYPE_CUSTOM);
+        $ambientAlpha = $this->createGenre('AmbientAlpha', Genre::TYPE_AUTO_GENERATED_ENGLISH);
+        $darkNight = $this->createGenre('DarkNight', Genre::TYPE_AUTO_GENERATED_ENGLISH);
+        $mindfulGenre = $this->createGenre('MindfulGenre', Genre::TYPE_AUTO_GENERATED_ENGLISH);
 
         $alpha = Product::factory()->create([
             'work_name' => $alphaName,
             'age_category' => 'ALL_AGES',
             'progress' => 'Listening',
             'series' => 'SERIES_ALPHA',
-            'genre_english' => json_encode(['AmbientAlpha']),
-            'genre_custom' => ['CalmFocus'],
         ]);
+        $this->attachGenres($alpha, [$ambientAlpha, $calmFocus]);
 
         $beta = Product::factory()->create([
             'work_name' => $betaName,
             'age_category' => 'R18',
             'progress' => 'Completed',
             'series' => 'SERIES_BETA',
-            'genre_english' => json_encode(['DarkNight']),
-            'genre_custom' => ['NightTag'],
         ]);
+        $this->attachGenres($beta, [$darkNight, $nightTag]);
 
         $gamma = Product::factory()->create([
             'work_name' => $gammaName,
             'age_category' => 'ALL_AGES',
             'progress' => 'Completed',
             'series' => 'SERIES_ALPHA',
-            'genre_english' => json_encode(['MindfulGenre']),
-            'genre_custom' => ['DayTag'],
         ]);
+        $this->attachGenres($gamma, [$mindfulGenre, $dayTag]);
 
         $this->get('/?age_category=ALL_AGES')
             ->assertOk()
@@ -75,7 +79,7 @@ class ProductControllerTest extends TestCase
             ->assertDontSee($beta->work_name);
     }
 
-    public function test_index_search_matches_id_titles_series_and_genre_json_text(): void
+    public function test_index_search_matches_id_titles_series_and_related_genres(): void
     {
         $token = $this->uniqueToken('SEARCH');
         $jpToken = "SEARCH_JP_{$token}";
@@ -83,22 +87,25 @@ class ProductControllerTest extends TestCase
         $seriesToken = "SEARCH_SERIES_{$token}";
         $genreToken = "SEARCH_GENRE_{$token}";
         $noiseToken = "SEARCH_NOISE_{$token}";
+        $customToken = "SEARCH_CUSTOM_{$token}";
+        $genre = $this->createGenre($genreToken, Genre::TYPE_AUTO_GENERATED_ENGLISH);
+        $customGenre = $this->createGenre($customToken, Genre::TYPE_CUSTOM);
+        $noiseGenre = $this->createGenre("SEARCH_NOISE_GENRE_{$token}", Genre::TYPE_AUTO_GENERATED_ENGLISH);
+        $noiseCustomGenre = $this->createGenre("SEARCH_NOISE_CUSTOM_{$token}", Genre::TYPE_CUSTOM);
 
         $target = Product::factory()->create([
             'work_name' => $jpToken,
             'work_name_english' => $enToken,
             'series' => $seriesToken,
-            'genre_english' => json_encode([$genreToken]),
-            'genre_custom' => ["SEARCH_CUSTOM_{$token}"],
         ]);
+        $this->attachGenres($target, [$genre, $customGenre]);
 
         $noise = Product::factory()->create([
             'work_name' => $noiseToken,
             'work_name_english' => "SEARCH_NOISE_EN_{$token}",
             'series' => "SEARCH_NOISE_SERIES_{$token}",
-            'genre_english' => json_encode(["SEARCH_NOISE_GENRE_{$token}"]),
-            'genre_custom' => ["SEARCH_NOISE_CUSTOM_{$token}"],
         ]);
+        $this->attachGenres($noise, [$noiseGenre, $noiseCustomGenre]);
 
         $this->get('/?search=' . strtolower($target->id))
             ->assertOk()
@@ -124,6 +131,11 @@ class ProductControllerTest extends TestCase
             ->assertOk()
             ->assertSee($target->work_name)
             ->assertDontSee($noise->work_name);
+
+        $this->get('/?search=' . strtolower($customToken))
+            ->assertOk()
+            ->assertSee($target->work_name)
+            ->assertDontSee($noise->work_name);
     }
 
     public function test_index_ignores_invalid_filter_values(): void
@@ -139,11 +151,69 @@ class ProductControllerTest extends TestCase
             ->assertSee($beta->work_name);
     }
 
+    public function test_index_displays_titles_from_related_genres(): void
+    {
+        $englishGenre = $this->createGenre('Resolved English Tag', Genre::TYPE_AUTO_GENERATED_ENGLISH);
+        $customGenre = $this->createGenre('Resolved Custom Tag', Genre::TYPE_CUSTOM);
+
+        $product = Product::factory()->create([
+            'work_name' => 'RESOLVED_GENRE_DISPLAY_TOKEN',
+        ]);
+        $this->attachGenres($product, [$englishGenre, $customGenre]);
+
+        $this->get('/')
+            ->assertOk()
+            ->assertSee($product->work_name)
+            ->assertSee('Resolved English Tag')
+            ->assertSee('Resolved Custom Tag');
+    }
+
+    public function test_index_filters_by_genre_id_from_view_links(): void
+    {
+        $sharedGenre = $this->createGenre('Linked Tag', Genre::TYPE_AUTO_GENERATED_ENGLISH);
+
+        $matching = Product::factory()->create([
+            'work_name' => 'GENRE_ID_MATCH_TOKEN',
+        ]);
+        $this->attachGenres($matching, [$sharedGenre]);
+
+        $noise = Product::factory()->create([
+            'work_name' => 'GENRE_ID_NOISE_TOKEN',
+        ]);
+
+        $this->get('/?genre=' . $sharedGenre->getKey())
+            ->assertOk()
+            ->assertSee($matching->work_name)
+            ->assertDontSee($noise->work_name);
+    }
+
+    public function test_tag_library_lists_clickable_english_and_custom_genres(): void
+    {
+        $englishGenre = $this->createGenre('Library English Tag', Genre::TYPE_AUTO_GENERATED_ENGLISH);
+        $customGenre = $this->createGenre('Library Custom Tag', Genre::TYPE_CUSTOM);
+        $this->createGenre('Library Japanese Tag', Genre::TYPE_AUTO_GENERATED_JAPANESE);
+
+        $response = $this->from('/?progress=Listening')->get('/tags');
+
+        $response->assertOk()
+            ->assertSee('Tag Library')
+            ->assertSee('Quick Add')
+            ->assertSee('Library English Tag')
+            ->assertSee('Library Custom Tag')
+            ->assertDontSee('Library Japanese Tag')
+            ->assertSee('genre=' . $englishGenre->getKey(), false)
+            ->assertSee('genre=' . $customGenre->getKey(), false)
+            ->assertSee('href="/create?redirect=', false)
+            ->assertDontSee('hero__back', false);
+    }
+
     public function test_create_renders_form_page(): void
     {
         $this->get('/create')
             ->assertOk()
             ->assertSee('Add Work')
+            ->assertSee('Additional Genres')
+            ->assertSee('Fetched Japanese and English genres stay attached automatically.')
             ->assertSee('name="id"', false)
             ->assertSee('id="add_start_date_month"', false)
             ->assertSee('id="add_finish_date_month"', false);
@@ -151,11 +221,15 @@ class ProductControllerTest extends TestCase
 
     public function test_edit_renders_form_page_for_existing_product(): void
     {
+        $japaneseGenre = $this->createGenre('Sleep Guidance', Genre::TYPE_AUTO_GENERATED_JAPANESE);
+        $englishGenre = $this->createGenre('Sleep Guidance EN', Genre::TYPE_AUTO_GENERATED_ENGLISH);
+
         $product = Product::factory()->create([
             'work_name' => 'EDIT_VIEW_NAME_TOKEN',
             'work_name_english' => 'EDIT_VIEW_EN_TOKEN',
             'notes' => 'EDIT_VIEW_NOTES_TOKEN',
         ]);
+        $this->attachGenres($product, [$japaneseGenre, $englishGenre]);
 
         $this->get("/edit/{$product->id}?redirect=/?progress=Listening")
             ->assertOk()
@@ -163,6 +237,10 @@ class ProductControllerTest extends TestCase
             ->assertSee($product->id)
             ->assertSee($product->work_name)
             ->assertSee($product->work_name_english)
+            ->assertSee('Fetched JP Genres')
+            ->assertSee('Fetched EN Genres')
+            ->assertSee('Sleep Guidance')
+            ->assertSee('Sleep Guidance EN')
             ->assertSee($product->notes)
             ->assertSee('name="redirect"', false);
     }
@@ -171,7 +249,10 @@ class ProductControllerTest extends TestCase
     {
         $product = Product::factory()->create([
             'work_name' => 'EDIT_TAG_PREFILL_TOKEN',
-            'genre_custom' => ['Junior / Senior (at work, school, etc)', 'Office Lady'],
+        ]);
+        $this->attachGenres($product, [
+            $this->createGenre('Junior / Senior (at work, school, etc)', Genre::TYPE_CUSTOM),
+            $this->createGenre('Office Lady', Genre::TYPE_CUSTOM),
         ]);
 
         $this->get("/edit/{$product->id}")
@@ -307,15 +388,18 @@ class ProductControllerTest extends TestCase
 
     public function test_update_requires_work_name_and_saves_listening_fields(): void
     {
+        $oldCustomGenre = $this->createGenre('OldTag', Genre::TYPE_CUSTOM);
+        $existingEnglishGenre = $this->createGenre('Existing English Genre', Genre::TYPE_AUTO_GENERATED_ENGLISH);
+
         $product = Product::factory()->create([
             'work_name' => 'UPDATE_OLD_NAME_TOKEN',
             'work_name_english' => 'UPDATE_OLD_EN_TOKEN',
             'progress' => 'Plan to Listen',
             'score' => null,
             'series' => null,
-            'genre_custom' => ['OldTag'],
             'notes' => null,
         ]);
+        $this->attachGenres($product, [$oldCustomGenre, $existingEnglishGenre]);
 
         $this->from("/edit/{$product->id}")
             ->post("/update/{$product->id}", [
@@ -352,14 +436,21 @@ class ProductControllerTest extends TestCase
 
         $response->assertSessionHasNoErrors();
 
-        $product->refresh();
+        $product->refresh()->load(['customGenres', 'englishGenres']);
 
         $this->assertSame('UPDATE_NEW_NAME_TOKEN', $product->work_name);
         $this->assertSame('UPDATE_NEW_EN_TOKEN', $product->work_name_english);
         $this->assertSame('Completed', $product->progress);
         $this->assertSame(9, $product->score);
         $this->assertSame('UPDATE_SERIES_TOKEN', $product->series);
-        $this->assertSame(['Tag One', 'Tag Two'], $product->genre_custom);
+        $this->assertEqualsCanonicalizing(
+            ['Tag One', 'Tag Two'],
+            $product->customGenres->pluck('title')->all()
+        );
+        $this->assertSame(
+            ['Existing English Genre'],
+            $product->englishGenres->pluck('title')->all()
+        );
         $this->assertSame("Line 1\nLine 2", $product->notes);
         $this->assertSame('03', (string) data_get($product->start_date, 'month'));
         $this->assertSame('01', (string) data_get($product->start_date, 'day'));
@@ -376,7 +467,9 @@ class ProductControllerTest extends TestCase
     {
         $product = Product::factory()->create([
             'work_name' => 'QUOTED_TAGS_WORK_TOKEN',
-            'genre_custom' => ['Old Tag'],
+        ]);
+        $this->attachGenres($product, [
+            $this->createGenre('Old Tag', Genre::TYPE_CUSTOM),
         ]);
 
         $response = $this->post("/update/{$product->id}", [
@@ -387,12 +480,42 @@ class ProductControllerTest extends TestCase
 
         $response->assertSessionHasNoErrors();
 
-        $product->refresh();
+        $product->refresh()->load('customGenres');
+
+        $this->assertEqualsCanonicalizing(
+            ['Junior / Senior (at work, school, etc)', 'Office Lady'],
+            $product->customGenres->pluck('title')->all()
+        );
+    }
+
+    public function test_update_attaches_existing_auto_generated_genre_when_user_adds_matching_title(): void
+    {
+        $existingGenre = $this->createGenre('Existing Auto Genre', Genre::TYPE_AUTO_GENERATED_ENGLISH);
+
+        $product = Product::factory()->create([
+            'work_name' => 'MATCH_EXISTING_GENRE_TOKEN',
+        ]);
+
+        $response = $this->post("/update/{$product->id}", [
+            'work_name' => $product->work_name,
+            'progress' => $product->progress,
+            'genre_custom' => 'Existing Auto Genre',
+        ]);
+
+        $response->assertSessionHasNoErrors();
+
+        $product->refresh()->load(['genres', 'englishGenres', 'customGenres']);
 
         $this->assertSame(
-            ['Junior / Senior (at work, school, etc)', 'Office Lady'],
-            $product->genre_custom
+            [$existingGenre->getKey()],
+            $product->genres->pluck('id')->all()
         );
+        $this->assertSame(
+            ['Existing Auto Genre'],
+            $product->englishGenres->pluck('title')->all()
+        );
+        $this->assertSame([], $product->customGenres->pluck('title')->all());
+        $this->assertSame(1, Genre::query()->where('title', 'Existing Auto Genre')->count());
     }
 
     public function test_update_redirect_rewrites_progress_when_value_changes(): void
@@ -543,5 +666,28 @@ class ProductControllerTest extends TestCase
     private function uniqueToken(string $prefix): string
     {
         return $prefix . '_' . random_int(100000, 999999);
+    }
+
+    private function createGenre(string $title, string $type): Genre
+    {
+        return Genre::query()->create([
+            'group_id' => null,
+            'title' => $title,
+            'description' => null,
+            'order' => null,
+            'type' => $type,
+            'language' => $type === Genre::TYPE_AUTO_GENERATED_JAPANESE
+                ? Genre::LANGUAGE_JAPANESE
+                : Genre::LANGUAGE_ENGLISH,
+        ]);
+    }
+
+    private function attachGenres(Product $product, array $genres): void
+    {
+        $product->genres()->sync(
+            collect($genres)
+                ->map(fn (Genre $genre) => $genre->getKey())
+                ->all()
+        );
     }
 }

@@ -2,6 +2,13 @@
 
 ## Development
 
+* 2026-03-16 -- 1.1.0 Tag Library
+  * Moved genres to `genres` + `genre_product` with Genre/GenreGroup models and migration from legacy product genre JSON fields
+  * Updated list/index filtering and search to use related genres, and show English/custom genre titles from the genre library
+  * Updated create/edit genre flow so fetched JP/EN genres stay attached, while added titles reuse existing genres when possible
+  * Added Tag Library page with clickable genre links 
+  * Extracted the floating side menu into a shared Blade component + CSS file
+
 * 2026-02-17 -- 1.0.7 Notes Search
   * Search now also include user notes
 

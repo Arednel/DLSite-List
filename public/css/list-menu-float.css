@@ -1,0 +1,71 @@
+.list-menu-float {
+    position: fixed;
+    display: block;
+    top: 20%;
+    width: 50px;
+    font-size: 11px;
+    border: #ee9898 1px solid;
+    z-index: 3;
+}
+
+.list-menu-float .icon-menu {
+    position: relative;
+    background-color: #fffdf8 !important;
+    display: block;
+    width: 50px;
+    height: 50px;
+    opacity: 1;
+    overflow: hidden;
+    transition: all 0.3s ease;
+}
+
+.list-menu-float .icon-menu svg.icon {
+    position: absolute;
+    fill: #ccb3b3;
+}
+
+.list-menu-float .icon-menu:hover svg.icon {
+    fill: #7d6a6a;
+}
+
+.list-menu-float .icon-menu.quick-add svg.icon-quick-add,
+.list-menu-float .icon-menu.anime-list svg.icon-anime-list,
+.list-menu-float .icon-menu.manga-list svg.icon-manga-list,
+.list-menu-float .icon-menu.statistics svg.icon-statistics {
+    left: 13px;
+    top: 12px;
+}
+
+.list-menu-float .icon-menu .text {
+    position: absolute;
+    top: 14px;
+    left: 50px;
+    width: 0;
+    display: inline-block;
+    color: #7d6a6a;
+    font-size: 1.4em;
+    font-family: "Verdana", "lucida grande", tahoma, verdana, arial, sans-serif;
+    text-align: center;
+    vertical-align: middle;
+    overflow: hidden;
+    white-space: nowrap;
+    opacity: 0;
+    transition: all 0.3s ease;
+}
+
+.list-menu-float .icon-menu:not(.profile):hover {
+    background-color: #333;
+    width: 145px;
+}
+
+.list-menu-float .icon-menu:hover .text {
+    width: 94px;
+    opacity: 1;
+}
+
+.image-all-works,
+.image-tag-library {
+    position: absolute;
+    left: 11px;
+    top: 12px;
+}

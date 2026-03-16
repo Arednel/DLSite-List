@@ -2,7 +2,11 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Requests\StoreProductRequest;
+use App\Http\Requests\UpdateProductRequest;
+use App\Models\Genre;
 use App\Models\Product;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\File;
@@ -10,8 +14,6 @@ use Symfony\Component\Process\Process;
 use Symfony\Component\Process\Exception\ProcessFailedException;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\ValidationException;
-use App\Http\Requests\UpdateProductRequest;
-use App\Http\Requests\StoreProductRequest;
 
 class ProductController extends Controller
 {
@@ -20,83 +22,64 @@ class ProductController extends Controller
      */
     public function index(Request $request)
     {
-        // Define allowed values
         $allowedAgeCategory = ['ALL_AGES', 'R15', 'R18'];
         $allowedProgress = ['Listening', 'Completed', 'Plan to Listen'];
+        $progress = $request->filled('progress') && in_array($request->progress, $allowedProgress, true)
+            ? $request->progress
+            : 'All ASMR';
 
-        // Start a query builder instead of immediately fetching all products
-        $query = Product::query();
-        // --- Filter by age (if given) ---
-        if ($request->has('age_category') && in_array($request->age_category, $allowedAgeCategory)) {
-            $query->where('age_category', $request->age_category);
-        }
-
-        // --- Filter by progress ---
-        if ($request->has('progress') && in_array($request->progress, $allowedProgress)) {
-            $query->where('progress', $request->progress);
-
-            $progress = $request->progress;
-        } else {
-            // Better text for the page
-            $progress = 'All ASMR';
-        }
-
-        // --- Filter by genre (search in both english + custom) ---
-        if ($request->has('genre') && $request->genre !== null) {
-            $genre = $request->genre;
-
-            $query->where(function ($q) use ($genre) {
-                $q->whereJsonContains('genre_english', $genre)
-                    ->orWhereJsonContains('genre_custom', $genre);
-            });
-        }
-
-        // --- Filter by series ---
-        if ($request->has('series') && $request->series !== null) {
-            $query->where('series', $request->series);
-        }
-
-        // --- Search by title / series / tags / RJ ---
-        if ($request->filled('search')) {
-            $search = mb_strtolower($request->search);
-
-            $query->where(function ($q) use ($search) {
-                $q->whereRaw('LOWER(id) LIKE ?', ["%{$search}%"])
-                    ->orWhereRaw('LOWER(work_name) LIKE ?', ["%{$search}%"])
-                    ->orWhereRaw('LOWER(work_name_english) LIKE ?', ["%{$search}%"])
-                    ->orWhereRaw('LOWER(series) LIKE ?', ["%{$search}%"])
-                    ->orWhereRaw('LOWER(genre) LIKE ?', ["%{$search}%"])
-                    ->orWhereRaw('LOWER(genre_english) LIKE ?', ["%{$search}%"])
-                    ->orWhereRaw('LOWER(genre_custom) LIKE ?', ["%{$search}%"])
-                    ->orWhereRaw('LOWER(notes) LIKE ?', ["%{$search}%"]);
-            });
-        }
-
-        // Get products
-        $products = $query->get();
-        //Sort by id (Biggest number first)
-        $products = $products->sortByDesc(function ($item) {
+        $products = Product::query()
+            ->with([
+                'englishGenres:id,title',
+                'customGenres:id,title',
+            ])
+            ->when(
+                $request->filled('age_category') && in_array($request->age_category, $allowedAgeCategory, true),
+                fn (Builder $query) => $query->where('age_category', $request->age_category)
+            )
+            ->when(
+                $request->filled('progress') && in_array($request->progress, $allowedProgress, true),
+                fn (Builder $query) => $query->where('progress', $request->progress)
+            )
+            ->when(
+                $request->filled('genre'),
+                fn (Builder $query) => $this->applyGenreFilter($query, (string) $request->genre)
+            )
+            ->when(
+                $request->filled('series'),
+                fn (Builder $query) => $query->where('series', $request->series)
+            )
+            ->when(
+                $request->filled('search'),
+                fn (Builder $query) => $this->applySearchFilter($query, mb_strtolower($request->search))
+            )
+            ->get()
+            ->sortByDesc(function (Product $product) {
             // Remove "RJ" prefix and cast to integer
-            return (int) substr($item->id, 2);
-        })->values();
+                return (int) substr($product->id, 2);
+            })
+            ->values();
 
         return view('Index', ['products' => $products, 'progress' => $progress]);
     }
 
     public function create()
     {
-        $monthLabels = collect(range(1, 12))
-            ->mapWithKeys(fn($month) => [
-                $month => Carbon::create(2000, $month, 1)->translatedFormat('M'),
-            ])
-            ->all();
-        $years = range(now()->year, 1995);
-        $days = range(1, 31);
+        return view('Create', $this->buildDateFieldOptions());
+    }
 
-        return view('Create', [
-            'monthLabels' => $monthLabels,
-            'days' => $days,
-            'years' => $years,
+    public function tagLibrary()
+    {
+        $genres = Genre::query()
+            ->whereIn('type', [
+                Genre::TYPE_AUTO_GENERATED_ENGLISH,
+                Genre::TYPE_CUSTOM,
+            ])
+            ->orderBy('title')
+            ->get(['id', 'title', 'type']);
+
+        return view('TagLibrary', [
+            'genres' => $genres,
         ]);
     }
 
@@ -149,7 +132,6 @@ class ProductController extends Controller
 
         $genre = $workData['japanese']['genre'];
         $genre_english = $workData['english']['genre'];
-
         $genre_custom = $validated['genre_custom'] ?? [];
 
         $description = $workData['japanese']['description'];
@@ -158,7 +140,7 @@ class ProductController extends Controller
         $series = $validated['series'] ?? null;
         $sample_images = $workData['japanese']['sample_images'];
 
-        $data = array(
+        $data = [
             'id' => $dlsite_product_id,
             'maker_id' => $maker_id,
             'work_name' => $work_name,
@@ -166,9 +148,6 @@ class ProductController extends Controller
             'age_category' => $age_category,
             'circle' => $circle,
             'work_image' => $work_image,
-            'genre' => json_encode($genre),
-            'genre_english' => json_encode($genre_english),
-            'genre_custom' => $genre_custom,
             'description' => $description,
             'description_english' => $description_english,
             'notes' => $notes,
@@ -181,9 +160,10 @@ class ProductController extends Controller
             'num_re_listen_times' => $validated['num_re_listen_times'] ?? null,
             're_listen_value' => $validated['re_listen_value'] ?? null,
             'priority' => $validated['priority'] ?? null,
-        );
+        ];
 
-        Product::create($data);
+        $product = Product::create($data);
+        $this->syncProductGenres($product, $genre, $genre_english, $genre_custom);
 
         // Build redirect target
         $redirectUrl = $request->input('redirect', '/');
@@ -204,23 +184,19 @@ class ProductController extends Controller
      */
     public function edit(Request $request, string $id)
     {
-        $product = Product::findOrFail($id);
-
-        $monthLabels = collect(range(1, 12))
-            ->mapWithKeys(fn($month) => [
-                $month => Carbon::create(2000, $month, 1)->translatedFormat('M'),
+        $product = Product::query()
+            ->with([
+                'japaneseGenres:id,title',
+                'englishGenres:id,title',
+                'customGenres:id,title',
             ])
-            ->all();
-        $years = range(now()->year, 1995);
-        $days = range(1, 31);
+            ->findOrFail($id);
 
         return view('Edit', [
             'product' => $product,
-            'genreCustomInput' => $this->formatGenreCustomForInput($product->genre_custom),
+            'genreCustomInput' => $this->formatGenreCustomForInput($product->customGenres->pluck('title')->all()),
             'redirect' => $request->input('redirect', '/'),
-            'monthLabels' => $monthLabels,
-            'days' => $days,
-            'years' => $years,
+            ...$this->buildDateFieldOptions(),
         ]);
     }
 
@@ -239,7 +215,6 @@ class ProductController extends Controller
             'progress' => $data['progress'] ?? null,
             'score' => $data['score'] ?? null,
             'series' => $data['series'] ?? null,
-            'genre_custom' => $data['genre_custom'] ?? [],
             'work_name' => $data['work_name'],
             'work_name_english' => $data['work_name_english'] ?? null,
             'notes' => $data['notes'] ?? null,
@@ -250,6 +225,7 @@ class ProductController extends Controller
             'priority' => $data['priority'] ?? null,
         ]);
         $product->save();
+        $this->syncProductCustomGenres($product, $data['genre_custom'] ?? []);
 
         $redirect = $request->input('redirect', '/');
 
@@ -351,5 +327,82 @@ class ProductController extends Controller
         }
 
         return '"' . str_replace('"', '""', $tag) . '"';
+    }
+
+    private function buildDateFieldOptions(): array
+    {
+        return [
+            'monthLabels' => collect(range(1, 12))
+                ->mapWithKeys(fn($month) => [
+                    $month => Carbon::create(2000, $month, 1)->translatedFormat('M'),
+                ])
+                ->all(),
+            'days' => range(1, 31),
+            'years' => range(now()->year, 1995),
+        ];
+    }
+
+    private function applyGenreFilter(Builder $query, string $genreFilter): void
+    {
+        $genreFilter = trim($genreFilter);
+
+        if ($genreFilter === '') {
+            return;
+        }
+
+        $query->whereHas('genres', function (Builder $genreQuery) use ($genreFilter): void {
+            if (ctype_digit($genreFilter)) {
+                $genreQuery->whereKey((int) $genreFilter);
+                return;
+            }
+
+            $genreQuery->where('title', $genreFilter);
+        });
+    }
+
+    private function applySearchFilter(Builder $query, string $search): void
+    {
+        $query->where(function (Builder $searchQuery) use ($search): void {
+            $searchQuery->whereRaw('LOWER(id) LIKE ?', ["%{$search}%"])
+                ->orWhereRaw('LOWER(work_name) LIKE ?', ["%{$search}%"])
+                ->orWhereRaw('LOWER(work_name_english) LIKE ?', ["%{$search}%"])
+                ->orWhereRaw('LOWER(series) LIKE ?', ["%{$search}%"])
+                ->orWhereRaw('LOWER(notes) LIKE ?', ["%{$search}%"])
+                ->orWhereHas('genres', function (Builder $genreQuery) use ($search): void {
+                    $genreQuery->whereRaw('LOWER(title) LIKE ?', ["%{$search}%"]);
+                });
+        });
+    }
+
+    private function syncProductGenres(Product $product, array $japaneseTitles, array $englishTitles, array $customTitles): void
+    {
+        $genreIds = array_merge(
+            Genre::resolveIdsFromTitles($japaneseTitles, Genre::TYPE_AUTO_GENERATED_JAPANESE, Genre::LANGUAGE_JAPANESE),
+            Genre::resolveIdsFromTitles($englishTitles, Genre::TYPE_AUTO_GENERATED_ENGLISH, Genre::LANGUAGE_ENGLISH),
+            Genre::resolveIdsFromTitles($customTitles, Genre::TYPE_CUSTOM, Genre::LANGUAGE_ENGLISH),
+        );
+
+        $product->genres()->sync(array_values(array_unique($genreIds)));
+    }
+
+    private function syncProductCustomGenres(Product $product, array $customTitles): void
+    {
+        $nonCustomGenreIds = $product->genres()
+            ->where('genres.type', '!=', Genre::TYPE_CUSTOM)
+            ->pluck('genres.id')
+            ->all();
+
+        // User-added titles can reuse existing fetched genres by title.
+        // Only brand new titles stay as custom genres.
+        $customGenreIds = Genre::resolveIdsFromTitles(
+            $customTitles,
+            Genre::TYPE_CUSTOM,
+            Genre::LANGUAGE_ENGLISH
+        );
+
+        $product->genres()->sync(array_values(array_unique(array_merge(
+            $nonCustomGenreIds,
+            $customGenreIds,
+        ))));
     }
 }

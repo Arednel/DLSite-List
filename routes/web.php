@@ -18,8 +18,12 @@ use App\Http\Controllers\ProductController;
 //Main Page
 Route::get('/', [ProductController::class, 'Index'])->name('index');
 
+//Works CRUD logic
 Route::get('/create', [ProductController::class, 'create']);
 Route::post('/store', [ProductController::class, 'store']);
 Route::get('/edit/{id}', [ProductController::class, 'edit']);
 Route::post('/update/{id}', [ProductController::class, 'update']);
 Route::post('/destroy/{id}', [ProductController::class, 'destroy']);
+
+//Tag Library
+Route::get('/tags', [ProductController::class, 'tagLibrary'])->name('tags.index');

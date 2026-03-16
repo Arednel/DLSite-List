@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 
 class Product extends Model
 {
@@ -19,9 +20,6 @@ class Product extends Model
         'age_category',
         'circle',
         'work_image',
-        'genre',
-        'genre_english',
-        'genre_custom',
         'description',
         'description_english',
         'notes',
@@ -37,8 +35,27 @@ class Product extends Model
     ];
 
     protected $casts = [
-        'genre_custom' => 'array',
         'start_date' => 'array',
         'end_date' => 'array',
     ];
+
+    public function genres(): BelongsToMany
+    {
+        return $this->belongsToMany(Genre::class)->withTimestamps();
+    }
+
+    public function japaneseGenres(): BelongsToMany
+    {
+        return $this->genres()->where('genres.type', Genre::TYPE_AUTO_GENERATED_JAPANESE);
+    }
+
+    public function englishGenres(): BelongsToMany
+    {
+        return $this->genres()->where('genres.type', Genre::TYPE_AUTO_GENERATED_ENGLISH);
+    }
+
+    public function customGenres(): BelongsToMany
+    {
+        return $this->genres()->where('genres.type', Genre::TYPE_CUSTOM);
+    }
 }
