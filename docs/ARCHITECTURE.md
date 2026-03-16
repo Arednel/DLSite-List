@@ -70,7 +70,7 @@ Runtime note:
 - index filter state is normalized into `app/Support/ProductIndexFilters.php`, which is then reused by the controller, query layer, and Blade modal
 - switching progress tabs keeps the rest of the index request state, but intentionally drops the current `genre` filter
 - create/store resolves scraped/custom titles into `genres` rows and syncs the pivot
-- edit shows fetched Japanese/English genres as read-only and keeps them attached automatically
+- edit loads only the fetched English/custom genre rows it renders, while keeping fetched non-custom genres attached automatically
 - update reads user-added genres from the form and reuses an existing fetched genre row when the title already exists
 
 ## Scraper Integration

@@ -2,6 +2,9 @@
 
 ## Development
 
+* 2026-03-16 -- 1.2.1 Query optimization
+  * Simplified edit genre loading to use the same lightweight-query approach for fetched EN/custom tags
+
 * 2026-03-16 -- 1.2.0 Mobile version
   * Added mobile layouts for index, create, and edit views
   * Added a mobile slide-in version of the shared floating menu

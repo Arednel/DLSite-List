@@ -491,7 +491,7 @@ class ProductControllerTest extends TestCase
 
     public function test_edit_renders_form_page_for_existing_product(): void
     {
-        $japaneseGenre = $this->createGenre('Sleep Guidance', Genre::TYPE_AUTO_GENERATED_JAPANESE);
+        $japaneseGenre = $this->createGenre('JP_ONLY_GUIDANCE_TOKEN', Genre::TYPE_AUTO_GENERATED_JAPANESE);
         $englishGenre = $this->createGenre('Sleep Guidance EN', Genre::TYPE_AUTO_GENERATED_ENGLISH);
 
         $product = Product::factory()->create([
@@ -509,8 +509,8 @@ class ProductControllerTest extends TestCase
             ->assertSee($product->work_name)
             ->assertSee($product->work_name_english)
             ->assertSee('Fetched EN Genres')
-            ->assertSee('Sleep Guidance')
             ->assertSee('Sleep Guidance EN')
+            ->assertDontSee('JP_ONLY_GUIDANCE_TOKEN')
             ->assertSee($product->notes)
             ->assertSee('name="redirect"', false);
     }

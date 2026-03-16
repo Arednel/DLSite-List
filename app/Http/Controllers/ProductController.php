@@ -11,7 +11,9 @@ use App\Support\ProductIndexFilters;
 use App\Support\ProductIndexResults;
 use App\Support\TagInput;
 use Illuminate\Http\Request;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\File;
 use Symfony\Component\Process\Process;
 use Symfony\Component\Process\Exception\ProcessFailedException;
@@ -158,17 +160,15 @@ class ProductController extends Controller
      */
     public function edit(Request $request, string $id)
     {
-        $product = Product::query()
-            ->with([
-                'japaneseGenres:id,title',
-                'englishGenres:id,title',
-                'customGenres:id,title',
-            ])
-            ->findOrFail($id);
+        $product = Product::findOrFail($id);
+        $editGenres = $this->loadEditGenresForProduct($product->getKey());
 
         return view('Edit', [
             'product' => $product,
-            'genreCustomInput' => $this->formatGenreCustomForInput($product->customGenres->pluck('title')->all()),
+            'englishGenres' => $editGenres->get(Genre::TYPE_AUTO_GENERATED_ENGLISH, collect()),
+            'genreCustomInput' => $this->formatGenreCustomForInput(
+                $editGenres->get(Genre::TYPE_CUSTOM, collect())->pluck('title')->all()
+            ),
             'redirect' => $request->input('redirect', '/'),
             ...$this->buildDateFieldOptions(),
         ]);
@@ -294,6 +294,25 @@ class ProductController extends Controller
             'days' => range(1, 31),
             'years' => range(now()->year, 1995),
         ];
+    }
+
+    private function loadEditGenresForProduct(string $productId): Collection
+    {
+        // Edit only renders fetched EN genres and the custom-tag input.
+        // Load just those rows instead of hydrating every genre relationship.
+        return DB::table('genre_product')
+            ->join('genres', 'genres.id', '=', 'genre_product.genre_id')
+            ->where('genre_product.product_id', $productId)
+            ->whereIn('genres.type', [
+                Genre::TYPE_AUTO_GENERATED_ENGLISH,
+                Genre::TYPE_CUSTOM,
+            ])
+            ->orderBy('genres.title')
+            ->get([
+                'genres.title',
+                'genres.type',
+            ])
+            ->groupBy('type');
     }
 
     private function syncProductGenres(Product $product, array $japaneseTitles, array $englishTitles, array $customTitles): void

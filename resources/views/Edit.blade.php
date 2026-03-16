@@ -36,7 +36,8 @@
                                             <div id="top-submit-buttons" class="mt8 mb8 dialog-submit-row">
                                                 <input type="submit" class="inputButton main_submit" value="Submit">
                                             </div>
-                                            <table class="form-fields-table" cellpadding="5" cellspacing="0" width="100%">
+                                            <table class="form-fields-table" cellpadding="5" cellspacing="0"
+                                                width="100%">
                                                 <tbody>
                                                     <x-fields.rj-display :id="$product->id" :work-name="$product->work_name" />
                                                     <x-fields.status-select :value="$product->progress" />
@@ -45,7 +46,7 @@
                                                     <x-fields.title-japanese :value="$product->work_name" required />
                                                     <x-fields.title-english :value="$product->work_name_english" />
                                                     <x-fields.genre-readonly label="Fetched EN Genres"
-                                                        :genres="$product->englishGenres" />
+                                                        :genres="$englishGenres" />
                                                     <x-fields.genre-custom :value="$genreCustomInput" />
                                                     <x-fields.notes :value="$product->notes" />
                                                     <x-fields.start-date :month-labels="$monthLabels" :days="$days"
@@ -64,8 +65,8 @@
                                             </div>
                                         </form>
 
-                                        <form class="dialog-actions dialog-actions-right" id="delete-form" method="POST"
-                                            action="/destroy/{{ $product->id }}">
+                                        <form class="dialog-actions dialog-actions-right" id="delete-form"
+                                            method="POST" action="/destroy/{{ $product->id }}">
                                             @csrf
 
                                             <input type="hidden" name="redirect"
