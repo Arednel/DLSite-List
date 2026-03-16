@@ -153,19 +153,21 @@ class ProductControllerTest extends TestCase
 
     public function test_index_displays_titles_from_related_genres(): void
     {
+        $japaneseGenre = $this->createGenre('Resolved Japanese Tag', Genre::TYPE_AUTO_GENERATED_JAPANESE);
         $englishGenre = $this->createGenre('Resolved English Tag', Genre::TYPE_AUTO_GENERATED_ENGLISH);
         $customGenre = $this->createGenre('Resolved Custom Tag', Genre::TYPE_CUSTOM);
 
         $product = Product::factory()->create([
             'work_name' => 'RESOLVED_GENRE_DISPLAY_TOKEN',
         ]);
-        $this->attachGenres($product, [$englishGenre, $customGenre]);
+        $this->attachGenres($product, [$japaneseGenre, $englishGenre, $customGenre]);
 
         $this->get('/')
             ->assertOk()
             ->assertSee($product->work_name)
             ->assertSee('Resolved English Tag')
-            ->assertSee('Resolved Custom Tag');
+            ->assertSee('Resolved Custom Tag')
+            ->assertDontSee('Resolved Japanese Tag');
     }
 
     public function test_index_filters_by_genre_id_from_view_links(): void

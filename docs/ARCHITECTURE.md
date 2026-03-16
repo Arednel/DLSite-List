@@ -52,7 +52,7 @@ Migration note:
 - after conversion, those legacy JSON columns are dropped
 
 Runtime note:
-- `ProductController@index` shows English + custom genres through Eloquent many-to-many relationships
+- `ProductController@index` shows English + custom genres through one lightweight grouped query from `genre_product` + `genres`
 - create/store resolves scraped/custom titles into `genres` rows and syncs the pivot
 - edit shows fetched Japanese/English genres as read-only and keeps them attached automatically
 - update reads user-added genres from the form and reuses an existing fetched genre row when the title already exists

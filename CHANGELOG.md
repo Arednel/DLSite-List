@@ -2,6 +2,9 @@
 
 ## Development
 
+* 2026-03-16 -- 1.1.1 Query optimization
+  * Simplified index tag loading to use one lightweight grouped query for visible EN/custom genres instead of eager-loading genre relations
+
 * 2026-03-16 -- 1.1.0 Tag Library
   * Moved genres to `genres` + `genre_product` with Genre/GenreGroup models and migration from legacy product genre JSON fields
   * Updated list/index filtering and search to use related genres, and show English/custom genre titles from the genre library

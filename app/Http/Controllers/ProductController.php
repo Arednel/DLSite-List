@@ -7,9 +7,11 @@ use App\Http\Requests\UpdateProductRequest;
 use App\Models\Genre;
 use App\Models\Product;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\File;
+use Illuminate\Support\Facades\DB;
 use Symfony\Component\Process\Process;
 use Symfony\Component\Process\Exception\ProcessFailedException;
 use Illuminate\Support\Facades\Storage;
@@ -29,10 +31,6 @@ class ProductController extends Controller
             : 'All ASMR';
 
         $products = Product::query()
-            ->with([
-                'englishGenres:id,title',
-                'customGenres:id,title',
-            ])
             ->when(
                 $request->filled('age_category') && in_array($request->age_category, $allowedAgeCategory, true),
                 fn (Builder $query) => $query->where('age_category', $request->age_category)
@@ -60,7 +58,11 @@ class ProductController extends Controller
             })
             ->values();
 
-        return view('Index', ['products' => $products, 'progress' => $progress]);
+        return view('Index', [
+            'products' => $products,
+            'productGenres' => $this->loadVisibleGenresForProducts($products->pluck('id')->all()),
+            'progress' => $progress,
+        ]);
     }
 
     public function create()
@@ -340,6 +342,30 @@ class ProductController extends Controller
             'days' => range(1, 31),
             'years' => range(now()->year, 1995),
         ];
+    }
+
+    private function loadVisibleGenresForProducts(array $productIds): Collection
+    {
+        if ($productIds === []) {
+            return collect();
+        }
+
+        // Index only needs visible EN/custom tags, so use one lightweight query
+        // instead of hydrating genre relationships for every listed product.
+        return DB::table('genre_product')
+            ->join('genres', 'genres.id', '=', 'genre_product.genre_id')
+            ->whereIn('genre_product.product_id', $productIds)
+            ->whereIn('genres.type', [
+                Genre::TYPE_AUTO_GENERATED_ENGLISH,
+                Genre::TYPE_CUSTOM,
+            ])
+            ->orderBy('genres.title')
+            ->get([
+                'genre_product.product_id',
+                'genres.id',
+                'genres.title',
+            ])
+            ->groupBy('product_id');
     }
 
     private function applyGenreFilter(Builder $query, string $genreFilter): void

@@ -154,8 +154,7 @@
 
                                 <td id="tags" class="data tags">
                                     <div class="tags">
-                                        @php($visibleGenres = $product->customGenres->concat($product->englishGenres))
-                                        @foreach ($visibleGenres as $genre)
+                                        @foreach ($productGenres->get($product->id, collect()) as $genre)
                                             <a
                                                 href="/?age_category={{ request('age_category') }}&progress={{ request('progress') }}&genre={{ $genre->id }}">
                                                 {{ $genre->title }}</a>{{ !$loop->last ? ',' : '' }}
