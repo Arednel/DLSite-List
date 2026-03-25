@@ -2,6 +2,11 @@
 
 ## Development
 
+* 2026-03-26 -- 1.2.2 Docker Compose and fixes
+  * Added docker-compose Quick Start
+  * Fixed python save paths for Unix systems
+  * Fixed index css file name related error
+
 * 2026-03-16 -- 1.2.1 Query optimization
   * Simplified edit genre loading to use the same lightweight-query approach for fetched EN/custom tags
 
@@ -54,7 +59,7 @@
 
 * 2026-01-23 -- 1.0.0 Python venv and Improvements
   * Moved python modules to .venv
-  * * Adjasted python logic accordingly
+    * Adjasted python logic accordingly
   * Added error message in cases of: inputting wrong RJ Code, RJ Geo-blocking orx Deleted work
   * Imporved controller store logic
   * Improved controller scrape logic

@@ -3,7 +3,7 @@
 ## Stack
 - Backend: Laravel 12 (PHP 8.3)
 - Frontend: Blade templates + plain CSS/JS
-- Database: MySQL
+- Database: MySQL 8
 - Scraper: Python script (`python/DLSiteScraper.py`) invoked from Laravel
 
 ## Main Application Flow

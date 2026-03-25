@@ -14,7 +14,7 @@ storageDir = sys.argv[1]
 workID = sys.argv[2]
 
 # Set the log file path and name
-log_file = os.path.join(f"{storageDir}\\logs\\DLSiteScraper.log")
+log_file = os.path.join(storageDir, "logs", "DLSiteScraper.log")
 # Configure logging
 logging.basicConfig(
     filename=log_file,
@@ -135,7 +135,7 @@ try:
     combined = {"japanese": workJapanese_serialized, "english": workEnglish_serialized}
 
     # Define save path and filename
-    savePath = f"{storageDir}\\app\\Works\\"
+    savePath = os.path.join(storageDir, "app", "Works")
     os.makedirs(savePath, exist_ok=True)  # Create folder if it doesn't exist
     filename = f"{workJapanese.product_id}.json"
 
@@ -144,9 +144,7 @@ try:
         json.dump(combined, f, ensure_ascii=False, indent=2)
 
     # After saving JSON
-    images_dir = os.path.join(
-        storageDir, "app", "public", "Works", workJapanese.product_id
-    )
+    images_dir = os.path.join(storageDir, "app", "public", "Works", workJapanese.product_id)
     os.makedirs(images_dir, exist_ok=True)
 
     # Main cover

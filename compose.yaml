@@ -1,0 +1,68 @@
+services:
+    # Application
+    app:
+        build:
+            context: .
+            dockerfile: docker/app.dockerfile
+        entrypoint: ["/usr/local/bin/docker-app-entrypoint.sh"] # Run Laravel migrations after db startup
+        working_dir: /var/www/dlsite_list
+        volumes:
+            - storage_app:/var/www/dlsite_list/storage/app
+            - storage_framework:/var/www/dlsite_list/storage/framework
+            - storage_logs:/var/www/dlsite_list/storage/logs
+        depends_on:
+            database:
+                condition: service_healthy
+        env_file: "docker/.env.docker"
+
+    # Web Server
+    web:
+        build:
+            context: .
+            dockerfile: docker/web.dockerfile
+        working_dir: /var/www/dlsite_list
+        volumes:
+            - storage_app:/var/www/dlsite_list/storage/app:ro
+        depends_on:
+            - "app"
+        ports:
+            - 8080:80
+
+    # Database
+    database:
+        image: mysql:8.0
+        volumes:
+            - dbdata:/var/lib/mysql
+        environment:
+            MYSQL_DATABASE: ${DB_DATABASE}
+            MYSQL_ROOT_PASSWORD: ${DB_PASSWORD}
+            MYSQL_PASSWORD: ${DB_PASSWORD}
+            MYSQL_USER: ${DB_USERNAME}
+        healthcheck:
+            test: ["CMD", "mysqladmin" ,"ping", "-h", "localhost"]
+            timeout: 20s
+            retries: 10
+        env_file: "docker/.env.docker"
+
+    # Database management (phpMyAdmin)
+    pma:
+        image: phpmyadmin:5.2
+        environment:
+            - PMA_ARBITRARY=1
+            - PMA_HOST=${DB_HOST}
+            - PMA_USER=${DB_USERNAME}
+            - PMA_PASSWORD=${DB_PASSWORD}
+            - PMA_PORT=${DB_PORT}
+        depends_on:
+            database:
+                condition: service_healthy
+        ports:
+            - 8888:80
+        env_file: "docker/.env.docker"
+
+
+volumes:
+    storage_app:
+    storage_framework:
+    storage_logs:
+    dbdata:
