@@ -11,17 +11,12 @@ git clone https://github.com/Arednel/DLSite-List.git
 
 cd DLSite-List
 
-docker compose --env-file docker/.env.docker up --build
+docker compose --env-file docker/.env.docker up --build -d
 ```
 
 ### 2) After startup
 - DLSite List available at: `http://localhost:8080`
 - phpMyAdmin available at: `http://localhost:8888`
-
-### 3) Stop docker containers with:
-```bash
-docker compose --env-file docker/.env.docker down
-```
 
 ## Manual installation process
 
