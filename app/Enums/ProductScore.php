@@ -22,16 +22,16 @@ enum ProductScore: string
     public function label(): string
     {
         return match ($this) {
-            self::Ten => '(10) Masterpiece',
-            self::Nine => '(9) Great',
-            self::Eight => '(8) Very Good',
-            self::Seven => '(7) Good',
-            self::Six => '(6) Nice',
-            self::Five => '(5) Average',
-            self::Four => '(4) Below Average',
-            self::Three => '(3) Unremarkable',
-            self::Two => '(2) Subtle',
             self::One => '(1) Faint',
+            self::Two => '(2) Subtle',
+            self::Three => '(3) Unremarkable',
+            self::Four => '(4) Below Average',
+            self::Five => '(5) Average',
+            self::Six => '(6) Nice',
+            self::Seven => '(7) Good',
+            self::Eight => '(8) Very Good',
+            self::Nine => '(9) Great',
+            self::Ten => '(10) Masterpiece',
         };
     }
 }

@@ -921,6 +921,7 @@ body.filter-modal-open {
 
     .advanced-options-actions {
         flex-direction: column-reverse;
+        padding-bottom: 80px;
     }
 
     .list-table,

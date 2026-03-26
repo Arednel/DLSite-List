@@ -2,6 +2,11 @@
 
 ## Development
 
+* 2026-03-26 -- 1.2.3 Fixes
+  * Added padding for advanced options on mobile devices
+  * Reordered labels in ProductScore.php
+  * Updated docker logic
+
 * 2026-03-26 -- 1.2.2 Docker Compose and fixes
   * Added docker-compose Quick Start
   * Fixed python save paths for Unix systems
