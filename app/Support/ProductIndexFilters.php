@@ -11,6 +11,7 @@ use App\Enums\ProductProgress;
 use App\Enums\ProductReListenValue;
 use App\Enums\ProductScore;
 use BackedEnum;
+use Illuminate\Support\Arr;
 
 final readonly class ProductIndexFilters
 {
@@ -136,6 +137,11 @@ final readonly class ProductIndexFilters
         return collect($this->toInput())
             ->reject(fn (string $value) => $value === '')
             ->all();
+    }
+
+    public function toQueryWithout(array|string $keys): array
+    {
+        return Arr::except($this->toQuery(), $keys);
     }
 
     /**

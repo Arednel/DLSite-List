@@ -8,14 +8,14 @@ enum ProductIndexTagMatch: string
 {
     use ProvidesOptions;
 
-    case Any = 'any';
     case All = 'all';
+    case Any = 'any';
 
     public function label(): string
     {
         return match ($this) {
-            self::Any => 'Any tag',
             self::All => 'All tags',
+            self::Any => 'Any tag',
         };
     }
 }

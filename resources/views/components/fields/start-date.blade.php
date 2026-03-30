@@ -14,8 +14,7 @@
         <select id="add_start_date_month" name="add[start_date][month]" class="inputtext">
             <option value=""></option>
             @foreach ($monthLabels as $value => $label)
-                <option value="{{ $value }}"
-                    @selected((string) old('add.start_date.month', $monthValue) === (string) $value)>
+                <option value="{{ $value }}" @selected((string) old('add.start_date.month', $monthValue) === (string) $value)>
                     {{ $label }}</option>
             @endforeach
         </select>
@@ -23,8 +22,7 @@
         <select id="add_start_date_day" name="add[start_date][day]" class="inputtext">
             <option value=""></option>
             @foreach ($days as $day)
-                <option value="{{ $day }}"
-                    @selected((string) old('add.start_date.day', $dayValue) === (string) $day)>
+                <option value="{{ $day }}" @selected((string) old('add.start_date.day', $dayValue) === (string) $day)>
                     {{ $day }}</option>
             @endforeach
         </select>
@@ -32,8 +30,7 @@
         <select id="add_start_date_year" name="add[start_date][year]" class="inputtext">
             <option value=""></option>
             @foreach ($years as $year)
-                <option value="{{ $year }}"
-                    @selected((string) old('add.start_date.year', $yearValue) === (string) $year)>
+                <option value="{{ $year }}" @selected((string) old('add.start_date.year', $yearValue) === (string) $year)>
                     {{ $year }}</option>
             @endforeach
         </select>

@@ -62,4 +62,25 @@ class ProductIndexFiltersTest extends TestCase
         $this->assertSame(ProductIndexTagMatch::All, $filters->resolvedTagMatch());
         $this->assertSame(ProductIndexSortDirection::Desc, $filters->primarySort?->direction);
     }
+
+    public function test_it_can_drop_selected_keys_from_query_output(): void
+    {
+        $filters = ProductIndexFilters::fromQuery([
+            'search' => 'rain',
+            'genre' => '36',
+            'progress' => 'Listening',
+            'series' => 'SERIES_ALPHA',
+        ]);
+
+        $this->assertSame([
+            'search' => 'rain',
+            'series' => 'SERIES_ALPHA',
+        ], $filters->toQueryWithout(['progress', 'genre']));
+
+        $this->assertSame([
+            'genre' => '36',
+            'series' => 'SERIES_ALPHA',
+            'progress' => 'Listening',
+        ], $filters->toQueryWithout('search'));
+    }
 }

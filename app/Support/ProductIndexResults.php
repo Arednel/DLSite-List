@@ -5,12 +5,12 @@ namespace App\Support;
 use App\Enums\ProductIndexSortField;
 use App\Models\Genre;
 use App\Models\Product;
-use Illuminate\Support\Collection;
+use Illuminate\Database\Eloquent\Collection as EloquentCollection;
 use Illuminate\Support\Facades\DB;
 
 final class ProductIndexResults
 {
-    public function getProducts(ProductIndexFilters $filters): Collection
+    public function getProducts(ProductIndexFilters $filters): EloquentCollection
     {
         $products = Product::query()
             ->when(
@@ -69,7 +69,7 @@ final class ProductIndexResults
         return $this->sortProducts($products, $filters->sorts());
     }
 
-    public function loadVisibleGenres(array $productIds): Collection
+    public function loadVisibleGenres(array $productIds): \Illuminate\Support\Collection
     {
         if ($productIds === []) {
             return collect();
@@ -96,7 +96,7 @@ final class ProductIndexResults
     /**
      * @param  list<ProductIndexSort>  $sorts
      */
-    private function sortProducts(Collection $products, array $sorts): Collection
+    private function sortProducts(EloquentCollection $products, array $sorts): EloquentCollection
     {
         $items = $products->all();
 
@@ -116,7 +116,7 @@ final class ProductIndexResults
             return $this->rjSortValue($right) <=> $this->rjSortValue($left);
         });
 
-        return collect($items)->values();
+        return new EloquentCollection(array_values($items));
     }
 
     private function compareSortableValues(mixed $left, mixed $right, string $direction): int

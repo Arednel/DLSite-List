@@ -9,6 +9,7 @@ use App\Models\Genre;
 use App\Models\Product;
 use App\Support\ProductIndexFilters;
 use App\Support\ProductIndexResults;
+use App\Support\ReturnTarget;
 use App\Support\TagInput;
 use Illuminate\Http\Request;
 use Illuminate\Support\Collection;
@@ -25,23 +26,33 @@ class ProductController extends Controller
     /**
      * Display a listing of the resource.
      */
-    public function index(ProductIndexRequest $request, ProductIndexResults $ProductIndexResults)
+    public function index(ProductIndexRequest $request, ProductIndexResults $productIndexResults)
     {
         $filters = $request->filters();
-        $products = $ProductIndexResults->getProducts($filters);
+        $products = $productIndexResults->getProducts($filters);
 
         return view('Index', [
             'products' => $products,
-            'productGenres' => $ProductIndexResults->loadVisibleGenres($products->pluck('id')->all()),
+            'productGenres' => $productIndexResults->loadVisibleGenres($products->modelKeys()),
             'filters' => $filters,
             'filterOptions' => ProductIndexFilters::optionSets(),
             'progress' => $filters->progressHeading(),
+            'filterQuery' => $filters->toQuery(),
+            'allProgressQuery' => $filters->toQueryWithout(['progress', 'genre']),
+            'searchFormQuery' => $filters->toQueryWithout('search'),
         ]);
     }
 
-    public function create()
+    public function create(Request $request)
     {
-        return view('Create', $this->buildDateFieldOptions());
+        $returnTarget = ReturnTarget::fromRequest($request);
+
+        return view('Create', [
+            'returnRoute' => $returnTarget->route,
+            'returnQuery' => $returnTarget->query,
+            'returnUrl' => $returnTarget->toUrl(),
+            ...$this->buildDateFieldOptions(),
+        ]);
     }
 
     public function tagLibrary()
@@ -141,10 +152,10 @@ class ProductController extends Controller
         $product = Product::create($data);
         $this->syncProductGenres($product, $genre, $genre_english, $genre_custom);
 
-        // Build redirect target
-        $redirectUrl = $request->input('redirect', '/');
+        $returnTarget = ReturnTarget::fromRequest($request)
+            ->withFragment($dlsite_product_id);
 
-        return redirect($redirectUrl . '#' . $dlsite_product_id);
+        return redirect($returnTarget->toUrl());
     }
 
     /**
@@ -162,6 +173,7 @@ class ProductController extends Controller
     {
         $product = Product::findOrFail($id);
         $editGenres = $this->loadEditGenresForProduct($product->getKey());
+        $returnTarget = ReturnTarget::fromRequest($request, $product->getKey());
 
         return view('Edit', [
             'product' => $product,
@@ -169,7 +181,10 @@ class ProductController extends Controller
             'genreCustomInput' => $this->formatGenreCustomForInput(
                 $editGenres->get(Genre::TYPE_CUSTOM, collect())->pluck('title')->all()
             ),
-            'redirect' => $request->input('redirect', '/'),
+            'returnRoute' => $returnTarget->route,
+            'returnQuery' => $returnTarget->query,
+            'returnFragment' => $returnTarget->fragment,
+            'returnUrl' => $returnTarget->toUrl(),
             ...$this->buildDateFieldOptions(),
         ]);
     }
@@ -201,15 +216,14 @@ class ProductController extends Controller
         $product->save();
         $this->syncProductCustomGenres($product, $data['genre_custom'] ?? []);
 
-        $redirect = $request->input('redirect', '/');
+        $returnTarget = ReturnTarget::fromRequest($request, $product->getKey());
+        $newProgress = $data['progress'] ?? null;
 
-        // only replace ?progress= if value changed
-        if ($oldProgress !== $request->progress) {
-            $redirect = preg_replace('/([?&])progress=[^&]*/', '', $redirect);
-            $redirect .= (str_contains($redirect, '?') ? '&' : '?') . 'progress=' . urlencode($request->progress);
+        if ($oldProgress !== $newProgress) {
+            $returnTarget = $returnTarget->withIndexProgress($newProgress);
         }
 
-        return redirect($redirect . "#{$id}");
+        return redirect($returnTarget->toUrl());
     }
 
     /**
@@ -217,7 +231,7 @@ class ProductController extends Controller
      */
     public function destroy(Request $request, string $id)
     {
-        $redirect = $request->input('redirect', '/');
+        $redirect = ReturnTarget::fromRequest($request)->toUrl();
         $product = Product::find($id);
 
         // Missing records should be a safe no-op.

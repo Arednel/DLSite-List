@@ -1,3 +1,7 @@
+@props([
+    'quickAddUrl' => route('products.create', [], false),
+])
+
 <div class="list-menu-float-shell" data-list-menu-shell>
     <button class="mobile-menu-toggle" type="button" aria-label="Open navigation menu" aria-expanded="false"
         aria-controls="list-menu-float" data-list-menu-toggle>
@@ -12,7 +16,7 @@
         data-list-menu-overlay></button>
 
     <div class="list-menu-float" id="list-menu-float" data-list-menu aria-hidden="true">
-        <a class="icon-menu quick-add List_LightBox" href="/create?redirect={{ urlencode(request()->fullUrl()) }}">
+        <a class="icon-menu quick-add List_LightBox" href="{{ $quickAddUrl }}">
             <svg class="icon icon-quick-add" width="22px" height="20px" viewBox="0 0 22 20" version="1.1">
                 <g>
                     <path

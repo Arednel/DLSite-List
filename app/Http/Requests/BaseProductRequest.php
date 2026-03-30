@@ -5,6 +5,7 @@ namespace App\Http\Requests;
 use App\Support\TagInput;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Support\Carbon;
+use Illuminate\Validation\Validator;
 
 abstract class BaseProductRequest extends FormRequest
 {
@@ -40,22 +41,21 @@ abstract class BaseProductRequest extends FormRequest
         ]);
     }
 
-    /**
-     * Configure the validator instance.
-     */
-    public function withValidator($validator): void
+    public function after(): array
     {
-        $validator->after(function ($validator) {
-            $this->validateDateParts($validator, 'start_date', 'add.start_date', 'Start date is invalid.');
-            $this->validateDateParts($validator, 'end_date', 'add.finish_date', 'Finish date is invalid.');
-            $this->validateDateOrder($validator);
-        });
+        return [
+            function (Validator $validator): void {
+                $this->validateDateParts($validator, 'start_date', 'add.start_date', 'Start date is invalid.');
+                $this->validateDateParts($validator, 'end_date', 'add.finish_date', 'Finish date is invalid.');
+                $this->validateDateOrder($validator);
+            },
+        ];
     }
 
     /**
      * Validate date parts for a given key (month/day/year).
      */
-    protected function validateDateParts($validator, string $sourceKey, string $errorKey, string $message): void
+    protected function validateDateParts(Validator $validator, string $sourceKey, string $errorKey, string $message): void
     {
         $date = $this->input($sourceKey);
 
@@ -95,7 +95,7 @@ abstract class BaseProductRequest extends FormRequest
         }
     }
 
-    protected function validateDateOrder($validator): void
+    protected function validateDateOrder(Validator $validator): void
     {
         $startDate = $this->fullDateFromInput('start_date');
         $endDate = $this->fullDateFromInput('end_date');

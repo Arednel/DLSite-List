@@ -26,8 +26,14 @@
                                         Add Work
                                     </div>
                                     <div class="dialog-body">
-                                        <form name="edit_work" method="post" id="main-form" action="/store">
+                                        <form name="edit_work" method="post" id="main-form"
+                                            action="{{ route('products.store') }}">
                                             @csrf
+                                            <input type="hidden" name="return_route" value="{{ $returnRoute }}">
+                                            @foreach ($returnQuery as $queryKey => $queryValue)
+                                                <input type="hidden" name="return_query[{{ $queryKey }}]"
+                                                    value="{{ $queryValue }}">
+                                            @endforeach
                                             <div id="top-submit-buttons" class="mt8 mb8 dialog-submit-row">
                                                 <input type="submit" class="inputButton main_submit" value="Submit">
                                             </div>
@@ -57,8 +63,7 @@
                                         </form>
 
                                         <div class="dialog-actions dialog-actions-right">
-                                            <a href="{{ request('redirect', '/') }}"
-                                                class="inputButton ml8 ignore-visited-link">
+                                            <a href="{{ $returnUrl }}" class="inputButton ml8 ignore-visited-link">
                                                 Go back
                                             </a>
                                         </div>

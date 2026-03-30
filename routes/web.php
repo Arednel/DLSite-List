@@ -19,11 +19,11 @@ use App\Http\Controllers\ProductController;
 Route::get('/', [ProductController::class, 'Index'])->name('index');
 
 //Works CRUD logic
-Route::get('/create', [ProductController::class, 'create']);
-Route::post('/store', [ProductController::class, 'store']);
-Route::get('/edit/{id}', [ProductController::class, 'edit']);
-Route::post('/update/{id}', [ProductController::class, 'update']);
-Route::post('/destroy/{id}', [ProductController::class, 'destroy']);
+Route::get('/create', [ProductController::class, 'create'])->name('products.create');
+Route::post('/store', [ProductController::class, 'store'])->name('products.store');
+Route::get('/edit/{id}', [ProductController::class, 'edit'])->name('products.edit');
+Route::post('/update/{id}', [ProductController::class, 'update'])->name('products.update');
+Route::post('/destroy/{id}', [ProductController::class, 'destroy'])->name('products.destroy');
 
 //Tag Library
 Route::get('/tags', [ProductController::class, 'tagLibrary'])->name('tags.index');

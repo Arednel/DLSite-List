@@ -3,10 +3,8 @@
     'filterOptions' => [],
 ])
 
-@php($filterQuery = $filters->toQuery())
-
-<button type="button" class="advanced-options-button {{ $filters->hasActiveFilters() ? 'is-active' : '' }}" data-index-filter-open
-    aria-controls="advanced-options-modal" aria-expanded="false">
+<button type="button" class="advanced-options-button {{ $filters->hasActiveFilters() ? 'is-active' : '' }}"
+    data-index-filter-open aria-controls="advanced-options-modal" aria-expanded="false">
     <i class="fa-solid fa-sliders"></i>
     Filter
 </button>
@@ -20,12 +18,12 @@
         </button>
 
         <form method="GET" action="{{ route('index') }}">
-            @if (array_key_exists('search', $filterQuery))
-                <input type="hidden" name="search" value="{{ $filterQuery['search'] }}">
+            @if ($filters->search !== '')
+                <input type="hidden" name="search" value="{{ $filters->search }}">
             @endif
 
-            @if (array_key_exists('genre', $filterQuery))
-                <input type="hidden" name="genre" value="{{ $filterQuery['genre'] }}">
+            @if ($filters->genre !== '')
+                <input type="hidden" name="genre" value="{{ $filters->genre }}">
             @endif
 
             <h2 id="advanced-options-title" class="advanced-options-header">
@@ -50,20 +48,17 @@
                     placeholder="Notes text">
             </div>
 
-            <x-index.filter-select id="filter_age_category" name="age_category" label="Age"
-                :options="$filterOptions['age_categories']" :selected="$filters->ageCategory?->value ?? ''"
-                placeholder="All ages" />
+            <x-index.filter-select id="filter_age_category" name="age_category" label="Age" :options="$filterOptions['age_categories']"
+                :selected="$filters->ageCategory?->value ?? ''" placeholder="All Works" />
 
-            <x-index.filter-select id="filter_progress" name="progress" label="Progress"
-                :options="$filterOptions['progress']" :selected="$filters->progress?->value ?? ''"
-                placeholder="Any progress" />
+            <x-index.filter-select id="filter_progress" name="progress" label="Progress" :options="$filterOptions['progress']"
+                :selected="$filters->progress?->value ?? ''" placeholder="Any progress" />
 
-            <x-index.filter-select id="filter_score" name="score" label="Score" :options="$filterOptions['scores']"
-                :selected="$filters->score?->value ?? ''" placeholder="Any score" />
+            <x-index.filter-select id="filter_score" name="score" label="Score" :options="$filterOptions['scores']" :selected="$filters->score?->value ?? ''"
+                placeholder="Any score" />
 
-            <x-index.filter-select id="filter_priority" name="priority" label="Priority"
-                :options="$filterOptions['priorities']" :selected="$filters->priority?->value ?? ''"
-                placeholder="Any priority" />
+            <x-index.filter-select id="filter_priority" name="priority" label="Priority" :options="$filterOptions['priorities']"
+                :selected="$filters->priority?->value ?? ''" placeholder="Any priority" />
 
             <div class="filter-widget">
                 <label class="widget-header" for="filter_num_re_listen_times">Total Times Re-listened</label>
@@ -72,24 +67,19 @@
             </div>
 
             <x-index.filter-select id="filter_re_listen_value" name="re_listen_value" label="Re-listen Value"
-                :options="$filterOptions['re_listen_values']" :selected="$filters->reListenValue?->value ?? ''"
-                placeholder="Any value" />
+                :options="$filterOptions['re_listen_values']" :selected="$filters->reListenValue?->value ?? ''" placeholder="Any value" />
 
             <div class="filter-widget tags">
                 <label class="widget-header" for="filter_tags">Tags</label>
                 <div class="filter-field-stack">
                     <textarea id="filter_tags" name="tags" rows="3"
                         placeholder='Comma-separated. Use double quotes for tags that contain commas, e.g. "Junior / Senior (at work, school, etc)", Office Lady'>{{ $filters->tags }}</textarea>
-                    @php($tagMatchOptions = [
-                        'all' => $filterOptions['tag_match']['all'] ?? 'All tags',
-                        'any' => $filterOptions['tag_match']['any'] ?? 'Any tag',
-                    ])
-                    <x-index.segmented-radio-group name="tag_match" :options="$tagMatchOptions"
+                    <x-index.segmented-radio-group name="tag_match" :options="$filterOptions['tag_match'] ?? []"
                         :selected="$filters->resolvedTagMatch()->value" />
                 </div>
             </div>
 
-            @if (array_key_exists('genre', $filterQuery))
+            @if ($filters->genre !== '')
                 <div class="filter-widget current-tag">
                     <span class="widget-header">Tag</span>
                     <span class="filter-static-value">Current tag filter stays applied.</span>
@@ -102,18 +92,17 @@
             </h2>
 
             <x-index.filter-select id="sort_first_field" name="sort_first_field" label="Primary"
-                group-class="sort-widget first" :options="$filterOptions['sort_fields']"
-                :selected="$filters->primarySort?->field->value ?? ''" placeholder="None" data-sort-field="primary">
-                <x-index.sort-direction-group name="sort_first_direction" :options="$filterOptions['sort_directions']"
-                    :selected="$filters->primarySort?->direction->value ?? 'desc'" scope="primary" />
+                group-class="sort-widget first" :options="$filterOptions['sort_fields']" :selected="$filters->primarySort?->field->value ?? ''" placeholder="None"
+                data-sort-field="primary">
+                <x-index.sort-direction-group name="sort_first_direction" :options="$filterOptions['sort_directions']" :selected="$filters->primarySort?->direction->value ?? 'desc'"
+                    scope="primary" />
             </x-index.filter-select>
 
             <x-index.filter-select id="sort_second_field" name="sort_second_field" label="Secondary"
-                group-class="sort-widget second" :options="$filterOptions['sort_fields']"
-                :selected="$filters->secondarySort?->field->value ?? ''" placeholder="None"
+                group-class="sort-widget second" :options="$filterOptions['sort_fields']" :selected="$filters->secondarySort?->field->value ?? ''" placeholder="None"
                 data-sort-field="secondary">
-                <x-index.sort-direction-group name="sort_second_direction" :options="$filterOptions['sort_directions']"
-                    :selected="$filters->secondarySort?->direction->value ?? 'desc'" scope="secondary" />
+                <x-index.sort-direction-group name="sort_second_direction" :options="$filterOptions['sort_directions']" :selected="$filters->secondarySort?->direction->value ?? 'desc'"
+                    scope="secondary" />
             </x-index.filter-select>
 
             <div class="advanced-options-actions">

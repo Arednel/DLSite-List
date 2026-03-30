@@ -2,6 +2,10 @@
 
 namespace Tests\Feature;
 
+use App\Enums\ProductPriority;
+use App\Enums\ProductProgress;
+use App\Enums\ProductReListenValue;
+use App\Enums\ProductScore;
 use App\Models\Genre;
 use App\Models\Product;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -281,6 +285,10 @@ class ProductControllerTest extends TestCase
     {
         $this->get('/')
             ->assertOk()
+            ->assertSeeInOrder([
+                'name="tag_match" value="all"',
+                'name="tag_match" value="any"',
+            ], false)
             ->assertSee('name="tag_match" value="all"', false)
             ->assertDontSee('name="tag_match" value="any" checked', false)
             ->assertSee('name="sort_first_direction" value="desc"', false)
@@ -473,7 +481,7 @@ class ProductControllerTest extends TestCase
             ->assertSee('data-list-menu-overlay', false)
             ->assertSee('genre=' . $englishGenre->getKey(), false)
             ->assertSee('genre=' . $customGenre->getKey(), false)
-            ->assertSee('href="/create?redirect=', false)
+            ->assertSee('href="/create?return_route=tags.index"', false)
             ->assertDontSee('hero__back', false);
     }
 
@@ -485,8 +493,37 @@ class ProductControllerTest extends TestCase
             ->assertSee('width=device-width, initial-scale=1', false)
             ->assertSee('Custom Tags')
             ->assertSee('name="id"', false)
+            ->assertSee('name="return_route" value="index"', false)
+            ->assertSee('href="/"', false)
             ->assertSee('id="add_start_date_month"', false)
             ->assertSee('id="add_finish_date_month"', false);
+    }
+
+    public function test_create_renders_enum_backed_select_labels(): void
+    {
+        $response = $this->get('/create');
+
+        $response->assertOk();
+
+        foreach (ProductProgress::options() as $value => $label) {
+            $response->assertSee('value="' . e($value) . '"', false);
+            $response->assertSee($label);
+        }
+
+        foreach (ProductScore::options() as $value => $label) {
+            $response->assertSee('value="' . e($value) . '"', false);
+            $response->assertSee($label);
+        }
+
+        foreach (ProductPriority::options() as $value => $label) {
+            $response->assertSee('value="' . e($value) . '"', false);
+            $response->assertSee($label);
+        }
+
+        foreach (ProductReListenValue::options() as $value => $label) {
+            $response->assertSee('value="' . e($value) . '"', false);
+            $response->assertSee($label);
+        }
     }
 
     public function test_edit_renders_form_page_for_existing_product(): void
@@ -501,7 +538,15 @@ class ProductControllerTest extends TestCase
         ]);
         $this->attachGenres($product, [$japaneseGenre, $englishGenre]);
 
-        $this->get("/edit/{$product->id}?redirect=/?progress=Listening")
+        $query = http_build_query([
+            'return_route' => 'index',
+            'return_query' => [
+                'progress' => 'Listening',
+            ],
+            'return_fragment' => $product->id,
+        ]);
+
+        $this->get("/edit/{$product->id}?{$query}")
             ->assertOk()
             ->assertSee('Edit Work')
             ->assertSee('width=device-width, initial-scale=1', false)
@@ -512,7 +557,11 @@ class ProductControllerTest extends TestCase
             ->assertSee('Sleep Guidance EN')
             ->assertDontSee('JP_ONLY_GUIDANCE_TOKEN')
             ->assertSee($product->notes)
-            ->assertSee('name="redirect"', false);
+            ->assertSee('name="return_route" value="index"', false)
+            ->assertSee('name="return_query[progress]"', false)
+            ->assertSee('name="return_fragment"', false)
+            ->assertSee('href="/?progress=Listening#' . $product->id . '"', false)
+            ->assertDontSee('name="redirect"', false);
     }
 
     public function test_edit_prefills_comma_custom_tags_as_quoted_csv(): void
@@ -701,7 +750,11 @@ class ProductControllerTest extends TestCase
                 're_listen_value' => '5',
                 'priority' => '2',
             ],
-            'redirect' => '/?progress=Plan%20to%20Listen',
+            'return_route' => 'index',
+            'return_query' => [
+                'progress' => 'Plan to Listen',
+            ],
+            'return_fragment' => $product->id,
         ]);
 
         $response->assertSessionHasNoErrors();
@@ -800,8 +853,14 @@ class ProductControllerTest extends TestCase
         $this->post("/update/{$product->id}", [
             'work_name' => $product->work_name,
             'progress' => 'Completed',
-            'redirect' => $redirect,
-        ])->assertRedirect("/?age_category=ALL_AGES&search=rain&progress=Completed#{$product->id}");
+            'return_route' => 'index',
+            'return_query' => [
+                'age_category' => 'ALL_AGES',
+                'progress' => 'Listening',
+                'search' => 'rain',
+            ],
+            'return_fragment' => $product->id,
+        ])->assertRedirect("/?search=rain&age_category=ALL_AGES&progress=Completed#{$product->id}");
     }
 
     public function test_update_redirect_keeps_progress_query_when_value_is_unchanged(): void
@@ -816,7 +875,12 @@ class ProductControllerTest extends TestCase
         $this->post("/update/{$product->id}", [
             'work_name' => $product->work_name,
             'progress' => 'Listening',
-            'redirect' => $redirect,
+            'return_route' => 'index',
+            'return_query' => [
+                'age_category' => 'ALL_AGES',
+                'progress' => 'Listening',
+            ],
+            'return_fragment' => $product->id,
         ])->assertRedirect("{$redirect}#{$product->id}");
     }
 
@@ -913,7 +977,10 @@ class ProductControllerTest extends TestCase
         ]);
 
         $this->post("/destroy/{$product->id}", [
-            'redirect' => '/?progress=Completed',
+            'return_route' => 'index',
+            'return_query' => [
+                'progress' => 'Completed',
+            ],
         ])->assertRedirect('/?progress=Completed');
 
         $this->assertDatabaseMissing('products', ['id' => $product->id]);
@@ -924,7 +991,10 @@ class ProductControllerTest extends TestCase
         $missingId = Product::factory()->make()->id;
 
         $this->post("/destroy/{$missingId}", [
-            'redirect' => '/?progress=Plan%20to%20Listen',
+            'return_route' => 'index',
+            'return_query' => [
+                'progress' => 'Plan to Listen',
+            ],
         ])->assertRedirect('/?progress=Plan%20to%20Listen');
     }
 

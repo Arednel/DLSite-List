@@ -25,6 +25,7 @@
 - Model: `app/Models/Product.php`
 - Views: `resources/views/*.blade.php`
 - UI field components: `resources/views/components/fields/*.blade.php`
+- UI field component classes: `app/View/Components/Fields/*.php`
 - Scripts/CSS: `public/scripts/*`, `public/css/*`
 
 Shared UI note:
@@ -32,13 +33,16 @@ Shared UI note:
 - desktop keeps the floating hover menu
 - mobile uses a toggle button that opens the same menu as a left-side drawer
 - `resources/views/Index.blade.php` keeps the desktop table on larger screens and switches to stacked cards on mobile so search/actions still fit
-- `resources/views/Create.blade.php` and `resources/views/Edit.blade.php` use `public/css/edit.css` for both desktop and mobile form layouts
-- `resources/views/components/index/advanced-filters.blade.php` owns the index filter/sort modal markup
-- `resources/views/components/index/*.blade.php` contains the smaller reusable filter/select/radio pieces used by the index modal
-- `app/Http/Requests/ProductIndexRequest.php` builds a typed `ProductIndexFilters` object from the query string
+- `resources/views/Create.blade.php` and `resources/views/Edit.blade.php` use `public/css/edit.css` for both desktop and mobile form layouts and render reusable field components from `resources/views/components/fields/*.blade.php`
+- `app/View/Components/Fields/*.php` provides the class-based field components used by those Blade views
+- `AppServiceProvider` registers the enum-backed field component aliases used by `<x-fields.* />`
+- the progress, score, priority, and re-listen field component classes read their select options from the matching enums in `app/Enums/*.php`
+- `resources/views/components/index/advanced-filters.blade.php` renders the index filter/sort modal
+- `resources/views/components/index/*.blade.php` contains the reusable filter/select/radio pieces used by the index modal
+- `app/Http/Requests/ProductIndexRequest.php` normalizes the query string into a `ProductIndexFilters` object
 - `app/Enums/*.php` holds enum-backed filter options for progress, priority, tag match, sort fields, and the numeric rating scales
 - `app/Models/Product.php` owns the Laravel 12 local scopes used by index filtering/search
-- `app/Support/ProductIndexResults.php` now focuses on orchestrating product loading/sorting and the lightweight visible-genre query
+- `app/Support/ProductIndexResults.php` loads filtered products, applies PHP-side multi-column sorting, and runs the lightweight visible-genre query used by the index page
 - the advanced filter modal defaults to `All tags` matching and `Desc` sort direction until the user chooses something else
 
 ## Data Model
@@ -50,7 +54,7 @@ Shared UI note:
 `genres` table stores the visible genre title text and metadata:
 - `title`
 - `type` (`auto_generated_japanese`, `auto_generated_english`, `custom`)
-- `language` (`jp` or `en` for now)
+- `language` (`jp` or `en`)
 - optional `group_id`
 
 `genre_groups` stores optional genre group definitions.
@@ -68,7 +72,11 @@ Migration note:
 Runtime note:
 - `ProductController@index` shows English + custom genres through one lightweight grouped query from `genre_product` + `genres`
 - index filter state is normalized into `app/Support/ProductIndexFilters.php`, which is then reused by the controller, query layer, and Blade modal
+- `app/Support/ProductIndexFilters.php` also builds query arrays used by progress tabs, preserved search state, and tag links on the index page
 - switching progress tabs keeps the rest of the index request state, but intentionally drops the current `genre` filter
+- clicking a series link opens the index with only the `series` filter applied
+- `app/Support/ReturnTarget.php` normalizes the structured return state (`return_route`, `return_query`, `return_fragment`) used by create/edit/update/destroy flows
+- update rebuilds the return URL through `ReturnTarget` and updates the `progress` query only when returning to the index after a status change
 - create/store resolves scraped/custom titles into `genres` rows and syncs the pivot
 - edit loads only the fetched English/custom genre rows it renders, while keeping fetched non-custom genres attached automatically
 - update reads user-added genres from the form and reuses an existing fetched genre row when the title already exists
@@ -79,10 +87,16 @@ Runtime note:
 
 ## Validation / Normalization Notes
 - RJ input can be raw RJ code or URL containing RJ code.
+- `BaseProductRequest` normalizes the create/edit `add[...]` fields in `prepareForValidation()`, then runs date-part and date-order checks through the form request `after()` hook.
 - Custom tags are comma-separated and parsed with CSV rules:
   - commas inside a tag are supported via quotes
   - example: `"Junior / Senior (at work, school, etc)", Office Lady`
 
 ## Testing Overview
-- Feature tests: `tests/Feature/ProductControllerTest.php`
-- Uses `RefreshDatabase` to isolate DB state during test execution.
+- Feature tests:
+  - `tests/Feature/ProductControllerTest.php`
+  - `tests/Feature/ProductGenreMigrationTest.php`
+- Unit tests:
+  - `tests/Unit/Support/ProductIndexFiltersTest.php`
+  - `tests/Unit/ExampleTest.php`
+- Feature tests use `RefreshDatabase` to isolate DB state during test execution.

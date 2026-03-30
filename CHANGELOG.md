@@ -2,6 +2,16 @@
 
 ## Development
 
+2026-03-30 -- 1.2.4 Fixes and Optimizations
+  * Removed the unused Laravel Excel dependency
+  * Improved index filter handling and cleaned up Blade templates
+  * Clicking on "Series" now opens all works from that series and resets the other index filters
+  * Improved create/edit return navigation without relying on raw redirect URLs
+  * Cleaned up create/edit form field components and enum-backed select handling
+  * Switched additional create/edit date validation to Laravel 12 form request `after()` hooks
+  * Changed "Age" placeholder to "All Works" in Advanced Filters
+  * Updated tests and project docs for the current behavior
+
 * 2026-03-26 -- 1.2.3 Fixes
   * Added padding for advanced options on mobile devices
   * Reordered labels in ProductScore.php

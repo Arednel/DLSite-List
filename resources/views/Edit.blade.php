@@ -27,11 +27,15 @@
                                     </div>
                                     <div class="dialog-body">
                                         <form name="edit_work" method="post" id="main-form"
-                                            action="/update/{{ $product->id }}">
+                                            action="{{ route('products.update', ['id' => $product->id]) }}">
                                             @csrf
 
-                                            <input type="hidden" name="redirect"
-                                                value="{{ request('redirect', url('/')) }}">
+                                            <input type="hidden" name="return_route" value="{{ $returnRoute }}">
+                                            @foreach ($returnQuery as $queryKey => $queryValue)
+                                                <input type="hidden" name="return_query[{{ $queryKey }}]"
+                                                    value="{{ $queryValue }}">
+                                            @endforeach
+                                            <input type="hidden" name="return_fragment" value="{{ $returnFragment }}">
 
                                             <div id="top-submit-buttons" class="mt8 mb8 dialog-submit-row">
                                                 <input type="submit" class="inputButton main_submit" value="Submit">
@@ -66,11 +70,15 @@
                                         </form>
 
                                         <form class="dialog-actions dialog-actions-right" id="delete-form"
-                                            method="POST" action="/destroy/{{ $product->id }}">
+                                            method="POST"
+                                            action="{{ route('products.destroy', ['id' => $product->id]) }}">
                                             @csrf
 
-                                            <input type="hidden" name="redirect"
-                                                value="{{ request('redirect', url('/')) }}">
+                                            <input type="hidden" name="return_route" value="{{ $returnRoute }}">
+                                            @foreach ($returnQuery as $queryKey => $queryValue)
+                                                <input type="hidden" name="return_query[{{ $queryKey }}]"
+                                                    value="{{ $queryValue }}">
+                                            @endforeach
 
                                             <input type="submit" class="inputButton ml8 delete_submit" value="Delete"
                                                 onclick="return openDeleteModal(event);">
@@ -79,8 +87,7 @@
                                         <br>
 
                                         <div class="dialog-actions dialog-actions-right">
-                                            <a href="{{ $redirect }}#{{ $product->id }}"
-                                                class="inputButton ml8 ignore-visited-link">
+                                            <a href="{{ $returnUrl }}" class="inputButton ml8 ignore-visited-link">
                                                 Go back
                                             </a>
                                         </div>

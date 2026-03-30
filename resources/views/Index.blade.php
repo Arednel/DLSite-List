@@ -11,13 +11,9 @@
 </head>
 
 <body class="ownlist anime" data-work="anime">
-    @php($filterQuery = $filters->toQuery())
-    @php($allProgressQuery = collect($filterQuery)->except(['progress', 'genre'])->all())
-    @php($searchFormQuery = collect($filterQuery)->except('search')->all())
-
     <div class="header"></div>
 
-    <x-list-menu-float />
+    <x-list-menu-float :quick-add-url="route('products.create', ['return_route' => 'index', 'return_query' => $filterQuery], false)" />
 
     <div id="list-container" class="list-container">
         <div class="cover-block">
@@ -44,8 +40,7 @@
                 <!-- Search -->
                 <div class="search-container">
                     <form method="GET" action="{{ route('index') }}" class="search-form">
-                        <input type="text" name="search" value="{{ $filterQuery['search'] ?? '' }}"
-                            placeholder="Search..."
+                        <input type="text" name="search" value="{{ $filters->search }}" placeholder="Search..."
                             class="search-input">
                         <button type="submit" class="search-button">
                             <i class="fa-solid fa-magnifying-glass"></i>
@@ -140,8 +135,7 @@
                                         @if ($product->series == null)
                                             -
                                         @else
-                                            <a
-                                                href="{{ route('index', array_merge($filterQuery, ['series' => $product->series]), false) }}">
+                                            <a href="{{ route('index', 'series=' . $product->series) }}">
                                                 {{ $product->series }}
                                             </a>
                                         @endif
@@ -171,7 +165,7 @@
                                 <td class="data actions" data-label="Actions">
                                     <div class="add-edit-more">
                                         <span class="edit">
-                                            <a href="/edit/{{ $product->id }}?redirect={{ urlencode(request()->fullUrl()) }}#{{ $product->id }}"
+                                            <a href="{{ route('products.edit', ['id' => $product->id, 'return_route' => 'index', 'return_query' => $filterQuery, 'return_fragment' => $product->id], false) }}"
                                                 class="List_LightBox">Edit</a>
                                         </span>
                                     </div>

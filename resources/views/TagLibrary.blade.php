@@ -11,7 +11,7 @@
 </head>
 
 <body>
-    <x-list-menu-float />
+    <x-list-menu-float :quick-add-url="route('products.create', ['return_route' => 'tags.index'], false)" />
 
     <main class="page">
         <div class="container">
