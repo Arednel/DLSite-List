@@ -58,6 +58,7 @@ class ProductController extends Controller
     public function tagLibrary()
     {
         $genres = Genre::query()
+            ->withCount('products')
             ->whereIn('type', [
                 Genre::TYPE_AUTO_GENERATED_ENGLISH,
                 Genre::TYPE_CUSTOM,

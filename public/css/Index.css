@@ -878,9 +878,9 @@ body.filter-modal-open {
 
     .advanced-options-panel {
         width: calc(100vw - 20px);
-        max-height: calc(100vh - 20px);
+        max-height: calc(100dvh - 20px);
         margin: 10px auto;
-        padding: 18px 16px 16px;
+        padding: 18px 16px calc(16px + env(safe-area-inset-bottom));
     }
 
     .advanced-options-header {
@@ -921,7 +921,7 @@ body.filter-modal-open {
 
     .advanced-options-actions {
         flex-direction: column-reverse;
-        padding-bottom: 80px;
+        padding-bottom: calc(16px + env(safe-area-inset-bottom));
     }
 
     .list-table,
@@ -1049,6 +1049,14 @@ body.filter-modal-open {
 
     #tags {
         font-size: 14px;
+    }
+}
+
+@supports not (height: 100dvh) {
+    @media (max-width: 992px) {
+        .advanced-options-panel {
+            max-height: calc(100vh - 20px);
+        }
     }
 }
 

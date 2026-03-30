@@ -5,8 +5,9 @@
 
     <meta name="viewport" content="width=device-width, initial-scale=1">
 
-    <link rel="stylesheet" href="{{ asset('css/index.css') }}">
-    <link rel="stylesheet" href="{{ asset('css/list-menu-float.css') }}">
+    <link rel="stylesheet" href="{{ asset('css/index.css') }}?v={{ filemtime(public_path('css/index.css')) }}">
+    <link rel="stylesheet"
+        href="{{ asset('css/list-menu-float.css') }}?v={{ filemtime(public_path('css/list-menu-float.css')) }}">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.6.0/css/all.min.css">
 </head>
 
@@ -192,7 +193,7 @@
         </div>
     </footer>
 
-    <script src="{{ asset('scripts/tableSort.js') }}"></script>
+    <script src="{{ asset('scripts/tableSort.js') }}?v={{ filemtime(public_path('scripts/tableSort.js')) }}"></script>
 </body>
 
 </html>

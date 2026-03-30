@@ -9,7 +9,7 @@
 ## Main Application Flow
 1. User opens list page (`GET /`).
 2. `ProductController@index` applies filters/search and renders `resources/views/Index.blade.php`.
-3. `GET /tags` renders the tag library and links each English/custom genre back to the same index filter used on the list page.
+3. `GET /tags` renders the tag library, shows the work count for each English/custom genre, and links each tag back to the same index filter used on the list page.
 4. User can create/edit/delete entries through forms.
 5. Store flow (`POST /store`) validates input, runs scraper, reads scraped JSON, and creates a `products` row.
 6. Update flow (`POST /update/{id}`) validates and updates editable fields.
@@ -37,6 +37,7 @@ Shared UI note:
 - `app/View/Components/Fields/*.php` provides the class-based field components used by those Blade views
 - `AppServiceProvider` registers the enum-backed field component aliases used by `<x-fields.* />`
 - the progress, score, priority, and re-listen field component classes read their select options from the matching enums in `app/Enums/*.php`
+- Blade pages load CSS and JS from `public/` with `filemtime(public_path(...))` query strings for cache busting
 - `resources/views/components/index/advanced-filters.blade.php` renders the index filter/sort modal
 - `resources/views/components/index/*.blade.php` contains the reusable filter/select/radio pieces used by the index modal
 - `app/Http/Requests/ProductIndexRequest.php` normalizes the query string into a `ProductIndexFilters` object

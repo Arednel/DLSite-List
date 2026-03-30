@@ -469,13 +469,23 @@ class ProductControllerTest extends TestCase
         $customGenre = $this->createGenre('Library Custom Tag', Genre::TYPE_CUSTOM);
         $this->createGenre('Library Japanese Tag', Genre::TYPE_AUTO_GENERATED_JAPANESE);
 
+        $firstProduct = Product::factory()->create([
+            'work_name' => 'LIBRARY_TAG_COUNT_FIRST_TOKEN',
+        ]);
+        $secondProduct = Product::factory()->create([
+            'work_name' => 'LIBRARY_TAG_COUNT_SECOND_TOKEN',
+        ]);
+
+        $this->attachGenres($firstProduct, [$englishGenre, $customGenre]);
+        $this->attachGenres($secondProduct, [$englishGenre]);
+
         $response = $this->from('/?progress=Listening')->get('/tags');
 
         $response->assertOk()
             ->assertSee('Tag Library')
             ->assertSee('Quick Add')
-            ->assertSee('Library English Tag')
-            ->assertSee('Library Custom Tag')
+            ->assertSee('Library English Tag (2)')
+            ->assertSee('Library Custom Tag (1)')
             ->assertDontSee('Library Japanese Tag')
             ->assertSee('data-list-menu-toggle', false)
             ->assertSee('data-list-menu-overlay', false)

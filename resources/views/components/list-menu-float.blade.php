@@ -79,4 +79,5 @@
     </div>
 </div>
 
-<script src="{{ asset('scripts/list-menu-float.js') }}" defer></script>
+<script src="{{ asset('scripts/list-menu-float.js') }}?v={{ filemtime(public_path('scripts/list-menu-float.js')) }}"
+    defer></script>

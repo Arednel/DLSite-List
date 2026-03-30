@@ -2,6 +2,11 @@
 
 ## Development
 
+2026-03-30 -- 1.2.5 CSS and Tag Library improvements
+  * Tag Library now shows how many works use each visible tag
+  * Improved mobile advanced-filter actions so Apply and Clear stay reachable on browsers with changing bottom UI
+  * Added simple CSS/JS cache busting in Blade via `filemtime(public_path(...))`
+
 2026-03-30 -- 1.2.4 Fixes and Optimizations
   * Removed the unused Laravel Excel dependency
   * Improved index filter handling and cleaned up Blade templates

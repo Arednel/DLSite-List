@@ -6,8 +6,8 @@
 
     <meta name="viewport" content="width=device-width, initial-scale=1">
 
-    <link rel="stylesheet" href="{{ asset('css/tag-library.css') }}">
-    <link rel="stylesheet" href="{{ asset('css/list-menu-float.css') }}">
+    <link rel="stylesheet" href="{{ asset('css/tag-library.css') }}?v={{ filemtime(public_path('css/tag-library.css')) }}">
+    <link rel="stylesheet" href="{{ asset('css/list-menu-float.css') }}?v={{ filemtime(public_path('css/list-menu-float.css')) }}">
 </head>
 
 <body>
@@ -27,7 +27,7 @@
                             @forelse ($genres as $genre)
                                 <a class="tag tag--soft tag--md is-clickable"
                                     href="{{ route('index', ['age_category' => '', 'progress' => '', 'genre' => $genre->id]) }}">
-                                    {{ $genre->title }}
+                                    {{ $genre->title }} ({{ $genre->products_count }})
                                 </a>
                             @empty
                                 <p class="empty-state">No English or custom tags yet.</p>

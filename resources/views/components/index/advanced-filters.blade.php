@@ -74,8 +74,7 @@
                 <div class="filter-field-stack">
                     <textarea id="filter_tags" name="tags" rows="3"
                         placeholder='Comma-separated. Use double quotes for tags that contain commas, e.g. "Junior / Senior (at work, school, etc)", Office Lady'>{{ $filters->tags }}</textarea>
-                    <x-index.segmented-radio-group name="tag_match" :options="$filterOptions['tag_match'] ?? []"
-                        :selected="$filters->resolvedTagMatch()->value" />
+                    <x-index.segmented-radio-group name="tag_match" :options="$filterOptions['tag_match'] ?? []" :selected="$filters->resolvedTagMatch()->value" />
                 </div>
             </div>
 
@@ -114,5 +113,6 @@
 </div>
 
 @once
-    <script src="{{ asset('scripts/index-filters.js') }}" defer></script>
+    <script src="{{ asset('scripts/index-filters.js') }}?v={{ filemtime(public_path('scripts/index-filters.js')) }}"
+        defer></script>
 @endonce
