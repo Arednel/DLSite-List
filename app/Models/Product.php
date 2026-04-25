@@ -44,22 +44,28 @@ class Product extends Model
 
     public function genres(): BelongsToMany
     {
-        return $this->belongsToMany(Genre::class)->withTimestamps();
+        return $this->belongsToMany(Genre::class)
+            ->withPivot('source')
+            ->withTimestamps();
     }
 
     public function japaneseGenres(): BelongsToMany
     {
-        return $this->genres()->where('genres.type', Genre::TYPE_AUTO_GENERATED_JAPANESE);
+        return $this->genres()
+            ->where('genres.type', Genre::TYPE_AUTO_GENERATED_JAPANESE)
+            ->wherePivot('source', Genre::PIVOT_SOURCE_FETCHED);
     }
 
     public function englishGenres(): BelongsToMany
     {
-        return $this->genres()->where('genres.type', Genre::TYPE_AUTO_GENERATED_ENGLISH);
+        return $this->genres()
+            ->where('genres.type', Genre::TYPE_AUTO_GENERATED_ENGLISH)
+            ->wherePivot('source', Genre::PIVOT_SOURCE_FETCHED);
     }
 
     public function customGenres(): BelongsToMany
     {
-        return $this->genres()->where('genres.type', Genre::TYPE_CUSTOM);
+        return $this->genres()->wherePivot('source', Genre::PIVOT_SOURCE_CUSTOM);
     }
 
     #[Scope]

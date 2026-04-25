@@ -1,3 +1,5 @@
+@php($isCustomCreate = $isCustomCreate ?? false)
+
 <html lang="en" class="appearance-none dark-mode cvonfc">
 
 <head>
@@ -14,7 +16,7 @@
         <div class="wrapper">
             <div id="contentWrapper">
                 <div>
-                    <h1 class="h1">Add Work</h1>
+                    <h1 class="h1">{{ $isCustomCreate ? 'Add Custom Work' : 'Add Work' }}</h1>
                 </div>
 
                 <div id="content">
@@ -23,11 +25,22 @@
                             <tr>
                                 <td>
                                     <div class="normal_header dialog-header">
-                                        Add Work
+                                        {{ $isCustomCreate ? 'Add Custom Work' : 'Add Work' }}
                                     </div>
                                     <div class="dialog-body">
+                                        <div class="create-mode-switch">
+                                            <a href="{{ route('products.create', ['return_route' => $returnRoute, 'return_query' => $returnQuery], false) }}"
+                                                class="inputButton ignore-visited-link {{ !$isCustomCreate ? 'is-active' : '' }}">
+                                                DLSite Create
+                                            </a>
+                                            <a href="{{ route('products.create.custom', ['return_route' => $returnRoute, 'return_query' => $returnQuery], false) }}"
+                                                class="inputButton ml8 ignore-visited-link {{ $isCustomCreate ? 'is-active' : '' }}">
+                                                Custom Create
+                                            </a>
+                                        </div>
                                         <form name="edit_work" method="post" id="main-form"
-                                            action="{{ route('products.store') }}">
+                                            action="{{ $isCustomCreate ? route('products.store.custom') : route('products.store') }}"
+                                            @if ($isCustomCreate) enctype="multipart/form-data" @endif>
                                             @csrf
                                             <input type="hidden" name="return_route" value="{{ $returnRoute }}">
                                             @foreach ($returnQuery as $queryKey => $queryValue)
@@ -44,10 +57,15 @@
                                                     <x-fields.status-select />
                                                     <x-fields.score-select />
                                                     <x-fields.series-field />
-                                                    <x-fields.title-japanese />
+                                                    <x-fields.title-japanese :required="$isCustomCreate" />
                                                     <x-fields.title-english />
                                                     <x-fields.genre-custom />
                                                     <x-fields.notes />
+                                                    @if ($isCustomCreate)
+                                                        <x-fields.age-category :options="$ageCategoryOptions" />
+                                                        <x-fields.work-image-upload />
+                                                        <x-fields.sample-images-upload />
+                                                    @endif
                                                     <x-fields.start-date :month-labels="$monthLabels" :days="$days"
                                                         :years="$years" />
                                                     <x-fields.finish-date :month-labels="$monthLabels" :days="$days"

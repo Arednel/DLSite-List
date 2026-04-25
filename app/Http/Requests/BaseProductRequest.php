@@ -9,6 +9,17 @@ use Illuminate\Validation\Validator;
 
 abstract class BaseProductRequest extends FormRequest
 {
+    protected function normalizeRjIdInput(): void
+    {
+        $id = $this->input('id');
+
+        if (is_string($id) && preg_match('/RJ\d+/i', $id, $matches)) {
+            $this->merge([
+                'id' => strtoupper($matches[0]),
+            ]);
+        }
+    }
+
     protected function commonRules(): array
     {
         return [

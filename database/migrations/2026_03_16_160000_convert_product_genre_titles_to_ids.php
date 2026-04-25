@@ -15,6 +15,8 @@ return new class extends Migration
     private const TYPE_CUSTOM = 'custom';
     private const LANGUAGE_JAPANESE = 'jp';
     private const LANGUAGE_ENGLISH = 'en';
+    private const SOURCE_FETCHED = 'fetched';
+    private const SOURCE_CUSTOM = 'custom';
 
     /**
      * Run the migrations.
@@ -30,12 +32,14 @@ return new class extends Migration
             return;
         }
 
+        $hasPivotSource = Schema::hasColumn(self::GENRE_PRODUCT_TABLE, 'source');
+
         DB::table(self::PRODUCTS_TABLE)
             ->select(['id', 'genre', 'genre_english', 'genre_custom'])
             ->orderBy('id')
             ->lazy()
-            ->each(function (object $product): void {
-                $genreIds = array_merge(
+            ->each(function (object $product) use ($hasPivotSource): void {
+                $fetchedGenreIds = array_merge(
                     $this->resolveGenreIds(
                         $this->decodeJsonArray($product->genre),
                         self::TYPE_AUTO_GENERATED_JAPANESE,
@@ -46,20 +50,26 @@ return new class extends Migration
                         self::TYPE_AUTO_GENERATED_ENGLISH,
                         self::LANGUAGE_ENGLISH
                     ),
-                    $this->resolveGenreIds(
-                        $this->decodeJsonArray($product->genre_custom),
-                        self::TYPE_CUSTOM,
-                        self::LANGUAGE_ENGLISH
-                    ),
+                );
+                $customGenreIds = $this->resolveGenreIds(
+                    $this->decodeJsonArray($product->genre_custom),
+                    self::TYPE_CUSTOM,
+                    self::LANGUAGE_ENGLISH
                 );
 
-                foreach (array_values(array_unique($genreIds)) as $genreId) {
-                    DB::table(self::GENRE_PRODUCT_TABLE)->insertOrIgnore([
+                foreach ($this->genreSyncPayload($fetchedGenreIds, $customGenreIds) as $genreId => $source) {
+                    $row = [
                         'product_id' => $product->id,
                         'genre_id' => $genreId,
                         'created_at' => now(),
                         'updated_at' => now(),
-                    ]);
+                    ];
+
+                    if ($hasPivotSource) {
+                        $row['source'] = $source;
+                    }
+
+                    DB::table(self::GENRE_PRODUCT_TABLE)->insertOrIgnore($row);
                 }
             });
 
@@ -85,41 +95,56 @@ return new class extends Migration
             });
         }
 
+        $hasPivotSource = Schema::hasColumn(self::GENRE_PRODUCT_TABLE, 'source');
+
         DB::table(self::PRODUCTS_TABLE)
             ->select(['id'])
             ->orderBy('id')
             ->lazy()
-            ->each(function (object $product): void {
+            ->each(function (object $product) use ($hasPivotSource): void {
+                $genreSelect = [
+                    self::GENRES_TABLE . '.title',
+                    self::GENRES_TABLE . '.type',
+                ];
+
+                if ($hasPivotSource) {
+                    $genreSelect[] = self::GENRE_PRODUCT_TABLE . '.source';
+                }
+
                 $genres = DB::table(self::GENRE_PRODUCT_TABLE)
                     ->join(self::GENRES_TABLE, self::GENRES_TABLE . '.id', '=', self::GENRE_PRODUCT_TABLE . '.genre_id')
                     ->where(self::GENRE_PRODUCT_TABLE . '.product_id', $product->id)
-                    ->select([
-                        self::GENRES_TABLE . '.title',
-                        self::GENRES_TABLE . '.type',
-                    ])
+                    ->select($genreSelect)
                     ->orderBy(self::GENRES_TABLE . '.id')
                     ->get();
+
+                $japaneseGenres = $genres->where('type', self::TYPE_AUTO_GENERATED_JAPANESE);
+                $englishGenres = $genres->where('type', self::TYPE_AUTO_GENERATED_ENGLISH);
+                $customGenres = $genres->where('type', self::TYPE_CUSTOM);
+
+                if ($hasPivotSource) {
+                    $japaneseGenres = $japaneseGenres->where('source', '!=', self::SOURCE_CUSTOM);
+                    $englishGenres = $englishGenres->where('source', '!=', self::SOURCE_CUSTOM);
+                    $customGenres = $genres->where('source', self::SOURCE_CUSTOM);
+                }
 
                 DB::table(self::PRODUCTS_TABLE)
                     ->where('id', $product->id)
                     ->update([
                         'genre' => json_encode(
-                            $genres
-                                ->where('type', self::TYPE_AUTO_GENERATED_JAPANESE)
+                            $japaneseGenres
                                 ->pluck('title')
                                 ->values()
                                 ->all()
                         ),
                         'genre_english' => json_encode(
-                            $genres
-                                ->where('type', self::TYPE_AUTO_GENERATED_ENGLISH)
+                            $englishGenres
                                 ->pluck('title')
                                 ->values()
                                 ->all()
                         ),
                         'genre_custom' => json_encode(
-                            $genres
-                                ->where('type', self::TYPE_CUSTOM)
+                            $customGenres
                                 ->pluck('title')
                                 ->values()
                                 ->all()
@@ -164,6 +189,21 @@ return new class extends Migration
         $normalized = trim((string) $value);
 
         return $normalized === '' ? null : $normalized;
+    }
+
+    private function genreSyncPayload(array $fetchedGenreIds, array $customGenreIds): array
+    {
+        $payload = [];
+
+        foreach (array_unique($fetchedGenreIds) as $genreId) {
+            $payload[$genreId] = self::SOURCE_FETCHED;
+        }
+
+        foreach (array_unique($customGenreIds) as $genreId) {
+            $payload[$genreId] ??= self::SOURCE_CUSTOM;
+        }
+
+        return $payload;
     }
 
     private function resolveGenreId(string $title, string $preferredType, string $language): int

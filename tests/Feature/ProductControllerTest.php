@@ -9,6 +9,8 @@ use App\Enums\ProductScore;
 use App\Models\Genre;
 use App\Models\Product;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\Storage;
 use Tests\TestCase;
 
 class ProductControllerTest extends TestCase
@@ -500,13 +502,36 @@ class ProductControllerTest extends TestCase
         $this->get('/create')
             ->assertOk()
             ->assertSee('Add Work')
+            ->assertSee('DLSite Create')
+            ->assertSee('Custom Create')
             ->assertSee('width=device-width, initial-scale=1', false)
             ->assertSee('Custom Tags')
             ->assertSee('name="id"', false)
             ->assertSee('name="return_route" value="index"', false)
             ->assertSee('href="/"', false)
             ->assertSee('id="add_start_date_month"', false)
-            ->assertSee('id="add_finish_date_month"', false);
+            ->assertSee('id="add_finish_date_month"', false)
+            ->assertDontSee('name="age_category"', false)
+            ->assertDontSee('name="work_image"', false)
+            ->assertDontSee('name="sample_images[]"', false);
+    }
+
+    public function test_custom_create_renders_form_page(): void
+    {
+        $this->get('/create/custom')
+            ->assertOk()
+            ->assertSee('Add Custom Work')
+            ->assertSee('DLSite Create')
+            ->assertSee('Custom Create')
+            ->assertSee('/store/custom', false)
+            ->assertSee('enctype="multipart/form-data"', false)
+            ->assertSee('name="id"', false)
+            ->assertSee('name="work_name"', false)
+            ->assertSee('name="age_category"', false)
+            ->assertSee('name="work_image"', false)
+            ->assertSee('name="sample_images[]"', false)
+            ->assertSee('file-upload-input', false)
+            ->assertSee('Select age category');
     }
 
     public function test_create_renders_enum_backed_select_labels(): void
@@ -715,6 +740,196 @@ class ProductControllerTest extends TestCase
         }
     }
 
+    public function test_custom_store_saves_local_uploads_and_sets_work_image_path(): void
+    {
+        Storage::fake('public');
+
+        $workId = Product::factory()->make()->id;
+        $cover = UploadedFile::fake()->image('cover.png')->size(1024);
+        $sampleOne = UploadedFile::fake()->image('sample-one.jpg')->size(1024);
+        $sampleTwo = UploadedFile::fake()->image('sample-two.png')->size(1024);
+
+        $response = $this->post('/store/custom', [
+            'id' => strtolower($workId),
+            'work_name' => 'CUSTOM_STORE_JP_TOKEN',
+            'work_name_english' => 'CUSTOM_STORE_EN_TOKEN',
+            'age_category' => 'R18',
+            'progress' => 'Completed',
+            'score' => 8,
+            'series' => 'CUSTOM_STORE_SERIES_TOKEN',
+            'genre_custom' => 'Custom One, Custom Two',
+            'notes' => 'CUSTOM_STORE_NOTES_TOKEN',
+            'work_image' => $cover,
+            'sample_images' => [$sampleOne, $sampleTwo],
+            'add' => [
+                'start_date' => [
+                    'month' => '04',
+                    'day' => '01',
+                    'year' => '2026',
+                ],
+                'finish_date' => [
+                    'month' => '04',
+                    'day' => '02',
+                    'year' => '2026',
+                ],
+                'num_re_listen_times' => '2',
+                're_listen_value' => '4',
+                'priority' => '1',
+            ],
+            'return_route' => 'index',
+        ]);
+
+        $response->assertSessionHasNoErrors();
+        $response->assertRedirect('/#' . $workId);
+
+        Storage::disk('public')->assertExists("Works/{$workId}/cover.png");
+        Storage::disk('public')->assertExists("Works/{$workId}/sample_1.jpg");
+        Storage::disk('public')->assertExists("Works/{$workId}/sample_2.png");
+
+        $product = Product::query()->whereKey($workId)->firstOrFail();
+
+        $this->assertSame("storage/Works/{$workId}/cover.png", $product->work_image);
+        $this->assertSame('CUSTOM_STORE_JP_TOKEN', $product->work_name);
+        $this->assertSame('CUSTOM_STORE_EN_TOKEN', $product->work_name_english);
+        $this->assertSame('R18', $product->age_category);
+        $this->assertSame('CUSTOM_STORE_SERIES_TOKEN', $product->series);
+        $this->assertSame('CUSTOM_STORE_NOTES_TOKEN', $product->notes);
+        $this->assertSame(
+            [
+                "storage/Works/{$workId}/sample_1.jpg",
+                "storage/Works/{$workId}/sample_2.png",
+            ],
+            json_decode($product->sample_images, true)
+        );
+        $this->assertEqualsCanonicalizing(
+            ['Custom One', 'Custom Two'],
+            $product->customGenres->pluck('title')->all()
+        );
+
+        $this->get('/')
+            ->assertOk()
+            ->assertSee('src="storage/Works/' . $workId . '/cover.png"', false)
+            ->assertDontSee('images/No Image.png', false);
+    }
+
+    public function test_custom_store_rejects_missing_cover_image(): void
+    {
+        Storage::fake('public');
+
+        $workId = Product::factory()->make()->id;
+
+        $response = $this->from('/create/custom')->post('/store/custom', [
+            'id' => $workId,
+            'work_name' => 'CUSTOM_NO_COVER_TOKEN',
+            'age_category' => 'ALL_AGES',
+        ]);
+
+        $response->assertRedirect('/create/custom');
+        $response->assertSessionHasErrors(['work_image']);
+        $this->assertDatabaseMissing('products', ['id' => $workId]);
+    }
+
+    public function test_index_image_uses_stored_work_image_path(): void
+    {
+        Product::factory()->create([
+            'work_name' => 'IMAGE_PRIMARY_TOKEN',
+            'work_image' => 'storage/Works/PRIMARY/cover.webp',
+        ]);
+
+        $this->get('/')
+            ->assertOk()
+            ->assertSee('IMAGE_PRIMARY_TOKEN')
+            ->assertSee('src="storage/Works/PRIMARY/cover.webp"', false)
+            ->assertDontSee('images/No Image.png', false);
+    }
+
+    public function test_custom_store_keeps_matching_existing_genre_editable_as_custom_tag(): void
+    {
+        Storage::fake('public');
+
+        $existingGenre = $this->createGenre('Existing Store Auto Genre', Genre::TYPE_AUTO_GENERATED_ENGLISH);
+        $workId = Product::factory()->make()->id;
+
+        $response = $this->post('/store/custom', [
+            'id' => $workId,
+            'work_name' => 'CUSTOM_EXISTING_GENRE_TOKEN',
+            'age_category' => 'ALL_AGES',
+            'genre_custom' => 'Existing Store Auto Genre',
+            'work_image' => UploadedFile::fake()->image('cover.png')->size(1024),
+        ]);
+
+        $response->assertSessionHasNoErrors();
+
+        $product = Product::query()->whereKey($workId)->firstOrFail();
+        $product->load(['genres', 'englishGenres', 'customGenres']);
+
+        $this->assertSame([$existingGenre->getKey()], $product->genres->pluck('id')->all());
+        $this->assertSame([], $product->englishGenres->pluck('title')->all());
+        $this->assertSame(['Existing Store Auto Genre'], $product->customGenres->pluck('title')->all());
+
+        $this->get("/edit/{$product->id}")
+            ->assertOk()
+            ->assertSee('No fetched genres.')
+            ->assertSee('Existing Store Auto Genre');
+    }
+
+    public function test_custom_store_rejects_required_duplicate_and_image_validation_errors(): void
+    {
+        Storage::fake('public');
+
+        $missingRequiredResponse = $this->from('/create/custom')->post('/store/custom', [
+            'id' => Product::factory()->make()->id,
+        ]);
+
+        $missingRequiredResponse->assertRedirect('/create/custom');
+        $missingRequiredResponse->assertSessionHasErrors(['work_name', 'age_category', 'work_image']);
+
+        $existing = Product::factory()->create();
+
+        $duplicateResponse = $this->from('/create/custom')->post('/store/custom', [
+            'id' => $existing->id,
+            'work_name' => 'CUSTOM_DUPLICATE_TOKEN',
+            'age_category' => 'ALL_AGES',
+            'work_image' => UploadedFile::fake()->image('cover.png')->size(1024),
+        ]);
+
+        $duplicateResponse->assertRedirect('/create/custom');
+        $duplicateResponse->assertSessionHasErrors(['id']);
+
+        $invalidAgeResponse = $this->from('/create/custom')->post('/store/custom', [
+            'id' => Product::factory()->make()->id,
+            'work_name' => 'CUSTOM_INVALID_AGE_TOKEN',
+            'age_category' => 'NOT_VALID',
+            'work_image' => UploadedFile::fake()->image('cover.png')->size(1024),
+        ]);
+
+        $invalidAgeResponse->assertRedirect('/create/custom');
+        $invalidAgeResponse->assertSessionHasErrors(['age_category']);
+
+        $invalidImageResponse = $this->from('/create/custom')->post('/store/custom', [
+            'id' => Product::factory()->make()->id,
+            'work_name' => 'CUSTOM_INVALID_IMAGE_TOKEN',
+            'age_category' => 'ALL_AGES',
+            'work_image' => UploadedFile::fake()->create('cover.txt', 1, 'text/plain'),
+        ]);
+
+        $invalidImageResponse->assertRedirect('/create/custom');
+        $invalidImageResponse->assertSessionHasErrors(['work_image']);
+
+        $oversizedImageResponse = $this->from('/create/custom')->post('/store/custom', [
+            'id' => Product::factory()->make()->id,
+            'work_name' => 'CUSTOM_OVERSIZED_IMAGE_TOKEN',
+            'age_category' => 'ALL_AGES',
+            'work_image' => UploadedFile::fake()->image('cover.png')->size(1024),
+            'sample_images' => [
+                UploadedFile::fake()->image('sample.jpg')->size(20481),
+            ],
+        ]);
+
+        $oversizedImageResponse->assertRedirect('/create/custom');
+        $oversizedImageResponse->assertSessionHasErrors(['sample_images.0']);
+    }
+
     public function test_update_requires_work_name_and_saves_listening_fields(): void
     {
         $oldCustomGenre = $this->createGenre('OldTag', Genre::TYPE_CUSTOM);
@@ -821,7 +1036,7 @@ class ProductControllerTest extends TestCase
         );
     }
 
-    public function test_update_attaches_existing_auto_generated_genre_when_user_adds_matching_title(): void
+    public function test_update_keeps_matching_existing_genre_editable_when_added_as_custom_tag(): void
     {
         $existingGenre = $this->createGenre('Existing Auto Genre', Genre::TYPE_AUTO_GENERATED_ENGLISH);
 
@@ -843,12 +1058,17 @@ class ProductControllerTest extends TestCase
             [$existingGenre->getKey()],
             $product->genres->pluck('id')->all()
         );
+        $this->assertSame([], $product->englishGenres->pluck('title')->all());
         $this->assertSame(
             ['Existing Auto Genre'],
-            $product->englishGenres->pluck('title')->all()
+            $product->customGenres->pluck('title')->all()
         );
-        $this->assertSame([], $product->customGenres->pluck('title')->all());
         $this->assertSame(1, Genre::query()->where('title', 'Existing Auto Genre')->count());
+
+        $this->get("/edit/{$product->id}")
+            ->assertOk()
+            ->assertSee('No fetched genres.')
+            ->assertSee('Existing Auto Genre');
     }
 
     public function test_update_redirect_rewrites_progress_when_value_changes(): void
@@ -1036,7 +1256,13 @@ class ProductControllerTest extends TestCase
     {
         $product->genres()->sync(
             collect($genres)
-                ->map(fn(Genre $genre) => $genre->getKey())
+                ->mapWithKeys(fn(Genre $genre) => [
+                    $genre->getKey() => [
+                        'source' => $genre->type === Genre::TYPE_CUSTOM
+                            ? Genre::PIVOT_SOURCE_CUSTOM
+                            : Genre::PIVOT_SOURCE_FETCHED,
+                    ],
+                ])
                 ->all()
         );
     }

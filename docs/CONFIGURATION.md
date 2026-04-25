@@ -68,3 +68,11 @@ Run tests:
 - Python requirements: `python/requirements.txt`
 - Scraped JSON output: `storage/app/Works/*.json`
 - Scraped image output: `storage/app/public/Works/{RJ}/*`
+
+## Custom Work Upload Paths
+- Required custom cover upload output: `storage/app/public/Works/{RJ}/cover.{ext}`
+- Optional custom sample upload output: `storage/app/public/Works/{RJ}/sample_1.{ext}`, `sample_2.{ext}`, etc.
+- Custom cover and sample uploads are validated as image files up to 20 MB each.
+- Stored public paths use the existing `/storage` link format, for example `storage/Works/{RJ}/sample_1.jpg`
+- Custom cover uploads set `products.work_image` to the public path with the uploaded image extension, for example `storage/Works/{RJ}/cover.png`
+- Local/manual setup still needs `php artisan storage:link` so uploaded custom images are browser-accessible

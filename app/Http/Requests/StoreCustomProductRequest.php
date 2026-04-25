@@ -2,34 +2,33 @@
 
 namespace App\Http\Requests;
 
+use App\Enums\ProductAgeCategory;
 use Illuminate\Validation\Rule;
+use Illuminate\Validation\Rules\File;
 
-class StoreProductRequest extends BaseProductRequest
+class StoreCustomProductRequest extends BaseProductRequest
 {
-    /**
-     * Determine if the user is authorized to make this request.
-     */
     public function authorize(): bool
     {
         return true;
     }
 
     /**
-     * Get the validation rules that apply to the request.
-     *
      * @return array<string, mixed>
      */
     public function rules(): array
     {
         return array_merge([
-            'id' => ['bail', 'required', 'regex:/^RJ\\d+$/', Rule::unique('products', 'id')],
-            'work_name' => ['nullable', 'string'],
+            'id' => ['bail', 'required', 'regex:/^RJ\d+$/', Rule::unique('products', 'id')],
+            'work_name' => ['required', 'string'],
+            'age_category' => ['required', Rule::enum(ProductAgeCategory::class)],
+            'work_image' => ['required', File::image()->max('20mb')],
+            'sample_images' => ['nullable', 'array'],
+            'sample_images.*' => [File::image()->max('20mb')],
         ], $this->commonRules());
     }
 
     /**
-     * Custom validation messages.
-     *
      * @return array<string, string>
      */
     public function messages(): array
@@ -41,9 +40,6 @@ class StoreProductRequest extends BaseProductRequest
         ];
     }
 
-    /**
-     * Prepare the data for validation.
-     */
     protected function prepareForValidation(): void
     {
         $this->normalizeRjIdInput();

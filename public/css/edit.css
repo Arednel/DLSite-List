@@ -14,6 +14,40 @@
     margin-top: 4px;
 }
 
+.create-mode-switch {
+    text-align: right;
+}
+
+.create-mode-switch .inputButton.is-active {
+    font-weight: bold;
+}
+
+.file-upload-input {
+    cursor: pointer;
+    line-height: 22px;
+    padding: 0;
+}
+
+.file-upload-input::file-selector-button {
+    background-color: #4065ba;
+    border: none;
+    border-radius: 2px;
+    color: #fff;
+    cursor: pointer;
+    font-family: lucida grande, tahoma, verdana, arial, sans-serif;
+    font-size: 11px;
+    margin-right: 8px;
+    padding: 4px 8px;
+}
+
+.file-upload-input:hover::file-selector-button {
+    background-color: #6c8cd8;
+}
+
+.dark-mode .file-upload-input:hover::file-selector-button {
+    background-color: #5676c2;
+}
+
 /* Modal base styles */
 .modal {
     display: none;
@@ -655,8 +689,8 @@ body:not(.ownlist) {
         box-sizing: border-box;
     }
 
-    .dark-mode .page-common .ml8 {
-        margin-left: 0 !important;
+    .create-mode-switch {
+        margin-bottom: 15px !important;
     }
 }
 

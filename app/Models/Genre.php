@@ -19,6 +19,9 @@ class Genre extends Model
     public const LANGUAGE_ENGLISH = 'en';
     public const LANGUAGE_JAPANESE = 'jp';
 
+    public const PIVOT_SOURCE_FETCHED = 'fetched';
+    public const PIVOT_SOURCE_CUSTOM = 'custom';
+
     protected $fillable = [
         'group_id',
         'title',

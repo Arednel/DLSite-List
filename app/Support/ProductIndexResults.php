@@ -80,10 +80,11 @@ final class ProductIndexResults
         return DB::table('genre_product')
             ->join('genres', 'genres.id', '=', 'genre_product.genre_id')
             ->whereIn('genre_product.product_id', $productIds)
-            ->whereIn('genres.type', [
-                Genre::TYPE_AUTO_GENERATED_ENGLISH,
-                Genre::TYPE_CUSTOM,
-            ])
+            ->where(function ($query): void {
+                $query->where('genre_product.source', Genre::PIVOT_SOURCE_CUSTOM)
+                    ->orWhere('genres.type', Genre::TYPE_AUTO_GENERATED_ENGLISH)
+                    ->orWhere('genres.type', Genre::TYPE_CUSTOM);
+            })
             ->orderBy('genres.title')
             ->get([
                 'genre_product.product_id',

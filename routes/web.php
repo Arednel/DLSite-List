@@ -25,5 +25,9 @@ Route::get('/edit/{id}', [ProductController::class, 'edit'])->name('products.edi
 Route::post('/update/{id}', [ProductController::class, 'update'])->name('products.update');
 Route::post('/destroy/{id}', [ProductController::class, 'destroy'])->name('products.destroy');
 
+// Add custom work
+Route::get('/create/custom', [ProductController::class, 'create_custom'])->name('products.create.custom');
+Route::post('/store/custom', [ProductController::class, 'store_custom'])->name('products.store.custom');
+
 //Tag Library
 Route::get('/tags', [ProductController::class, 'tagLibrary'])->name('tags.index');

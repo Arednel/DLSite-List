@@ -49,6 +49,17 @@ class ProductGenreMigrationTest extends TestCase
                 ->pluck('genre_id')
                 ->all()
         );
+        $this->assertEquals(
+            [
+                $japaneseGenre->id => Genre::PIVOT_SOURCE_FETCHED,
+                $sharedGenreId => Genre::PIVOT_SOURCE_FETCHED,
+                $customGenre->id => Genre::PIVOT_SOURCE_CUSTOM,
+            ],
+            DB::table('genre_product')
+                ->where('product_id', $product->id)
+                ->pluck('source', 'genre_id')
+                ->all()
+        );
         $this->assertSame(Genre::TYPE_AUTO_GENERATED_JAPANESE, $japaneseGenre->type);
         $this->assertSame(Genre::LANGUAGE_JAPANESE, $japaneseGenre->language);
         $this->assertSame(Genre::TYPE_CUSTOM, $customGenre->type);
@@ -91,6 +102,13 @@ class ProductGenreMigrationTest extends TestCase
         );
         $this->assertSame(Genre::TYPE_AUTO_GENERATED_ENGLISH, $sharedGenre->type);
         $this->assertSame(Genre::LANGUAGE_ENGLISH, $sharedGenre->language);
+        $this->assertSame(
+            Genre::PIVOT_SOURCE_FETCHED,
+            DB::table('genre_product')
+                ->where('product_id', $product->id)
+                ->where('genre_id', $sharedGenreId)
+                ->value('source')
+        );
     }
 
     public function test_migration_down_restores_legacy_genre_json_from_pivot_data(): void
@@ -125,9 +143,9 @@ class ProductGenreMigrationTest extends TestCase
         ]);
 
         $product->genres()->sync([
-            $japaneseGenre->getKey(),
-            $englishGenre->getKey(),
-            $customGenre->getKey(),
+            $japaneseGenre->getKey() => ['source' => Genre::PIVOT_SOURCE_FETCHED],
+            $englishGenre->getKey() => ['source' => Genre::PIVOT_SOURCE_FETCHED],
+            $customGenre->getKey() => ['source' => Genre::PIVOT_SOURCE_CUSTOM],
         ]);
 
         $this->runGenreIdMigrationDown();

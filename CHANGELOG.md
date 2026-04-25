@@ -2,6 +2,11 @@
 
 ## Development
 
+2026-04-25 -- 1.2.6 Custom RJ work creation and Fixes
+  * Added a Custom Create mode for manually adding RJ works without running the scraper
+  * Fixed user-entered custom tags. Now they stay editable in Edit Work, even when they reuse an existing fetched genre title
+  * Updated validation, upload styling, tests, migrations, and project docs for the new custom work flow
+
 2026-03-30 -- 1.2.5 CSS and Tag Library improvements
   * Tag Library now shows how many works use each visible tag
   * Improved mobile advanced-filter actions so Apply and Clear stay reachable on browsers with changing bottom UI

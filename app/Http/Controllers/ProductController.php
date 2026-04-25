@@ -2,7 +2,9 @@
 
 namespace App\Http\Controllers;
 
+use App\Enums\ProductAgeCategory;
 use App\Http\Requests\ProductIndexRequest;
+use App\Http\Requests\StoreCustomProductRequest;
 use App\Http\Requests\StoreProductRequest;
 use App\Http\Requests\UpdateProductRequest;
 use App\Models\Genre;
@@ -12,13 +14,14 @@ use App\Support\ProductIndexResults;
 use App\Support\ReturnTarget;
 use App\Support\TagInput;
 use Illuminate\Http\Request;
+use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\File;
+use Illuminate\Support\Facades\Storage;
 use Symfony\Component\Process\Process;
 use Symfony\Component\Process\Exception\ProcessFailedException;
-use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\ValidationException;
 
 class ProductController extends Controller
@@ -45,14 +48,12 @@ class ProductController extends Controller
 
     public function create(Request $request)
     {
-        $returnTarget = ReturnTarget::fromRequest($request);
+        return $this->createView($request, false);
+    }
 
-        return view('Create', [
-            'returnRoute' => $returnTarget->route,
-            'returnQuery' => $returnTarget->query,
-            'returnUrl' => $returnTarget->toUrl(),
-            ...$this->buildDateFieldOptions(),
-        ]);
+    public function create_custom(Request $request)
+    {
+        return $this->createView($request, true);
     }
 
     public function tagLibrary()
@@ -155,6 +156,44 @@ class ProductController extends Controller
 
         $returnTarget = ReturnTarget::fromRequest($request)
             ->withFragment($dlsite_product_id);
+
+        return redirect($returnTarget->toUrl());
+    }
+
+    public function store_custom(StoreCustomProductRequest $request)
+    {
+        $validated = $request->validated();
+        $workID = $validated['id'];
+
+        $work_image = $this->storeCustomCoverImage($request->file('work_image'), $workID);
+        $sampleImages = $this->storeCustomSampleImages($request, $workID);
+
+        $product = Product::create([
+            'id' => $workID,
+            'maker_id' => null,
+            'work_name' => $validated['work_name'],
+            'work_name_english' => $validated['work_name_english'] ?? null,
+            'age_category' => $validated['age_category'],
+            'circle' => null,
+            'work_image' => $work_image,
+            'description' => null,
+            'description_english' => null,
+            'notes' => $validated['notes'] ?? null,
+            'series' => $validated['series'] ?? null,
+            'sample_images' => json_encode($sampleImages),
+            'score' => $validated['score'] ?? null,
+            'progress' => $validated['progress'] ?? null,
+            'start_date' => $validated['start_date'] ?? null,
+            'end_date' => $validated['end_date'] ?? null,
+            'num_re_listen_times' => $validated['num_re_listen_times'] ?? null,
+            're_listen_value' => $validated['re_listen_value'] ?? null,
+            'priority' => $validated['priority'] ?? null,
+        ]);
+
+        $this->syncProductCustomGenres($product, $validated['genre_custom'] ?? []);
+
+        $returnTarget = ReturnTarget::fromRequest($request)
+            ->withFragment($workID);
 
         return redirect($returnTarget->toUrl());
     }
@@ -298,6 +337,43 @@ class ProductController extends Controller
         return TagInput::format($tags ?? []);
     }
 
+    private function createView(Request $request, bool $isCustomCreate)
+    {
+        $returnTarget = ReturnTarget::fromRequest($request);
+
+        return view('Create', [
+            'isCustomCreate' => $isCustomCreate,
+            'returnRoute' => $returnTarget->route,
+            'returnQuery' => $returnTarget->query,
+            'returnUrl' => $returnTarget->toUrl(),
+            'ageCategoryOptions' => ProductAgeCategory::options(),
+            ...$this->buildDateFieldOptions(),
+        ]);
+    }
+
+    private function storeCustomCoverImage(UploadedFile $file, string $workID): string
+    {
+        $path = "Works/{$workID}/cover.{$file->extension()}";
+
+        Storage::disk('public')->putFileAs("Works/{$workID}", $file, basename($path));
+
+        return "storage/{$path}";
+    }
+
+    private function storeCustomSampleImages(Request $request, string $workID): array
+    {
+        return collect($request->file('sample_images', []))
+            ->values()
+            ->map(function (UploadedFile $file, int $index) use ($workID): string {
+                $path = "Works/{$workID}/sample_" . ($index + 1) . '.' . $file->extension();
+
+                Storage::disk('public')->putFileAs("Works/{$workID}", $file, basename($path));
+
+                return "storage/{$path}";
+            })
+            ->all();
+    }
+
     private function buildDateFieldOptions(): array
     {
         return [
@@ -313,52 +389,65 @@ class ProductController extends Controller
 
     private function loadEditGenresForProduct(string $productId): Collection
     {
-        // Edit only renders fetched EN genres and the custom-tag input.
-        // Load just those rows instead of hydrating every genre relationship.
+        // Edit separates readonly fetched genres from user-editable custom entries by pivot source.
         return DB::table('genre_product')
             ->join('genres', 'genres.id', '=', 'genre_product.genre_id')
             ->where('genre_product.product_id', $productId)
-            ->whereIn('genres.type', [
-                Genre::TYPE_AUTO_GENERATED_ENGLISH,
-                Genre::TYPE_CUSTOM,
-            ])
+            ->where(function ($query): void {
+                $query->where('genre_product.source', Genre::PIVOT_SOURCE_CUSTOM)
+                    ->orWhere('genres.type', Genre::TYPE_AUTO_GENERATED_ENGLISH);
+            })
             ->orderBy('genres.title')
             ->get([
                 'genres.title',
                 'genres.type',
+                'genre_product.source',
             ])
-            ->groupBy('type');
+            ->groupBy(fn(object $genre): string => $genre->source === Genre::PIVOT_SOURCE_CUSTOM
+                ? Genre::TYPE_CUSTOM
+                : $genre->type);
     }
 
     private function syncProductGenres(Product $product, array $japaneseTitles, array $englishTitles, array $customTitles): void
     {
-        $genreIds = array_merge(
+        $fetchedGenreIds = array_merge(
             Genre::resolveIdsFromTitles($japaneseTitles, Genre::TYPE_AUTO_GENERATED_JAPANESE, Genre::LANGUAGE_JAPANESE),
             Genre::resolveIdsFromTitles($englishTitles, Genre::TYPE_AUTO_GENERATED_ENGLISH, Genre::LANGUAGE_ENGLISH),
-            Genre::resolveIdsFromTitles($customTitles, Genre::TYPE_CUSTOM, Genre::LANGUAGE_ENGLISH),
         );
+        $customGenreIds = Genre::resolveIdsFromTitles($customTitles, Genre::TYPE_CUSTOM, Genre::LANGUAGE_ENGLISH);
 
-        $product->genres()->sync(array_values(array_unique($genreIds)));
+        $product->genres()->sync($this->genreSyncPayload($fetchedGenreIds, $customGenreIds));
     }
 
     private function syncProductCustomGenres(Product $product, array $customTitles): void
     {
-        $nonCustomGenreIds = $product->genres()
-            ->where('genres.type', '!=', Genre::TYPE_CUSTOM)
-            ->pluck('genres.id')
+        $fetchedGenreIds = DB::table('genre_product')
+            ->where('product_id', $product->getKey())
+            ->where('source', Genre::PIVOT_SOURCE_FETCHED)
+            ->pluck('genre_id')
             ->all();
 
-        // User-added titles can reuse existing fetched genres by title.
-        // Only brand new titles stay as custom genres.
         $customGenreIds = Genre::resolveIdsFromTitles(
             $customTitles,
             Genre::TYPE_CUSTOM,
             Genre::LANGUAGE_ENGLISH
         );
 
-        $product->genres()->sync(array_values(array_unique(array_merge(
-            $nonCustomGenreIds,
-            $customGenreIds,
-        ))));
+        $product->genres()->sync($this->genreSyncPayload($fetchedGenreIds, $customGenreIds));
+    }
+
+    private function genreSyncPayload(array $fetchedGenreIds, array $customGenreIds): array
+    {
+        $payload = [];
+
+        foreach (array_unique($fetchedGenreIds) as $genreId) {
+            $payload[$genreId] = ['source' => Genre::PIVOT_SOURCE_FETCHED];
+        }
+
+        foreach (array_unique($customGenreIds) as $genreId) {
+            $payload[$genreId] ??= ['source' => Genre::PIVOT_SOURCE_CUSTOM];
+        }
+
+        return $payload;
     }
 }

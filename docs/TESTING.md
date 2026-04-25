@@ -3,9 +3,9 @@
 ## Scope
 Current automated coverage is in Laravel PHPUnit tests:
 - `tests/Feature/ProductControllerTest.php`
-  - covers index filtering/sorting, create/edit pages, validation, update flow, and destroy flow
+  - covers index filtering/sorting, create/edit pages, custom create/upload flow, editable custom tag source behavior, index image selection, validation, update flow, and destroy flow
 - `tests/Feature/ProductGenreMigrationTest.php`
-  - covers migration of legacy product genre JSON into `genres` + `genre_product`
+  - covers migration of legacy product genre JSON into `genres` + `genre_product`, including pivot source values
 - `tests/Unit/Support/ProductIndexFiltersTest.php`
   - covers query normalization, defaults, and query export helpers
 - `tests/Unit/Support/ReturnTargetTest.php`
@@ -33,6 +33,8 @@ There are no project-owned Python tests.
    - `APP_KEY`
 
 Feature tests use `RefreshDatabase`, so the configured test database is migrated/reset for each test run.
+
+Upload tests use Laravel's `UploadedFile::fake()` and `Storage::fake('public')` helpers, so custom cover/sample image tests do not write to the real public storage disk.
 
 ## Running Tests
 - Run all tests:
