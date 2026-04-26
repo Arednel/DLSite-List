@@ -2,6 +2,9 @@
 
 ## Development
 
+2026-04-26 -- 1.2.8 Docker fix
+  * Changed index.css case
+
 2026-04-26 -- 1.2.7 Options and Refetch Tags
   * Added an Options page with a "Refetch Tags" workflow
   * Added Livewire
