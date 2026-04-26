@@ -60,7 +60,7 @@ try:
         "english": {
             "genre": work_english.get("genre") or [],
         },
-    }, ensure_ascii=False))
+    }, ensure_ascii=True))
 except Exception as error:
     error_message = str(error).strip()
     mapped = map_known_error(error_message, workID)

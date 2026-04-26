@@ -2,6 +2,9 @@
 
 ## Development
 
+2026-04-26 -- 1.2.9 Python fix
+  * Python fix for non Japanese systems
+
 2026-04-26 -- 1.2.8 Docker fix
   * Changed index.css case
 
