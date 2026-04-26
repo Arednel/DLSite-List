@@ -2,6 +2,11 @@
 
 ## Development
 
+2026-04-26 -- 1.2.7 Options and Refetch Tags
+  * Added an Options page with a "Refetch Tags" workflow
+  * Added Livewire
+  * Added database queue and batch support, Docker queue worker configuration, and worker setup docs
+
 2026-04-25 -- 1.2.6 Custom RJ work creation and Fixes
   * Added a Custom Create mode for manually adding RJ works without running the scraper
   * Fixed user-entered custom tags. Now they stay editable in Edit Work, even when they reuse an existing fetched genre title

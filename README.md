@@ -50,6 +50,11 @@ Activate it with:
 pip install -r python/requirements.txt
 ```
 
+### 4) Run workers
+```bash
+php artisan queue:work
+```
+
 ## Running tests
 Create `.env.testing` from `.env.testing.example`, set test DB credentials, then run:
 

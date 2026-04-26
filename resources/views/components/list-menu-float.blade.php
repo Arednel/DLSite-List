@@ -76,6 +76,12 @@
             </div>
             <span class="text">Tag Library</span>
         </a>
+        <a class="icon-menu anime-list" href="{{ route('options.index') }}">
+            <div class="image-options">
+                <img src="{{ asset('images/Options.png') }}" width="25">
+            </div>
+            <span class="text">Options</span>
+        </a>
     </div>
 </div>
 

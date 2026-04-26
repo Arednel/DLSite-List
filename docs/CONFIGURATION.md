@@ -54,6 +54,33 @@ Relevant variables:
 MySQL engine is configured as InnoDB in:
 - `config/database.php` (`mysql.engine`)
 
+## Queue and Scheduler
+Refetch Tags runs through Laravel's database queue and job batches.
+
+Relevant variable:
+- `QUEUE_CONNECTION=database`
+
+Required migrations create:
+- `jobs`
+- `job_batches`
+- `tag_refetch_runs`
+- `tag_refetch_work_results`
+
+Run the queue worker from the project root while using Refetch Tags:
+```bash
+php artisan queue:work
+```
+
+`php artisan schedule:work` is only needed if a scheduled command is added. The project does not currently register a scheduled batch-pruning command.
+
+## Livewire
+The Options selected-work search and Refetch Tags progress panel use Livewire.
+
+Relevant Composer package:
+- `livewire/livewire`
+
+No published Livewire config is required. The Options page includes Livewire's Blade asset directives so `wire:model.live.debounce.250ms` can update the search results while typing. The refetch progress page uses `wire:poll.1s` only while a run is still running.
+
 ## Testing Configuration
 Test setup:
 - `.env.testing` is separate from `docker/.env.docker`
@@ -65,9 +92,12 @@ Run tests:
 
 ## Scraper Runtime Paths
 - Python script: `python/DLSiteScraper.py`
+- Tags-only Python script: `python/DLSiteTagFetcher.py`
 - Python requirements: `python/requirements.txt`
 - Scraped JSON output: `storage/app/Works/*.json`
 - Scraped image output: `storage/app/public/Works/{RJ}/*`
+
+`python/DLSiteTagFetcher.py` is used only by the Options -> Refetch Tags workflow. It prints JP/EN genre JSON to stdout and does not write scraped JSON or download images.
 
 ## Custom Work Upload Paths
 - Required custom cover upload output: `storage/app/public/Works/{RJ}/cover.{ext}`

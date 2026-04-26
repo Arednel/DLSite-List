@@ -1,19 +1,40 @@
+x-app-build: &app_build
+  context: .
+  dockerfile: docker/app.dockerfile
+
+x-app-volumes: &app_volumes
+  - storage_app:/var/www/dlsite_list/storage/app
+  - storage_framework:/var/www/dlsite_list/storage/framework
+  - storage_logs:/var/www/dlsite_list/storage/logs
+
 services:
     # Application
     app:
-        build:
-            context: .
-            dockerfile: docker/app.dockerfile
+        build: *app_build
         entrypoint: ["/usr/local/bin/docker-app-entrypoint.sh"] # Run Laravel migrations after db startup
         working_dir: /var/www/dlsite_list
-        volumes:
-            - storage_app:/var/www/dlsite_list/storage/app
-            - storage_framework:/var/www/dlsite_list/storage/framework
-            - storage_logs:/var/www/dlsite_list/storage/logs
+        volumes: *app_volumes
         depends_on:
             database:
                 condition: service_healthy
+        healthcheck:
+            test: ["CMD", "php", "artisan", "about", "--only=environment"]
+            timeout: 20s
+            retries: 10
         env_file: "docker/.env.docker"
+
+    queue:
+        build: *app_build
+        working_dir: /var/www/dlsite_list
+        command: ["php", "artisan", "queue:work"]
+        volumes: *app_volumes
+        depends_on:
+            app:
+                condition: service_healthy
+            database:
+                condition: service_healthy
+        env_file: docker/.env.docker
+        restart: unless-stopped
 
     # Web Server
     web:

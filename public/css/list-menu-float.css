@@ -73,7 +73,8 @@
 }
 
 .image-all-works,
-.image-tag-library {
+.image-tag-library,
+.image-options {
     position: absolute;
     left: 11px;
     top: 12px;
@@ -167,7 +168,8 @@
     .list-menu-float .icon-menu.manga-list svg.icon-manga-list,
     .list-menu-float .icon-menu.statistics svg.icon-statistics,
     .list-menu-float .image-all-works,
-    .list-menu-float .image-tag-library {
+    .list-menu-float .image-tag-library,
+    .image-options {
         left: 16px;
         top: 15px;
     }

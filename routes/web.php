@@ -3,6 +3,7 @@
 use Illuminate\Support\Facades\Route;
 
 use App\Http\Controllers\ProductController;
+use App\Http\Controllers\OptionsController;
 
 /*
 |--------------------------------------------------------------------------
@@ -15,10 +16,10 @@ use App\Http\Controllers\ProductController;
 |
 */
 
-//Main Page
+// Main Page
 Route::get('/', [ProductController::class, 'Index'])->name('index');
 
-//Works CRUD logic
+// Works CRUD logic
 Route::get('/create', [ProductController::class, 'create'])->name('products.create');
 Route::post('/store', [ProductController::class, 'store'])->name('products.store');
 Route::get('/edit/{id}', [ProductController::class, 'edit'])->name('products.edit');
@@ -29,5 +30,12 @@ Route::post('/destroy/{id}', [ProductController::class, 'destroy'])->name('produ
 Route::get('/create/custom', [ProductController::class, 'create_custom'])->name('products.create.custom');
 Route::post('/store/custom', [ProductController::class, 'store_custom'])->name('products.store.custom');
 
-//Tag Library
+// Tag Library
 Route::get('/tags', [ProductController::class, 'tagLibrary'])->name('tags.index');
+
+// Options
+Route::get('/options', [OptionsController::class, 'index'])->name('options.index');
+Route::post('/options/refetch-tags', [OptionsController::class, 'startRefetchTags'])->name('options.refetch-tags.start');
+Route::get('/options/refetch-tags/{run}', [OptionsController::class, 'showRefetchTags'])->name('options.refetch-tags.show');
+Route::get('/options/refetch-tags/{run}/status', [OptionsController::class, 'refetchTagsStatus'])->name('options.refetch-tags.status');
+Route::post('/options/refetch-tags/{run}/apply', [OptionsController::class, 'applyRefetchTags'])->name('options.refetch-tags.apply');
