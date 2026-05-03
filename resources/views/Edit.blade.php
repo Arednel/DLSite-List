@@ -80,7 +80,7 @@
                                                     value="{{ $queryValue }}">
                                             @endforeach
 
-                                            <input type="submit" class="inputButton ml8 delete_submit" value="Delete"
+                                            <input type="submit" class="inputButton delete_submit" value="Delete"
                                                 onclick="return openDeleteModal(event);">
                                         </form>
 
@@ -112,7 +112,9 @@
     </div>
 </body>
 
-<script src="{{ asset('scripts/deleteConfirmation.js') }}?v={{ filemtime(public_path('scripts/deleteConfirmation.js')) }}"></script>
+<script
+    src="{{ asset('scripts/deleteConfirmation.js') }}?v={{ filemtime(public_path('scripts/deleteConfirmation.js')) }}">
+</script>
 <script src="{{ asset('scripts/dateInsert.js') }}?v={{ filemtime(public_path('scripts/dateInsert.js')) }}"></script>
 
 </html>

@@ -2,6 +2,10 @@
 
 ## Development
 
+2026-05-03 -- 1.2.9.1 Cleanup
+  * Added description for refetch tags
+  * CSS Cleanup
+
 2026-04-26 -- 1.2.9 Python fix
   * Python fix for non Japanese systems
 

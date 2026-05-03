@@ -6,9 +6,11 @@
 
     <meta name="viewport" content="width=device-width, initial-scale=1">
 
-    <link rel="stylesheet" href="{{ asset('css/tag-library.css') }}?v={{ filemtime(public_path('css/tag-library.css')) }}">
+    <link rel="stylesheet"
+        href="{{ asset('css/tag-library.css') }}?v={{ filemtime(public_path('css/tag-library.css')) }}">
     <link rel="stylesheet" href="{{ asset('css/options.css') }}?v={{ filemtime(public_path('css/options.css')) }}">
-    <link rel="stylesheet" href="{{ asset('css/list-menu-float.css') }}?v={{ filemtime(public_path('css/list-menu-float.css')) }}">
+    <link rel="stylesheet"
+        href="{{ asset('css/list-menu-float.css') }}?v={{ filemtime(public_path('css/list-menu-float.css')) }}">
 
     @livewireStyles
 </head>
@@ -24,6 +26,11 @@
 
             <section class="panel">
                 <h2>Refetch Tags</h2>
+                <p class="option-description">
+                    Fetch the latest DLsite genre tags for all works or for only selected works.
+                    <br>
+                    After that you can review new and stale tags before applying the changes.
+                </p>
 
                 @if ($errors->any())
                     <div class="notice notice--error">
