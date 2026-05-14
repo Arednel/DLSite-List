@@ -40,8 +40,7 @@ class OptionsWorkSearch extends Component
 
     private function products(): Collection
     {
-        $query = Product::query()
-            ->orderBy('id');
+        $query = Product::query();
 
         $search = trim($this->search);
 
@@ -55,7 +54,9 @@ class OptionsWorkSearch extends Component
             });
         }
 
-        return $query->get(['id', 'work_name', 'work_name_english']);
+        return $query
+            ->orderByNumericRj()
+            ->get(['id', 'work_name', 'work_name_english']);
     }
 
     /**

@@ -1,6 +1,7 @@
 <form method="POST" action="{{ route('options.refetch-tags.start') }}" class="stack">
     @csrf
     <input type="hidden" name="scope" value="selected">
+    <input type="hidden" name="tab" value="refetch">
 
     @foreach ($hiddenSelectedProductIds as $productId)
         <input type="hidden" name="product_ids[]" value="{{ $productId }}">
@@ -15,8 +16,7 @@
     <div class="work-checklist">
         @forelse ($products as $product)
             <label class="work-checklist__item" wire:key="refetch-work-{{ $product->id }}">
-                <input type="checkbox" name="product_ids[]" value="{{ $product->id }}"
-                    wire:model.live="selectedProductIds">
+                <input type="checkbox" name="product_ids[]" value="{{ $product->id }}" wire:model="selectedProductIds">
                 <span>
                     <strong>{{ $product->id }}</strong>
                     {{ $product->work_name }}
@@ -34,7 +34,7 @@
 
     @if ($hasAnyProducts)
         <div class="option-actions">
-            <button type="submit" class="tag tag--soft tag--lg is-clickable">
+            <button type="submit" class="tag tag--gradient tag--lg is-clickable">
                 Refetch selected works
             </button>
         </div>

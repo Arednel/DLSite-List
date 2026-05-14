@@ -4,15 +4,47 @@ namespace App\Support;
 
 use App\Enums\ProductIndexSortField;
 use App\Models\Genre;
+use App\Models\Option;
 use App\Models\Product;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Collection as EloquentCollection;
+use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Facades\DB;
 
 final class ProductIndexResults
 {
-    public function getProducts(ProductIndexFilters $filters): EloquentCollection
+    private const INDEX_COLUMNS = [
+        'id',
+        'work_name',
+        'work_name_english',
+        'notes',
+        'score',
+        'series',
+        'age_category',
+        'progress',
+        'work_image',
+        'priority',
+        'num_re_listen_times',
+        're_listen_value',
+        'start_date',
+        'end_date',
+        'created_at',
+    ];
+
+    public function getProducts(ProductIndexFilters $filters, int|string $perPage): EloquentCollection|LengthAwarePaginator
     {
-        $products = Product::query()
+        $query = $this->filteredQuery($filters);
+        $query = $this->applySqlSorting($query, $filters->sorts());
+
+        return $perPage === Option::INDEX_PER_PAGE_UNLIMITED
+            ? $query->get()
+            : $query->paginate((int) $perPage);
+    }
+
+    private function filteredQuery(ProductIndexFilters $filters): Builder
+    {
+        return Product::query()
+            ->select(self::INDEX_COLUMNS)
             ->when(
                 $filters->ageCategory !== null,
                 fn($query) => $query->where('age_category', $filters->ageCategory->value)
@@ -27,7 +59,7 @@ final class ProductIndexResults
             )
             ->when(
                 $filters->series !== '',
-                fn($query) => $query->where('series', $filters->series)
+                fn($query) => $query->filterSeries($filters->series)
             )
             ->when(
                 $filters->title !== '',
@@ -63,10 +95,7 @@ final class ProductIndexResults
             ->when(
                 $filters->search !== '',
                 fn($query) => $query->searchIndex($filters->search)
-            )
-            ->get();
-
-        return $this->sortProducts($products, $filters->sorts());
+            );
     }
 
     public function loadVisibleGenres(array $productIds): \Illuminate\Support\Collection
@@ -97,88 +126,34 @@ final class ProductIndexResults
     /**
      * @param  list<ProductIndexSort>  $sorts
      */
-    private function sortProducts(EloquentCollection $products, array $sorts): EloquentCollection
+    private function applySqlSorting(Builder $query, array $sorts): Builder
     {
-        $items = $products->all();
+        $hasRjSort = false;
 
-        usort($items, function (Product $left, Product $right) use ($sorts): int {
-            foreach ($sorts as $sort) {
-                $comparison = $this->compareSortableValues(
-                    $this->productSortValue($left, $sort->field),
-                    $this->productSortValue($right, $sort->field),
-                    $sort->direction->value,
-                );
-
-                if ($comparison !== 0) {
-                    return $comparison;
-                }
+        foreach ($sorts as $sort) {
+            if ($sort->field === ProductIndexSortField::RJ) {
+                $hasRjSort = true;
             }
 
-            return $this->rjSortValue($right) <=> $this->rjSortValue($left);
-        });
+            $this->orderByNullableColumn($query, $sort->field->sqlColumn(), $sort->direction->value);
+        }
 
-        return new EloquentCollection(array_values($items));
+        if (! $hasRjSort) {
+            $this->orderByNullableColumn($query, ProductIndexSortField::RJ->sqlColumn(), 'desc');
+        }
+
+        return $query;
     }
 
-    private function compareSortableValues(mixed $left, mixed $right, string $direction): int
+    private function orderByNullableColumn(Builder $query, string $column, string $direction): void
     {
-        if ($left === $right) {
-            return 0;
-        }
-
-        if ($left === null) {
-            return 1;
-        }
-
-        if ($right === null) {
-            return -1;
-        }
-
-        $comparison = $left <=> $right;
-
-        return $direction === 'desc' ? -$comparison : $comparison;
+        $query
+            ->orderByRaw($this->wrapColumn($query, $column) . ' IS NULL')
+            ->orderBy($column, $direction);
     }
 
-    private function productSortValue(Product $product, ProductIndexSortField $field): int|string|null
+    private function wrapColumn(Builder $query, string $column): string
     {
-        return match ($field) {
-            ProductIndexSortField::Score => $product->score,
-            ProductIndexSortField::Priority => $product->priority,
-            ProductIndexSortField::TotalTimesReListened => $product->num_re_listen_times,
-            ProductIndexSortField::ReListenValue => $product->re_listen_value,
-            ProductIndexSortField::StartDate => $this->dateSortValue($product->start_date),
-            ProductIndexSortField::FinishDate => $this->dateSortValue($product->end_date),
-        };
-    }
-
-    private function dateSortValue(?array $date): ?string
-    {
-        if (!is_array($date)) {
-            return null;
-        }
-
-        $year = $this->dateSortPart($date['year'] ?? null);
-        $month = $this->dateSortPart($date['month'] ?? null);
-        $day = $this->dateSortPart($date['day'] ?? null);
-
-        if ($year === null && $month === null && $day === null) {
-            return null;
-        }
-
-        return sprintf('%04d%02d%02d', $year ?? 0, $month ?? 0, $day ?? 0);
-    }
-
-    private function dateSortPart(mixed $value): ?int
-    {
-        if ($value === null || $value === '') {
-            return null;
-        }
-
-        return (int) $value;
-    }
-
-    private function rjSortValue(Product $product): int
-    {
-        return (int) substr($product->id, 2);
+        return $query->getQuery()->getGrammar()->wrap($column);
     }
 }

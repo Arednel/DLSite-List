@@ -60,7 +60,7 @@ class StartTagRefetchRequest extends FormRequest
     {
         if ($this->input('scope') === 'all') {
             return Product::query()
-                ->orderBy('id')
+                ->orderByNumericRj()
                 ->pluck('id')
                 ->all();
         }
@@ -72,7 +72,7 @@ class StartTagRefetchRequest extends FormRequest
 
         return Product::query()
             ->whereIn('id', $selectedIds)
-            ->orderBy('id')
+            ->orderByNumericRj()
             ->pluck('id')
             ->all();
     }

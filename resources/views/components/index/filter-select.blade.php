@@ -1,12 +1,4 @@
-@props([
-    'id',
-    'name',
-    'label',
-    'options' => [],
-    'selected' => '',
-    'placeholder' => null,
-    'groupClass' => 'filter-widget',
-])
+@props(['id', 'name', 'label', 'options' => [], 'placeholder' => null, 'groupClass' => 'filter-widget'])
 
 <div class="{{ $groupClass }}">
     <label class="widget-header" for="{{ $id }}">{{ $label }}</label>
@@ -16,7 +8,7 @@
         @endif
 
         @foreach ($options as $optionValue => $optionLabel)
-            <option value="{{ $optionValue }}" @selected((string) $selected === (string) $optionValue)>
+            <option value="{{ $optionValue }}">
                 {{ $optionLabel }}
             </option>
         @endforeach

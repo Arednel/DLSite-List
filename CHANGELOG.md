@@ -2,6 +2,13 @@
 
 ## Development
 
+2026-05-14 -- 1.3.0 Livewire Index pagination and Sorting
+  * Rebuilt the Index page around Livewire filters, sorting, URL state, and pagination
+  * Added configurable Index page size in Options, including fixed, custom, and unlimited modes
+  * Moved RJ and partial date sorting to stored SQL sort keys and cleaned up related Index/filter code
+  * Changed footer text
+  * Updated tests and docs
+
 2026-05-03 -- 1.2.9.1 Cleanup
   * Added description for refetch tags
   * CSS Cleanup

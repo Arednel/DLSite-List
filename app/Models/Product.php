@@ -40,7 +40,24 @@ class Product extends Model
     protected $casts = [
         'start_date' => 'array',
         'end_date' => 'array',
+        'rj_number' => 'integer',
+        'start_date_sort' => 'integer',
+        'end_date_sort' => 'integer',
     ];
+
+    protected static function booted(): void
+    {
+        static::saving(function (Product $product): void {
+            $product->syncIndexKeys();
+        });
+    }
+
+    public function syncIndexKeys(): void
+    {
+        $this->rj_number = self::rjNumberFromId($this->id);
+        $this->start_date_sort = self::dateSortValue($this->start_date);
+        $this->end_date_sort = self::dateSortValue($this->end_date);
+    }
 
     public function genres(): BelongsToMany
     {
@@ -80,6 +97,7 @@ class Product extends Model
         $query->whereHas('genres', function (Builder $genreQuery) use ($genreFilter): void {
             if (ctype_digit($genreFilter)) {
                 $genreQuery->whereKey((int) $genreFilter);
+
                 return;
             }
 
@@ -88,16 +106,24 @@ class Product extends Model
     }
 
     #[Scope]
+    protected function filterSeries(Builder $query, string $series): void
+    {
+        $query->where('series', $series);
+    }
+
+    #[Scope]
     protected function searchIndex(Builder $query, string $search): void
     {
-        $search = '%' . trim($search) . '%';
+        $search = '%'.trim($search).'%';
 
         $query->where(function (Builder $searchQuery) use ($search): void {
-            $searchQuery->whereLike('id', $search)
-                ->orWhereLike('work_name', $search)
-                ->orWhereLike('work_name_english', $search)
-                ->orWhereLike('series', $search)
-                ->orWhereLike('notes', $search)
+            $searchQuery->whereAny([
+                'id',
+                'work_name',
+                'work_name_english',
+                'series',
+                'notes',
+            ], 'like', $search)
                 ->orWhereHas('genres', fn (Builder $genreQuery) => $genreQuery->whereLike('title', $search));
         });
     }
@@ -105,7 +131,7 @@ class Product extends Model
     #[Scope]
     protected function filterTitle(Builder $query, string $title): void
     {
-        $title = '%' . trim($title) . '%';
+        $title = '%'.trim($title).'%';
 
         $query->where(function (Builder $titleQuery) use ($title): void {
             $titleQuery->whereLike('work_name', $title)
@@ -116,7 +142,15 @@ class Product extends Model
     #[Scope]
     protected function filterNotes(Builder $query, string $notes): void
     {
-        $query->whereLike('notes', '%' . trim($notes) . '%');
+        $query->whereLike('notes', '%'.trim($notes).'%');
+    }
+
+    #[Scope]
+    protected function orderByNumericRj(Builder $query, string $direction = 'desc'): void
+    {
+        $direction = strtolower($direction) === 'asc' ? 'asc' : 'desc';
+
+        $query->orderBy('rj_number', $direction);
     }
 
     #[Scope]
@@ -150,6 +184,7 @@ class Product extends Model
                 foreach ($normalizedTags as $index => $tag) {
                     if ($index === 0) {
                         $tagQuery->whereRaw('LOWER(title) = ?', [$tag]);
+
                         continue;
                     }
 
@@ -157,5 +192,40 @@ class Product extends Model
                 }
             });
         });
+    }
+
+    public static function rjNumberFromId(?string $id): ?int
+    {
+        if ($id === null || ! preg_match('/^RJ(\d+)$/i', $id, $matches)) {
+            return null;
+        }
+
+        return (int) $matches[1];
+    }
+
+    public static function dateSortValue(mixed $date): ?int
+    {
+        if (! is_array($date)) {
+            return null;
+        }
+
+        $year = self::dateSortPart($date['year'] ?? null);
+        $month = self::dateSortPart($date['month'] ?? null);
+        $day = self::dateSortPart($date['day'] ?? null);
+
+        if ($year === null && $month === null && $day === null) {
+            return null;
+        }
+
+        return (int) sprintf('%04d%02d%02d', $year ?? 0, $month ?? 0, $day ?? 0);
+    }
+
+    private static function dateSortPart(mixed $value): ?int
+    {
+        if ($value === null || $value === '') {
+            return null;
+        }
+
+        return (int) $value;
     }
 }

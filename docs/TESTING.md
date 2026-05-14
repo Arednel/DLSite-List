@@ -3,15 +3,23 @@
 ## Scope
 Current automated coverage is in Laravel PHPUnit tests:
 - `tests/Feature/ProductControllerTest.php`
-  - covers index filtering/sorting, create/edit pages, custom create/upload flow, editable custom tag source behavior, index image selection, validation, update flow, and destroy flow
+  - covers index filtering/sorting, create/edit pages, create/edit return navigation state across Index/Tag Library/unsupported-route flows, custom create/upload flow, editable custom tag source behavior, index image selection, validation, update flow, and destroy flow
+- `tests/Feature/ProductIndexLivewireTest.php`
+  - covers Livewire-owned Index pagination defaults, fixed/custom/unlimited page sizes, narrowed Index result columns, SQL-backed scalar/search/date/Added to the site Date pagination, built-in pagination links with the progress-menu scroll target, RJ header sorting, advanced primary/secondary sorting, Livewire-bound Filter modal controls, restored filter defaults, the external Alpine advanced-filter component, local client-side filter modal opening/closing without Livewire entanglement or native form reset, page reset behavior, and query-string initialization
+- `tests/Unit/Enums/ProductIndexSortFieldTest.php`
+  - covers Index sort field SQL column metadata
+- `tests/Feature/ProductSortKeysTest.php`
+  - covers derived product index keys for numeric RJ sorting, partial start/finish date sorting, and exact series filtering behavior
+- `tests/Feature/IndexPaginationSettingsTest.php`
+  - covers the Options page-size setting component, including default, fixed, custom positive integer, unlimited, deferred save behavior, scalar option persistence, Livewire-only mode state, Livewire dirty-state saved notice behavior, and invalid custom values
 - `tests/Feature/ProductGenreMigrationTest.php`
   - covers migration of legacy product genre JSON into `genres` + `genre_product`, including pivot source values
 - `tests/Feature/OptionsControllerTest.php`
-  - covers the Options page, latest-refetch link, Refetch Tags request validation, queue batch creation, selected/all work scopes, progress JSON, tags-only job results, skipped errors/custom-only works, review rendering/change indicators, newest-run-only apply controls, and apply behavior for stale tag move/remove choices
+  - covers the Options/Refetch page tabs, latest-refetch link, Refetch Tags request validation, queue batch creation, selected/all work scopes including numeric RJ-desc queued order, progress JSON, tags-only job results, skipped errors/custom-only works, review rendering/change indicators, newest-run-only apply controls, and apply behavior for stale tag move/remove choices
 - `tests/Feature/OptionsRefetchProgressTest.php`
   - covers the Livewire refetch progress panel polling only while a run is active and redirecting once review results are ready
 - `tests/Feature/OptionsWorkSearchTest.php`
-  - covers the Livewire selected-work search and selected product preservation when filtered results change
+  - covers the Livewire selected-work search, numeric RJ-desc visible order, and selected product preservation when filtered results change
 - `tests/Unit/Support/ProductIndexFiltersTest.php`
   - covers query normalization, defaults, and query export helpers
 - `tests/Unit/Support/ReturnTargetTest.php`
@@ -47,12 +55,15 @@ Upload tests use Laravel's `UploadedFile::fake()` and `Storage::fake('public')` 
 Refetch Tags tests use Laravel's `Bus::fake()` for batch dispatch assertions and fake `DLSiteTagFetcher` classes so no DLSite network calls run during tests.
 
 Livewire component tests use `Livewire::test()` to update component state without a browser.
+Index pagination tests set `options.index_per_page` through `App\Models\Option` so fixed, custom, and unlimited list sizes can be verified without touching application config.
 
 ## Running Tests
 - Run all tests:
   - `php artisan test`
 - Run a filtered subset:
   - `php artisan test --filter=ProductControllerTest`
+  - `php artisan test --filter=ProductIndexLivewireTest`
+  - `php artisan test --filter=IndexPaginationSettingsTest`
   - `php artisan test --filter=OptionsControllerTest`
   - `php artisan test --filter=OptionsRefetchProgressTest`
   - `php artisan test --filter=OptionsWorkSearchTest`

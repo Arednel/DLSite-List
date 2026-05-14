@@ -73,13 +73,32 @@ php artisan queue:work
 
 `php artisan schedule:work` is only needed if a scheduled command is added. The project does not currently register a scheduled batch-pruning command.
 
-## Livewire
-The Options selected-work search and Refetch Tags progress panel use Livewire.
-
 Relevant Composer package:
 - `livewire/livewire`
 
-No published Livewire config is required. The Options page includes Livewire's Blade asset directives so `wire:model.live.debounce.250ms` can update the search results while typing. The refetch progress page uses `wire:poll.1s` only while a run is still running.
+## App Options
+The `options` table stores app settings as scalar string values keyed by `options.key`.
+
+Current setting:
+- `index_per_page`: controls how many works the Index list renders per page
+
+Runtime note:
+- `App\Models\Option` normalizes the stored string into `int|string` values for application use
+
+Default:
+- `100`
+
+Built-in choices:
+- `10`
+- `25`
+- `50`
+- `100`
+- `250`
+- `500`
+- `1000`
+- `unlimited`
+
+The Options tab also accepts a custom positive integer. `unlimited` disables Index pagination and renders every matching work.
 
 ## Testing Configuration
 Test setup:

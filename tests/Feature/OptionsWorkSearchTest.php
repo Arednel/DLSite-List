@@ -36,6 +36,28 @@ class OptionsWorkSearchTest extends TestCase
             ->assertDontSee('VISIBLE_WORK_TOKEN');
     }
 
+    public function test_livewire_work_search_sorts_visible_results_by_numeric_rj_descending(): void
+    {
+        Product::factory()->create([
+            'id' => 'RJ000000002',
+            'work_name' => 'ORDER_MATCH_TWO',
+        ]);
+        Product::factory()->create([
+            'id' => 'RJ000000010',
+            'work_name' => 'ORDER_MATCH_TEN',
+        ]);
+        Product::factory()->create([
+            'id' => 'RJ000000001',
+            'work_name' => 'ORDER_OTHER_ONE',
+        ]);
+
+        Livewire::test(OptionsWorkSearch::class)
+            ->assertSeeInOrder(['RJ000000010', 'RJ000000002', 'RJ000000001'])
+            ->set('search', 'ORDER_MATCH')
+            ->assertSeeInOrder(['RJ000000010', 'RJ000000002'])
+            ->assertDontSee('RJ000000001');
+    }
+
     public function test_livewire_work_search_preserves_selected_ids_when_filtered_out(): void
     {
         $selected = Product::factory()->create([

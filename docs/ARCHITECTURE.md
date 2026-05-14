@@ -2,16 +2,16 @@
 
 ## Stack
 - Backend: Laravel 12 (PHP 8.3)
-- Frontend: Blade templates, Livewire for Options work search/refetch progress, and plain CSS/JS
+- Frontend: Blade templates, Livewire for the Index list, Options work search/settings/refetch progress, and plain CSS/JS
 - Database: MySQL 8
 - Scraper: Python scripts invoked from Laravel (`python/DLSiteScraper.py`, `python/DLSiteTagFetcher.py`)
 - Background work: Laravel database queues and job batches
 
 ## Main Application Flow
 1. User opens list page (`GET /`).
-2. `ProductController@index` applies filters/search and renders `resources/views/Index.blade.php`.
+2. `ProductController@index` renders `resources/views/Index.blade.php`, then `app/Livewire/ProductIndex.php` owns list filters, sorting, pagination, and URL query state.
 3. `GET /tags` renders the tag library, shows the work count for each English/custom genre, and links each tag back to the same index filter used on the list page.
-4. `GET /options` renders Options workflows, including Refetch Tags.
+4. `GET /options` renders the Options tab by default, and `GET /options?tab=refetch` renders the Refetch Tags tab.
 5. User can create/edit/delete entries through forms.
 6. Store flow (`POST /store`) validates input, runs scraper, reads scraped JSON, and creates a `products` row.
 7. Custom store flow (`POST /store/custom`) validates manual input, skips scraper/network checks, stores the required local cover plus optional sample images, and creates a `products` row.
@@ -31,6 +31,7 @@
   - `app/Http/Requests/UpdateProductRequest.php`
   - shared normalization/validation in `app/Http/Requests/BaseProductRequest.php`
 - Model: `app/Models/Product.php`
+- App option model: `app/Models/Option.php`
 - Refetch models:
   - `app/Models/TagRefetchRun.php`
   - `app/Models/TagRefetchWorkResult.php`
@@ -39,6 +40,8 @@
   - `app/Support/TagRefetch/DLSiteTagFetcher.php`
   - `app/Support/TagRefetch/TagRefetchService.php`
 - Livewire components:
+  - `app/Livewire/ProductIndex.php`
+  - `app/Livewire/IndexPaginationSettings.php`
   - `app/Livewire/OptionsWorkSearch.php`
   - `app/Livewire/OptionsRefetchProgress.php`
 - Views: `resources/views/*.blade.php`
@@ -51,7 +54,7 @@ Shared UI note:
 - `resources/views/components/list-menu-float.blade.php` is reused by index/tag library
 - desktop keeps the floating hover menu
 - mobile uses a toggle button that opens the same menu as a left-side drawer
-- `resources/views/Index.blade.php` keeps the desktop table on larger screens and switches to stacked cards on mobile so search/actions still fit
+- `resources/views/Index.blade.php` hosts `ProductIndex`; the Livewire view keeps the desktop table on larger screens and switches to stacked cards on mobile so search/actions still fit
 - `resources/views/Create.blade.php` switches between DLSite create and custom create modes; `resources/views/Create.blade.php` and `resources/views/Edit.blade.php` use `public/css/edit.css` for both desktop and mobile form layouts and render reusable field components from `resources/views/components/fields/*.blade.php`
 - `app/View/Components/Fields/*.php` provides the class-based field components used by those Blade views
 - `AppServiceProvider` registers the enum-backed field component aliases used by `<x-fields.* />`
@@ -59,10 +62,11 @@ Shared UI note:
 - Blade pages load CSS and JS from `public/` with `filemtime(public_path(...))` query strings for cache busting
 - `resources/views/components/index/advanced-filters.blade.php` renders the index filter/sort modal
 - `resources/views/components/index/*.blade.php` contains the reusable filter/select/radio pieces used by the index modal
-- `app/Http/Requests/ProductIndexRequest.php` normalizes the query string into a `ProductIndexFilters` object
-- `app/Enums/*.php` holds enum-backed filter options for progress, priority, tag match, sort fields, and the numeric rating scales
-- `app/Models/Product.php` owns the Laravel 12 local scopes used by index filtering/search
-- `app/Support/ProductIndexResults.php` loads filtered products, applies PHP-side multi-column sorting, and runs the lightweight visible-genre query used by the index page
+- `app/Livewire/ProductIndex.php` binds filter/sort properties to the URL query string, then normalizes that state into a `ProductIndexFilters` object
+- `app/Enums/*.php` holds enum-backed filter options for progress, priority, tag match, sort fields including `Added to the site Date`, sort backend metadata, and the numeric rating scales
+- `app/Models/Product.php` owns the Laravel 12 local scopes used by index filtering/search and keeps derived index keys in sync for RJ sorting and partial date sorting
+- `app/Support/ProductIndexResults.php` builds the filtered product query, selects only the columns rendered by the Index, and uses enum-defined SQL-backed pagination for default/RJ/scalar/date sorts
+- `ProductIndex` reads `options.index_per_page` once per render, uses Livewire computed properties for derived filter/query/options/sort-icon state, and derives return/progress/tag query arrays from that normalized state
 - the advanced filter modal defaults to `All tags` matching and `Desc` sort direction until the user chooses something else
 
 ## Data Model
@@ -104,28 +108,48 @@ Queue tables:
 - `jobs` stores pending database queue jobs
 - `job_batches` stores Laravel batch metadata
 
+`options` stores app-level settings as scalar string values:
+- `index_per_page` controls Index pagination
+- default is `100`
+- fixed choices are `10`, `25`, `50`, `100`, `250`, `500`, `1000`
+- custom values accept any positive integer
+- `unlimited` disables Index pagination links and renders all matching works
+- `App\Models\Option` normalizes the stored scalar string into the `int|string` runtime value the app uses
+
+Current repo-level Index sort-key indexes:
+- `products.id` remains the primary key
+- `products.rj_number`, `start_date_sort`, and `end_date_sort` are derived nullable integer sort keys with indexes used by Index SQL sorting
+
 Migration note:
 - legacy `products.genre`, `products.genre_english`, and `products.genre_custom` JSON columns are migrated into
   `genres` + `genre_product` by `2026_03_16_160000_convert_product_genre_titles_to_ids.php`
 - after conversion, those legacy JSON columns are dropped
 
 Runtime note:
-- `ProductController@index` shows English + custom genres through one lightweight grouped query from `genre_product` + `genres`
+- `ProductIndex` shows English + custom genres through one lightweight grouped query from `genre_product` + `genres` for the current page
 - index cover images are rendered directly from `products.work_image`
-- index filter state is normalized into `app/Support/ProductIndexFilters.php`, which is then reused by the controller, query layer, and Blade modal
-- `app/Support/ProductIndexFilters.php` also builds query arrays used by progress tabs, preserved search state, and tag links on the index page
+- `products.start_date` and `products.end_date` JSON remain the editable/display source of truth; their `*_sort` columns store `YYYYMMDD` integers with missing month/day as `00`
+- `ProductIndex` keeps its filter/sort state in the URL through Livewire's `queryString()` config, then normalizes that state into `app/Support/ProductIndexFilters.php`
+- `app/Support/ProductIndexFilters.php` provides the normalized filter query used by progress tabs, preserved search state, and tag links on the index page
+- opening and closing the advanced filter modal is local Alpine state registered in `public/scripts/index-advanced-filters.js`, not Livewire state, so showing the modal does not rerun the Index query or reset draft filter values
+- changing advanced sort draft fields is client-side/deferred through that Alpine component until Apply, so the modal does not send requests while choosing primary/secondary sort columns
+- desktop table headers and the advanced sort modal both update the same Livewire-backed server-side sort state
+- Index pagination uses Livewire/Laravel paginator links with the project pagination view and Livewire's scroll target data to return to `#progress-menu`, keeping progress tabs, search, and Filter visible after page changes
 - switching progress tabs keeps the rest of the index request state, but intentionally drops the current `genre` filter
-- clicking a series link opens the index with only the `series` filter applied
+- clicking a series link opens the index with only the exact `series` filter applied
 - `app/Support/ReturnTarget.php` normalizes the structured return state (`return_route`, `return_query`, `return_fragment`) used by create/edit/update/destroy flows
-- update rebuilds the return URL through `ReturnTarget` and updates the `progress` query only when returning to the index after a status change
+- update rebuilds the return URL through `ReturnTarget` and updates the `progress` query only when returning to the index after a status change; index page numbers are preserved in return state unless progress changes
 - create/store resolves scraped/custom titles into `genres` rows and syncs the pivot
 - edit loads only the fetched English/custom genre rows it renders, while keeping fetched non-custom genres attached automatically
 - update reads user-added genres from the form, stores them as `genre_product.source = custom`, and can reuse an existing fetched genre row while keeping it editable for that product
 - custom create stores user-uploaded covers/samples in `storage/app/public/Works/{RJ}`, saves the uploaded cover public path in `products.work_image`, and attaches custom tags through the same genre resolver used by update
 - Options -> Refetch Tags dispatches one queued `FetchProductTagsJob` per selected product and stores results before any product tags are changed
 - the refetch progress panel is rendered by Livewire and polls every second only while the run is still running
-- the Options page links to the latest refetch run when at least one run exists
-- the selected-work search on the Options page is rendered by Livewire so filtering can run through the same product query rules as the server
+- the Options page has separate `Options` and `Refetch` tabs; validation errors from refetch forms reopen the Refetch tab
+- the Refetch tab links to the latest refetch run when at least one run exists
+- the Options tab includes an Index Pagination setting powered by Livewire and persisted in `options.index_per_page`; changing the mode can reveal the custom-value input immediately, but the setting is only persisted when Save is submitted
+- the selected-work search on the Refetch tab is rendered by Livewire so filtering can run through the same product query rules as the server
+- the Refetch tab work list and queued all/selected refetch ids use numeric RJ descending order, matching the Index default order
 - custom-only works are skipped during refetch because they do not have DLSite metadata to fetch from
 - applying a refetch run attaches new fetched tags with `genre_product.source = fetched`
 - stale fetched tags move to `genre_product.source = custom` by default, but the review form can remove them instead
@@ -155,9 +179,13 @@ Runtime note:
 ## Testing Overview
 - Feature tests:
   - `tests/Feature/ProductControllerTest.php`
+  - `tests/Feature/ProductIndexLivewireTest.php`
+  - `tests/Feature/ProductSortKeysTest.php`
+  - `tests/Feature/IndexPaginationSettingsTest.php`
   - `tests/Feature/ProductGenreMigrationTest.php`
   - `tests/Feature/OptionsControllerTest.php`
 - Unit tests:
+  - `tests/Unit/Enums/ProductIndexSortFieldTest.php`
   - `tests/Unit/Support/ProductIndexFiltersTest.php`
   - `tests/Unit/ExampleTest.php`
 - Feature tests use `RefreshDatabase` to isolate DB state during test execution.

@@ -16,6 +16,7 @@ class ReturnTargetTest extends TestCase
                 'progress' => 'Listening',
                 'priority' => '-1',
                 'search' => 'rain',
+                'page' => '3',
             ],
             'return_fragment' => ' RJ123456 ',
         ]));
@@ -24,9 +25,25 @@ class ReturnTargetTest extends TestCase
         $this->assertSame([
             'search' => 'rain',
             'progress' => 'Listening',
+            'page' => '3',
         ], $target->query);
         $this->assertSame('RJ123456', $target->fragment);
-        $this->assertSame('/?search=rain&progress=Listening#RJ123456', $target->toUrl());
+        $this->assertSame('/?search=rain&progress=Listening&page=3#RJ123456', $target->toUrl());
+    }
+
+    public function test_it_drops_invalid_index_return_pages(): void
+    {
+        foreach (['0', '-1', '1.5', 'abc', '01'] as $page) {
+            $target = ReturnTarget::fromRequest(Request::create('/create', 'GET', [
+                'return_route' => 'index',
+                'return_query' => [
+                    'search' => 'rain',
+                    'page' => $page,
+                ],
+            ]));
+
+            $this->assertSame(['search' => 'rain'], $target->query);
+        }
     }
 
     public function test_it_drops_query_and_fragment_for_non_index_routes(): void
@@ -63,6 +80,7 @@ class ReturnTargetTest extends TestCase
                 'age_category' => 'ALL_AGES',
                 'progress' => 'Listening',
                 'search' => 'rain',
+                'page' => '4',
             ],
             'return_fragment' => 'RJ123456',
         ]))->withIndexProgress('Completed');

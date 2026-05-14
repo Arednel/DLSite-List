@@ -1,3 +1,45 @@
+.options-tabs {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    width: fit-content;
+    max-width: 100%;
+    margin-bottom: 1.25rem;
+    border: 1px solid rgba(190, 24, 93, 0.18);
+    border-radius: 999px;
+    background: rgba(255, 255, 255, 0.92);
+    box-shadow: 0 12px 28px rgba(190, 24, 93, 0.14);
+    padding: 0.35rem;
+}
+
+.options-tab {
+    border: 1px solid rgba(236, 72, 153, 0.16);
+    border-radius: 99px;
+    background: var(--pink-50);
+    color: var(--pink-700);
+    display: inline-flex;
+    font-weight: 700;
+    justify-content: center;
+    min-width: 7rem;
+    padding: 0.75rem 1.1rem;
+    text-decoration: none;
+    transition: background-color 0.2s ease, border-color 0.2s ease, color 0.2s ease;
+}
+
+.options-tab:hover,
+.options-tab:focus-visible {
+    background: var(--pink-100);
+    border-color: var(--pink-300);
+    color: var(--text-strong);
+}
+
+.options-tab.is-active {
+    background: linear-gradient(135deg, var(--pink-500), var(--pink-700));
+    border-color: transparent;
+    box-shadow: 0 8px 18px rgba(190, 24, 93, 0.28);
+    color: white;
+}
+
 .option-actions {
     display: flex;
     flex-wrap: wrap;
@@ -14,7 +56,8 @@
 }
 
 .option-search,
-.review-actions select {
+.review-actions select,
+.option-search-input {
     width: 100%;
     border: 2px solid var(--pink-300);
     border-radius: 0.85rem;
@@ -24,13 +67,22 @@
     transition: border-color 0.16s ease, box-shadow 0.16s ease;
 }
 
-.option-search {
+.option-search,
+.option-search-input {
     min-height: 3rem;
+}
+
+.option-search {
     padding: 0.7rem 0.9rem;
 }
 
+.option-search-input {
+    box-sizing: border-box
+}
+
 .option-search:focus,
-.review-actions select:focus {
+.review-actions select:focus,
+.option-search-input:focus {
     border-color: var(--pink-500);
     outline: none;
     box-shadow: 0 0 0 3px rgba(236, 72, 153, 0.17);
@@ -87,6 +139,12 @@
     border-color: #fecaca;
     background: #fff1f2;
     color: #be123c;
+}
+
+.text-error {
+    margin-top: 0.35rem;
+    color: #be123c;
+    font-size: 0.85rem;
 }
 
 .progress-summary {
@@ -253,7 +311,15 @@
     user-select: text !important;
 }
 
-@media (max-width: 40rem) {
+@media (max-width: 992px) {
+
+    .options-tabs {
+        width: calc(100% - 0.7rem);
+    }
+
+    .options-tab {
+        flex: 1 1 8rem;
+    }
 
     .progress-summary,
     .result-card summary {

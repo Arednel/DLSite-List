@@ -19,7 +19,7 @@ class OptionsControllerTest extends TestCase
 {
     use RefreshDatabase;
 
-    public function test_options_page_renders_refetch_actions_and_checklist(): void
+    public function test_options_page_renders_options_tab_by_default(): void
     {
         $product = Product::factory()->create([
             'work_name' => 'OPTIONS_WORK_TOKEN',
@@ -29,9 +29,35 @@ class OptionsControllerTest extends TestCase
         $this->get('/options')
             ->assertOk()
             ->assertSee('Options')
+            ->assertSee('href="/options?tab=options"', false)
+            ->assertSee('href="/options?tab=refetch"', false)
+            ->assertSee('Index Pagination')
+            ->assertSee('Index page size')
+            ->assertDontSee('Refetch Tags')
+            ->assertDontSee('Refetch all works')
+            ->assertDontSee('Refetch selected works')
+            ->assertDontSee('OPTIONS_WORK_TOKEN')
+            ->assertDontSee('OPTIONS_EN_TOKEN');
+    }
+
+    public function test_refetch_tab_renders_refetch_actions_and_checklist(): void
+    {
+        $product = Product::factory()->create([
+            'work_name' => 'OPTIONS_WORK_TOKEN',
+            'work_name_english' => 'OPTIONS_EN_TOKEN',
+        ]);
+
+        $this->get('/options?tab=refetch')
+            ->assertOk()
+            ->assertSee('Options')
+            ->assertSee('href="/options?tab=options"', false)
+            ->assertSee('href="/options?tab=refetch"', false)
+            ->assertSee('class="options-tab is-active"', false)
+            ->assertDontSee('Index Pagination')
             ->assertSee('Refetch Tags')
             ->assertSee('Refetch all works')
             ->assertSee('Refetch selected works')
+            ->assertSee('name="tab" value="refetch"', false)
             ->assertSee('wire:model.live.debounce.250ms="search"', false)
             ->assertSee('name="product_ids[]"', false)
             ->assertDontSee('Go to latest refetch')
@@ -42,7 +68,7 @@ class OptionsControllerTest extends TestCase
 
     public function test_options_page_shows_empty_state_when_there_are_no_works(): void
     {
-        $this->get('/options')
+        $this->get('/options?tab=refetch')
             ->assertOk()
             ->assertSee('No works available for tag refetch.')
             ->assertDontSee('Go to latest refetch')
@@ -55,7 +81,7 @@ class OptionsControllerTest extends TestCase
         $olderRun = app(TagRefetchService::class)->createRun([$product->id]);
         $latestRun = app(TagRefetchService::class)->createRun([$product->id]);
 
-        $this->get('/options')
+        $this->get('/options?tab=refetch')
             ->assertOk()
             ->assertSee('Go to latest refetch')
             ->assertSee('href="'.route('options.refetch-tags.show', $latestRun).'"', false)
@@ -66,8 +92,14 @@ class OptionsControllerTest extends TestCase
     {
         Bus::fake();
 
-        $first = Product::factory()->create(['work_name' => 'REFETCH_ALL_FIRST_TOKEN']);
-        $second = Product::factory()->create(['work_name' => 'REFETCH_ALL_SECOND_TOKEN']);
+        $first = Product::factory()->create([
+            'id' => 'RJ000000002',
+            'work_name' => 'REFETCH_ALL_FIRST_TOKEN',
+        ]);
+        $second = Product::factory()->create([
+            'id' => 'RJ000000010',
+            'work_name' => 'REFETCH_ALL_SECOND_TOKEN',
+        ]);
 
         $response = $this->post(route('options.refetch-tags.start'), [
             'scope' => 'all',
@@ -77,46 +109,67 @@ class OptionsControllerTest extends TestCase
 
         $response->assertRedirect(route('options.refetch-tags.show', $run));
         $this->assertSame(TagRefetchRun::STATUS_RUNNING, $run->status);
-        $this->assertEqualsCanonicalizing([$first->id, $second->id], $run->selected_product_ids);
+        $this->assertSame([$second->id, $first->id], $run->selected_product_ids);
         $this->assertSame(2, $run->total_count);
         $this->assertSame(2, $run->results()->count());
         $this->assertNotNull($run->batch_id);
 
         Bus::assertBatched(function (PendingBatch $batch) use ($run, $first, $second): bool {
+            $jobProductIds = $batch->jobs
+                ->map(fn (FetchProductTagsJob $job): string => $job->productId)
+                ->all();
+
             return $batch->name === "Refetch tags #{$run->id}"
                 && $batch->jobs->count() === 2
-                && $batch->jobs->every(fn (FetchProductTagsJob $job): bool => in_array($job->productId, [$first->id, $second->id], true));
+                && $jobProductIds === [$second->id, $first->id];
         });
     }
 
-    public function test_starting_selected_works_only_queues_selected_products(): void
+    public function test_starting_selected_works_only_queues_selected_products_in_numeric_rj_desc_order(): void
     {
         Bus::fake();
 
-        $selected = Product::factory()->create(['work_name' => 'REFETCH_SELECTED_TOKEN']);
-        $notSelected = Product::factory()->create(['work_name' => 'REFETCH_NOT_SELECTED_TOKEN']);
+        $selectedLow = Product::factory()->create([
+            'id' => 'RJ000000002',
+            'work_name' => 'REFETCH_SELECTED_LOW_TOKEN',
+        ]);
+        $selectedHigh = Product::factory()->create([
+            'id' => 'RJ000000010',
+            'work_name' => 'REFETCH_SELECTED_HIGH_TOKEN',
+        ]);
+        $notSelected = Product::factory()->create([
+            'id' => 'RJ000000001',
+            'work_name' => 'REFETCH_NOT_SELECTED_TOKEN',
+        ]);
 
         $this->post(route('options.refetch-tags.start'), [
             'scope' => 'selected',
-            'product_ids' => [$selected->id],
+            'product_ids' => [$selectedLow->id, $selectedHigh->id],
         ])->assertRedirect();
 
         $run = TagRefetchRun::query()->firstOrFail();
 
-        $this->assertSame([$selected->id], $run->selected_product_ids);
+        $this->assertSame([$selectedHigh->id, $selectedLow->id], $run->selected_product_ids);
         $this->assertDatabaseHas('tag_refetch_work_results', [
             'tag_refetch_run_id' => $run->id,
-            'product_id' => $selected->id,
+            'product_id' => $selectedLow->id,
+        ]);
+        $this->assertDatabaseHas('tag_refetch_work_results', [
+            'tag_refetch_run_id' => $run->id,
+            'product_id' => $selectedHigh->id,
         ]);
         $this->assertDatabaseMissing('tag_refetch_work_results', [
             'tag_refetch_run_id' => $run->id,
             'product_id' => $notSelected->id,
         ]);
 
-        Bus::assertBatched(function (PendingBatch $batch) use ($selected): bool {
-            return $batch->jobs->count() === 1
-                && $batch->jobs->first() instanceof FetchProductTagsJob
-                && $batch->jobs->first()->productId === $selected->id;
+        Bus::assertBatched(function (PendingBatch $batch) use ($selectedHigh, $selectedLow): bool {
+            $jobProductIds = $batch->jobs
+                ->map(fn (FetchProductTagsJob $job): string => $job->productId)
+                ->all();
+
+            return $batch->jobs->count() === 2
+                && $jobProductIds === [$selectedHigh->id, $selectedLow->id];
         });
     }
 
@@ -124,21 +177,23 @@ class OptionsControllerTest extends TestCase
     {
         Bus::fake();
 
-        $this->from('/options')
+        $this->from('/options?tab=refetch')
             ->post(route('options.refetch-tags.start'), [
                 'scope' => 'all',
+                'tab' => 'refetch',
             ])
-            ->assertRedirect('/options')
+            ->assertRedirect('/options?tab=refetch')
             ->assertSessionHasErrors(['product_ids']);
 
         Product::factory()->create(['work_name' => 'REFETCH_VALIDATION_TOKEN']);
 
-        $this->from('/options')
+        $this->from('/options?tab=refetch')
             ->post(route('options.refetch-tags.start'), [
                 'scope' => 'selected',
                 'product_ids' => [],
+                'tab' => 'refetch',
             ])
-            ->assertRedirect('/options')
+            ->assertRedirect('/options?tab=refetch')
             ->assertSessionHasErrors(['product_ids']);
 
         Bus::assertNothingBatched();

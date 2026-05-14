@@ -3,14 +3,11 @@
 namespace App\Http\Controllers;
 
 use App\Enums\ProductAgeCategory;
-use App\Http\Requests\ProductIndexRequest;
 use App\Http\Requests\StoreCustomProductRequest;
 use App\Http\Requests\StoreProductRequest;
 use App\Http\Requests\UpdateProductRequest;
 use App\Models\Genre;
 use App\Models\Product;
-use App\Support\ProductIndexFilters;
-use App\Support\ProductIndexResults;
 use App\Support\ReturnTarget;
 use App\Support\TagInput;
 use Illuminate\Http\Request;
@@ -29,21 +26,9 @@ class ProductController extends Controller
     /**
      * Display a listing of the resource.
      */
-    public function index(ProductIndexRequest $request, ProductIndexResults $productIndexResults)
+    public function index()
     {
-        $filters = $request->filters();
-        $products = $productIndexResults->getProducts($filters);
-
-        return view('Index', [
-            'products' => $products,
-            'productGenres' => $productIndexResults->loadVisibleGenres($products->modelKeys()),
-            'filters' => $filters,
-            'filterOptions' => ProductIndexFilters::optionSets(),
-            'progress' => $filters->progressHeading(),
-            'filterQuery' => $filters->toQuery(),
-            'allProgressQuery' => $filters->toQueryWithout(['progress', 'genre']),
-            'searchFormQuery' => $filters->toQueryWithout('search'),
-        ]);
+        return view('Index');
     }
 
     public function create(Request $request)

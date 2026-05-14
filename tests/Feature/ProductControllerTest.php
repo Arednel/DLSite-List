@@ -271,6 +271,7 @@ class ProductControllerTest extends TestCase
             ->assertDontSee($wrongReListen->work_name)
             ->assertSee('data-index-filter-open', false)
             ->assertSee('data-index-filter-modal', false)
+            ->assertSee('scripts/index-advanced-filters.js', false)
             ->assertSee('name="title"', false)
             ->assertSee('name="notes"', false)
             ->assertSee('name="score"', false)
@@ -279,8 +280,7 @@ class ProductControllerTest extends TestCase
             ->assertSee('name="num_re_listen_times"', false)
             ->assertSee('name="re_listen_value"', false)
             ->assertSee('name="tags"', false)
-            ->assertSee('name="sort_first_field"', false)
-            ->assertSee('scripts/index-filters.js', false);
+            ->assertSee('name="sort_first_field"', false);
     }
 
     public function test_index_filter_modal_defaults_to_all_tags_and_desc_sort_direction(): void
@@ -534,6 +534,47 @@ class ProductControllerTest extends TestCase
             ->assertSee('Select age category');
     }
 
+    public function test_create_preserves_index_return_state_for_go_back_and_mode_switch(): void
+    {
+        $query = http_build_query([
+            'return_route' => 'index',
+            'return_query' => [
+                'progress' => 'Listening',
+                'search' => 'rain',
+                'page' => '3',
+            ],
+        ]);
+
+        $this->get("/create?{$query}")
+            ->assertOk()
+            ->assertSee('name="return_route" value="index"', false)
+            ->assertSeeInOrder(['name="return_query[search]"', 'value="rain"'], false)
+            ->assertSeeInOrder(['name="return_query[progress]"', 'value="Listening"'], false)
+            ->assertSeeInOrder(['name="return_query[page]"', 'value="3"'], false)
+            ->assertSee('href="/?search=rain&amp;progress=Listening&amp;page=3"', false)
+            ->assertSee('href="/create/custom?return_route=index&amp;return_query%5Bsearch%5D=rain&amp;return_query%5Bprogress%5D=Listening&amp;return_query%5Bpage%5D=3"', false);
+    }
+
+    public function test_create_discards_query_for_tag_library_return_targets(): void
+    {
+        $query = http_build_query([
+            'return_route' => 'tags.index',
+            'return_query' => [
+                'search' => 'rain',
+                'progress' => 'Listening',
+            ],
+            'return_fragment' => 'RJ123456',
+        ]);
+
+        $this->get("/create?{$query}")
+            ->assertOk()
+            ->assertSee('name="return_route" value="tags.index"', false)
+            ->assertDontSee('name="return_query[search]"', false)
+            ->assertDontSee('name="return_query[progress]"', false)
+            ->assertSee('href="/tags"', false)
+            ->assertSee('href="/create/custom?return_route=tags.index"', false);
+    }
+
     public function test_create_renders_enum_backed_select_labels(): void
     {
         $response = $this->get('/create');
@@ -599,6 +640,18 @@ class ProductControllerTest extends TestCase
             ->assertDontSee('name="redirect"', false);
     }
 
+    public function test_edit_defaults_go_back_fragment_to_current_product_when_not_provided(): void
+    {
+        $product = Product::factory()->create([
+            'work_name' => 'EDIT_DEFAULT_FRAGMENT_TOKEN',
+        ]);
+
+        $this->get("/edit/{$product->id}?return_route=index&return_query[progress]=Listening")
+            ->assertOk()
+            ->assertSee('name="return_fragment" value="' . $product->id . '"', false)
+            ->assertSee('href="/?progress=Listening#' . $product->id . '"', false);
+    }
+
     public function test_edit_prefills_comma_custom_tags_as_quoted_csv(): void
     {
         $product = Product::factory()->create([
@@ -640,7 +693,7 @@ class ProductControllerTest extends TestCase
     public function test_store_extracts_rj_from_url_before_validation(): void
     {
         $existing = Product::factory()->create();
-        $urlInput = "https://www.dlsite.com/maniax/work/=/product_id/" . strtolower($existing->id) . ".html";
+        $urlInput = 'https://www.dlsite.com/maniax/work/=/product_id/' . strtolower($existing->id) . '.html';
 
         $response = $this->from('/create')->post('/store', [
             'id' => $urlInput,
@@ -871,6 +924,42 @@ class ProductControllerTest extends TestCase
             ->assertOk()
             ->assertSee('No fetched genres.')
             ->assertSee('Existing Store Auto Genre');
+    }
+
+    public function test_custom_store_returns_to_same_index_state_with_new_work_anchor(): void
+    {
+        Storage::fake('public');
+
+        $workId = Product::factory()->make()->id;
+
+        $response = $this->post('/store/custom', $this->customStorePayload($workId, [
+            'return_route' => 'index',
+            'return_query' => [
+                'progress' => 'Listening',
+                'search' => 'rain',
+                'page' => '3',
+            ],
+        ]));
+
+        $response->assertSessionHasNoErrors();
+        $response->assertRedirect("/?search=rain&progress=Listening&page=3#{$workId}");
+    }
+
+    public function test_custom_store_returns_to_tag_library_without_anchor(): void
+    {
+        Storage::fake('public');
+
+        $workId = Product::factory()->make()->id;
+
+        $response = $this->post('/store/custom', $this->customStorePayload($workId, [
+            'return_route' => 'tags.index',
+            'return_query' => [
+                'search' => 'rain',
+            ],
+        ]));
+
+        $response->assertSessionHasNoErrors();
+        $response->assertRedirect('/tags');
     }
 
     public function test_custom_store_rejects_required_duplicate_and_image_validation_errors(): void
@@ -1114,6 +1203,45 @@ class ProductControllerTest extends TestCase
         ])->assertRedirect("{$redirect}#{$product->id}");
     }
 
+    public function test_update_redirect_drops_saved_page_when_progress_changes(): void
+    {
+        $product = Product::factory()->create([
+            'progress' => 'Listening',
+            'work_name' => 'REDIRECT_PAGE_DROP_TOKEN',
+        ]);
+
+        $this->post("/update/{$product->id}", [
+            'work_name' => $product->work_name,
+            'progress' => 'Completed',
+            'return_route' => 'index',
+            'return_query' => [
+                'search' => 'rain',
+                'progress' => 'Listening',
+                'page' => '4',
+            ],
+            'return_fragment' => $product->id,
+        ])->assertRedirect("/?search=rain&progress=Completed#{$product->id}");
+    }
+
+    public function test_update_to_tag_library_ignores_index_progress_rewrite_rules(): void
+    {
+        $product = Product::factory()->create([
+            'progress' => 'Listening',
+            'work_name' => 'REDIRECT_TAGS_TOKEN',
+        ]);
+
+        $this->post("/update/{$product->id}", [
+            'work_name' => $product->work_name,
+            'progress' => 'Completed',
+            'return_route' => 'tags.index',
+            'return_query' => [
+                'search' => 'rain',
+                'page' => '4',
+            ],
+            'return_fragment' => $product->id,
+        ])->assertRedirect('/tags');
+    }
+
     public function test_update_normalizes_empty_listening_fields_to_null(): void
     {
         $product = Product::factory()->create([
@@ -1228,6 +1356,20 @@ class ProductControllerTest extends TestCase
         ])->assertRedirect('/?progress=Plan%20to%20Listen');
     }
 
+    public function test_destroy_returns_to_tag_library_without_query_or_anchor(): void
+    {
+        $product = Product::factory()->create([
+            'work_name' => 'DESTROY_TAGS_TOKEN',
+        ]);
+
+        $this->post("/destroy/{$product->id}", [
+            'return_route' => 'tags.index',
+            'return_query' => [
+                'search' => 'rain',
+            ],
+        ])->assertRedirect('/tags');
+    }
+
     public function test_edit_returns_404_for_missing_product(): void
     {
         $this->get('/edit/RJ999999999')->assertNotFound();
@@ -1265,5 +1407,15 @@ class ProductControllerTest extends TestCase
                 ])
                 ->all()
         );
+    }
+
+    private function customStorePayload(string $workId, array $overrides = []): array
+    {
+        return array_replace_recursive([
+            'id' => strtolower($workId),
+            'work_name' => 'CUSTOM_RETURN_TARGET_TOKEN',
+            'age_category' => 'ALL_AGES',
+            'work_image' => UploadedFile::fake()->image('cover.png')->size(1024),
+        ], $overrides);
     }
 }

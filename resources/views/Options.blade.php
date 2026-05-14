@@ -24,39 +24,72 @@
                 <h1>Options</h1>
             </header>
 
-            <section class="panel">
-                <h2>Refetch Tags</h2>
-                <p class="option-description">
-                    Fetch the latest DLsite genre tags for all works or for only selected works.
-                    <br>
-                    After that you can review new and stale tags before applying the changes.
-                </p>
+            @php
+                $activeTab = old('tab', request('tab', 'options'));
+                $activeTab = in_array($activeTab, ['options', 'refetch'], true) ? $activeTab : 'options';
+            @endphp
 
-                @if ($errors->any())
-                    <div class="notice notice--error">
-                        {{ $errors->first() }}
-                    </div>
-                @endif
+            <nav class="options-tabs" aria-label="Options sections" role="tablist">
+                <a class="options-tab {{ $activeTab === 'options' ? 'is-active' : '' }}"
+                    href="{{ route('options.index', ['tab' => 'options'], false) }}" role="tab"
+                    aria-controls="options-tab-panel" aria-selected="{{ $activeTab === 'options' ? 'true' : 'false' }}">
+                    Options
+                </a>
+                <a class="options-tab {{ $activeTab === 'refetch' ? 'is-active' : '' }}"
+                    href="{{ route('options.index', ['tab' => 'refetch'], false) }}" role="tab"
+                    aria-controls="refetch-tab-panel"
+                    aria-selected="{{ $activeTab === 'refetch' ? 'true' : 'false' }}">
+                    Refetch
+                </a>
+            </nav>
 
-                <div class="option-actions">
-                    <form method="POST" action="{{ route('options.refetch-tags.start') }}">
-                        @csrf
-                        <input type="hidden" name="scope" value="all">
-                        <button type="submit" class="tag tag--gradient tag--lg is-clickable">
-                            Refetch all works
-                        </button>
-                    </form>
+            @if ($activeTab === 'options')
+                <section id="options-tab-panel" class="panel" role="tabpanel">
+                    <h2>Index Pagination</h2>
+                    <p class="option-description">
+                        Choose how many works are shown on each Index page.
+                    </p>
 
-                    @if ($latestRefetchRun)
-                        <a class="tag tag--soft tag--lg is-clickable"
-                            href="{{ route('options.refetch-tags.show', $latestRefetchRun) }}">
-                            Go to latest refetch
-                        </a>
+                    <livewire:index-pagination-settings />
+                </section>
+            @endif
+
+            @if ($activeTab === 'refetch')
+                <section id="refetch-tab-panel" class="panel" role="tabpanel">
+                    <h2>Refetch Tags</h2>
+                    <p class="option-description">
+                        Fetch the latest DLsite genre tags for all works or for only selected works.
+                        <br>
+                        After that you can review new and stale tags before applying the changes.
+                    </p>
+
+                    @if ($errors->any())
+                        <div class="notice notice--error">
+                            {{ $errors->first() }}
+                        </div>
                     @endif
-                </div>
 
-                <livewire:options-work-search />
-            </section>
+                    <div class="option-actions">
+                        <form method="POST" action="{{ route('options.refetch-tags.start') }}">
+                            @csrf
+                            <input type="hidden" name="scope" value="all">
+                            <input type="hidden" name="tab" value="refetch">
+                            <button type="submit" class="tag tag--gradient tag--lg is-clickable">
+                                Refetch all works
+                            </button>
+                        </form>
+
+                        @if ($latestRefetchRun)
+                            <a class="tag tag--soft tag--lg is-clickable"
+                                href="{{ route('options.refetch-tags.show', $latestRefetchRun) }}">
+                                Go to latest refetch
+                            </a>
+                        @endif
+                    </div>
+
+                    <livewire:options-work-search />
+                </section>
+            @endif
         </div>
     </main>
 
