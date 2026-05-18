@@ -269,6 +269,30 @@ class OptionsControllerTest extends TestCase
         $this->assertSame(['Keep Custom Tag'], $product->customGenres->pluck('title')->all());
     }
 
+    public function test_tag_diff_uses_relationship_titles_and_sorted_fetched_tags(): void
+    {
+        $product = Product::factory()->create();
+        $zuluJapanese = $this->createGenre('Zulu JP', Genre::TYPE_AUTO_GENERATED_JAPANESE);
+        $alphaJapanese = $this->createGenre('Alpha JP', Genre::TYPE_AUTO_GENERATED_JAPANESE);
+        $zuluEnglish = $this->createGenre('Zulu EN', Genre::TYPE_AUTO_GENERATED_ENGLISH);
+        $alphaEnglish = $this->createGenre('Alpha EN', Genre::TYPE_AUTO_GENERATED_ENGLISH);
+        $custom = $this->createGenre('Already Custom', Genre::TYPE_CUSTOM);
+
+        $this->attachGenres($product, [
+            $zuluJapanese,
+            $custom,
+            $zuluEnglish,
+            $alphaJapanese,
+            $alphaEnglish,
+        ]);
+
+        $diff = app(TagRefetchService::class)->diffProductTags($product, [], ['Already Custom']);
+
+        $this->assertSame(['Alpha JP', 'Zulu JP'], $diff['stale_japanese_tags']);
+        $this->assertSame(['Alpha EN', 'Zulu EN'], $diff['stale_english_tags']);
+        $this->assertSame([], $diff['added_english_tags']);
+    }
+
     public function test_fetch_job_skips_errors_and_custom_only_works(): void
     {
         $service = app(TagRefetchService::class);

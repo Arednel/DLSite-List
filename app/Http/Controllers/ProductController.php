@@ -16,7 +16,9 @@ use Illuminate\Support\Collection;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\File;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Facades\URL;
 use Symfony\Component\Process\Process;
 use Symfony\Component\Process\Exception\ProcessFailedException;
 use Illuminate\Validation\ValidationException;
@@ -140,7 +142,7 @@ class ProductController extends Controller
         $this->syncProductGenres($product, $genre, $genre_english, $genre_custom);
 
         $returnTarget = ReturnTarget::fromRequest($request)
-            ->withFragment($dlsite_product_id);
+            ->forProduct($product);
 
         return redirect($returnTarget->toUrl());
     }
@@ -178,7 +180,7 @@ class ProductController extends Controller
         $this->syncProductCustomGenres($product, $validated['genre_custom'] ?? []);
 
         $returnTarget = ReturnTarget::fromRequest($request)
-            ->withFragment($workID);
+            ->forProduct($product);
 
         return redirect($returnTarget->toUrl());
     }
@@ -206,7 +208,6 @@ class ProductController extends Controller
             'genreCustomInput' => $this->formatGenreCustomForInput(
                 $editGenres->get(Genre::TYPE_CUSTOM, collect())->pluck('title')->all()
             ),
-            'returnRoute' => $returnTarget->route,
             'returnQuery' => $returnTarget->query,
             'returnFragment' => $returnTarget->fragment,
             'returnUrl' => $returnTarget->toUrl(),
@@ -248,7 +249,7 @@ class ProductController extends Controller
             $returnTarget = $returnTarget->withIndexProgress($newProgress);
         }
 
-        return redirect($returnTarget->toUrl());
+        return redirect($returnTarget->forProduct($product)->toUrl());
     }
 
     /**
@@ -256,32 +257,38 @@ class ProductController extends Controller
      */
     public function destroy(Request $request, string $id)
     {
-        $redirect = ReturnTarget::fromRequest($request)->toUrl();
+        $returnTarget = ReturnTarget::fromRequest($request);
         $product = Product::find($id);
 
         // Missing records should be a safe no-op.
         if (!$product) {
-            return redirect($redirect);
+            return redirect($returnTarget->toUrl());
         }
 
-        // Delete the product from DB
+        $jsonPath = "Works/{$id}.json";
+        $imageDirectory = "Works/{$id}";
+
+        if (! Storage::disk('local')->delete($jsonPath)) {
+            Log::warning('Unable to delete product scraper JSON.', [
+                'product_id' => $id,
+                'path' => $jsonPath,
+            ]);
+        }
+
+        if (! Storage::disk('public')->deleteDirectory($imageDirectory)) {
+            Log::warning('Unable to delete product image directory.', [
+                'product_id' => $id,
+                'path' => $imageDirectory,
+            ]);
+        }
+
         $product->delete();
 
-        // Remove JSON file
-        $jsonPath = "app/Works/{$id}.json";
-        $storageJsonPath = storage_path($jsonPath);
-        if (file_exists($storageJsonPath)) {
-            unlink($storageJsonPath);
-        }
-
-        // Remove images directory in storage/app/public/Works/{id}
-        Storage::disk('public')->deleteDirectory("Works/{$id}");
-
         // Return to same page but no anchor (work is gone)
-        return redirect($redirect);
+        return redirect($returnTarget->afterDeleting()->toUrl());
     }
 
-    private function Scrape($workID)
+    private function Scrape(string $workID)
     {
         $storageDir = storage_path();
 
@@ -325,12 +332,25 @@ class ProductController extends Controller
     private function createView(Request $request, bool $isCustomCreate)
     {
         $returnTarget = ReturnTarget::fromRequest($request);
+        $returnUrl = $request->input('return_url');
+        $returnUrl = is_scalar($returnUrl) ? trim((string) $returnUrl) : '';
+
+        // Keep the original back target when switching between DLSite and Custom create.
+        if ($returnUrl === '') {
+            $returnUrl = URL::previous(route('index'));
+        }
+
+        $returnParameters = ['return_url' => $returnUrl];
+
+        if ($returnTarget->query !== []) {
+            $returnParameters['return_query'] = $returnTarget->query;
+        }
 
         return view('Create', [
             'isCustomCreate' => $isCustomCreate,
-            'returnRoute' => $returnTarget->route,
             'returnQuery' => $returnTarget->query,
-            'returnUrl' => $returnTarget->toUrl(),
+            'returnUrl' => $returnUrl,
+            'returnParameters' => $returnParameters,
             'ageCategoryOptions' => ProductAgeCategory::options(),
             ...$this->buildDateFieldOptions(),
         ]);

@@ -2,6 +2,14 @@
 
 ## Development
 
+2026-05-18 -- 1.3.1 Workflow Refinements
+  * Reworked create/edit/delete return navigation around index-only return state, stable create back links, visible-work anchors, and delete page fallback
+  * Centralized index query keys and visibility filter groups in `ProductIndexFilters`
+  * Simplified selected-work search, refetch tag comparison, product index queries, and return-target helper code
+  * Logged destroy file-cleanup failures without blocking product deletion
+  * Hardened malformed create back-link input and expanded edge-case coverage for return navigation, destroy cleanup, and refetch tag diffs
+  * Cleaned up CSS, tests, and project docs
+
 2026-05-14 -- 1.3.0 Livewire Index pagination and Sorting
   * Rebuilt the Index page around Livewire filters, sorting, URL state, and pagination
   * Added configurable Index page size in Options, including fixed, custom, and unlimited modes

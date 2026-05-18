@@ -3,7 +3,6 @@
 namespace App\Livewire;
 
 use App\Models\Product;
-use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Collection;
 use Illuminate\View\View;
 use Livewire\Component;
@@ -31,7 +30,7 @@ class OptionsWorkSearch extends Component
     public function updatedSelectedProductIds(): void
     {
         $this->selectedProductIds = collect($this->selectedProductIds)
-            ->map(fn (mixed $productId): string => (string) $productId)
+            ->map(fn(mixed $productId): string => (string) $productId)
             ->filter()
             ->unique()
             ->values()
@@ -45,13 +44,7 @@ class OptionsWorkSearch extends Component
         $search = trim($this->search);
 
         if ($search !== '') {
-            $query->where(function (Builder $query) use ($search): void {
-                $like = "%{$search}%";
-
-                $query->where('id', 'like', $like)
-                    ->orWhere('work_name', 'like', $like)
-                    ->orWhere('work_name_english', 'like', $like);
-            });
+            $query->whereAny(['id', 'work_name', 'work_name_english'], 'like', "%{$search}%");
         }
 
         return $query

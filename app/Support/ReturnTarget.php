@@ -2,88 +2,97 @@
 
 namespace App\Support;
 
+use App\Models\Option;
+use App\Models\Product;
 use Illuminate\Http\Request;
+use Illuminate\Support\Arr;
+use Illuminate\Support\Uri;
 
 final readonly class ReturnTarget
 {
-    private const INDEX_ROUTE = 'index';
-
-    private const ALLOWED_ROUTES = [
-        self::INDEX_ROUTE,
-        'tags.index',
-        'options.index',
-    ];
-
     public function __construct(
-        public string $route,
         public array $query = [],
         public ?string $fragment = null,
     ) {}
 
     public static function fromRequest(Request $request, ?string $defaultFragment = null): self
     {
-        $route = $request->string('return_route')->trim()->toString();
-        $route = in_array($route, self::ALLOWED_ROUTES, true)
-            ? $route
-            : self::INDEX_ROUTE;
-
         return new self(
-            route: $route,
-            query: $route === self::INDEX_ROUTE
-                ? self::normalizeQuery($request->input('return_query', []))
-                : [],
-            fragment: $route === self::INDEX_ROUTE
-                ? self::normalizeFragment($request->input('return_fragment', $defaultFragment))
-                : null,
-        );
-    }
-
-    public function withFragment(?string $fragment): self
-    {
-        if ($this->route !== self::INDEX_ROUTE) {
-            return $this;
-        }
-
-        return new self(
-            route: $this->route,
-            query: $this->query,
-            fragment: self::normalizeFragment($fragment),
+            query: self::normalizeQuery($request->input('return_query', [])),
+            fragment: self::normalizeFragment($request->input('return_fragment', $defaultFragment)),
         );
     }
 
     public function withIndexProgress(?string $progress): self
     {
-        if ($this->route !== self::INDEX_ROUTE) {
-            return $this;
-        }
+        $query = $this->queryWithoutPage();
 
-        $query = $this->query;
-        unset($query['progress'], $query['page']);
+        unset($query['progress']);
 
         if (filled($progress)) {
             $query['progress'] = $progress;
         }
 
         return new self(
-            route: $this->route,
-            query: $query,
+            query: self::normalizeQuery($query),
             fragment: $this->fragment,
         );
     }
 
-    public function toUrl(): string
-    {
-        $url = route(
-            $this->route,
-            $this->route === self::INDEX_ROUTE ? $this->query : [],
-            false,
-        );
+    public function forProduct(
+        Product $product,
+        ?ProductIndexResults $results = null,
+        int|string|null $perPage = null,
+    ): self {
+        $results ??= app(ProductIndexResults::class);
+        $perPage ??= Option::indexPerPage();
 
-        if ($this->fragment !== null) {
-            $url .= '#' . rawurlencode($this->fragment);
+        $query = $this->queryForVisibleProduct($product, $results);
+        $page = $results->pageForProduct(ProductIndexFilters::fromQuery($query), $product, $perPage);
+
+        if ($page !== null && $page > 1) {
+            $query['page'] = (string) $page;
         }
 
-        return $url;
+        return new self(
+            query: $query,
+            fragment: (string) $product->getKey(),
+        );
+    }
+
+    public function afterDeleting(
+        ?ProductIndexResults $results = null,
+        int|string|null $perPage = null,
+    ): self {
+        $results ??= app(ProductIndexResults::class);
+        $perPage ??= Option::indexPerPage();
+
+        $savedPage = self::normalizePage($this->query['page'] ?? null);
+        $query = $this->queryWithoutPage();
+
+        if ($savedPage === null || $perPage === Option::INDEX_PER_PAGE_UNLIMITED) {
+            return new self(query: $query);
+        }
+
+        $lastPage = $results->lastPage(ProductIndexFilters::fromQuery($query), $perPage);
+        $page = min($savedPage, $lastPage ?? 1);
+
+        if ($page > 1) {
+            $query['page'] = (string) $page;
+        }
+
+        return new self(query: $query);
+    }
+
+    public function toUrl(): string
+    {
+        $uri = Uri::route('index', $this->query, false);
+
+        if ($this->fragment !== null) {
+            $uri = $uri->withFragment($this->fragment);
+        }
+
+        return $uri->value();
     }
 
     private static function normalizeQuery(mixed $query): array
@@ -120,5 +129,29 @@ final readonly class ReturnTarget
         ]);
 
         return $page === false ? null : $page;
+    }
+
+    private function queryWithoutPage(): array
+    {
+        return Arr::except($this->query, 'page');
+    }
+
+    private function queryForVisibleProduct(Product $product, ProductIndexResults $results): array
+    {
+        $query = $this->queryWithoutPage();
+
+        foreach (ProductIndexFilters::VISIBILITY_FILTER_GROUPS as $filterGroup) {
+            if (! Arr::hasAny($query, $filterGroup)) {
+                continue;
+            }
+
+            $groupQuery = Arr::only($query, $filterGroup);
+
+            if (! $results->containsProduct(ProductIndexFilters::fromQuery($groupQuery), $product)) {
+                $query = Arr::except($query, $filterGroup);
+            }
+        }
+
+        return ProductIndexFilters::fromQuery($query)->toQuery();
     }
 }

@@ -73,6 +73,16 @@ class IndexPaginationSettingsTest extends TestCase
             ->set('mode', '500')
             ->assertSet('saved', false)
             ->assertDontSee('Index pagination setting saved.');
+
+        Livewire::test(IndexPaginationSettings::class)
+            ->set('mode', 'custom')
+            ->set('customValue', '25')
+            ->call('save')
+            ->assertSet('saved', true)
+            ->assertSee('Index pagination setting saved.')
+            ->set('customValue', '30')
+            ->assertSet('saved', false)
+            ->assertDontSee('Index pagination setting saved.');
     }
 
     public function test_settings_component_rejects_non_positive_custom_values(): void

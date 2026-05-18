@@ -29,11 +29,11 @@
                                     </div>
                                     <div class="dialog-body">
                                         <div class="create-mode-switch">
-                                            <a href="{{ route('products.create', ['return_route' => $returnRoute, 'return_query' => $returnQuery], false) }}"
+                                            <a href="{{ route('products.create', $returnParameters, false) }}"
                                                 class="inputButton ignore-visited-link {{ !$isCustomCreate ? 'is-active' : '' }}">
                                                 DLSite Create
                                             </a>
-                                            <a href="{{ route('products.create.custom', ['return_route' => $returnRoute, 'return_query' => $returnQuery], false) }}"
+                                            <a href="{{ route('products.create.custom', $returnParameters, false) }}"
                                                 class="inputButton ml8 ignore-visited-link {{ $isCustomCreate ? 'is-active' : '' }}">
                                                 Custom Create
                                             </a>
@@ -42,7 +42,7 @@
                                             action="{{ $isCustomCreate ? route('products.store.custom') : route('products.store') }}"
                                             @if ($isCustomCreate) enctype="multipart/form-data" @endif>
                                             @csrf
-                                            <input type="hidden" name="return_route" value="{{ $returnRoute }}">
+                                            <input type="hidden" name="return_url" value="{{ $returnUrl }}">
                                             @foreach ($returnQuery as $queryKey => $queryValue)
                                                 <input type="hidden" name="return_query[{{ $queryKey }}]"
                                                     value="{{ $queryValue }}">

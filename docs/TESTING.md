@@ -3,9 +3,11 @@
 ## Scope
 Current automated coverage is in Laravel PHPUnit tests:
 - `tests/Feature/ProductControllerTest.php`
-  - covers index filtering/sorting, create/edit pages, create/edit return navigation state across Index/Tag Library/unsupported-route flows, custom create/upload flow, editable custom tag source behavior, index image selection, validation, update flow, and destroy flow
+  - covers index filtering/sorting, create/edit pages, index-only return navigation with visible-work anchors, visibility-filter return redirects, custom-sort return page calculation, a full visible-update return workflow, Laravel previous URL create back links, malformed create back-link input, create-mode back-link preservation, filtered delete page fallback, custom create/upload flow, editable custom tag source behavior, index image selection, validation, update flow, and logged destroy cleanup failures
+- `tests/Feature/ReturnTargetProductTest.php`
+  - covers product-aware return URLs for unlimited pagination, first-page omission, and multi-filter visible-work cleanup
 - `tests/Feature/ProductIndexLivewireTest.php`
-  - covers Livewire-owned Index pagination defaults, fixed/custom/unlimited page sizes, narrowed Index result columns, SQL-backed scalar/search/date/Added to the site Date pagination, built-in pagination links with the progress-menu scroll target, RJ header sorting, advanced primary/secondary sorting, Livewire-bound Filter modal controls, restored filter defaults, the external Alpine advanced-filter component, local client-side filter modal opening/closing without Livewire entanglement or native form reset, page reset behavior, and query-string initialization
+  - covers Livewire-owned Index pagination defaults, fixed/custom/unlimited page sizes, narrowed Index result columns, SQL-backed scalar/search/date/Added to the site Date pagination, nullable scalar sort ordering, built-in pagination links with the progress-menu scroll target, RJ header sorting, advanced primary/secondary sorting, Livewire-bound Filter modal controls, restored filter defaults, the external Alpine advanced-filter component, local client-side filter modal opening/closing without Livewire entanglement or native form reset, page reset behavior, and query-string initialization
 - `tests/Unit/Enums/ProductIndexSortFieldTest.php`
   - covers Index sort field SQL column metadata
 - `tests/Feature/ProductSortKeysTest.php`
@@ -15,15 +17,15 @@ Current automated coverage is in Laravel PHPUnit tests:
 - `tests/Feature/ProductGenreMigrationTest.php`
   - covers migration of legacy product genre JSON into `genres` + `genre_product`, including pivot source values
 - `tests/Feature/OptionsControllerTest.php`
-  - covers the Options/Refetch page tabs, latest-refetch link, Refetch Tags request validation, queue batch creation, selected/all work scopes including numeric RJ-desc queued order, progress JSON, tags-only job results, skipped errors/custom-only works, review rendering/change indicators, newest-run-only apply controls, and apply behavior for stale tag move/remove choices
+  - covers the Options/Refetch page tabs, latest-refetch link, Refetch Tags request validation, queue batch creation, selected/all work scopes including numeric RJ-desc queued order, progress JSON, tags-only job results, relationship-backed tag diff ordering, skipped errors/custom-only works, review rendering/change indicators, newest-run-only apply controls, and apply behavior for stale tag move/remove choices
 - `tests/Feature/OptionsRefetchProgressTest.php`
   - covers the Livewire refetch progress panel polling only while a run is active and redirecting once review results are ready
 - `tests/Feature/OptionsWorkSearchTest.php`
   - covers the Livewire selected-work search, numeric RJ-desc visible order, and selected product preservation when filtered results change
 - `tests/Unit/Support/ProductIndexFiltersTest.php`
-  - covers query normalization, defaults, and query export helpers
+  - covers query normalization, defaults, explicit input keys, visibility filter group coverage, and query export helpers
 - `tests/Unit/Support/ReturnTargetTest.php`
-  - covers return-route normalization, index-only query/fragment handling, and URL generation
+  - covers index-only return query/fragment normalization, malformed input fallback, ignored legacy return routes, and URL generation
 - `tests/Unit/View/Components/Fields/EnumSelectFieldTest.php`
   - covers enum-backed field component defaults and option maps
 - `tests/Unit/Models/TagRefetchStateTest.php`

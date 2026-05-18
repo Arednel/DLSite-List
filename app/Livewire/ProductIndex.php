@@ -19,26 +19,6 @@ class ProductIndex extends Component
 {
     use WithPagination;
 
-    private const FILTER_KEYS = [
-        'search',
-        'title',
-        'notes',
-        'genre',
-        'series',
-        'tags',
-        'tag_match',
-        'age_category',
-        'progress',
-        'score',
-        'priority',
-        'num_re_listen_times',
-        're_listen_value',
-        'sort_first_field',
-        'sort_first_direction',
-        'sort_second_field',
-        'sort_second_direction',
-    ];
-
     public string $search = '';
     public string $title = '';
     public string $notes = '';
@@ -61,7 +41,7 @@ class ProductIndex extends Component
 
     protected function queryString(): array
     {
-        return collect(self::FILTER_KEYS)
+        return collect(ProductIndexFilters::INPUT_KEYS)
             ->mapWithKeys(fn(string $key): array => [$key => []])
             ->all();
     }
@@ -104,7 +84,6 @@ class ProductIndex extends Component
             'currentQuery' => $currentQuery,
             'tagBaseQuery' => $filterQuery,
             'quickAddUrl' => route('products.create', [
-                'return_route' => 'index',
                 'return_query' => $currentQuery,
             ], false),
             'sortIcons' => $this->sortIcons,
@@ -208,7 +187,7 @@ class ProductIndex extends Component
     {
         $input = [];
 
-        foreach (self::FILTER_KEYS as $key) {
+        foreach (ProductIndexFilters::INPUT_KEYS as $key) {
             $input[$key] = (string) $this->{$key};
         }
 

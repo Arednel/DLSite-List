@@ -15,6 +15,43 @@ use Illuminate\Support\Arr;
 
 final readonly class ProductIndexFilters
 {
+    // All Index filter and sort keys accepted from the URL and mirrored by the Livewire component.
+    public const INPUT_KEYS = [
+        'search',
+        'title',
+        'notes',
+        'genre',
+        'series',
+        'tags',
+        'tag_match',
+        'age_category',
+        'progress',
+        'score',
+        'priority',
+        'num_re_listen_times',
+        're_listen_value',
+        'sort_first_field',
+        'sort_first_direction',
+        'sort_second_field',
+        'sort_second_direction',
+    ];
+
+    // These groups can hide a redirected work from the Index. Sort and page state stay outside this list.
+    public const VISIBILITY_FILTER_GROUPS = [
+        ['search'],
+        ['title'],
+        ['notes'],
+        ['genre'],
+        ['series'],
+        ['tags', 'tag_match'],
+        ['age_category'],
+        ['progress'],
+        ['score'],
+        ['priority'],
+        ['num_re_listen_times'],
+        ['re_listen_value'],
+    ];
+
     public function __construct(
         public string $search = '',
         public string $title = '',
@@ -31,8 +68,7 @@ final readonly class ProductIndexFilters
         public ?ProductReListenValue $reListenValue = null,
         public ?ProductIndexSort $primarySort = null,
         public ?ProductIndexSort $secondarySort = null,
-    ) {
-    }
+    ) {}
 
     public static function fromQuery(array $query): self
     {
@@ -135,7 +171,7 @@ final readonly class ProductIndexFilters
     public function toQuery(): array
     {
         return collect($this->toInput())
-            ->reject(fn (string $value) => $value === '')
+            ->reject(fn(string $value) => $value === '')
             ->all();
     }
 

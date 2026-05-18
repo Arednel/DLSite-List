@@ -175,6 +175,56 @@ class ProductIndexLivewireTest extends TestCase
             ->assertDontSee('SQL_SCORE_NINE');
     }
 
+    public function test_nullable_scalar_sorts_keep_null_values_last(): void
+    {
+        $this->createProduct(1, [
+            'work_name' => 'NULL_SORT_VALUE',
+            'score' => null,
+            'priority' => null,
+            'num_re_listen_times' => null,
+            're_listen_value' => null,
+        ]);
+        $this->createProduct(2, [
+            'work_name' => 'LOW_SORT_VALUE',
+            'score' => 1,
+            'priority' => 0,
+            'num_re_listen_times' => 1,
+            're_listen_value' => 1,
+        ]);
+        $this->createProduct(3, [
+            'work_name' => 'HIGH_SORT_VALUE',
+            'score' => 9,
+            'priority' => 2,
+            'num_re_listen_times' => 3,
+            're_listen_value' => 5,
+        ]);
+
+        $results = app(ProductIndexResults::class);
+        $cases = [
+            ['score', 'asc', ['LOW_SORT_VALUE', 'HIGH_SORT_VALUE', 'NULL_SORT_VALUE']],
+            ['score', 'desc', ['HIGH_SORT_VALUE', 'LOW_SORT_VALUE', 'NULL_SORT_VALUE']],
+            ['priority', 'asc', ['LOW_SORT_VALUE', 'HIGH_SORT_VALUE', 'NULL_SORT_VALUE']],
+            ['num_re_listen_times', 'asc', ['LOW_SORT_VALUE', 'HIGH_SORT_VALUE', 'NULL_SORT_VALUE']],
+            ['re_listen_value', 'asc', ['LOW_SORT_VALUE', 'HIGH_SORT_VALUE', 'NULL_SORT_VALUE']],
+        ];
+
+        foreach ($cases as [$field, $direction, $expectedNames]) {
+            $products = $results->getProducts(
+                ProductIndexFilters::fromQuery([
+                    'sort_first_field' => $field,
+                    'sort_first_direction' => $direction,
+                ]),
+                Option::INDEX_PER_PAGE_UNLIMITED,
+            );
+
+            $this->assertSame(
+                $expectedNames,
+                $products->pluck('work_name')->all(),
+                "Failed asserting nullable {$field} {$direction} sort order.",
+            );
+        }
+    }
+
     public function test_date_sort_uses_sql_sort_keys_across_paginated_results(): void
     {
         Option::setIndexPerPage(3);

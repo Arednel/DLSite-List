@@ -41,6 +41,40 @@ final class ProductIndexResults
             : $query->paginate((int) $perPage);
     }
 
+    public function containsProduct(ProductIndexFilters $filters, Product $product): bool
+    {
+        return $this->filteredQuery($filters)
+            ->whereKey($product->getKey())
+            ->exists();
+    }
+
+    public function pageForProduct(ProductIndexFilters $filters, Product $product, int|string $perPage): ?int
+    {
+        if ($perPage === Option::INDEX_PER_PAGE_UNLIMITED) {
+            return null;
+        }
+
+        $position = $this->applySqlSorting($this->filteredQuery($filters), $filters->sorts())
+            ->pluck('id')
+            ->search((string) $product->getKey(), true);
+
+        return $position === false
+            ? null
+            : intdiv($position, max(1, (int) $perPage)) + 1;
+    }
+
+    public function lastPage(ProductIndexFilters $filters, int|string $perPage): ?int
+    {
+        if ($perPage === Option::INDEX_PER_PAGE_UNLIMITED) {
+            return null;
+        }
+
+        $perPage = max(1, (int) $perPage);
+        $total = $this->filteredQuery($filters)->count();
+
+        return max(1, (int) ceil($total / $perPage));
+    }
+
     private function filteredQuery(ProductIndexFilters $filters): Builder
     {
         return Product::query()
@@ -148,12 +182,7 @@ final class ProductIndexResults
     private function orderByNullableColumn(Builder $query, string $column, string $direction): void
     {
         $query
-            ->orderByRaw($this->wrapColumn($query, $column) . ' IS NULL')
+            ->orderByRaw($query->getQuery()->getGrammar()->wrap($column) . ' IS NULL')
             ->orderBy($column, $direction);
-    }
-
-    private function wrapColumn(Builder $query, string $column): string
-    {
-        return $query->getQuery()->getGrammar()->wrap($column);
     }
 }

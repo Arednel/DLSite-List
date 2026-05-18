@@ -99,6 +99,6 @@ class TagRefetchWorkResult extends Model
 
     private function hasTags(?array $tags): bool
     {
-        return count($tags ?? []) > 0;
+        return filled($tags);
     }
 }

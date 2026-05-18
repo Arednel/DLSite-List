@@ -30,7 +30,6 @@
                                             action="{{ route('products.update', ['id' => $product->id]) }}">
                                             @csrf
 
-                                            <input type="hidden" name="return_route" value="{{ $returnRoute }}">
                                             @foreach ($returnQuery as $queryKey => $queryValue)
                                                 <input type="hidden" name="return_query[{{ $queryKey }}]"
                                                     value="{{ $queryValue }}">
@@ -74,7 +73,6 @@
                                             action="{{ route('products.destroy', ['id' => $product->id]) }}">
                                             @csrf
 
-                                            <input type="hidden" name="return_route" value="{{ $returnRoute }}">
                                             @foreach ($returnQuery as $queryKey => $queryValue)
                                                 <input type="hidden" name="return_query[{{ $queryKey }}]"
                                                     value="{{ $queryValue }}">

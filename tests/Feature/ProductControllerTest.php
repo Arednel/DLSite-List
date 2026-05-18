@@ -7,10 +7,14 @@ use App\Enums\ProductProgress;
 use App\Enums\ProductReListenValue;
 use App\Enums\ProductScore;
 use App\Models\Genre;
+use App\Models\Option;
 use App\Models\Product;
+use Illuminate\Contracts\Filesystem\Filesystem;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
+use Mockery;
 use Tests\TestCase;
 
 class ProductControllerTest extends TestCase
@@ -268,7 +272,13 @@ class ProductControllerTest extends TestCase
             ->assertDontSee($wrongPriority->work_name)
             ->assertDontSee($wrongScore->work_name)
             ->assertDontSee($wrongNotes->work_name)
-            ->assertDontSee($wrongReListen->work_name)
+            ->assertDontSee($wrongReListen->work_name);
+    }
+
+    public function test_index_filter_modal_renders_extended_fields(): void
+    {
+        $this->get('/')
+            ->assertOk()
             ->assertSee('data-index-filter-open', false)
             ->assertSee('data-index-filter-modal', false)
             ->assertSee('scripts/index-advanced-filters.js', false)
@@ -493,7 +503,7 @@ class ProductControllerTest extends TestCase
             ->assertSee('data-list-menu-overlay', false)
             ->assertSee('genre=' . $englishGenre->getKey(), false)
             ->assertSee('genre=' . $customGenre->getKey(), false)
-            ->assertSee('href="/create?return_route=tags.index"', false)
+            ->assertSee('href="/create"', false)
             ->assertDontSee('hero__back', false);
     }
 
@@ -507,8 +517,8 @@ class ProductControllerTest extends TestCase
             ->assertSee('width=device-width, initial-scale=1', false)
             ->assertSee('Custom Tags')
             ->assertSee('name="id"', false)
-            ->assertSee('name="return_route" value="index"', false)
-            ->assertSee('href="/"', false)
+            ->assertDontSee('name="return_route"', false)
+            ->assertSee('href="http://localhost"', false)
             ->assertSee('id="add_start_date_month"', false)
             ->assertSee('id="add_finish_date_month"', false)
             ->assertDontSee('name="age_category"', false)
@@ -537,7 +547,6 @@ class ProductControllerTest extends TestCase
     public function test_create_preserves_index_return_state_for_go_back_and_mode_switch(): void
     {
         $query = http_build_query([
-            'return_route' => 'index',
             'return_query' => [
                 'progress' => 'Listening',
                 'search' => 'rain',
@@ -547,32 +556,68 @@ class ProductControllerTest extends TestCase
 
         $this->get("/create?{$query}")
             ->assertOk()
-            ->assertSee('name="return_route" value="index"', false)
+            ->assertDontSee('name="return_route"', false)
             ->assertSeeInOrder(['name="return_query[search]"', 'value="rain"'], false)
             ->assertSeeInOrder(['name="return_query[progress]"', 'value="Listening"'], false)
             ->assertSeeInOrder(['name="return_query[page]"', 'value="3"'], false)
-            ->assertSee('href="/?search=rain&amp;progress=Listening&amp;page=3"', false)
-            ->assertSee('href="/create/custom?return_route=index&amp;return_query%5Bsearch%5D=rain&amp;return_query%5Bprogress%5D=Listening&amp;return_query%5Bpage%5D=3"', false);
+            ->assertSee('name="return_url" value="http://localhost"', false)
+            ->assertSee('href="http://localhost"', false)
+            ->assertSee('href="/create/custom?return_url=http%3A%2F%2Flocalhost&amp;return_query%5Bsearch%5D=rain&amp;return_query%5Bprogress%5D=Listening&amp;return_query%5Bpage%5D=3"', false);
     }
 
-    public function test_create_discards_query_for_tag_library_return_targets(): void
+    public function test_create_go_back_uses_previous_url_with_index_fallback(): void
     {
-        $query = http_build_query([
-            'return_route' => 'tags.index',
-            'return_query' => [
-                'search' => 'rain',
-                'progress' => 'Listening',
-            ],
-            'return_fragment' => 'RJ123456',
-        ]);
-
-        $this->get("/create?{$query}")
+        $this->from('/tags')->get('/create')
             ->assertOk()
-            ->assertSee('name="return_route" value="tags.index"', false)
+            ->assertDontSee('name="return_route"', false)
             ->assertDontSee('name="return_query[search]"', false)
             ->assertDontSee('name="return_query[progress]"', false)
-            ->assertSee('href="/tags"', false)
-            ->assertSee('href="/create/custom?return_route=tags.index"', false);
+            ->assertSee('href="http://localhost/tags"', false)
+            ->assertSee('href="/create/custom?return_url=http%3A%2F%2Flocalhost%2Ftags"', false);
+    }
+
+    public function test_create_go_back_ignores_malformed_return_url_input(): void
+    {
+        $query = http_build_query([
+            'return_url' => [
+                'bad' => 'http://localhost/create',
+            ],
+            'return_query' => [
+                'progress' => 'Listening',
+            ],
+        ]);
+
+        $this->from('/tags')->get("/create?{$query}")
+            ->assertOk()
+            ->assertSee('name="return_url" value="http://localhost/tags"', false)
+            ->assertSee('href="http://localhost/tags"', false)
+            ->assertSee('href="/create/custom?return_url=http%3A%2F%2Flocalhost%2Ftags&amp;return_query%5Bprogress%5D=Listening"', false)
+            ->assertDontSee('return_url%5Bbad%5D', false);
+    }
+
+    public function test_create_mode_switch_preserves_original_go_back_url(): void
+    {
+        $query = http_build_query([
+            'return_url' => 'http://localhost/tags',
+            'return_query' => [
+                'progress' => 'Listening',
+            ],
+        ]);
+
+        $this->from('/create')->get("/create/custom?{$query}")
+            ->assertOk()
+            ->assertSee('name="return_url" value="http://localhost/tags"', false)
+            ->assertSee('href="http://localhost/tags"', false)
+            ->assertSee('href="/create?return_url=http%3A%2F%2Flocalhost%2Ftags&amp;return_query%5Bprogress%5D=Listening"', false)
+            ->assertDontSee('href="http://localhost/create"', false);
+    }
+
+    public function test_create_go_back_uses_laravel_previous_url_for_external_referrer(): void
+    {
+        $this->withHeader('referer', 'https://example.com/tags')
+            ->get('/create')
+            ->assertOk()
+            ->assertSee('href="https://example.com/tags"', false);
     }
 
     public function test_create_renders_enum_backed_select_labels(): void
@@ -615,7 +660,6 @@ class ProductControllerTest extends TestCase
         $this->attachGenres($product, [$japaneseGenre, $englishGenre]);
 
         $query = http_build_query([
-            'return_route' => 'index',
             'return_query' => [
                 'progress' => 'Listening',
             ],
@@ -633,7 +677,7 @@ class ProductControllerTest extends TestCase
             ->assertSee('Sleep Guidance EN')
             ->assertDontSee('JP_ONLY_GUIDANCE_TOKEN')
             ->assertSee($product->notes)
-            ->assertSee('name="return_route" value="index"', false)
+            ->assertDontSee('name="return_route"', false)
             ->assertSee('name="return_query[progress]"', false)
             ->assertSee('name="return_fragment"', false)
             ->assertSee('href="/?progress=Listening#' . $product->id . '"', false)
@@ -646,7 +690,7 @@ class ProductControllerTest extends TestCase
             'work_name' => 'EDIT_DEFAULT_FRAGMENT_TOKEN',
         ]);
 
-        $this->get("/edit/{$product->id}?return_route=index&return_query[progress]=Listening")
+        $this->get("/edit/{$product->id}?return_query[progress]=Listening")
             ->assertOk()
             ->assertSee('name="return_fragment" value="' . $product->id . '"', false)
             ->assertSee('href="/?progress=Listening#' . $product->id . '"', false);
@@ -829,7 +873,6 @@ class ProductControllerTest extends TestCase
                 're_listen_value' => '4',
                 'priority' => '1',
             ],
-            'return_route' => 'index',
         ]);
 
         $response->assertSessionHasNoErrors();
@@ -926,26 +969,56 @@ class ProductControllerTest extends TestCase
             ->assertSee('Existing Store Auto Genre');
     }
 
-    public function test_custom_store_returns_to_same_index_state_with_new_work_anchor(): void
+    public function test_custom_store_returns_to_new_work_on_calculated_index_page(): void
     {
         Storage::fake('public');
+        Option::setIndexPerPage(2);
 
-        $workId = Product::factory()->make()->id;
+        Product::factory()->create(['id' => 'RJ000000005', 'progress' => 'Listening']);
+        Product::factory()->create(['id' => 'RJ000000004', 'progress' => 'Listening']);
+        Product::factory()->create(['id' => 'RJ000000002', 'progress' => 'Listening']);
+        Product::factory()->create(['id' => 'RJ000000001', 'progress' => 'Listening']);
+
+        $workId = 'RJ000000003';
 
         $response = $this->post('/store/custom', $this->customStorePayload($workId, [
-            'return_route' => 'index',
+            'progress' => 'Listening',
             'return_query' => [
                 'progress' => 'Listening',
-                'search' => 'rain',
-                'page' => '3',
+                'page' => '9',
             ],
         ]));
 
         $response->assertSessionHasNoErrors();
-        $response->assertRedirect("/?search=rain&progress=Listening&page=3#{$workId}");
+        $response->assertRedirect("/?progress=Listening&page=2#{$workId}");
     }
 
-    public function test_custom_store_returns_to_tag_library_without_anchor(): void
+    public function test_custom_store_returns_to_new_work_on_calculated_custom_sort_page(): void
+    {
+        Storage::fake('public');
+        Option::setIndexPerPage(2);
+
+        Product::factory()->create(['id' => 'RJ000000001', 'score' => 1]);
+        Product::factory()->create(['id' => 'RJ000000002', 'score' => 3]);
+        Product::factory()->create(['id' => 'RJ000000004', 'score' => 7]);
+        Product::factory()->create(['id' => 'RJ000000005', 'score' => 9]);
+
+        $workId = 'RJ000000003';
+
+        $response = $this->post('/store/custom', $this->customStorePayload($workId, [
+            'score' => 5,
+            'return_query' => [
+                'sort_first_field' => 'score',
+                'sort_first_direction' => 'asc',
+                'page' => '9',
+            ],
+        ]));
+
+        $response->assertSessionHasNoErrors();
+        $response->assertRedirect("/?sort_first_field=score&sort_first_direction=asc&page=2#{$workId}");
+    }
+
+    public function test_custom_store_from_non_index_quick_add_returns_to_new_work_on_index(): void
     {
         Storage::fake('public');
 
@@ -959,53 +1032,107 @@ class ProductControllerTest extends TestCase
         ]));
 
         $response->assertSessionHasNoErrors();
-        $response->assertRedirect('/tags');
+        $response->assertRedirect("/#{$workId}");
     }
 
-    public function test_custom_store_rejects_required_duplicate_and_image_validation_errors(): void
+    public function test_custom_store_preserves_matching_tag_filter_for_new_work(): void
     {
         Storage::fake('public');
 
-        $missingRequiredResponse = $this->from('/create/custom')->post('/store/custom', [
+        $workId = Product::factory()->make()->id;
+
+        $response = $this->post('/store/custom', $this->customStorePayload($workId, [
+            'genre_custom' => 'VisibleTag',
+            'return_query' => [
+                'tags' => 'VisibleTag',
+                'tag_match' => 'all',
+            ],
+        ]));
+
+        $response->assertSessionHasNoErrors();
+        $response->assertRedirect("/?tags=VisibleTag&tag_match=all#{$workId}");
+    }
+
+    public function test_custom_store_drops_hiding_tag_filter_for_new_work(): void
+    {
+        Storage::fake('public');
+
+        $workId = Product::factory()->make()->id;
+
+        $response = $this->post('/store/custom', $this->customStorePayload($workId, [
+            'genre_custom' => 'VisibleTag',
+            'return_query' => [
+                'tags' => 'HiddenTag',
+                'tag_match' => 'all',
+            ],
+        ]));
+
+        $response->assertSessionHasNoErrors();
+        $response->assertRedirect("/#{$workId}");
+    }
+
+    public function test_custom_store_rejects_missing_required_fields(): void
+    {
+        $response = $this->from('/create/custom')->post('/store/custom', [
             'id' => Product::factory()->make()->id,
         ]);
 
-        $missingRequiredResponse->assertRedirect('/create/custom');
-        $missingRequiredResponse->assertSessionHasErrors(['work_name', 'age_category', 'work_image']);
+        $response->assertRedirect('/create/custom');
+        $response->assertSessionHasErrors(['work_name', 'age_category', 'work_image']);
+    }
+
+    public function test_custom_store_rejects_duplicate_rj_code(): void
+    {
+        Storage::fake('public');
 
         $existing = Product::factory()->create();
 
-        $duplicateResponse = $this->from('/create/custom')->post('/store/custom', [
+        $response = $this->from('/create/custom')->post('/store/custom', [
             'id' => $existing->id,
             'work_name' => 'CUSTOM_DUPLICATE_TOKEN',
             'age_category' => 'ALL_AGES',
             'work_image' => UploadedFile::fake()->image('cover.png')->size(1024),
         ]);
 
-        $duplicateResponse->assertRedirect('/create/custom');
-        $duplicateResponse->assertSessionHasErrors(['id']);
+        $response->assertRedirect('/create/custom');
+        $response->assertSessionHasErrors(['id']);
+    }
 
-        $invalidAgeResponse = $this->from('/create/custom')->post('/store/custom', [
+    public function test_custom_store_rejects_invalid_age_category(): void
+    {
+        Storage::fake('public');
+
+        $response = $this->from('/create/custom')->post('/store/custom', [
             'id' => Product::factory()->make()->id,
             'work_name' => 'CUSTOM_INVALID_AGE_TOKEN',
             'age_category' => 'NOT_VALID',
             'work_image' => UploadedFile::fake()->image('cover.png')->size(1024),
         ]);
 
-        $invalidAgeResponse->assertRedirect('/create/custom');
-        $invalidAgeResponse->assertSessionHasErrors(['age_category']);
+        $response->assertRedirect('/create/custom');
+        $response->assertSessionHasErrors(['age_category']);
+    }
 
-        $invalidImageResponse = $this->from('/create/custom')->post('/store/custom', [
+    public function test_custom_store_rejects_non_image_cover_upload(): void
+    {
+        Storage::fake('public');
+
+        $response = $this->from('/create/custom')->post('/store/custom', [
             'id' => Product::factory()->make()->id,
             'work_name' => 'CUSTOM_INVALID_IMAGE_TOKEN',
             'age_category' => 'ALL_AGES',
             'work_image' => UploadedFile::fake()->create('cover.txt', 1, 'text/plain'),
         ]);
 
-        $invalidImageResponse->assertRedirect('/create/custom');
-        $invalidImageResponse->assertSessionHasErrors(['work_image']);
+        $response->assertRedirect('/create/custom');
+        $response->assertSessionHasErrors(['work_image']);
+    }
 
-        $oversizedImageResponse = $this->from('/create/custom')->post('/store/custom', [
+    public function test_custom_store_rejects_oversized_sample_image_upload(): void
+    {
+        Storage::fake('public');
+
+        $response = $this->from('/create/custom')->post('/store/custom', [
             'id' => Product::factory()->make()->id,
             'work_name' => 'CUSTOM_OVERSIZED_IMAGE_TOKEN',
             'age_category' => 'ALL_AGES',
@@ -1015,11 +1142,23 @@ class ProductControllerTest extends TestCase
             ],
         ]);
 
-        $oversizedImageResponse->assertRedirect('/create/custom');
-        $oversizedImageResponse->assertSessionHasErrors(['sample_images.0']);
+        $response->assertRedirect('/create/custom');
+        $response->assertSessionHasErrors(['sample_images.0']);
     }
 
-    public function test_update_requires_work_name_and_saves_listening_fields(): void
+    public function test_update_requires_work_name(): void
+    {
+        $product = Product::factory()->create();
+
+        $this->from("/edit/{$product->id}")
+            ->post("/update/{$product->id}", [
+                'progress' => 'Listening',
+            ])
+            ->assertRedirect("/edit/{$product->id}")
+            ->assertSessionHasErrors(['work_name']);
+    }
+
+    public function test_update_saves_listening_fields(): void
     {
         $oldCustomGenre = $this->createGenre('OldTag', Genre::TYPE_CUSTOM);
         $existingEnglishGenre = $this->createGenre('Existing English Genre', Genre::TYPE_AUTO_GENERATED_ENGLISH);
@@ -1033,13 +1172,6 @@ class ProductControllerTest extends TestCase
             'notes' => null,
         ]);
         $this->attachGenres($product, [$oldCustomGenre, $existingEnglishGenre]);
-
-        $this->from("/edit/{$product->id}")
-            ->post("/update/{$product->id}", [
-                'progress' => 'Listening',
-            ])
-            ->assertRedirect("/edit/{$product->id}")
-            ->assertSessionHasErrors(['work_name']);
 
         $response = $this->post("/update/{$product->id}", [
             'work_name' => 'UPDATE_NEW_NAME_TOKEN',
@@ -1167,8 +1299,6 @@ class ProductControllerTest extends TestCase
             'work_name' => 'REDIRECT_CHANGED_TOKEN',
         ]);
 
-        $redirect = '/?age_category=ALL_AGES&progress=Listening&search=rain';
-
         $this->post("/update/{$product->id}", [
             'work_name' => $product->work_name,
             'progress' => 'Completed',
@@ -1176,10 +1306,27 @@ class ProductControllerTest extends TestCase
             'return_query' => [
                 'age_category' => 'ALL_AGES',
                 'progress' => 'Listening',
+            ],
+            'return_fragment' => $product->id,
+        ])->assertRedirect("/?age_category=ALL_AGES&progress=Completed#{$product->id}");
+    }
+
+    public function test_update_redirect_drops_search_when_it_would_hide_the_target_work(): void
+    {
+        $product = Product::factory()->create([
+            'progress' => 'Listening',
+            'work_name' => 'REDIRECT_SEARCH_DROPPED_TOKEN',
+        ]);
+
+        $this->post("/update/{$product->id}", [
+            'work_name' => $product->work_name,
+            'progress' => 'Completed',
+            'return_query' => [
+                'progress' => 'Listening',
                 'search' => 'rain',
             ],
             'return_fragment' => $product->id,
-        ])->assertRedirect("/?search=rain&age_category=ALL_AGES&progress=Completed#{$product->id}");
+        ])->assertRedirect("/?progress=Completed#{$product->id}");
     }
 
     public function test_update_redirect_keeps_progress_query_when_value_is_unchanged(): void
@@ -1220,10 +1367,204 @@ class ProductControllerTest extends TestCase
                 'page' => '4',
             ],
             'return_fragment' => $product->id,
-        ])->assertRedirect("/?search=rain&progress=Completed#{$product->id}");
+        ])->assertRedirect("/?progress=Completed#{$product->id}");
     }
 
-    public function test_update_to_tag_library_ignores_index_progress_rewrite_rules(): void
+    public function test_update_drops_filters_that_hide_the_target_work(): void
+    {
+        $product = Product::factory()->create([
+            'progress' => 'Listening',
+            'series' => 'VISIBLE_SERIES',
+            'work_name' => 'VISIBLE_FILTER_TOKEN',
+        ]);
+
+        $this->post("/update/{$product->id}", [
+            'work_name' => $product->work_name,
+            'progress' => 'Listening',
+            'series' => $product->series,
+            'return_query' => [
+                'progress' => 'Listening',
+                'series' => 'HIDING_SERIES',
+            ],
+            'return_fragment' => $product->id,
+        ])->assertRedirect("/?progress=Listening#{$product->id}");
+    }
+
+    public function test_update_preserves_matching_tag_filter_for_target_work(): void
+    {
+        $product = Product::factory()->create([
+            'work_name' => 'VISIBLE_TAG_FILTER_TOKEN',
+        ]);
+
+        $this->post("/update/{$product->id}", [
+            'work_name' => $product->work_name,
+            'genre_custom' => 'VisibleTag',
+            'return_query' => [
+                'tags' => 'VisibleTag',
+                'tag_match' => 'all',
+            ],
+            'return_fragment' => $product->id,
+        ])->assertRedirect("/?tags=VisibleTag&tag_match=all#{$product->id}");
+    }
+
+    public function test_update_drops_hiding_tag_filter_for_target_work(): void
+    {
+        $product = Product::factory()->create([
+            'work_name' => 'HIDDEN_TAG_FILTER_TOKEN',
+        ]);
+
+        $this->post("/update/{$product->id}", [
+            'work_name' => $product->work_name,
+            'genre_custom' => 'VisibleTag',
+            'return_query' => [
+                'tags' => 'HiddenTag',
+                'tag_match' => 'all',
+            ],
+            'return_fragment' => $product->id,
+        ])->assertRedirect("/#{$product->id}");
+    }
+
+    public function test_update_drops_each_hiding_visibility_filter_group(): void
+    {
+        $scenarios = [
+            'search' => ['search' => 'HIDDEN_SEARCH_TOKEN'],
+            'title' => ['title' => 'HIDDEN_TITLE_TOKEN'],
+            'notes' => ['notes' => 'HIDDEN_NOTES_TOKEN'],
+            'genre' => ['genre' => 'HiddenGenreToken'],
+            'age_category' => ['age_category' => 'R18'],
+            'score' => ['score' => '1'],
+            'priority' => ['priority' => '0'],
+            'num_re_listen_times' => ['num_re_listen_times' => '9'],
+            're_listen_value' => ['re_listen_value' => '1'],
+        ];
+
+        foreach ($scenarios as $name => $hidingQuery) {
+            $product = Product::factory()->create([
+                'work_name' => "VISIBLE_FILTER_{$name}",
+                'age_category' => 'ALL_AGES',
+                'progress' => 'Listening',
+            ]);
+
+            $response = $this->post("/update/{$product->id}", [
+                'work_name' => $product->work_name,
+                'work_name_english' => "VISIBLE_ENGLISH_{$name}",
+                'progress' => 'Listening',
+                'score' => 8,
+                'series' => "VISIBLE_SERIES_{$name}",
+                'genre_custom' => "VisibleGenre{$name}",
+                'notes' => "VISIBLE_NOTES_{$name}",
+                'add' => [
+                    'num_re_listen_times' => '3',
+                    're_listen_value' => '4',
+                    'priority' => '2',
+                ],
+                'return_query' => array_merge([
+                    'progress' => 'Listening',
+                ], $hidingQuery),
+                'return_fragment' => $product->id,
+            ]);
+
+            $response->assertSessionHasNoErrors();
+            $response->assertRedirect("/?progress=Listening#{$product->id}");
+        }
+    }
+
+    public function test_update_returns_to_target_work_on_calculated_custom_sort_page(): void
+    {
+        Option::setIndexPerPage(2);
+
+        Product::factory()->create(['id' => 'RJ000000101', 'score' => 1]);
+        Product::factory()->create(['id' => 'RJ000000102', 'score' => 3]);
+        $product = Product::factory()->create([
+            'id' => 'RJ000000103',
+            'work_name' => 'CUSTOM_SORT_UPDATE_TARGET',
+            'score' => 5,
+        ]);
+        Product::factory()->create(['id' => 'RJ000000104', 'score' => 7]);
+        Product::factory()->create(['id' => 'RJ000000105', 'score' => 9]);
+
+        $response = $this->post("/update/{$product->id}", [
+            'work_name' => $product->work_name,
+            'progress' => $product->progress,
+            'score' => 5,
+            'return_query' => [
+                'sort_first_field' => 'score',
+                'sort_first_direction' => 'asc',
+                'page' => '9',
+            ],
+            'return_fragment' => $product->id,
+        ]);
+
+        $response->assertSessionHasNoErrors();
+        $response->assertRedirect("/?sort_first_field=score&sort_first_direction=asc&page=2#{$product->id}");
+    }
+
+    public function test_update_workflow_returns_to_visible_work_after_filter_sort_and_page_changes(): void
+    {
+        Option::setIndexPerPage(2);
+
+        Product::factory()->create([
+            'id' => 'RJ000000101',
+            'work_name' => 'WORKFLOW_LISTENING_SCORE_ONE',
+            'progress' => 'Listening',
+            'series' => 'OLD_WORKFLOW_SERIES',
+            'score' => 1,
+        ]);
+        Product::factory()->create([
+            'id' => 'RJ000000102',
+            'work_name' => 'WORKFLOW_LISTENING_SCORE_THREE',
+            'progress' => 'Listening',
+            'series' => 'OLD_WORKFLOW_SERIES',
+            'score' => 3,
+        ]);
+        Product::factory()->create(['id' => 'RJ000000201', 'progress' => 'Completed', 'score' => 1]);
+        Product::factory()->create(['id' => 'RJ000000202', 'progress' => 'Completed', 'score' => 3]);
+        Product::factory()->create(['id' => 'RJ000000204', 'progress' => 'Completed', 'score' => 7]);
+        Product::factory()->create(['id' => 'RJ000000205', 'progress' => 'Completed', 'score' => 9]);
+
+        $product = Product::factory()->create([
+            'id' => 'RJ000000103',
+            'work_name' => 'WORKFLOW_VISIBLE_UPDATE_TARGET',
+            'progress' => 'Listening',
+            'series' => 'OLD_WORKFLOW_SERIES',
+            'score' => 5,
+        ]);
+        $returnQuery = [
+            'progress' => 'Listening',
+            'series' => 'OLD_WORKFLOW_SERIES',
+            'sort_first_field' => 'score',
+            'sort_first_direction' => 'asc',
+            'page' => '2',
+        ];
+
+        $this->get('/?' . http_build_query($returnQuery))
+            ->assertOk()
+            ->assertSee($product->work_name)
+            ->assertDontSee('WORKFLOW_LISTENING_SCORE_ONE');
+
+        $this->get("/edit/{$product->id}?" . http_build_query([
+            'return_query' => $returnQuery,
+            'return_fragment' => $product->id,
+        ]))
+            ->assertOk()
+            ->assertSeeInOrder(['name="return_query[series]"', 'value="OLD_WORKFLOW_SERIES"'], false)
+            ->assertSeeInOrder(['name="return_query[sort_first_field]"', 'value="score"'], false)
+            ->assertSeeInOrder(['name="return_query[page]"', 'value="2"'], false);
+
+        $response = $this->post("/update/{$product->id}", [
+            'work_name' => $product->work_name,
+            'progress' => 'Completed',
+            'score' => 5,
+            'series' => 'NEW_WORKFLOW_SERIES',
+            'return_query' => $returnQuery,
+            'return_fragment' => $product->id,
+        ]);
+
+        $response->assertSessionHasNoErrors();
+        $response->assertRedirect("/?progress=Completed&sort_first_field=score&sort_first_direction=asc&page=2#{$product->id}");
+    }
+
+    public function test_update_ignores_return_route_and_returns_to_index_work_anchor(): void
     {
         $product = Product::factory()->create([
             'progress' => 'Listening',
@@ -1239,7 +1580,7 @@ class ProductControllerTest extends TestCase
                 'page' => '4',
             ],
             'return_fragment' => $product->id,
-        ])->assertRedirect('/tags');
+        ])->assertRedirect("/?progress=Completed#{$product->id}");
     }
 
     public function test_update_normalizes_empty_listening_fields_to_null(): void
@@ -1335,7 +1676,6 @@ class ProductControllerTest extends TestCase
         ]);
 
         $this->post("/destroy/{$product->id}", [
-            'return_route' => 'index',
             'return_query' => [
                 'progress' => 'Completed',
             ],
@@ -1349,14 +1689,45 @@ class ProductControllerTest extends TestCase
         $missingId = Product::factory()->make()->id;
 
         $this->post("/destroy/{$missingId}", [
-            'return_route' => 'index',
             'return_query' => [
                 'progress' => 'Plan to Listen',
             ],
         ])->assertRedirect('/?progress=Plan%20to%20Listen');
     }
 
-    public function test_destroy_returns_to_tag_library_without_query_or_anchor(): void
+    public function test_destroy_clamps_saved_page_to_last_valid_index_page(): void
+    {
+        Option::setIndexPerPage(2);
+
+        Product::factory()->create(['id' => 'RJ000000003']);
+        Product::factory()->create(['id' => 'RJ000000002']);
+        $product = Product::factory()->create(['id' => 'RJ000000001']);
+
+        $this->post("/destroy/{$product->id}", [
+            'return_query' => [
+                'page' => '2',
+            ],
+        ])->assertRedirect('/');
+    }
+
+    public function test_destroy_clamps_saved_page_using_the_filtered_index_result_set(): void
+    {
+        Option::setIndexPerPage(2);
+
+        Product::factory()->create(['id' => 'RJ000000003', 'progress' => 'Listening']);
+        Product::factory()->create(['id' => 'RJ000000002', 'progress' => 'Listening']);
+        $product = Product::factory()->create(['id' => 'RJ000000001', 'progress' => 'Listening']);
+        Product::factory()->create(['id' => 'RJ000000999', 'progress' => 'Completed']);
+
+        $this->post("/destroy/{$product->id}", [
+            'return_query' => [
+                'progress' => 'Listening',
+                'page' => '2',
+            ],
+        ])->assertRedirect('/?progress=Listening');
+    }
+
+    public function test_destroy_ignores_return_route_and_keeps_index_query(): void
     {
         $product = Product::factory()->create([
             'work_name' => 'DESTROY_TAGS_TOKEN',
@@ -1367,7 +1738,93 @@ class ProductControllerTest extends TestCase
             'return_query' => [
                 'search' => 'rain',
             ],
-        ])->assertRedirect('/tags');
+        ])->assertRedirect('/?search=rain');
+    }
+
+    public function test_destroy_logs_storage_cleanup_failure_and_deletes_product(): void
+    {
+        $product = Product::factory()->create([
+            'work_name' => 'DESTROY_STORAGE_FAILURE_TOKEN',
+        ]);
+        $localDisk = Mockery::mock(Filesystem::class);
+        $publicDisk = Mockery::mock(Filesystem::class);
+
+        $localDisk
+            ->shouldReceive('delete')
+            ->once()
+            ->with("Works/{$product->id}.json")
+            ->andReturn(false);
+
+        $publicDisk
+            ->shouldReceive('deleteDirectory')
+            ->once()
+            ->with("Works/{$product->id}")
+            ->andReturn(true);
+
+        Storage::shouldReceive('disk')
+            ->once()
+            ->with('local')
+            ->andReturn($localDisk);
+
+        Storage::shouldReceive('disk')
+            ->once()
+            ->with('public')
+            ->andReturn($publicDisk);
+
+        Log::shouldReceive('warning')
+            ->once()
+            ->with('Unable to delete product scraper JSON.', [
+                'product_id' => $product->id,
+                'path' => "Works/{$product->id}.json",
+            ]);
+
+        $this->post("/destroy/{$product->id}")
+            ->assertRedirect('/');
+
+        $this->assertDatabaseMissing('products', ['id' => $product->id]);
+    }
+
+    public function test_destroy_logs_public_image_cleanup_failure_and_deletes_product(): void
+    {
+        $product = Product::factory()->create([
+            'work_name' => 'DESTROY_IMAGE_FAILURE_TOKEN',
+        ]);
+        $localDisk = Mockery::mock(Filesystem::class);
+        $publicDisk = Mockery::mock(Filesystem::class);
+
+        $localDisk
+            ->shouldReceive('delete')
+            ->once()
+            ->with("Works/{$product->id}.json")
+            ->andReturn(true);
+
+        $publicDisk
+            ->shouldReceive('deleteDirectory')
+            ->once()
+            ->with("Works/{$product->id}")
+            ->andReturn(false);
+
+        Storage::shouldReceive('disk')
+            ->once()
+            ->with('local')
+            ->andReturn($localDisk);
+
+        Storage::shouldReceive('disk')
+            ->once()
+            ->with('public')
+            ->andReturn($publicDisk);
+
+        Log::shouldReceive('warning')
+            ->once()
+            ->with('Unable to delete product image directory.', [
+                'product_id' => $product->id,
+                'path' => "Works/{$product->id}",
+            ]);
+
+        $this->post("/destroy/{$product->id}")
+            ->assertRedirect('/');
+
+        $this->assertDatabaseMissing('products', ['id' => $product->id]);
     }
 
     public function test_edit_returns_404_for_missing_product(): void

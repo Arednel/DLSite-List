@@ -47,14 +47,12 @@ class IndexPaginationSettings extends Component
         $this->saved = true;
     }
 
-    public function updatedMode(): void
+    public function updated(string $property): void
     {
-        $this->saved = false;
-        $this->resetValidation();
-    }
+        if (! in_array($property, ['mode', 'customValue'], true)) {
+            return;
+        }
 
-    public function updatedCustomValue(): void
-    {
         $this->saved = false;
         $this->resetValidation();
     }

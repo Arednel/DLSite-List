@@ -257,14 +257,15 @@ class TagRefetchService
      */
     private function currentFetchedTitles(Product $product, string $type): array
     {
-        return DB::table('genre_product')
-            ->join('genres', 'genres.id', '=', 'genre_product.genre_id')
-            ->where('genre_product.product_id', $product->getKey())
-            ->where('genre_product.source', Genre::PIVOT_SOURCE_FETCHED)
-            ->where('genres.type', $type)
-            ->orderBy('genres.title')
+        $genres = match ($type) {
+            Genre::TYPE_AUTO_GENERATED_JAPANESE => $product->japaneseGenres(),
+            Genre::TYPE_AUTO_GENERATED_ENGLISH => $product->englishGenres(),
+            default => null,
+        };
+
+        return $genres?->orderBy('genres.title')
             ->pluck('genres.title')
-            ->all();
+            ->all() ?? [];
     }
 
     /**
@@ -272,10 +273,7 @@ class TagRefetchService
      */
     private function currentCustomTitles(Product $product): array
     {
-        return DB::table('genre_product')
-            ->join('genres', 'genres.id', '=', 'genre_product.genre_id')
-            ->where('genre_product.product_id', $product->getKey())
-            ->where('genre_product.source', Genre::PIVOT_SOURCE_CUSTOM)
+        return $product->customGenres()
             ->pluck('genres.title')
             ->all();
     }
@@ -285,10 +283,8 @@ class TagRefetchService
      */
     private function currentCustomGenreIds(Product $product): array
     {
-        return DB::table('genre_product')
-            ->where('product_id', $product->getKey())
-            ->where('source', Genre::PIVOT_SOURCE_CUSTOM)
-            ->pluck('genre_id')
+        return $product->customGenres()
+            ->pluck('genres.id')
             ->all();
     }
 

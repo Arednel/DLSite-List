@@ -130,15 +130,17 @@ Runtime note:
 - index cover images are rendered directly from `products.work_image`
 - `products.start_date` and `products.end_date` JSON remain the editable/display source of truth; their `*_sort` columns store `YYYYMMDD` integers with missing month/day as `00`
 - `ProductIndex` keeps its filter/sort state in the URL through Livewire's `queryString()` config, then normalizes that state into `app/Support/ProductIndexFilters.php`
-- `app/Support/ProductIndexFilters.php` provides the normalized filter query used by progress tabs, preserved search state, and tag links on the index page
+- `app/Support/ProductIndexFilters.php` provides the normalized filter query used by progress tabs, preserved search state, tag links, explicit Livewire query-string keys, and the visibility-affecting filter groups used by return redirects
 - opening and closing the advanced filter modal is local Alpine state registered in `public/scripts/index-advanced-filters.js`, not Livewire state, so showing the modal does not rerun the Index query or reset draft filter values
 - changing advanced sort draft fields is client-side/deferred through that Alpine component until Apply, so the modal does not send requests while choosing primary/secondary sort columns
 - desktop table headers and the advanced sort modal both update the same Livewire-backed server-side sort state
 - Index pagination uses Livewire/Laravel paginator links with the project pagination view and Livewire's scroll target data to return to `#progress-menu`, keeping progress tabs, search, and Filter visible after page changes
 - switching progress tabs keeps the rest of the index request state, but intentionally drops the current `genre` filter
 - clicking a series link opens the index with only the exact `series` filter applied
-- `app/Support/ReturnTarget.php` normalizes the structured return state (`return_route`, `return_query`, `return_fragment`) used by create/edit/update/destroy flows
-- update rebuilds the return URL through `ReturnTarget` and updates the `progress` query only when returning to the index after a status change; index page numbers are preserved in return state unless progress changes
+- `app/Support/ReturnTarget.php` normalizes index-only return state (`return_query`, `return_fragment`) used by create/edit/update/destroy flows and builds index URLs with Laravel URI helpers
+- successful create/update redirects prioritize showing the created/edited work on the Index: `ReturnTarget` drops filters that would hide the work, preserves matching filters and sort state, and uses `ProductIndexResults` to calculate the correct page before appending the work anchor
+- destroy keeps the saved index query but clamps stale page numbers to the last valid page after deletion; storage cleanup uses Laravel storage deletes and logs cleanup failures without blocking product deletion
+- create-page Go Back ignores malformed `return_url` input, uses Laravel previous URL behavior with the Index as fallback, then preserves that back URL while switching between DLSite Create and Custom Create
 - create/store resolves scraped/custom titles into `genres` rows and syncs the pivot
 - edit loads only the fetched English/custom genre rows it renders, while keeping fetched non-custom genres attached automatically
 - update reads user-added genres from the form, stores them as `genre_product.source = custom`, and can reuse an existing fetched genre row while keeping it editable for that product
@@ -148,11 +150,12 @@ Runtime note:
 - the Options page has separate `Options` and `Refetch` tabs; validation errors from refetch forms reopen the Refetch tab
 - the Refetch tab links to the latest refetch run when at least one run exists
 - the Options tab includes an Index Pagination setting powered by Livewire and persisted in `options.index_per_page`; changing the mode can reveal the custom-value input immediately, but the setting is only persisted when Save is submitted
-- the selected-work search on the Refetch tab is rendered by Livewire so filtering can run through the same product query rules as the server
+- the selected-work search on the Refetch tab is rendered by Livewire and uses Laravel query helpers for the ID/title match
 - the Refetch tab work list and queued all/selected refetch ids use numeric RJ descending order, matching the Index default order
 - custom-only works are skipped during refetch because they do not have DLSite metadata to fetch from
 - applying a refetch run attaches new fetched tags with `genre_product.source = fetched`
 - stale fetched tags move to `genre_product.source = custom` by default, but the review form can remove them instead
+- refetch diff/apply reads current fetched/custom tags through the Product genre relationships
 - existing custom tags are preserved, and unused global auto-generated `genres` rows are detached from products but not deleted
 - only the newest review run shows apply controls; older review runs are read-only to avoid applying stale review decisions after a newer fetch
 - each review result row shows compact indicators for new JP, new EN, stale JP, and stale EN changes when those buckets are present

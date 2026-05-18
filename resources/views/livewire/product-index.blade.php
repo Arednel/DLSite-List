@@ -185,7 +185,6 @@
                                                 'products.edit',
                                                 [
                                                     'id' => $product->id,
-                                                    'return_route' => 'index',
                                                     'return_query' => $currentQuery,
                                                     'return_fragment' => $product->id,
                                                 ],
