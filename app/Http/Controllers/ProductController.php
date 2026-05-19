@@ -25,6 +25,18 @@ use Illuminate\Validation\ValidationException;
 
 class ProductController extends Controller
 {
+    private const VISIBILITY_AFFECTING_PRODUCT_FIELDS = [
+        'work_name',
+        'work_name_english',
+        'notes',
+        'series',
+        'progress',
+        'score',
+        'priority',
+        'num_re_listen_times',
+        're_listen_value',
+    ];
+
     /**
      * Display a listing of the resource.
      */
@@ -239,8 +251,9 @@ class ProductController extends Controller
             're_listen_value' => $data['re_listen_value'] ?? null,
             'priority' => $data['priority'] ?? null,
         ]);
+        $productFieldsChanged = $product->isDirty(self::VISIBILITY_AFFECTING_PRODUCT_FIELDS);
         $product->save();
-        $this->syncProductCustomGenres($product, $data['genre_custom'] ?? []);
+        $customGenresChanged = $this->syncProductCustomGenres($product, $data['genre_custom'] ?? []);
 
         $returnTarget = ReturnTarget::fromRequest($request, $product->getKey());
         $newProgress = $data['progress'] ?? null;
@@ -249,7 +262,10 @@ class ProductController extends Controller
             $returnTarget = $returnTarget->withIndexProgress($newProgress);
         }
 
-        return redirect($returnTarget->forProduct($product)->toUrl());
+        return redirect($returnTarget->forProduct(
+            $product,
+            visibilityMayHaveChanged: $productFieldsChanged || $customGenresChanged,
+        )->toUrl());
     }
 
     /**
@@ -424,7 +440,7 @@ class ProductController extends Controller
         $product->genres()->sync($this->genreSyncPayload($fetchedGenreIds, $customGenreIds));
     }
 
-    private function syncProductCustomGenres(Product $product, array $customTitles): void
+    private function syncProductCustomGenres(Product $product, array $customTitles): bool
     {
         $fetchedGenreIds = DB::table('genre_product')
             ->where('product_id', $product->getKey())
@@ -432,13 +448,30 @@ class ProductController extends Controller
             ->pluck('genre_id')
             ->all();
 
+        $currentCustomGenreIds = DB::table('genre_product')
+            ->where('product_id', $product->getKey())
+            ->where('source', Genre::PIVOT_SOURCE_CUSTOM)
+            ->pluck('genre_id')
+            ->map(fn(int|string $genreId): int => (int) $genreId)
+            ->sort()
+            ->values()
+            ->all();
+
         $customGenreIds = Genre::resolveIdsFromTitles(
             $customTitles,
             Genre::TYPE_CUSTOM,
             Genre::LANGUAGE_ENGLISH
         );
+        $normalizedCustomGenreIds = collect($customGenreIds)
+            ->map(fn(int|string $genreId): int => (int) $genreId)
+            ->unique()
+            ->sort()
+            ->values()
+            ->all();
 
         $product->genres()->sync($this->genreSyncPayload($fetchedGenreIds, $customGenreIds));
+
+        return $currentCustomGenreIds !== $normalizedCustomGenreIds;
     }
 
     private function genreSyncPayload(array $fetchedGenreIds, array $customGenreIds): array

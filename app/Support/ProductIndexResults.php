@@ -48,6 +48,22 @@ final class ProductIndexResults
             ->exists();
     }
 
+    public function pageContainsProduct(
+        ProductIndexFilters $filters,
+        Product $product,
+        int|string $perPage,
+        int $page,
+    ): bool {
+        if ($perPage === Option::INDEX_PER_PAGE_UNLIMITED) {
+            return $this->containsProduct($filters, $product);
+        }
+
+        return $this->applySqlSorting($this->filteredQuery($filters), $filters->sorts())
+            ->forPage(max(1, $page), max(1, (int) $perPage))
+            ->pluck('id')
+            ->contains((string) $product->getKey());
+    }
+
     public function pageForProduct(ProductIndexFilters $filters, Product $product, int|string $perPage): ?int
     {
         if ($perPage === Option::INDEX_PER_PAGE_UNLIMITED) {

@@ -5,7 +5,7 @@ Current automated coverage is in Laravel PHPUnit tests:
 - `tests/Feature/ProductControllerTest.php`
   - covers index filtering/sorting, create/edit pages, index-only return navigation with visible-work anchors, visibility-filter return redirects, custom-sort return page calculation, a full visible-update return workflow, Laravel previous URL create back links, malformed create back-link input, create-mode back-link preservation, filtered delete page fallback, custom create/upload flow, editable custom tag source behavior, index image selection, validation, update flow, and logged destroy cleanup failures
 - `tests/Feature/ReturnTargetProductTest.php`
-  - covers product-aware return URLs for unlimited pagination, first-page omission, and multi-filter visible-work cleanup
+  - covers product-aware return URLs for unlimited pagination, first-page omission, saved-page redirect fast paths, full-query visibility fast paths, unchanged-visibility fallback cleanup, and multi-filter visible-work cleanup
 - `tests/Feature/ProductIndexLivewireTest.php`
   - covers Livewire-owned Index pagination defaults, fixed/custom/unlimited page sizes, narrowed Index result columns, SQL-backed scalar/search/date/Added to the site Date pagination, nullable scalar sort ordering, built-in pagination links with the progress-menu scroll target, RJ header sorting, advanced primary/secondary sorting, Livewire-bound Filter modal controls, restored filter defaults, the external Alpine advanced-filter component, local client-side filter modal opening/closing without Livewire entanglement or native form reset, page reset behavior, and query-string initialization
 - `tests/Unit/Enums/ProductIndexSortFieldTest.php`
@@ -22,6 +22,9 @@ Current automated coverage is in Laravel PHPUnit tests:
   - covers the Livewire refetch progress panel polling only while a run is active and redirecting once review results are ready
 - `tests/Feature/OptionsWorkSearchTest.php`
   - covers the Livewire selected-work search, numeric RJ-desc visible order, and selected product preservation when filtered results change
+- `tests/Feature/PerformanceSmokeTest.php`
+  - defaults to 500 works, 500 tags, and 10000 pivot rows through constants at the top of the test, then reports average response times for plain/filtered/search/tag/unlimited Index paths plus common, recalculated, and filter-cleanup update redirects and delete page clamp redirects
+  - performance smoke timings emit PHPUnit warning issues above 500ms and stronger warning text above 1000ms; use `--do-not-fail-on-phpunit-warning` when you want the command to exit successfully while still showing those warnings
 - `tests/Unit/Support/ProductIndexFiltersTest.php`
   - covers query normalization, defaults, explicit input keys, visibility filter group coverage, and query export helpers
 - `tests/Unit/Support/ReturnTargetTest.php`
@@ -69,3 +72,5 @@ Index pagination tests set `options.index_per_page` through `App\Models\Option` 
   - `php artisan test --filter=OptionsControllerTest`
   - `php artisan test --filter=OptionsRefetchProgressTest`
   - `php artisan test --filter=OptionsWorkSearchTest`
+  - `php artisan test --filter=PerformanceSmokeTest`
+  - `php artisan test tests\Feature\PerformanceSmokeTest.php --do-not-fail-on-phpunit-warning`

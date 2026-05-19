@@ -43,9 +43,40 @@ final readonly class ReturnTarget
         Product $product,
         ?ProductIndexResults $results = null,
         int|string|null $perPage = null,
+        bool $visibilityMayHaveChanged = true,
     ): self {
         $results ??= app(ProductIndexResults::class);
         $perPage ??= Option::indexPerPage();
+
+        $query = $this->queryWithoutPage();
+        $savedPage = self::normalizePage($this->query['page'] ?? null) ?? 1;
+        $filters = ProductIndexFilters::fromQuery($query);
+
+        if ($results->pageContainsProduct($filters, $product, $perPage, $savedPage)) {
+            if ($savedPage > 1 && $perPage !== Option::INDEX_PER_PAGE_UNLIMITED) {
+                $query['page'] = (string) $savedPage;
+            }
+
+            return new self(
+                query: self::normalizeQuery($query),
+                fragment: (string) $product->getKey(),
+            );
+        }
+
+        if (! $visibilityMayHaveChanged) {
+            $page = $results->pageForProduct($filters, $product, $perPage);
+
+            if ($page !== null) {
+                if ($page > 1) {
+                    $query['page'] = (string) $page;
+                }
+
+                return new self(
+                    query: self::normalizeQuery($query),
+                    fragment: (string) $product->getKey(),
+                );
+            }
+        }
 
         $query = $this->queryForVisibleProduct($product, $results);
         $page = $results->pageForProduct(ProductIndexFilters::fromQuery($query), $product, $perPage);
@@ -140,6 +171,13 @@ final readonly class ReturnTarget
     {
         $query = $this->queryWithoutPage();
 
+        if (
+            ! self::hasVisibilityFilters($query)
+            || $results->containsProduct(ProductIndexFilters::fromQuery($query), $product)
+        ) {
+            return ProductIndexFilters::fromQuery($query)->toQuery();
+        }
+
         foreach (ProductIndexFilters::VISIBILITY_FILTER_GROUPS as $filterGroup) {
             if (! Arr::hasAny($query, $filterGroup)) {
                 continue;
@@ -153,5 +191,16 @@ final readonly class ReturnTarget
         }
 
         return ProductIndexFilters::fromQuery($query)->toQuery();
+    }
+
+    private static function hasVisibilityFilters(array $query): bool
+    {
+        foreach (ProductIndexFilters::VISIBILITY_FILTER_GROUPS as $filterGroup) {
+            if (Arr::hasAny($query, $filterGroup)) {
+                return true;
+            }
+        }
+
+        return false;
     }
 }

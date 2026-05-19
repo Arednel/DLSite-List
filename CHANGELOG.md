@@ -2,6 +2,11 @@
 
 ## Development
 
+2026-05-19 -- 1.3.2 Performance Improvements
+  * Optimized update return redirects with saved-page and full-query visibility fast paths
+  * Added heavier performance smoke coverage for Index, update redirect, and delete redirect workflows
+  * Added redirect tests for saved-page fast paths, full-query visibility shortcuts, unchanged visibility updates, stale return cleanup, and custom tag changes
+
 2026-05-18 -- 1.3.1 Workflow Refinements
   * Reworked create/edit/delete return navigation around index-only return state, stable create back links, visible-work anchors, and delete page fallback
   * Centralized index query keys and visibility filter groups in `ProductIndexFilters`

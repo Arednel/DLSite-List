@@ -138,7 +138,8 @@ Runtime note:
 - switching progress tabs keeps the rest of the index request state, but intentionally drops the current `genre` filter
 - clicking a series link opens the index with only the exact `series` filter applied
 - `app/Support/ReturnTarget.php` normalizes index-only return state (`return_query`, `return_fragment`) used by create/edit/update/destroy flows and builds index URLs with Laravel URI helpers
-- successful create/update redirects prioritize showing the created/edited work on the Index: `ReturnTarget` drops filters that would hide the work, preserves matching filters and sort state, and uses `ProductIndexResults` to calculate the correct page before appending the work anchor
+- successful create/update redirects prioritize showing the created/edited work on the Index: `ReturnTarget` first keeps the saved page when the work is already visible there, then avoids per-filter cleanup when the full query still matches, otherwise drops filters that would hide the work, preserves matching filters and sort state, and uses `ProductIndexResults` to calculate the correct page before appending the work anchor
+- update detects whether visibility-affecting product fields or custom tags changed before redirecting, so unchanged edits can trust the current index query unless the saved return state no longer contains the work
 - destroy keeps the saved index query but clamps stale page numbers to the last valid page after deletion; storage cleanup uses Laravel storage deletes and logs cleanup failures without blocking product deletion
 - create-page Go Back ignores malformed `return_url` input, uses Laravel previous URL behavior with the Index as fallback, then preserves that back URL while switching between DLSite Create and Custom Create
 - create/store resolves scraped/custom titles into `genres` rows and syncs the pivot

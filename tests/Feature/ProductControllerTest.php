@@ -1407,6 +1407,27 @@ class ProductControllerTest extends TestCase
         ])->assertRedirect("/?tags=VisibleTag&tag_match=all#{$product->id}");
     }
 
+    public function test_update_preserves_matching_tag_filter_when_custom_tags_do_not_change(): void
+    {
+        $visibleTag = $this->createGenre('StableVisibleTag', Genre::TYPE_CUSTOM);
+        $product = Product::factory()->create([
+            'work_name' => 'STABLE_VISIBLE_TAG_FILTER_TOKEN',
+        ]);
+        $this->attachGenres($product, [$visibleTag]);
+
+        $this->post("/update/{$product->id}", [
+            'work_name' => $product->work_name,
+            'work_name_english' => $product->work_name_english,
+            'progress' => $product->progress,
+            'genre_custom' => 'StableVisibleTag',
+            'return_query' => [
+                'tags' => 'StableVisibleTag',
+                'tag_match' => 'all',
+            ],
+            'return_fragment' => $product->id,
+        ])->assertRedirect("/?tags=StableVisibleTag&tag_match=all#{$product->id}");
+    }
+
     public function test_update_drops_hiding_tag_filter_for_target_work(): void
     {
         $product = Product::factory()->create([
@@ -1418,6 +1439,26 @@ class ProductControllerTest extends TestCase
             'genre_custom' => 'VisibleTag',
             'return_query' => [
                 'tags' => 'HiddenTag',
+                'tag_match' => 'all',
+            ],
+            'return_fragment' => $product->id,
+        ])->assertRedirect("/#{$product->id}");
+    }
+
+    public function test_update_drops_tag_filter_when_custom_tag_is_removed(): void
+    {
+        $oldTag = $this->createGenre('RemovedVisibleTag', Genre::TYPE_CUSTOM);
+        $product = Product::factory()->create([
+            'work_name' => 'REMOVED_TAG_FILTER_TOKEN',
+        ]);
+        $this->attachGenres($product, [$oldTag]);
+
+        $this->post("/update/{$product->id}", [
+            'work_name' => $product->work_name,
+            'progress' => $product->progress,
+            'genre_custom' => 'ReplacementVisibleTag',
+            'return_query' => [
+                'tags' => 'RemovedVisibleTag',
                 'tag_match' => 'all',
             ],
             'return_fragment' => $product->id,
@@ -1497,6 +1538,63 @@ class ProductControllerTest extends TestCase
 
         $response->assertSessionHasNoErrors();
         $response->assertRedirect("/?sort_first_field=score&sort_first_direction=asc&page=2#{$product->id}");
+    }
+
+    public function test_update_with_unchanged_visibility_fields_keeps_saved_page_and_filters(): void
+    {
+        Option::setIndexPerPage(2);
+
+        Product::factory()->create([
+            'id' => 'RJ000000101',
+            'progress' => 'Listening',
+            'series' => 'VISIBLE_SERIES',
+            'score' => 1,
+        ]);
+        Product::factory()->create([
+            'id' => 'RJ000000102',
+            'progress' => 'Listening',
+            'series' => 'VISIBLE_SERIES',
+            'score' => 3,
+        ]);
+        $product = Product::factory()->create([
+            'id' => 'RJ000000103',
+            'work_name' => 'UNCHANGED_VISIBILITY_TARGET',
+            'progress' => 'Listening',
+            'series' => 'VISIBLE_SERIES',
+            'score' => 5,
+        ]);
+        Product::factory()->create([
+            'id' => 'RJ000000104',
+            'progress' => 'Listening',
+            'series' => 'VISIBLE_SERIES',
+            'score' => 7,
+        ]);
+
+        $response = $this->post("/update/{$product->id}", [
+            'work_name' => $product->work_name,
+            'work_name_english' => $product->work_name_english,
+            'progress' => $product->progress,
+            'score' => 5,
+            'series' => $product->series,
+            'add' => [
+                'start_date' => [
+                    'year' => '2025',
+                    'month' => '03',
+                    'day' => '01',
+                ],
+            ],
+            'return_query' => [
+                'progress' => 'Listening',
+                'series' => 'VISIBLE_SERIES',
+                'sort_first_field' => 'score',
+                'sort_first_direction' => 'asc',
+                'page' => '2',
+            ],
+            'return_fragment' => $product->id,
+        ]);
+
+        $response->assertSessionHasNoErrors();
+        $response->assertRedirect("/?series=VISIBLE_SERIES&progress=Listening&sort_first_field=score&sort_first_direction=asc&page=2#{$product->id}");
     }
 
     public function test_update_workflow_returns_to_visible_work_after_filter_sort_and_page_changes(): void
