@@ -2,12 +2,17 @@
 
 ## Development
 
-2026-05-19 -- 1.3.2 Performance Improvements
+* 2026-05-22 -- 1.3.3 CSS, HTML Cleanup
+  * Cleaned up unused CSS classes, HTML code
+  * Moved CSS used both in Options and Tag Library to own css file
+  * Renamed some CSS classes for better clarity
+
+* 2026-05-19 -- 1.3.2 Performance Improvements
   * Optimized update return redirects with saved-page and full-query visibility fast paths
   * Added heavier performance smoke coverage for Index, update redirect, and delete redirect workflows
   * Added redirect tests for saved-page fast paths, full-query visibility shortcuts, unchanged visibility updates, stale return cleanup, and custom tag changes
 
-2026-05-18 -- 1.3.1 Workflow Refinements
+* 2026-05-18 -- 1.3.1 Workflow Refinements
   * Reworked create/edit/delete return navigation around index-only return state, stable create back links, visible-work anchors, and delete page fallback
   * Centralized index query keys and visibility filter groups in `ProductIndexFilters`
   * Simplified selected-work search, refetch tag comparison, product index queries, and return-target helper code
@@ -15,39 +20,39 @@
   * Hardened malformed create back-link input and expanded edge-case coverage for return navigation, destroy cleanup, and refetch tag diffs
   * Cleaned up CSS, tests, and project docs
 
-2026-05-14 -- 1.3.0 Livewire Index pagination and Sorting
+* 2026-05-14 -- 1.3.0 Livewire Index pagination and Sorting
   * Rebuilt the Index page around Livewire filters, sorting, URL state, and pagination
   * Added configurable Index page size in Options, including fixed, custom, and unlimited modes
   * Moved RJ and partial date sorting to stored SQL sort keys and cleaned up related Index/filter code
   * Changed footer text
   * Updated tests and docs
 
-2026-05-03 -- 1.2.9.1 Cleanup
+* 2026-05-03 -- 1.2.9.1 Cleanup
   * Added description for refetch tags
   * CSS Cleanup
 
-2026-04-26 -- 1.2.9 Python fix
+* 2026-04-26 -- 1.2.9 Python fix
   * Python fix for non Japanese systems
 
-2026-04-26 -- 1.2.8 Docker fix
+* 2026-04-26 -- 1.2.8 Docker fix
   * Changed index.css case
 
-2026-04-26 -- 1.2.7 Options and Refetch Tags
+* 2026-04-26 -- 1.2.7 Options and Refetch Tags
   * Added an Options page with a "Refetch Tags" workflow
   * Added Livewire
   * Added database queue and batch support, Docker queue worker configuration, and worker setup docs
 
-2026-04-25 -- 1.2.6 Custom RJ work creation and Fixes
+* 2026-04-25 -- 1.2.6 Custom RJ work creation and Fixes
   * Added a Custom Create mode for manually adding RJ works without running the scraper
   * Fixed user-entered custom tags. Now they stay editable in Edit Work, even when they reuse an existing fetched genre title
   * Updated validation, upload styling, tests, migrations, and project docs for the new custom work flow
 
-2026-03-30 -- 1.2.5 CSS and Tag Library improvements
+* 2026-03-30 -- 1.2.5 CSS and Tag Library improvements
   * Tag Library now shows how many works use each visible tag
   * Improved mobile advanced-filter actions so Apply and Clear stay reachable on browsers with changing bottom UI
   * Added simple CSS/JS cache busting in Blade via `filemtime(public_path(...))`
 
-2026-03-30 -- 1.2.4 Fixes and Optimizations
+* 2026-03-30 -- 1.2.4 Fixes and Optimizations
   * Removed the unused Laravel Excel dependency
   * Improved index filter handling and cleaned up Blade templates
   * Clicking on "Series" now opens all works from that series and resets the other index filters

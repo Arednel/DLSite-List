@@ -6,7 +6,7 @@
     <div id="list-container" class="list-container">
         <div class="cover-block">
             <div id="cover-image-container" class="image-container">
-                <img id="cover-image" src="{{ asset('images/sakura.png') }}">
+                <img id="cover-image" src="{{ asset('images/Sakura.png') }}">
             </div>
         </div>
 
@@ -14,28 +14,28 @@
             <div class="progress-menu">
                 <a href="{{ route('index', $allProgressQuery, false) }}" @class([
                     'progress-button',
-                    'all_anime',
+                    'progress-all',
                     'on' => $progressHeading === 'All ASMR',
                 ])>
                     All ASMR</a>
                 <a href="{{ route('index', array_merge($allProgressQuery, ['progress' => 'Listening']), false) }}"
                     @class([
                         'progress-button',
-                        'watching',
+                        'progress-listening',
                         'on' => $progressHeading === 'Listening',
                     ])>
                     Currently Listening</a>
                 <a href="{{ route('index', array_merge($allProgressQuery, ['progress' => 'Completed']), false) }}"
                     @class([
                         'progress-button',
-                        'completed',
+                        'progress-completed',
                         'on' => $progressHeading === 'Completed',
                     ])>
                     Completed</a>
                 <a href="{{ route('index', array_merge($allProgressQuery, ['progress' => 'Plan to Listen']), false) }}"
                     @class([
                         'progress-button',
-                        'plantowatch',
+                        'progress-plan-to-listen',
                         'on' => $progressHeading === 'Plan to Listen',
                     ])>
                     Plan to Listen</a>
@@ -53,9 +53,9 @@
         </div>
 
         <div class="list-block">
-            <div class="list-unit onhold">
+            <div class="list-unit product-list-panel">
                 <div class="list-status-title">
-                    <span class="text">
+                    <span class="progress-heading">
                         {{ $progressHeading }}
                     </span>
                     <x-index.advanced-filters :filter-options="$filterOptions" :filter-active="$filterActive" :has-current-tag-filter="$hasCurrentTagFilter" />
@@ -77,12 +77,12 @@
                                     Score <span class="sort-icon">{{ $sortIcons['score'] }}</span>
                                 </button>
                             </th>
-                            <th class="header-title Series" data-column="Series">
+                            <th class="header-title series" data-column="Series">
                                 <button type="button" class="table-sort-button" wire:click="sortByHeader('series')">
                                     Series <span class="sort-icon">{{ $sortIcons['series'] }}</span>
                                 </button>
                             </th>
-                            <th class="header-title type" data-column="Age">
+                            <th class="header-title age-category" data-column="Age">
                                 <button type="button" class="table-sort-button"
                                     wire:click="sortByHeader('age_category')">
                                     Age <span class="sort-icon">{{ $sortIcons['age_category'] }}</span>
@@ -94,7 +94,7 @@
                                 </button>
                             </th>
                             <th class="header-title tags">Tags</th>
-                            <th class="header-title score"></th>
+                            <th class="header-title actions"></th>
                         </tr>
                     </tbody>
 
@@ -105,40 +105,40 @@
                                 <td @class([
                                     'data',
                                     'status',
-                                    'watching' => $product->progress === 'Listening',
-                                    'completed' => $product->progress === 'Completed',
-                                    'plantowatch' => $product->progress === 'Plan to Listen',
+                                    'progress-listening' => $product->progress === 'Listening',
+                                    'progress-completed' => $product->progress === 'Completed',
+                                    'progress-plan-to-listen' => $product->progress === 'Plan to Listen',
                                 ])>
                                 </td>
                                 <td class="data number"></td>
                                 <td class="data image" data-label="Image"><a
                                         href="https://www.dlsite.com/maniax/work/=/product_id/{{ $product->id }}.html"
-                                        class="link sort" target="_blank">
+                                        class="product-link" target="_blank">
                                         <img src="{{ $product->work_image }}" class="image"></a>
                                 </td>
                                 <td class="data title clearfix" data-label="Title">
                                     <a href="https://www.dlsite.com/maniax/work/=/product_id/{{ $product->id }}.html"
-                                        class="link sort" target="_blank">{{ $product->id }} -
+                                        class="product-link" target="_blank">{{ $product->id }} -
                                         {{ $product->work_name }}</a>
                                     <div class="notes">
-                                        <div class="text notes">
+                                        <div class="note-text">
                                             @if ($product->work_name != $product->work_name_english && $product->work_name_english)
                                                 <a href="https://www.dlsite.com/maniax/work/=/product_id/{{ $product->id }}.html"
-                                                    class="link sort" target="_blank">
+                                                    class="product-link" target="_blank">
                                                     {{ $product->id }} - {{ $product->work_name_english }}</a>
                                             @endif
                                         </div>
                                     </div>
 
                                     <div class="notes">
-                                        <div class="text notes">
+                                        <div class="note-text">
                                             {!! nl2br(e($product->notes)) !!}
                                         </div>
                                     </div>
                                 </td>
 
                                 <td class="data score" data-label="Score">
-                                    <span class="score-label score-na">
+                                    <span class="cell-value">
                                         @if ($product->score == null)
                                             -
                                         @endif
@@ -147,7 +147,7 @@
                                 </td>
 
                                 <td class="data series" data-label="Series">
-                                    <span class="score-label score-na">
+                                    <span class="cell-value">
                                         @if ($product->series == null)
                                             -
                                         @else
@@ -158,7 +158,7 @@
                                     </span>
                                 </td>
 
-                                <td class="data type" data-label="Age">
+                                <td class="data age-category" data-label="Age">
                                     @if ($product->age_category == 'ALL_AGES')
                                         All Ages
                                     @else
@@ -179,8 +179,8 @@
                                     </div>
                                 </td>
                                 <td class="data actions" data-label="Actions">
-                                    <div class="add-edit-more">
-                                        <span class="edit">
+                                    <div class="row-actions">
+                                        <span class="edit-action">
                                             <a href="{{ route(
                                                 'products.edit',
                                                 [
@@ -190,7 +190,7 @@
                                                 ],
                                                 false,
                                             ) }}"
-                                                class="List_LightBox">Edit</a>
+                                                class="product-edit-link">Edit</a>
                                         </span>
                                     </div>
                                 </td>

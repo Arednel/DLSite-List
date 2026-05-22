@@ -1,7 +1,7 @@
 <tr>
-    <td class="borderClass">Priority</td>
-    <td class="borderClass">
-        <select id="add_priority" name="add[priority]" class="inputtext">
+    <td class="form-table-cell">Priority</td>
+    <td class="form-table-cell">
+        <select id="add_priority" name="add[priority]" class="form-control">
             <option value="" @selected(old('add.priority', $value) === null || old('add.priority', $value) === '')>
                 Select priority</option>
             @foreach ($options as $optionValue => $label)

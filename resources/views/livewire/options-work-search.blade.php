@@ -9,7 +9,7 @@
 
     <div>
         <label class="field-label" for="work-search">Select works</label>
-        <input id="work-search" class="option-search" type="search" placeholder="Search by RJ ID or title..."
+        <input id="work-search" class="option-control" type="search" placeholder="Search by RJ ID or title..."
             wire:model.live.debounce.250ms="search">
     </div>
 

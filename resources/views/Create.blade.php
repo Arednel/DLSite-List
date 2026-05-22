@@ -1,6 +1,6 @@
 @php($isCustomCreate = $isCustomCreate ?? false)
 
-<html lang="en" class="appearance-none dark-mode cvonfc">
+<html lang="en" class="dark-mode">
 
 <head>
     <title>Add</title>
@@ -11,12 +11,12 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/7.0.1/css/all.min.css">
 </head>
 
-<body class="page-common  ownlist_manga_update" data-ms="false" data-country-code="KZ" data-time="1741691968">
-    <div id="myanimelist">
+<body class="product-form-page">
+    <div id="product-form-container">
         <div class="wrapper">
             <div id="contentWrapper">
                 <div>
-                    <h1 class="h1">{{ $isCustomCreate ? 'Add Custom Work' : 'Add Work' }}</h1>
+                    <h1 class="form-page-title">{{ $isCustomCreate ? 'Add Custom Work' : 'Add Work' }}</h1>
                 </div>
 
                 <div id="content">
@@ -24,17 +24,17 @@
                         <tbody>
                             <tr>
                                 <td>
-                                    <div class="normal_header dialog-header">
+                                    <div class="dialog-title dialog-header">
                                         {{ $isCustomCreate ? 'Add Custom Work' : 'Add Work' }}
                                     </div>
                                     <div class="dialog-body">
                                         <div class="create-mode-switch">
                                             <a href="{{ route('products.create', $returnParameters, false) }}"
-                                                class="inputButton ignore-visited-link {{ !$isCustomCreate ? 'is-active' : '' }}">
+                                                class="form-button ignore-visited-link {{ !$isCustomCreate ? 'is-active' : '' }}">
                                                 DLSite Create
                                             </a>
                                             <a href="{{ route('products.create.custom', $returnParameters, false) }}"
-                                                class="inputButton ml8 ignore-visited-link {{ $isCustomCreate ? 'is-active' : '' }}">
+                                                class="form-button margin-left-8 ignore-visited-link {{ $isCustomCreate ? 'is-active' : '' }}">
                                                 Custom Create
                                             </a>
                                         </div>
@@ -47,8 +47,9 @@
                                                 <input type="hidden" name="return_query[{{ $queryKey }}]"
                                                     value="{{ $queryValue }}">
                                             @endforeach
-                                            <div id="top-submit-buttons" class="mt8 mb8 dialog-submit-row">
-                                                <input type="submit" class="inputButton main_submit" value="Submit">
+                                            <div id="top-submit-buttons"
+                                                class="margin-top-8 margin-bottom-8 dialog-submit-row">
+                                                <input type="submit" class="form-button submit-button" value="Submit">
                                             </div>
                                             <table class="form-fields-table" cellpadding="5" cellspacing="0"
                                                 width="100%">
@@ -75,13 +76,14 @@
                                                     <x-fields.priority />
                                                 </tbody>
                                             </table>
-                                            <div class="mt8 mb8 dialog-submit-row">
-                                                <input type="submit" class="inputButton main_submit" value="Submit">
+                                            <div class="margin-top-8 margin-bottom-8 dialog-submit-row">
+                                                <input type="submit" class="form-button submit-button" value="Submit">
                                             </div>
                                         </form>
 
                                         <div class="dialog-actions dialog-actions-right">
-                                            <a href="{{ $returnUrl }}" class="inputButton ml8 ignore-visited-link">
+                                            <a href="{{ $returnUrl }}"
+                                                class="form-button margin-left-8 ignore-visited-link">
                                                 Go back
                                             </a>
                                         </div>

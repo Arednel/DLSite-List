@@ -13,7 +13,7 @@
     @livewireStyles
 </head>
 
-<body class="ownlist anime" data-work="anime">
+<body class="product-index-page">
     <livewire:product-index />
 
     <footer>

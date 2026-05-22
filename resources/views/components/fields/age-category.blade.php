@@ -4,9 +4,9 @@
 ])
 
 <tr>
-    <td class="borderClass">Age Category</td>
-    <td class="borderClass">
-        <select id="age_category" name="age_category" class="inputtext" required>
+    <td class="form-table-cell">Age Category</td>
+    <td class="form-table-cell">
+        <select id="age_category" name="age_category" class="form-control" required>
             <option value="" @selected(old('age_category', $value) === '')>Select age category</option>
             @foreach ($options as $optionValue => $label)
                 <option value="{{ $optionValue }}" @selected(old('age_category', $value) === $optionValue)>

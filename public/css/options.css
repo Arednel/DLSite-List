@@ -55,9 +55,9 @@
     line-height: 1.55;
 }
 
-.option-search,
+.option-control,
 .review-actions select,
-.option-search-input {
+.option-control-input {
     width: 100%;
     border: 2px solid var(--pink-300);
     border-radius: 0.85rem;
@@ -67,22 +67,22 @@
     transition: border-color 0.16s ease, box-shadow 0.16s ease;
 }
 
-.option-search,
-.option-search-input {
+.option-control,
+.option-control-input {
     min-height: 3rem;
 }
 
-.option-search {
+.option-control {
     padding: 0.7rem 0.9rem;
 }
 
-.option-search-input {
+.option-control-input {
     box-sizing: border-box
 }
 
-.option-search:focus,
+.option-control:focus,
 .review-actions select:focus,
-.option-search-input:focus {
+.option-control-input:focus {
     border-color: var(--pink-500);
     outline: none;
     box-shadow: 0 0 0 3px rgba(236, 72, 153, 0.17);

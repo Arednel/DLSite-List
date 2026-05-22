@@ -1,4 +1,4 @@
-body.ownlist {
+body.product-index-page {
     background-attachment: fixed;
     background-position: center top;
     background-repeat: repeat-x;
@@ -84,23 +84,6 @@ a {
     top: 18px;
 }
 
-
-.header .icon-menu:hover {
-    background-color: #7D6A6A
-}
-
-.header .icon-menu svg.icon {
-    position: absolute;
-    fill: #CCB3B3;
-    left: 12px;
-    top: 4px;
-}
-
-.header .icon-menu .text {
-    position: absolute;
-    left: 52px;
-    top: 6px;
-}
 
 /**
  * List Container
@@ -232,7 +215,7 @@ a {
     color: #7D6A6A;
 }
 
-.list-unit .list-status-title .text {
+.list-unit .list-status-title .progress-heading {
     display: table-cell;
     width: 1024px;
     height: 38px;
@@ -295,7 +278,7 @@ a {
     width: 65px
 }
 
-.list-table .list-table-header .header-title.type {
+.list-table .list-table-header .header-title.age-category {
     width: 60px
 }
 
@@ -307,33 +290,8 @@ a {
     width: 120px
 }
 
-.list-table .list-table-header .header-title .link {
-    font-size: 11px;
-    color: #7D6A6A;
-    text-decoration: none
-}
-
-.list-table .list-table-header .header-title .link.sort {
-    position: relative;
-    display: inline-block;
-    color: #7D6A6A;
-    white-space: nowrap;
-    -moz-transition-property: all;
-    -o-transition-property: all;
-    -webkit-transition-property: all;
-    transition-property: all;
-    -moz-transition-duration: 0.3s;
-    -o-transition-duration: 0.3s;
-    -webkit-transition-duration: 0.3s;
-    transition-duration: 0.3s;
-    -moz-transition-timing-function: ease-in-out;
-    -o-transition-timing-function: ease-in-out;
-    -webkit-transition-timing-function: ease-in-out;
-    transition-timing-function: ease-in-out
-}
-
-.list-table .list-table-header .header-title .link.sort:hover {
-    color: #dd7d7d
+.list-table .list-table-header .header-title.actions {
+    width: 65px
 }
 
 .list-table .list-table-header .header-title .sort-icon {
@@ -360,19 +318,6 @@ a {
     color: #F4BFB7 !important;
 }
 
-.list-table .list-table-data .tags .edit {
-    display: block;
-    width: 100%;
-    text-align: center;
-    color: #A6E7C4 !important;
-    font-size: 10px;
-    font-family: "Verdana", "lucida grande", tahoma, verdana, arial, sans-serif;
-}
-
-.list-table .list-table-data .tags .edit:hover {
-    color: #F4BFB7 !important;
-}
-
 .list-table .list-table-data .data.image a {
     display: inline-block;
 }
@@ -388,21 +333,14 @@ a {
     word-wrap: break-word
 }
 
-.list-table .list-table-data .data.title .link {
+.list-table .list-table-data .data.title .product-link {
     font-size: 1.1em;
     font-weight: bold
 }
 
-.list-table .list-table-data .data.score .link {
+.list-table .list-table-data .data.score .product-link {
     font-size: 1.1em;
     font-weight: bold
-}
-
-.list-table .list-table-data .data.title .add-edit-more {
-    float: right;
-    margin-right: 10px;
-    font-size: 0.9em;
-    color: #dd7d7d;
 }
 
 .list-table .list-table-data .data.tags {
@@ -413,24 +351,20 @@ a {
     width: 4px
 }
 
-.list-table .list-table-data .data.status .text {
+.list-table .list-table-data .data.status .status-label {
     display: none
 }
 
-.list-table .list-table-data .data.status.watching {
+.list-table .list-table-data .data.status.progress-listening {
     background-color: #A6E7C4;
 }
 
-.list-table .list-table-data .data.status.plantowatch {
+.list-table .list-table-data .data.status.progress-plan-to-listen {
     background-color: #c3c3c3;
 }
 
-.list-table .list-table-data .data.status.completed {
+.list-table .list-table-data .data.status.progress-completed {
     background-color: #A7C6F3;
-}
-
-.list-table .list-table-data .data.status.onhold {
-    background-color: #FEE39E;
 }
 
 .list-table .list-table-data .data.title {
@@ -515,7 +449,7 @@ body.filter-modal-open {
     display: none !important;
 }
 
-.list-unit .list-status-title .text {
+.list-unit .list-status-title .progress-heading {
     box-sizing: border-box;
     padding: 0 132px;
 }
@@ -862,7 +796,7 @@ body.filter-modal-open {
     .cover-block .image-container,
     .list-unit,
     .list-unit .list-status-title,
-    .list-unit .list-status-title .text {
+    .list-unit .list-status-title .progress-heading {
         width: 100%;
         max-width: 100%;
     }
@@ -934,7 +868,7 @@ body.filter-modal-open {
         height: auto;
     }
 
-    .list-unit .list-status-title .text {
+    .list-unit .list-status-title .progress-heading {
         height: auto;
         padding: 12px 104px 12px 12px;
         font-size: 1.45em;
@@ -1101,7 +1035,7 @@ body.filter-modal-open {
         grid-area: series;
     }
 
-    .list-table .list-table-data .data.type {
+    .list-table .list-table-data .data.age-category {
         grid-area: age;
     }
 
@@ -1117,12 +1051,12 @@ body.filter-modal-open {
         grid-area: actions;
     }
 
-    .list-table .list-table-data .data.actions .add-edit-more {
+    .list-table .list-table-data .data.actions .row-actions {
         float: none;
         margin-right: 0;
     }
 
-    .list-table .list-table-data .data.actions .edit {
+    .list-table .list-table-data .data.actions .edit-action {
         text-align: left;
     }
 

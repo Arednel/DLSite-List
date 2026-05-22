@@ -17,7 +17,7 @@
     display: none;
 }
 
-.list-menu-float .icon-menu {
+.list-menu-float .list-menu-link {
     position: relative;
     background-color: #fffdf8 !important;
     display: block;
@@ -28,24 +28,30 @@
     transition: all 0.3s ease;
 }
 
-.list-menu-float .icon-menu svg.icon {
+.list-menu-float .list-menu-link svg.menu-icon {
     position: absolute;
-    fill: #ccb3b3;
-}
-
-.list-menu-float .icon-menu:hover svg.icon {
-    fill: #7d6a6a;
-}
-
-.list-menu-float .icon-menu.quick-add svg.icon-quick-add,
-.list-menu-float .icon-menu.anime-list svg.icon-anime-list,
-.list-menu-float .icon-menu.manga-list svg.icon-manga-list,
-.list-menu-float .icon-menu.statistics svg.icon-statistics {
     left: 13px;
-    top: 12px;
+    top: 50%;
+    transform: translateY(-50%);
+    fill: #ccb3b3;
+    color: #ccb3b3;
 }
 
-.list-menu-float .icon-menu .text {
+.list-menu-float .list-menu-link.all-works svg.menu-icon,
+.list-menu-float .list-menu-link.r15-filter svg.menu-icon {
+    left: 12px !important;
+}
+
+.list-menu-float .list-menu-link.tag-library svg.menu-icon {
+    left: 11px !important;
+}
+
+.list-menu-float .list-menu-link:hover svg.menu-icon {
+    fill: #7d6a6a;
+    color: #7d6a6a;
+}
+
+.list-menu-float .list-menu-link .menu-label {
     position: absolute;
     top: 14px;
     left: 50px;
@@ -62,22 +68,14 @@
     transition: all 0.3s ease;
 }
 
-.list-menu-float .icon-menu:not(.profile):hover {
+.list-menu-float .list-menu-link:hover {
     background-color: #333;
     width: 145px;
 }
 
-.list-menu-float .icon-menu:hover .text {
+.list-menu-float .list-menu-link:hover .menu-label {
     width: 94px;
     opacity: 1;
-}
-
-.image-all-works,
-.image-tag-library,
-.image-options {
-    position: absolute;
-    left: 11px;
-    top: 12px;
 }
 
 @media (max-width: 992px) {
@@ -148,38 +146,31 @@
         pointer-events: auto;
     }
 
-    .list-menu-float .icon-menu {
+    .list-menu-float .list-menu-link {
         width: 100%;
         height: 56px;
         border-bottom: #ee9898 1px solid;
     }
 
-    .list-menu-float .icon-menu:last-child {
+    .list-menu-float .list-menu-link:last-child {
         border-bottom: none;
     }
 
-    .list-menu-float .icon-menu:not(.profile):hover {
+    .list-menu-float .list-menu-link:hover {
         width: 100%;
         background-color: #fdf3f3;
     }
 
-    .list-menu-float .icon-menu.quick-add svg.icon-quick-add,
-    .list-menu-float .icon-menu.anime-list svg.icon-anime-list,
-    .list-menu-float .icon-menu.manga-list svg.icon-manga-list,
-    .list-menu-float .icon-menu.statistics svg.icon-statistics,
-    .list-menu-float .image-all-works,
-    .list-menu-float .image-tag-library,
-    .image-options {
-        left: 16px;
-        top: 15px;
-    }
-
-    .list-menu-float .icon-menu .text,
-    .list-menu-float .icon-menu:hover .text {
+    .list-menu-float .list-menu-link .menu-label,
+    .list-menu-float .list-menu-link:hover .menu-label {
         top: 18px;
         left: 56px;
         width: auto;
         opacity: 1;
         font-size: 1.2em;
+    }
+
+    .list-menu-float .list-menu-link.tag-library svg.menu-icon {
+        left: 10px !important;
     }
 }

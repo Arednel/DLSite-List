@@ -1,7 +1,7 @@
 <form wire:submit.prevent="save" class="stack">
     <div>
         <label class="field-label" for="index-per-page">Index page size</label>
-        <select id="index-per-page" class="option-search option-search-select" wire:model.change.live="mode">
+        <select id="index-per-page" class="option-control option-control-select" wire:model.change.live="mode">
             @foreach ($fixedOptions as $value => $label)
                 <option value="{{ $value }}">{{ $label }} works per page</option>
             @endforeach
@@ -12,7 +12,7 @@
 
     @if ($mode === 'custom')
         <label class="field-label" for="index-custom-per-page">Custom works per page</label>
-        <input id="index-custom-per-page" class="option-search-input" type="number" min="1" step="1"
+        <input id="index-custom-per-page" class="option-control-input" type="number" min="1" step="1"
             wire:model="customValue">
         @error('customValue')
             <div class="text-error">{{ $message }}</div>

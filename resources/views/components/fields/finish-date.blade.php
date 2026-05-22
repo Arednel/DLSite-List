@@ -8,10 +8,10 @@
 ])
 
 <tr>
-    <td class="borderClass">Finish Date</td>
-    <td class="borderClass">
+    <td class="form-table-cell">Finish Date</td>
+    <td class="form-table-cell">
         Month:
-        <select id="add_finish_date_month" name="add[finish_date][month]" class="inputtext">
+        <select id="add_finish_date_month" name="add[finish_date][month]" class="form-control">
             <option value=""></option>
             @foreach ($monthLabels as $value => $label)
                 <option value="{{ $value }}" @selected((string) old('add.finish_date.month', $monthValue) === (string) $value)>
@@ -19,7 +19,7 @@
             @endforeach
         </select>
         Day:
-        <select id="add_finish_date_day" name="add[finish_date][day]" class="inputtext">
+        <select id="add_finish_date_day" name="add[finish_date][day]" class="form-control">
             <option value=""></option>
             @foreach ($days as $day)
                 <option value="{{ $day }}" @selected((string) old('add.finish_date.day', $dayValue) === (string) $day)>
@@ -27,7 +27,7 @@
             @endforeach
         </select>
         Year:
-        <select id="add_finish_date_year" name="add[finish_date][year]" class="inputtext">
+        <select id="add_finish_date_year" name="add[finish_date][year]" class="form-control">
             <option value=""></option>
             @foreach ($years as $year)
                 <option value="{{ $year }}" @selected((string) old('add.finish_date.year', $yearValue) === (string) $year)>

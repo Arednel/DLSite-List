@@ -18,7 +18,7 @@
     text-align: right;
 }
 
-.create-mode-switch .inputButton.is-active {
+.create-mode-switch .form-button.is-active {
     font-weight: bold;
 }
 
@@ -77,28 +77,28 @@
     margin-top: 20px;
 }
 
-.dark-mode body:not(.ownlist) {
+.dark-mode body.product-form-page {
     background-color: #121212;
     color: #e0e0e0
 }
 
-.dark-mode body:not(.ownlist) input,
-.dark-mode body:not(.ownlist) textarea,
-.dark-mode body:not(.ownlist) select {
+.dark-mode body.product-form-page input,
+.dark-mode body.product-form-page textarea,
+.dark-mode body.product-form-page select {
     background-color: #333;
     border-color: #353535;
     color: #e0e0e0
 }
 
-.dark-mode .page-common .ml8 {
+.dark-mode .product-form-page .margin-left-8 {
     margin-left: 8px !important
 }
 
-.dark-mode .page-common .mt8 {
+.dark-mode .product-form-page .margin-top-8 {
     margin-top: 8px !important
 }
 
-.dark-mode .page-common .mb8 {
+.dark-mode .product-form-page .margin-bottom-8 {
     margin-bottom: 8px !important
 }
 
@@ -106,7 +106,7 @@
     color: #aaa;
 }
 
-.dark-mode body:not(.ownlist) {
+.dark-mode body.product-form-page {
     background: transparent;
     background-color: #121212;
     font-family: Verdana, Arial;
@@ -115,11 +115,11 @@
     text-align: center
 }
 
-.dark-mode .page-common html {
+.dark-mode .product-form-page html {
     height: 100%
 }
 
-.dark-mode .page-common body {
+.dark-mode .product-form-page body {
     background-color: #121212;
     font-family: Verdana, Arial;
     font-size: 11px;
@@ -129,7 +129,7 @@
     -webkit-text-size-adjust: 100%
 }
 
-.dark-mode .page-common #myanimelist {
+.dark-mode .product-form-page #product-form-container {
     margin-bottom: 0;
     margin-left: auto;
     margin-right: auto;
@@ -138,30 +138,30 @@
     width: 1060px
 }
 
-.dark-mode .page-common #contentWrapper {
+.dark-mode .product-form-page #contentWrapper {
     background-color: #121212;
     min-height: 555px;
     padding-bottom: 30px;
     position: relative
 }
 
-.dark-mode .page-common td {
+.dark-mode .product-form-page td {
     font-size: 11px;
     line-height: 1.5em
 }
 
-.dark-mode .page-common a,
-.dark-mode .page-common a:visited {
+.dark-mode .product-form-page a,
+.dark-mode .product-form-page a:visited {
     color: #abc4ed;
     text-decoration: none
 }
 
-.dark-mode .page-common a:hover {
+.dark-mode .product-form-page a:hover {
     color: #abc4ed;
     text-decoration: underline
 }
 
-.dark-mode .page-common #content {
+.dark-mode .product-form-page #content {
     background-color: #121212;
     border-color: #272727;
     border-style: solid;
@@ -170,7 +170,7 @@
     position: relative
 }
 
-.dark-mode .page-common .inputButton {
+.dark-mode .product-form-page .form-button {
     background-color: #4065ba;
     border: none;
     border-radius: 2px;
@@ -182,14 +182,14 @@
     text-decoration: none
 }
 
-.dark-mode .page-common .inputButton:disabled {
+.dark-mode .product-form-page .form-button:disabled {
     background-color: #5676c2;
     color: #fff;
     cursor: default;
     opacity: .5
 }
 
-.dark-mode .page-common .inputtext {
+.dark-mode .product-form-page .form-control {
     border-color: #353535;
     border-style: solid;
     border-width: 1px;
@@ -198,7 +198,7 @@
     padding: 2px
 }
 
-.dark-mode .page-common .textarea {
+.dark-mode .product-form-page .form-textarea {
     border-color: #353535;
     border-style: solid;
     border-width: 1px;
@@ -207,7 +207,7 @@
     padding: 2px
 }
 
-.dark-mode .page-common .normal_header {
+.dark-mode .product-form-page .dialog-title {
     border-color: #414141;
     border-style: solid;
     border-width: 0 0 1px;
@@ -219,7 +219,7 @@
     padding: 3px 0
 }
 
-.dark-mode .page-common .h1 {
+.dark-mode .product-form-page .form-page-title {
     background-color: #222;
     border-bottom-color: #585858;
     border-left-color: #272727;
@@ -236,20 +236,20 @@
     text-align: left
 }
 
-.dark-mode .page-common .borderClass {
+.dark-mode .product-form-page .form-table-cell {
     border-color: #272727;
     border-style: solid;
     border-width: 0 0 1px;
     padding: 3px
 }
 
-.dark-mode .page-common p {
+.dark-mode .product-form-page p {
     line-height: 1.5em;
     margin: 0;
     padding: 0
 }
 
-.dark-mode .dark-mode .page-common .inputtext {
+.dark-mode .dark-mode .product-form-page .form-control {
     background-color: #333
 }
 
@@ -268,45 +268,6 @@
     border-width: 0
 }
 
-.dark-mode #dialog .inputButton.submit {
-    -webkit-appearance: none;
-    -moz-appearance: none;
-    appearance: none;
-    background-color: #799ef3;
-    border: #799ef3 0 solid;
-    border-radius: 2px;
-    color: #121212 !important;
-    cursor: pointer;
-    font-family: Helvetica neue, Helvetica, lucida grande, tahoma, verdana, arial, sans-serif;
-    font-size: 14px;
-    letter-spacing: .03em;
-    padding: 6px 16px;
-    text-align: center
-}
-
-.dark-mode #dialog .inputButton.submit:hover {
-    background-color: #5676c2;
-    color: #121212;
-    text-decoration: none
-}
-
-.dark-mode #dialog .inputButton.submit:active {
-    background-color: #5676c2
-}
-
-.dark-mode #dialog .inputButton.submit.delete {
-    background-color: #5d6c91
-}
-
-.dark-mode #dialog .inputButton.submit.delete:hover {
-    background-color: rgba(93, 108, 145, .85);
-    text-decoration: none
-}
-
-.dark-mode #dialog .inputButton.submit.delete:active {
-    background-color: #5d6c91
-}
-
 .dark-mode .dark-mode #dialog {
     background-color: #222;
     border: 10px solid #222 !important
@@ -320,19 +281,19 @@
     margin-bottom: 0
 }
 
-.page-common .ml8 {
+.product-form-page .margin-left-8 {
     margin-left: 8px !important
 }
 
-.page-common .mt8 {
+.product-form-page .margin-top-8 {
     margin-top: 8px !important
 }
 
-.page-common .mb8 {
+.product-form-page .margin-bottom-8 {
     margin-bottom: 8px !important
 }
 
-body:not(.ownlist) {
+body.product-form-page {
     background: transparent;
     background-color: #fff;
     font-family: Verdana, Arial;
@@ -341,11 +302,11 @@ body:not(.ownlist) {
     text-align: center
 }
 
-.page-common html {
+.product-form-page html {
     height: 100%
 }
 
-.page-common body {
+.product-form-page body {
     background-color: #fff;
     font-family: Verdana, Arial;
     font-size: 11px;
@@ -355,7 +316,7 @@ body:not(.ownlist) {
     -webkit-text-size-adjust: 100%
 }
 
-.page-common #myanimelist {
+.product-form-page #product-form-container {
     margin-bottom: 0;
     margin-left: auto;
     margin-right: auto;
@@ -364,30 +325,30 @@ body:not(.ownlist) {
     width: 1060px
 }
 
-.page-common #contentWrapper {
+.product-form-page #contentWrapper {
     background-color: #fff;
     min-height: 555px;
     padding-bottom: 30px;
     position: relative
 }
 
-.page-common td {
+.product-form-page td {
     font-size: 11px;
     line-height: 1.5em
 }
 
-.page-common a,
-.page-common a:visited {
+.product-form-page a,
+.product-form-page a:visited {
     color: #1c439b;
     text-decoration: none
 }
 
-.page-common a:hover {
+.product-form-page a:hover {
     color: #1c439b;
     text-decoration: underline
 }
 
-.page-common #content {
+.product-form-page #content {
     background-color: #fff;
     border-color: #e5e5e5;
     border-style: solid;
@@ -396,7 +357,7 @@ body:not(.ownlist) {
     position: relative
 }
 
-.page-common .inputButton {
+.product-form-page .form-button {
     background-color: #4065ba;
     border: none;
     border-radius: 2px;
@@ -408,14 +369,14 @@ body:not(.ownlist) {
     text-decoration: none
 }
 
-.page-common .inputButton:disabled {
+.product-form-page .form-button:disabled {
     background-color: #5676c2;
     color: #fff;
     cursor: default;
     opacity: .5
 }
 
-.page-common .inputtext {
+.product-form-page .form-control {
     border-color: #d8d8d8;
     border-style: solid;
     border-width: 1px;
@@ -424,7 +385,7 @@ body:not(.ownlist) {
     padding: 2px
 }
 
-.page-common .textarea {
+.product-form-page .form-textarea {
     border-color: #d8d8d8;
     border-style: solid;
     border-width: 1px;
@@ -433,7 +394,7 @@ body:not(.ownlist) {
     padding: 2px
 }
 
-.page-common .normal_header {
+.product-form-page .dialog-title {
     border-color: #bebebe;
     border-style: solid;
     border-width: 0 0 1px;
@@ -445,7 +406,7 @@ body:not(.ownlist) {
     padding: 3px 0
 }
 
-.page-common .h1 {
+.product-form-page .form-page-title {
     background-color: #e1e7f5;
     border-bottom-color: #1c439b;
     border-left-color: #e5e5e5;
@@ -462,20 +423,20 @@ body:not(.ownlist) {
     text-align: left
 }
 
-.page-common .borderClass {
+.product-form-page .form-table-cell {
     border-color: #e5e5e5;
     border-style: solid;
     border-width: 0 0 1px;
     padding: 3px
 }
 
-.page-common p {
+.product-form-page p {
     line-height: 1.5em;
     margin: 0;
     padding: 0
 }
 
-.dark-mode .page-common .inputtext {
+.dark-mode .product-form-page .form-control {
     background-color: #333
 }
 
@@ -516,45 +477,6 @@ body:not(.ownlist) {
     border-width: 0
 }
 
-#dialog .inputButton.submit {
-    -webkit-appearance: none;
-    -moz-appearance: none;
-    appearance: none;
-    background-color: #4065ba;
-    border: #4065ba 0 solid;
-    border-radius: 2px;
-    color: #fff !important;
-    cursor: pointer;
-    font-family: Helvetica neue, Helvetica, lucida grande, tahoma, verdana, arial, sans-serif;
-    font-size: 14px;
-    letter-spacing: .03em;
-    padding: 6px 16px;
-    text-align: center
-}
-
-#dialog .inputButton.submit:hover {
-    background-color: #6c8cd8;
-    color: #fff;
-    text-decoration: none
-}
-
-#dialog .inputButton.submit:active {
-    background-color: #6c8cd8
-}
-
-#dialog .inputButton.submit.delete {
-    background-color: #8594b9
-}
-
-#dialog .inputButton.submit.delete:hover {
-    background-color: rgba(133, 148, 185, .85);
-    text-decoration: none
-}
-
-#dialog .inputButton.submit.delete:active {
-    background-color: #8594b9
-}
-
 .dark-mode #dialog {
     background-color: #222;
     border: 10px solid #222 !important
@@ -568,17 +490,17 @@ body:not(.ownlist) {
     margin-bottom: 0
 }
 
-.inputButton.danger {
+.form-button.danger {
     background-color: #e74c3c !important;
     cursor: pointer;
 }
 
-.inputButton.danger:hover {
+.form-button.danger:hover {
     background-color: #c0392b !important;
 }
 
-.form-fields-table .inputtext,
-.form-fields-table .textarea,
+.form-fields-table .form-control,
+.form-fields-table .form-textarea,
 .form-fields-table textarea,
 .form-fields-table select {
     max-width: 100%;
@@ -587,33 +509,33 @@ body:not(.ownlist) {
 
 @media (max-width: 768px) {
 
-    .page-common body,
-    .dark-mode .page-common body,
-    .page-common td,
-    .dark-mode .page-common td,
-    .page-common .inputtext,
-    .dark-mode .page-common .inputtext,
-    .page-common .textarea,
-    .dark-mode .page-common .textarea,
-    .page-common .field-helper,
-    .dark-mode .page-common .field-helper {
+    .product-form-page body,
+    .dark-mode .product-form-page body,
+    .product-form-page td,
+    .dark-mode .product-form-page td,
+    .product-form-page .form-control,
+    .dark-mode .product-form-page .form-control,
+    .product-form-page .form-textarea,
+    .dark-mode .product-form-page .form-textarea,
+    .product-form-page .field-helper,
+    .dark-mode .product-form-page .field-helper {
         font-size: 12px;
     }
 
-    .page-common #myanimelist,
-    .dark-mode .page-common #myanimelist {
+    .product-form-page #product-form-container,
+    .dark-mode .product-form-page #product-form-container {
         width: 100%;
     }
 
-    .page-common #content,
-    .dark-mode .page-common #content {
+    .product-form-page #content,
+    .dark-mode .product-form-page #content {
         padding: 0 8px 12px;
         border-left-width: 0;
         border-right-width: 0;
     }
 
-    .page-common .h1,
-    .dark-mode .page-common .h1 {
+    .product-form-page .form-page-title,
+    .dark-mode .product-form-page .form-page-title {
         border-left-width: 0;
         border-right-width: 0;
         padding: 10px 12px;
@@ -629,13 +551,13 @@ body:not(.ownlist) {
         box-sizing: border-box;
     }
 
-    .dialog-submit-row .inputButton,
-    .dialog-actions .inputButton {
+    .dialog-submit-row .form-button,
+    .dialog-actions .form-button {
         width: 100%;
         box-sizing: border-box;
     }
 
-    .dialog-actions .ml8 {
+    .dialog-actions .margin-left-8 {
         margin-left: 0 !important;
     }
 
@@ -666,8 +588,8 @@ body:not(.ownlist) {
         padding-bottom: 6px;
     }
 
-    .form-fields-table .inputtext,
-    .form-fields-table .textarea,
+    .form-fields-table .form-control,
+    .form-fields-table .form-textarea,
     .form-fields-table textarea,
     .form-fields-table select {
         width: 100%;
@@ -697,8 +619,8 @@ body:not(.ownlist) {
 
 @media (max-width: 480px) {
 
-    .page-common #content,
-    .dark-mode .page-common #content {
+    .product-form-page #content,
+    .dark-mode .product-form-page #content {
         padding: 0 6px 10px;
     }
 
@@ -707,8 +629,8 @@ body:not(.ownlist) {
         border-width: 4px;
     }
 
-    .page-common .inputButton,
-    .dark-mode .page-common .inputButton {
+    .product-form-page .form-button,
+    .dark-mode .product-form-page .form-button {
         padding: 8px 10px;
     }
 }

@@ -1,4 +1,4 @@
-<html lang="en" class="appearance-none dark-mode cvonfc">
+<html lang="en" class="dark-mode">
 
 <head>
     <title>Edit</title>
@@ -9,12 +9,12 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/7.0.1/css/all.min.css">
 </head>
 
-<body class="page-common  ownlist_manga_update" data-ms="false" data-country-code="KZ" data-time="1741691968">
-    <div id="myanimelist">
+<body class="product-form-page">
+    <div id="product-form-container">
         <div class="wrapper">
             <div id="contentWrapper">
                 <div>
-                    <h1 class="h1">Edit Work</h1>
+                    <h1 class="form-page-title">Edit Work</h1>
                 </div>
 
                 <div id="content">
@@ -22,7 +22,7 @@
                         <tbody>
                             <tr>
                                 <td>
-                                    <div class="normal_header dialog-header">
+                                    <div class="dialog-title dialog-header">
                                         Edit Work
                                     </div>
                                     <div class="dialog-body">
@@ -36,8 +36,9 @@
                                             @endforeach
                                             <input type="hidden" name="return_fragment" value="{{ $returnFragment }}">
 
-                                            <div id="top-submit-buttons" class="mt8 mb8 dialog-submit-row">
-                                                <input type="submit" class="inputButton main_submit" value="Submit">
+                                            <div id="top-submit-buttons"
+                                                class="margin-top-8 margin-bottom-8 dialog-submit-row">
+                                                <input type="submit" class="form-button submit-button" value="Submit">
                                             </div>
                                             <table class="form-fields-table" cellpadding="5" cellspacing="0"
                                                 width="100%">
@@ -63,8 +64,8 @@
                                                     <x-fields.priority :value="$product->priority" />
                                                 </tbody>
                                             </table>
-                                            <div class="mt8 mb8 dialog-submit-row">
-                                                <input type="submit" class="inputButton main_submit" value="Submit">
+                                            <div class="margin-top-8 margin-bottom-8 dialog-submit-row">
+                                                <input type="submit" class="form-button submit-button" value="Submit">
                                             </div>
                                         </form>
 
@@ -78,14 +79,15 @@
                                                     value="{{ $queryValue }}">
                                             @endforeach
 
-                                            <input type="submit" class="inputButton delete_submit" value="Delete"
+                                            <input type="submit" class="form-button delete-button" value="Delete"
                                                 onclick="return openDeleteModal(event);">
                                         </form>
 
                                         <br>
 
                                         <div class="dialog-actions dialog-actions-right">
-                                            <a href="{{ $returnUrl }}" class="inputButton ml8 ignore-visited-link">
+                                            <a href="{{ $returnUrl }}"
+                                                class="form-button margin-left-8 ignore-visited-link">
                                                 Go back
                                             </a>
                                         </div>
@@ -103,8 +105,8 @@
         <div class="modal-content">
             <p>Are you sure you want to delete this item?</p>
             <div class="modal-actions">
-                <button class="inputButton danger" onclick="confirmDeletion()">Yes, Delete</button>
-                <button class="inputButton ml8" onclick="closeModal()">Cancel</button>
+                <button class="form-button danger" onclick="confirmDeletion()">Yes, Delete</button>
+                <button class="form-button margin-left-8" onclick="closeModal()">Cancel</button>
             </div>
         </div>
     </div>
