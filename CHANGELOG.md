@@ -2,6 +2,9 @@
 
 ## Development
 
+* 2026-05-23 -- 1.3.4.1 Docker Tests
+  * Added "--rm", so docker test container automatically removed after tests
+
 * 2026-05-23 -- 1.3.4 Docker Tests and Scraper Process Cleanup
   * Added a shared DLSite Python runner using Laravel Process for scraper and tag-fetcher execution
   * Centralized genre sync payload creation with fetched-over-custom precedence

@@ -65,7 +65,7 @@ php artisan test
 To run the test suite inside Docker with a dedicated test database:
 
 ```bash
-docker compose --env-file docker/.env.docker --profile test run --build tests
+docker compose --env-file docker/.env.docker --profile test run --rm --build tests
 ```
 
 ## Additional docs
