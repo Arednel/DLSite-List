@@ -62,6 +62,12 @@ Create `.env.testing` from `.env.testing.example`, set test DB credentials, then
 php artisan test
 ```
 
+To run the test suite inside Docker with a dedicated test database:
+
+```bash
+docker compose --env-file docker/.env.docker --profile test run --build tests
+```
+
 ## Additional docs
 - `docs/CONFIGURATION.md`
 - `docs/ARCHITECTURE.md`

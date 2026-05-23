@@ -13,6 +13,7 @@ use Illuminate\Contracts\Filesystem\Filesystem;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Process;
 use Illuminate\Support\Facades\Storage;
 use Mockery;
 use Tests\TestCase;
@@ -747,6 +748,62 @@ class ProductControllerTest extends TestCase
         $response->assertSessionHasErrors(['id']);
 
         $this->assertSame('This RJ work is already in the database', session('errors')->first('id'));
+    }
+
+    public function test_store_uses_fake_dlsite_process_and_scraped_json_to_create_product(): void
+    {
+        Storage::fake('local');
+        Process::fake([
+            '*' => Process::result(),
+        ])->preventStrayProcesses();
+
+        $workId = Product::factory()->make()->id;
+
+        Storage::disk('local')->put("Works/{$workId}.json", json_encode([
+            'japanese' => [
+                'product_id' => $workId,
+                'maker_id' => 'RG12345',
+                'work_name' => 'SCRAPED_JP_TITLE_TOKEN',
+                'age_category' => ['_name_' => 'R18'],
+                'circle' => 'SCRAPED_CIRCLE_TOKEN',
+                'sample_images' => [],
+                'genre' => ['Scraped JP Tag'],
+                'description' => 'SCRAPED_JP_DESCRIPTION_TOKEN',
+            ],
+            'english' => [
+                'work_name' => 'SCRAPED_EN_TITLE_TOKEN',
+                'genre' => ['Scraped EN Tag'],
+                'description' => 'SCRAPED_EN_DESCRIPTION_TOKEN',
+            ],
+        ]));
+
+        $response = $this->post('/store', [
+            'id' => strtolower($workId),
+            'progress' => 'Completed',
+            'genre_custom' => 'Scraped Custom Tag',
+        ]);
+
+        $response->assertSessionHasNoErrors();
+        $response->assertRedirect("/#{$workId}");
+
+        Process::assertRan(function ($process) use ($workId): bool {
+            return $process->command === [
+                $this->expectedPythonExecutable(),
+                base_path('python/DLSiteScraper.py'),
+                storage_path(),
+                $workId,
+            ] && $process->timeout === null;
+        });
+
+        $product = Product::query()->whereKey($workId)->firstOrFail();
+        $product->load(['japaneseGenres', 'englishGenres', 'customGenres']);
+
+        $this->assertSame('SCRAPED_JP_TITLE_TOKEN', $product->work_name);
+        $this->assertSame('SCRAPED_EN_TITLE_TOKEN', $product->work_name_english);
+        $this->assertSame('Completed', $product->progress);
+        $this->assertSame(['Scraped JP Tag'], $product->japaneseGenres->pluck('title')->all());
+        $this->assertSame(['Scraped EN Tag'], $product->englishGenres->pluck('title')->all());
+        $this->assertSame(['Scraped Custom Tag'], $product->customGenres->pluck('title')->all());
     }
 
     public function test_store_rejects_invalid_date_order(): void
@@ -1933,6 +1990,15 @@ class ProductControllerTest extends TestCase
     private function uniqueToken(string $prefix): string
     {
         return $prefix . '_' . random_int(100000, 999999);
+    }
+
+    private function expectedPythonExecutable(): string
+    {
+        return base_path(
+            PHP_OS_FAMILY === 'Windows'
+                ? 'python/venv/Scripts/python.exe'
+                : 'python/venv/bin/python'
+        );
     }
 
     private function createGenre(string $title, string $type): Genre

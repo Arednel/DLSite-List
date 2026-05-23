@@ -6,6 +6,7 @@ use App\Models\Genre;
 use App\Models\Product;
 use App\Models\TagRefetchRun;
 use App\Models\TagRefetchWorkResult;
+use App\Support\GenreSyncPayload;
 use Illuminate\Support\Facades\DB;
 use Throwable;
 
@@ -229,7 +230,7 @@ class TagRefetchService
             );
         }
 
-        $product->genres()->sync($this->syncPayload($fetchedGenreIds, $customGenreIds));
+        $product->genres()->sync(GenreSyncPayload::build($fetchedGenreIds, $customGenreIds));
 
         $result->forceFill([
             'stale_japanese_action' => $japaneseAction,
@@ -257,15 +258,17 @@ class TagRefetchService
      */
     private function currentFetchedTitles(Product $product, string $type): array
     {
-        $genres = match ($type) {
-            Genre::TYPE_AUTO_GENERATED_JAPANESE => $product->japaneseGenres(),
-            Genre::TYPE_AUTO_GENERATED_ENGLISH => $product->englishGenres(),
-            default => null,
+        return match ($type) {
+            Genre::TYPE_AUTO_GENERATED_JAPANESE => $product->japaneseGenres()
+                ->orderBy('genres.title')
+                ->pluck('genres.title')
+                ->all(),
+            Genre::TYPE_AUTO_GENERATED_ENGLISH => $product->englishGenres()
+                ->orderBy('genres.title')
+                ->pluck('genres.title')
+                ->all(),
+            default => [],
         };
-
-        return $genres?->orderBy('genres.title')
-            ->pluck('genres.title')
-            ->all() ?? [];
     }
 
     /**
@@ -314,24 +317,5 @@ class TagRefetchService
             ->reject(fn (string $title): bool => in_array($title, $without, true))
             ->values()
             ->all();
-    }
-
-    /**
-     * @param  list<int>  $fetchedGenreIds
-     * @param  list<int>  $customGenreIds
-     */
-    private function syncPayload(array $fetchedGenreIds, array $customGenreIds): array
-    {
-        $payload = [];
-
-        foreach (array_unique($fetchedGenreIds) as $genreId) {
-            $payload[$genreId] = ['source' => Genre::PIVOT_SOURCE_FETCHED];
-        }
-
-        foreach (array_unique($customGenreIds) as $genreId) {
-            $payload[$genreId] = ['source' => Genre::PIVOT_SOURCE_CUSTOM];
-        }
-
-        return $payload;
     }
 }

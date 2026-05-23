@@ -1,5 +1,5 @@
-# Python 3.10 runtime stage
-FROM python:3.10-slim AS python-runtime
+# Python 3.14 runtime stage
+FROM python:3.14-slim AS python-runtime
 
 # Main PHP application stage
 FROM php:8.3-fpm
@@ -23,6 +23,9 @@ RUN mv "$PHP_INI_DIR/php.ini-production" "$PHP_INI_DIR/php.ini"
 # Copy the app files from the app directory.
 COPY . /var/www/dlsite_list
 
+# The real .env file is ignored by Docker, but some Laravel tooling still reads base_path('.env') directly. This line copies the Docker env file as a harmless in-image fallback while Compose env_file values remain the runtime source.
+RUN cp docker/.env.docker .env
+
 # Create directories
 RUN mkdir -p \
     /var/www/dlsite_list/storage/app/public \
@@ -39,7 +42,7 @@ COPY --from=composer:lts /usr/bin/composer /usr/bin/composer
 # Install Composer dependencies
 RUN composer install
 
-# Bring Python 3.10 into the PHP image
+# Bring Python into the PHP image
 COPY --from=python-runtime /usr/local /usr/local
 
 # Create python venv and install Python dependencies

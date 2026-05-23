@@ -37,8 +37,11 @@
   - `app/Models/TagRefetchWorkResult.php`
 - Refetch job/support:
   - `app/Jobs/FetchProductTagsJob.php`
+  - `app/Support/DLSite/DLSitePythonRunner.php`
   - `app/Support/TagRefetch/DLSiteTagFetcher.php`
   - `app/Support/TagRefetch/TagRefetchService.php`
+- Shared genre sync payload helper:
+  - `app/Support/GenreSyncPayload.php`
 - Livewire components:
   - `app/Livewire/ProductIndex.php`
   - `app/Livewire/IndexPaginationSettings.php`
@@ -146,6 +149,7 @@ Runtime note:
 - edit loads only the fetched English/custom genre rows it renders, while keeping fetched non-custom genres attached automatically
 - update reads user-added genres from the form, stores them as `genre_product.source = custom`, and can reuse an existing fetched genre row while keeping it editable for that product
 - custom create stores user-uploaded covers/samples in `storage/app/public/Works/{RJ}`, saves the uploaded cover public path in `products.work_image`, and attaches custom tags through the same genre resolver used by update
+- product create/update and refetch apply use `app/Support/GenreSyncPayload.php` to build `genre_product.source` sync payloads consistently; fetched tags keep precedence over custom tags when the same genre id appears in both lists
 - Options -> Refetch Tags dispatches one queued `FetchProductTagsJob` per selected product and stores results before any product tags are changed
 - the refetch progress panel is rendered by Livewire and polls every second only while the run is still running
 - the Options page has separate `Options` and `Refetch` tabs; validation errors from refetch forms reopen the Refetch tab
@@ -163,10 +167,11 @@ Runtime note:
 - refetch Blade views use small state/summary helpers on `TagRefetchRun` and `TagRefetchWorkResult` instead of checking raw status constants or counting buckets in controllers
 
 ## Scraper Integration
-- `ProductController::Scrape()` runs the Python script in `python/venv`.
+- `app/Support/DLSite/DLSitePythonRunner.php` runs Python scripts through Laravel's Process facade with the project `python/venv`.
+- Product create runs `python/DLSiteScraper.py` through `DLSitePythonRunner`.
 - Python fetches Japanese/English DLSite metadata, stores JSON in `storage/app/Works`, and downloads images to `storage/app/public/Works/{RJ}`.
 - Custom create does not run the scraper and does not create or read scraped JSON.
-- `DLSiteTagFetcher` runs `python/DLSiteTagFetcher.py` for the Refetch Tags queue job.
+- `DLSiteTagFetcher` runs `python/DLSiteTagFetcher.py` through `DLSitePythonRunner` for the Refetch Tags queue job.
 - `python/DLSiteTagFetcher.py` fetches tags only, returns `japanese.genre` and `english.genre` JSON through stdout, and does not write files.
 - Known DLSite fetch errors are stored as skipped work results and are shown on the review page.
 
@@ -179,17 +184,3 @@ Runtime note:
 - Custom tags are comma-separated and parsed with CSV rules:
   - commas inside a tag are supported via quotes
   - example: `"Junior / Senior (at work, school, etc)", Office Lady`
-
-## Testing Overview
-- Feature tests:
-  - `tests/Feature/ProductControllerTest.php`
-  - `tests/Feature/ProductIndexLivewireTest.php`
-  - `tests/Feature/ProductSortKeysTest.php`
-  - `tests/Feature/IndexPaginationSettingsTest.php`
-  - `tests/Feature/ProductGenreMigrationTest.php`
-  - `tests/Feature/OptionsControllerTest.php`
-- Unit tests:
-  - `tests/Unit/Enums/ProductIndexSortFieldTest.php`
-  - `tests/Unit/Support/ProductIndexFiltersTest.php`
-  - `tests/Unit/ExampleTest.php`
-- Feature tests use `RefreshDatabase` to isolate DB state during test execution.

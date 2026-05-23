@@ -8,19 +8,18 @@ use App\Http\Requests\StoreProductRequest;
 use App\Http\Requests\UpdateProductRequest;
 use App\Models\Genre;
 use App\Models\Product;
+use App\Support\DLSite\DLSitePythonRunner;
+use App\Support\GenreSyncPayload;
 use App\Support\ReturnTarget;
 use App\Support\TagInput;
 use Illuminate\Http\Request;
 use Illuminate\Http\UploadedFile;
-use Illuminate\Support\Collection;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\File;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\URL;
-use Symfony\Component\Process\Process;
-use Symfony\Component\Process\Exception\ProcessFailedException;
 use Illuminate\Validation\ValidationException;
 
 class ProductController extends Controller
@@ -74,26 +73,25 @@ class ProductController extends Controller
     /**
      * Store a newly created resource in storage.
      */
-    public function store(StoreProductRequest $request)
+    public function store(StoreProductRequest $request, DLSitePythonRunner $pythonRunner)
     {
         $validated = $request->validated();
 
         // Get RJ Code
         $workID = $validated['id'];
 
-        //Get work info from DLSite
-        $this->Scrape($workID);
+        // Get work info from DLSite
+        $this->scrape($workID, $pythonRunner);
 
-        //Get JSON info
-        $extractedWorkDataPath = storage_path('app/Works/' . $workID);
-        $json = File::get("$extractedWorkDataPath.json");
+        // Get JSON info
+        $json = Storage::disk('local')->get("Works/{$workID}.json");
         $workData = json_decode($json, true);
 
         $dlsite_product_id = $workData['japanese']['product_id'];
         $maker_id = $workData['japanese']['maker_id'];
         $work_name = $workData['japanese']['work_name'];
 
-        //If user isn't specified english title
+        // If user isn't specified english title
         if ($request->work_name_english == null) {
             $work_name_english = $workData['english']['work_name'];
             if ($work_name == $work_name_english) {
@@ -103,7 +101,7 @@ class ProductController extends Controller
             $work_name_english = $request->work_name_english;
         }
 
-        //If user passed work name - store it instead
+        // If user passed work name - store it instead
         if ($request->work_name != null) {
             $work_name = $request->work_name;
         }
@@ -304,39 +302,23 @@ class ProductController extends Controller
         return redirect($returnTarget->afterDeleting()->toUrl());
     }
 
-    private function Scrape(string $workID)
+    private function scrape(string $workID, DLSitePythonRunner $pythonRunner): void
     {
-        $storageDir = storage_path();
-
-        // Run DLSiteScraper download
-        $path = base_path('python/DLSiteScraper.py');
-
-        // Run the venv's Python (Windows vs Linux/macOS)
-        $pythonExe = base_path(
-            PHP_OS_FAMILY === 'Windows'
-                ? 'python/venv/Scripts/python.exe'
-                : 'python/venv/bin/python'
-        );
-
-        $process = new Process([$pythonExe, $path, $storageDir, $workID]);
-
-        // Set infinite timeout
-        $process->setTimeout(0);
-        $process->run();
+        $result = $pythonRunner->runScraper($workID);
 
         // Show any errors
-        if (!$process->isSuccessful()) {
-            $stderr = trim($process->getErrorOutput());
+        if ($result->failed()) {
+            $stderr = trim($result->errorOutput());
 
             // Show error on the previos page
-            if ($process->getExitCode() === 2 && $stderr !== '') {
+            if ($result->exitCode() === 2 && $stderr !== '') {
                 throw ValidationException::withMessages([
                     'id' => $stderr,
                 ]);
             }
 
             // Show error in Laravel
-            throw new ProcessFailedException($process);
+            $result->throw();
         }
     }
 
@@ -437,7 +419,7 @@ class ProductController extends Controller
         );
         $customGenreIds = Genre::resolveIdsFromTitles($customTitles, Genre::TYPE_CUSTOM, Genre::LANGUAGE_ENGLISH);
 
-        $product->genres()->sync($this->genreSyncPayload($fetchedGenreIds, $customGenreIds));
+        $product->genres()->sync(GenreSyncPayload::build($fetchedGenreIds, $customGenreIds));
     }
 
     private function syncProductCustomGenres(Product $product, array $customTitles): bool
@@ -469,23 +451,8 @@ class ProductController extends Controller
             ->values()
             ->all();
 
-        $product->genres()->sync($this->genreSyncPayload($fetchedGenreIds, $customGenreIds));
+        $product->genres()->sync(GenreSyncPayload::build($fetchedGenreIds, $customGenreIds));
 
         return $currentCustomGenreIds !== $normalizedCustomGenreIds;
-    }
-
-    private function genreSyncPayload(array $fetchedGenreIds, array $customGenreIds): array
-    {
-        $payload = [];
-
-        foreach (array_unique($fetchedGenreIds) as $genreId) {
-            $payload[$genreId] = ['source' => Genre::PIVOT_SOURCE_FETCHED];
-        }
-
-        foreach (array_unique($customGenreIds) as $genreId) {
-            $payload[$genreId] ??= ['source' => Genre::PIVOT_SOURCE_CUSTOM];
-        }
-
-        return $payload;
     }
 }

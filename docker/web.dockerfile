@@ -1,4 +1,4 @@
-FROM nginx:1.29
+FROM nginx:1.31
 
 # Copy public files (like css)
 WORKDIR /var/www/dlsite_list

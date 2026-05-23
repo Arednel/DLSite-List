@@ -36,6 +36,17 @@ services:
         env_file: docker/.env.docker
         restart: unless-stopped
 
+    # One-off test runner
+    tests:
+        profiles: ["test"]
+        build: *app_build
+        working_dir: /var/www/dlsite_list
+        command: ["php", "artisan", "test"]
+        depends_on:
+            database_test:
+                condition: service_healthy
+        env_file: docker/.env.testing.docker
+
     # Web Server
     web:
         build:
@@ -65,6 +76,23 @@ services:
             retries: 10
         env_file: "docker/.env.docker"
 
+    # Test Database
+    database_test:
+        profiles: ["test"]
+        image: mysql:8.0
+        volumes:
+            - dbdata_test:/var/lib/mysql
+        environment:
+            MYSQL_DATABASE: dlsite_list_test
+            MYSQL_ROOT_PASSWORD: laravel
+            MYSQL_PASSWORD: laravel
+            MYSQL_USER: laravel
+        healthcheck:
+            test: ["CMD", "mysqladmin" ,"ping", "-h", "localhost"]
+            timeout: 20s
+            retries: 10
+        env_file: "docker/.env.testing.docker"
+
     # Database management (phpMyAdmin)
     pma:
         image: phpmyadmin:5.2
@@ -87,3 +115,4 @@ volumes:
     storage_framework:
     storage_logs:
     dbdata:
+    dbdata_test:

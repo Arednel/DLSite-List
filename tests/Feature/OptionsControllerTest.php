@@ -84,8 +84,8 @@ class OptionsControllerTest extends TestCase
         $this->get('/options?tab=refetch')
             ->assertOk()
             ->assertSee('Go to latest refetch')
-            ->assertSee('href="'.route('options.refetch-tags.show', $latestRun).'"', false)
-            ->assertDontSee('href="'.route('options.refetch-tags.show', $olderRun).'"', false);
+            ->assertSee('href="' . route('options.refetch-tags.show', $latestRun) . '"', false)
+            ->assertDontSee('href="' . route('options.refetch-tags.show', $olderRun) . '"', false);
     }
 
     public function test_starting_all_works_creates_run_and_dispatches_one_batch_job_per_product(): void
@@ -116,7 +116,7 @@ class OptionsControllerTest extends TestCase
 
         Bus::assertBatched(function (PendingBatch $batch) use ($run, $first, $second): bool {
             $jobProductIds = $batch->jobs
-                ->map(fn (FetchProductTagsJob $job): string => $job->productId)
+                ->map(fn(FetchProductTagsJob $job): string => $job->productId)
                 ->all();
 
             return $batch->name === "Refetch tags #{$run->id}"
@@ -165,7 +165,7 @@ class OptionsControllerTest extends TestCase
 
         Bus::assertBatched(function (PendingBatch $batch) use ($selectedHigh, $selectedLow): bool {
             $jobProductIds = $batch->jobs
-                ->map(fn (FetchProductTagsJob $job): string => $job->productId)
+                ->map(fn(FetchProductTagsJob $job): string => $job->productId)
                 ->all();
 
             return $batch->jobs->count() === 2
@@ -243,6 +243,8 @@ class OptionsControllerTest extends TestCase
         $result = $run->results()->firstOrFail();
         $fetcher = new class extends DLSiteTagFetcher
         {
+            public function __construct() {}
+
             public function fetch(string $workId): array
             {
                 return [
@@ -308,6 +310,8 @@ class OptionsControllerTest extends TestCase
         $fetcher = new class extends DLSiteTagFetcher
         {
             public bool $calledForCustomOnly = false;
+
+            public function __construct() {}
 
             public function fetch(string $workId): array
             {
@@ -498,7 +502,7 @@ class OptionsControllerTest extends TestCase
     {
         $product->genres()->sync(
             collect($genres)
-                ->mapWithKeys(fn (Genre $genre): array => [
+                ->mapWithKeys(fn(Genre $genre): array => [
                     $genre->id => [
                         'source' => $genre->type === Genre::TYPE_CUSTOM
                             ? Genre::PIVOT_SOURCE_CUSTOM

@@ -6,6 +6,7 @@
 - `.env.testing`: test runtime
 - `.env.testing.example`: template for `.env.testing`
 - `docker/.env.docker`: Docker Compose runtime for `app`, `database`, and `pma` containers
+- `docker/.env.testing.docker`: Docker Compose runtime for the one-off `tests` service
 
 ## Simple Docker Setup
 Run from the project root:
@@ -16,12 +17,17 @@ This path:
 - installs Composer dependencies and the Python scraper venv inside the app image
 - builds the Nginx image from `docker/web.dockerfile`
 - starts MySQL 8 and phpMyAdmin
+- keeps the Docker test services behind the `test` Compose profile
 - runs `php artisan migrate` through `docker/docker-app-entrypoint.sh`
 - serves `/storage/*` directly from Nginx via `docker/vhost.conf`, so `php artisan storage:link` is not required for Docker
 
 Access points:
 - App: `http://localhost:8080`
 - phpMyAdmin: `http://localhost:8888`
+
+Docker test services are assigned to the `test` Compose profile, so they do not start during the normal app startup command.
+
+The app image copies `docker/.env.docker` to `.env` during build because some Laravel tooling expects `base_path('.env')` to exist. Runtime values still come from the Compose `env_file` entries, including `docker/.env.testing.docker` for the one-off `tests` service.
 
 ## Required Local Setup
 1. Create `.env` from `.env.example` if it does not already exist.
@@ -42,6 +48,7 @@ Access points:
 Main DB settings are in:
 - `.env` for local/manual runtime
 - `docker/.env.docker` for Docker Compose runtime
+- `docker/.env.testing.docker` for Docker Compose test runtime
 
 Relevant variables:
 - `DB_CONNECTION`
@@ -53,6 +60,10 @@ Relevant variables:
 
 MySQL engine is configured as InnoDB in:
 - `config/database.php` (`mysql.engine`)
+
+Docker database services:
+- `database` stores normal app data in the `dbdata` Docker volume
+- `database_test` stores test data in the `dbdata_test` Docker volume and is used only by the `tests` service
 
 ## Queue and Scheduler
 Refetch Tags runs through Laravel's database queue and job batches.
@@ -72,9 +83,6 @@ php artisan queue:work
 ```
 
 `php artisan schedule:work` is only needed if a scheduled command is added. The project does not currently register a scheduled batch-pruning command.
-
-Relevant Composer package:
-- `livewire/livewire`
 
 ## App Options
 The `options` table stores app settings as scalar string values keyed by `options.key`.
@@ -99,15 +107,6 @@ Built-in choices:
 - `unlimited`
 
 The Options tab also accepts a custom positive integer. `unlimited` disables Index pagination and renders every matching work.
-
-## Testing Configuration
-Test setup:
-- `.env.testing` is separate from `docker/.env.docker`
-- Put test DB credentials in `.env.testing`
-- Set application key
-
-Run tests:
-- `php artisan test`
 
 ## Scraper Runtime Paths
 - Python script: `python/DLSiteScraper.py`

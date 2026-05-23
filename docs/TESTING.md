@@ -27,6 +27,12 @@ Current automated coverage is in Laravel PHPUnit tests:
   - performance smoke timings emit PHPUnit warning issues above 500ms and stronger warning text above 1000ms; use `--do-not-fail-on-phpunit-warning` when you want the command to exit successfully while still showing those warnings
 - `tests/Unit/Support/ProductIndexFiltersTest.php`
   - covers query normalization, defaults, explicit input keys, visibility filter group coverage, and query export helpers
+- `tests/Unit/Support/DLSite/DLSitePythonRunnerTest.php`
+  - covers the Laravel Process command arrays used for scraper and tag-fetcher Python calls, including the project venv executable and disabled timeout
+- `tests/Unit/Support/GenreSyncPayloadTest.php`
+  - covers shared `genre_product.source` sync payload creation, deduplication, and fetched-over-custom precedence
+- `tests/Unit/Support/TagRefetch/DLSiteTagFetcherTest.php`
+  - covers Process-faked tag fetch output parsing, failed-process error messages, and invalid JSON handling
 - `tests/Unit/Support/ReturnTargetTest.php`
   - covers index-only return query/fragment normalization, malformed input fallback, ignored legacy return routes, and URL generation
 - `tests/Unit/View/Components/Fields/EnumSelectFieldTest.php`
@@ -39,6 +45,7 @@ Current automated coverage is in Laravel PHPUnit tests:
 There are no project-owned Python tests.
 
 ## Test Environment Setup
+### Local test setup
 1. Create a dedicated testing env file:
    - copy `.env.testing.example` to `.env.testing`
 2. Keep test settings separate from `docker/.env.docker`:
@@ -58,13 +65,24 @@ Feature tests use `RefreshDatabase`, so the configured test database is migrated
 Upload tests use Laravel's `UploadedFile::fake()` and `Storage::fake('public')` helpers, so custom cover/sample image tests do not write to the real public storage disk.
 
 Refetch Tags tests use Laravel's `Bus::fake()` for batch dispatch assertions and fake `DLSiteTagFetcher` classes so no DLSite network calls run during tests.
+Python process tests use Laravel's `Process::fake()` and `Process::preventStrayProcesses()` so scraper/tag-fetcher commands can be asserted without running Python.
 
 Livewire component tests use `Livewire::test()` to update component state without a browser.
 Index pagination tests set `options.index_per_page` through `App\Models\Option` so fixed, custom, and unlimited list sizes can be verified without touching application config.
 
+### Docker test setup
+Docker tests use:
+- `docker/.env.testing.docker` for Laravel's testing environment variables
+- `database_test` as the MySQL host inside the Docker network
+- `dbdata_test` as the separate Docker test database volume
+
+The Docker test service is one-off and does not run during the normal app startup command unless it is requested directly.
+
 ## Running Tests
 - Run all tests:
   - `php artisan test`
+- Run all tests inside Docker:
+  - `docker compose --env-file docker/.env.docker --profile test run --rm --build tests`
 - Run a filtered subset:
   - `php artisan test --filter=ProductControllerTest`
   - `php artisan test --filter=ProductIndexLivewireTest`
@@ -72,5 +90,9 @@ Index pagination tests set `options.index_per_page` through `App\Models\Option` 
   - `php artisan test --filter=OptionsControllerTest`
   - `php artisan test --filter=OptionsRefetchProgressTest`
   - `php artisan test --filter=OptionsWorkSearchTest`
+  - `php artisan test --filter=DLSite`
+  - `php artisan test --filter=GenreSyncPayloadTest`
   - `php artisan test --filter=PerformanceSmokeTest`
   - `php artisan test tests\Feature\PerformanceSmokeTest.php --do-not-fail-on-phpunit-warning`
+- Run a filtered subset inside Docker:
+  - `docker compose --env-file docker/.env.docker --profile test run --rm --build tests php artisan test --filter=ProductControllerTest`

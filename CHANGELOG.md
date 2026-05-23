@@ -2,9 +2,15 @@
 
 ## Development
 
+* 2026-05-23 -- 1.3.4 Docker Tests and Scraper Process Cleanup
+  * Added a shared DLSite Python runner using Laravel Process for scraper and tag-fetcher execution
+  * Centralized genre sync payload creation with fetched-over-custom precedence
+  * Added Docker test runner support with an isolated MySQL test database
+  * Expanded tests and updated project documentation
+
 * 2026-05-22 -- 1.3.3 CSS, HTML Cleanup
   * Cleaned up unused CSS classes, HTML code
-  * Moved CSS used both in Options and Tag Library to own css file
+  * Moved CSS used both in Options and Tag Library to it's own CSS file
   * Renamed some CSS classes for better clarity
 
 * 2026-05-19 -- 1.3.2 Performance Improvements

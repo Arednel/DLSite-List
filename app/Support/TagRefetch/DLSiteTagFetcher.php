@@ -2,36 +2,28 @@
 
 namespace App\Support\TagRefetch;
 
+use App\Support\DLSite\DLSitePythonRunner;
 use RuntimeException;
-use Symfony\Component\Process\Process;
 
 class DLSiteTagFetcher
 {
+    public function __construct(
+        private DLSitePythonRunner $pythonRunner,
+    ) {}
+
     /**
      * @return array{japanese: list<string>, english: list<string>}
      */
     public function fetch(string $workId): array
     {
-        $pythonExe = base_path(
-            PHP_OS_FAMILY === 'Windows'
-                ? 'python/venv/Scripts/python.exe'
-                : 'python/venv/bin/python'
-        );
+        $result = $this->pythonRunner->runTagFetcher($workId);
 
-        $process = new Process([
-            $pythonExe,
-            base_path('python/DLSiteTagFetcher.py'),
-            $workId,
-        ]);
-        $process->setTimeout(0);
-        $process->run();
-
-        if (! $process->isSuccessful()) {
-            $message = trim($process->getErrorOutput()) ?: trim($process->getOutput());
+        if ($result->failed()) {
+            $message = trim($result->errorOutput()) ?: trim($result->output());
             throw new RuntimeException($message ?: 'DLSite tag fetch failed.');
         }
 
-        $payload = json_decode($process->getOutput(), true);
+        $payload = json_decode($result->output(), true);
 
         if (! is_array($payload)) {
             throw new RuntimeException('DLSite tag fetch returned invalid JSON.');
