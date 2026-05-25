@@ -3,7 +3,7 @@
 ## Scope
 Current automated coverage is in Laravel PHPUnit tests:
 - `tests/Feature/ProductControllerTest.php`
-  - covers index filtering/sorting, English/custom-visible genre search and tag filters, create/edit pages, tag library English/custom visibility, index-only return navigation with visible-work anchors, visibility-filter return redirects, custom-sort return page calculation, a full visible-update return workflow, Laravel previous URL create back links, malformed create back-link input, create-mode back-link preservation, filtered delete page fallback, custom create/upload flow, editable custom tag source behavior, DLSite store with one fetched tag in both JP/EN buckets, index image selection, validation, update flow, and logged destroy cleanup failures
+  - covers index filtering/sorting, English/custom-visible genre search and tag filters, create/edit pages, optional fetched English tag editing, tag library English/custom visibility, index-only return navigation with visible-work anchors, visibility-filter return redirects, custom-sort return page calculation, a full visible-update return workflow, Laravel previous URL create back links, malformed create back-link input, create-mode back-link preservation, filtered delete page fallback, custom create/upload flow, editable custom tag source behavior, DLSite store with one fetched tag in both JP/EN buckets, index image selection, validation, update flow, and logged destroy cleanup failures
 - `tests/Feature/ReturnTargetProductTest.php`
   - covers product-aware return URLs for unlimited pagination, first-page omission, saved-page redirect fast paths, full-query visibility fast paths, unchanged-visibility fallback cleanup, and multi-filter visible-work cleanup
 - `tests/Feature/ProductIndexLivewireTest.php`
@@ -14,6 +14,8 @@ Current automated coverage is in Laravel PHPUnit tests:
   - covers derived product index keys for numeric RJ sorting, partial start/finish date sorting, and exact series filtering behavior
 - `tests/Feature/IndexPaginationSettingsTest.php`
   - covers the Options page-size setting component, including default, fixed, custom positive integer, unlimited, deferred save behavior, scalar option persistence, Livewire-only mode state, Livewire dirty-state saved notice behavior, and invalid custom values
+- `tests/Feature/FetchedTagEditingSettingsTest.php`
+  - covers the Options fetched-tag editing setting component, including default disabled state, scalar option persistence, and Livewire dirty-state saved notice behavior
 - `tests/Feature/ProductGenreMigrationTest.php`
   - covers migration of legacy product genre JSON into `genres` + `genre_product`, language row backfill into `genre_product_languages`, removal of old `genres.type` / `genres.language`, and same product/tag attachments with both JP and EN language rows
 - `tests/Feature/OptionsControllerTest.php`
@@ -32,7 +34,7 @@ Current automated coverage is in Laravel PHPUnit tests:
 - `tests/Unit/Support/GenreSyncPayloadTest.php`
   - covers shared `genre_product.source` sync payload creation, deduplication, fetched-over-custom precedence, and fetched language map creation
 - `tests/Unit/Support/ProductGenreSyncTest.php`
-  - covers syncing one product/tag attachment with multiple fetched language rows and preserving fetched language rows when custom tags are updated
+  - covers syncing one product/tag attachment with multiple fetched language rows, preserving fetched language rows when custom tags are updated, replacing editable English fetched rows, and fetched-over-custom precedence
 - `tests/Unit/Support/VisibleGenreAttachmentTest.php`
   - covers the shared English/custom-visible genre attachment query helper for custom, fetched EN, JP-only hidden, and same-title JP+EN cases
 - `tests/Unit/Support/TagRefetch/DLSiteTagFetcherTest.php`
@@ -73,6 +75,7 @@ Python process tests use Laravel's `Process::fake()` and `Process::preventStrayP
 
 Livewire component tests use `Livewire::test()` to update component state without a browser.
 Index pagination tests set `options.index_per_page` through `App\Models\Option` so fixed, custom, and unlimited list sizes can be verified without touching application config.
+Fetched tag editing tests set `options.edit_fetched_tags` through `App\Models\Option` so the disabled and enabled edit flows can be verified without changing environment config.
 
 ### Docker test setup
 Docker tests use:
@@ -91,6 +94,7 @@ The Docker test service is one-off and does not run during the normal app startu
   - `php artisan test --filter=ProductControllerTest`
   - `php artisan test --filter=ProductIndexLivewireTest`
   - `php artisan test --filter=IndexPaginationSettingsTest`
+  - `php artisan test --filter=FetchedTagEditingSettingsTest`
   - `php artisan test --filter=OptionsControllerTest`
   - `php artisan test --filter=OptionsRefetchProgressTest`
   - `php artisan test --filter=OptionsWorkSearchTest`

@@ -7,6 +7,7 @@ use App\Http\Requests\StoreCustomProductRequest;
 use App\Http\Requests\StoreProductRequest;
 use App\Http\Requests\UpdateProductRequest;
 use App\Models\Genre;
+use App\Models\Option;
 use App\Models\Product;
 use App\Support\DLSite\DLSitePythonRunner;
 use App\Support\ProductGenreSync;
@@ -214,12 +215,15 @@ class ProductController extends Controller
     {
         $product = Product::findOrFail($id);
         $editGenres = $this->loadEditGenresForProduct($product->getKey());
+        $englishGenres = $editGenres->get(Genre::LANGUAGE_ENGLISH, collect());
         $returnTarget = ReturnTarget::fromRequest($request, $product->getKey());
 
         return view('Edit', [
             'product' => $product,
-            'englishGenres' => $editGenres->get(Genre::LANGUAGE_ENGLISH, collect()),
-            'genreCustomInput' => $this->formatGenreCustomForInput(
+            'canEditFetchedTags' => Option::canEditFetchedTags(),
+            'englishGenres' => $englishGenres,
+            'genreFetchedEnglishInput' => $this->formatGenreInput($englishGenres->pluck('title')->all()),
+            'genreCustomInput' => $this->formatGenreInput(
                 $editGenres->get(Genre::PIVOT_SOURCE_CUSTOM, collect())->pluck('title')->all()
             ),
             'returnQuery' => $returnTarget->query,
@@ -255,7 +259,7 @@ class ProductController extends Controller
         ]);
         $productFieldsChanged = $product->isDirty(self::VISIBILITY_AFFECTING_PRODUCT_FIELDS);
         $product->save();
-        $customGenresChanged = $this->syncProductCustomGenres($product, $data['genre_custom'] ?? []);
+        $genresChanged = $this->syncProductEditGenres($product, $data);
 
         $returnTarget = ReturnTarget::fromRequest($request, $product->getKey());
         $newProgress = $data['progress'] ?? null;
@@ -266,7 +270,7 @@ class ProductController extends Controller
 
         return redirect($returnTarget->forProduct(
             $product,
-            visibilityMayHaveChanged: $productFieldsChanged || $customGenresChanged,
+            visibilityMayHaveChanged: $productFieldsChanged || $genresChanged,
         )->toUrl());
     }
 
@@ -279,7 +283,7 @@ class ProductController extends Controller
         $product = Product::find($id);
 
         // Missing records should be a safe no-op.
-        if (!$product) {
+        if (! $product) {
             return redirect($returnTarget->toUrl());
         }
 
@@ -326,7 +330,7 @@ class ProductController extends Controller
         }
     }
 
-    private function formatGenreCustomForInput(?array $tags): string
+    private function formatGenreInput(?array $tags): string
     {
         return TagInput::format($tags ?? []);
     }
@@ -422,5 +426,18 @@ class ProductController extends Controller
     private function syncProductCustomGenres(Product $product, array $customTitles): bool
     {
         return $this->genreSync->syncCustom($product, Genre::resolveIdsFromTitles($customTitles));
+    }
+
+    private function syncProductEditGenres(Product $product, array $data): bool
+    {
+        if (! Option::canEditFetchedTags()) {
+            return $this->syncProductCustomGenres($product, $data['genre_custom'] ?? []);
+        }
+
+        return $this->genreSync->syncEditableEnglishGenres(
+            $product,
+            Genre::resolveIdsFromTitles($data['genre_fetched_english'] ?? []),
+            Genre::resolveIdsFromTitles($data['genre_custom'] ?? []),
+        );
     }
 }

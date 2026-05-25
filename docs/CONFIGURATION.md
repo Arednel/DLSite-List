@@ -87,16 +87,17 @@ php artisan queue:work
 ## App Options
 The `options` table stores app settings as scalar string values keyed by `options.key`.
 
-Current setting:
+Current settings:
 - `index_per_page`: controls how many works the Index list renders per page
+- `edit_fetched_tags`: controls whether fetched English tags can be edited from Edit Work
 
 Runtime note:
-- `App\Models\Option` normalizes the stored string into `int|string` values for application use
+- `App\Models\Option` normalizes stored strings into the runtime values the app uses
 
-Default:
+Pagination default:
 - `100`
 
-Built-in choices:
+Pagination built-in choices:
 - `10`
 - `25`
 - `50`
@@ -107,6 +108,11 @@ Built-in choices:
 - `unlimited`
 
 The Options tab also accepts a custom positive integer. `unlimited` disables Index pagination and renders every matching work.
+
+Fetched tag editing default:
+- disabled
+
+When enabled, Edit Work allows changing fetched English tags. Japanese-only fetched tags remain stored but hidden.
 
 ## Scraper Runtime Paths
 - Python script: `python/DLSiteScraper.py`

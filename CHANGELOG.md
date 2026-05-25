@@ -2,6 +2,9 @@
 
 ## Development
 
+* 2026-05-24 -- 1.3.6 Tag Edit Toggle
+  * Added an Options toggle for editing fetched English tags from Edit Work
+
 * 2026-05-24 -- 1.3.5 Multilingual Tag Sync
   * Reworked genre language handling so one tag title can be attached as fetched JP, fetched EN, or custom per product
   * Updated Index, Edit, Tag Library, and Refetch Tags to show English/custom-visible tags while preserving JP-only fetched tags

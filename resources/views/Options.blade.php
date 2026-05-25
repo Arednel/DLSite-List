@@ -51,6 +51,13 @@
                     </p>
 
                     <livewire:index-pagination-settings />
+
+                    <h2>Tag Editing</h2>
+                    <p class="option-description">
+                        Choose whether fetched English tags can be changed from the Edit Work page.
+                    </p>
+
+                    <livewire:fetched-tag-editing-settings />
                 </section>
             @endif
 

@@ -763,6 +763,125 @@ class ProductControllerTest extends TestCase
             ->assertSee('"Junior / Senior (at work, school, etc)", Office Lady');
     }
 
+    public function test_edit_keeps_fetched_english_tags_readonly_when_option_disabled(): void
+    {
+        $englishGenre = $this->createGenre('READONLY_FETCHED_EN_TOKEN', Genre::TYPE_AUTO_GENERATED_ENGLISH);
+        $product = Product::factory()->create([
+            'work_name' => 'READONLY_FETCHED_EDIT_TOKEN',
+        ]);
+        $this->attachGenres($product, [$englishGenre]);
+
+        $this->get("/edit/{$product->id}")
+            ->assertOk()
+            ->assertSee('Fetched EN Genres')
+            ->assertSee('READONLY_FETCHED_EN_TOKEN')
+            ->assertSee('readonly', false)
+            ->assertDontSee('name="genre_fetched_english"', false);
+    }
+
+    public function test_edit_renders_editable_fetched_english_tags_when_option_enabled(): void
+    {
+        Option::setCanEditFetchedTags(true);
+
+        $englishGenre = $this->createGenre('EDITABLE_FETCHED_EN_TOKEN', Genre::TYPE_AUTO_GENERATED_ENGLISH);
+        $product = Product::factory()->create([
+            'work_name' => 'EDITABLE_FETCHED_EDIT_TOKEN',
+        ]);
+        $this->attachGenres($product, [$englishGenre]);
+
+        $this->get("/edit/{$product->id}")
+            ->assertOk()
+            ->assertSee('name="genre_fetched_english"', false)
+            ->assertSee('EDITABLE_FETCHED_EN_TOKEN')
+            ->assertDontSee('No fetched genres.');
+    }
+
+    public function test_update_ignores_fetched_english_input_when_option_disabled(): void
+    {
+        $englishGenre = $this->createGenre('UNCHANGED_FETCHED_EN_TOKEN', Genre::TYPE_AUTO_GENERATED_ENGLISH);
+        $product = Product::factory()->create([
+            'work_name' => 'IGNORE_FETCHED_EDIT_TOKEN',
+        ]);
+        $this->attachGenres($product, [$englishGenre]);
+
+        $this->post("/update/{$product->id}", [
+            'work_name' => $product->work_name,
+            'genre_fetched_english' => 'MALICIOUS_FETCHED_EN_TOKEN',
+        ])->assertSessionHasNoErrors();
+
+        $product->refresh()->load('englishGenres');
+        $this->assertSame(['UNCHANGED_FETCHED_EN_TOKEN'], $product->englishGenres->pluck('title')->all());
+        $this->assertDatabaseMissing('genres', [
+            'title' => 'MALICIOUS_FETCHED_EN_TOKEN',
+        ]);
+    }
+
+    public function test_update_can_replace_fetched_english_tags_when_option_enabled(): void
+    {
+        Option::setCanEditFetchedTags(true);
+
+        $product = Product::factory()->create([
+            'work_name' => 'REPLACE_FETCHED_EDIT_TOKEN',
+        ]);
+        $oldEnglishGenre = Genre::query()->create(['title' => 'Old Editable EN']);
+        $keptEnglishGenre = Genre::query()->create(['title' => 'Kept Editable EN']);
+        Genre::query()->create(['title' => 'New Editable EN']);
+
+        app(ProductGenreSync::class)->sync($product, [
+            Genre::LANGUAGE_ENGLISH => [
+                $oldEnglishGenre->getKey(),
+                $keptEnglishGenre->getKey(),
+            ],
+        ], []);
+
+        $this->post("/update/{$product->id}", [
+            'work_name' => $product->work_name,
+            'genre_fetched_english' => 'Kept Editable EN, New Editable EN',
+            'genre_custom' => 'Custom Editable Tag',
+        ])->assertSessionHasNoErrors();
+
+        $product->refresh()->load(['englishGenres', 'customGenres']);
+        $this->assertEqualsCanonicalizing(
+            ['Kept Editable EN', 'New Editable EN'],
+            $product->englishGenres->pluck('title')->all()
+        );
+        $this->assertSame(['Custom Editable Tag'], $product->customGenres->pluck('title')->all());
+        $this->assertDatabaseMissing('genre_product', [
+            'product_id' => $product->getKey(),
+            'genre_id' => $oldEnglishGenre->getKey(),
+        ]);
+    }
+
+    public function test_update_preserves_japanese_fetched_tags_when_editing_fetched_english_tags(): void
+    {
+        Option::setCanEditFetchedTags(true);
+
+        $product = Product::factory()->create([
+            'work_name' => 'PRESERVE_JP_FETCHED_EDIT_TOKEN',
+        ]);
+        $japaneseGenre = Genre::query()->create(['title' => 'Hidden JP Editable']);
+        $oldEnglishGenre = Genre::query()->create(['title' => 'Old Visible EN']);
+        Genre::query()->create(['title' => 'Replacement Visible EN']);
+
+        app(ProductGenreSync::class)->sync($product, [
+            Genre::LANGUAGE_JAPANESE => [$japaneseGenre->getKey()],
+            Genre::LANGUAGE_ENGLISH => [$oldEnglishGenre->getKey()],
+        ], []);
+
+        $this->post("/update/{$product->id}", [
+            'work_name' => $product->work_name,
+            'genre_fetched_english' => 'Replacement Visible EN',
+        ])->assertSessionHasNoErrors();
+
+        $product->refresh()->load(['japaneseGenres', 'englishGenres']);
+        $this->assertSame(['Hidden JP Editable'], $product->japaneseGenres->pluck('title')->all());
+        $this->assertSame(['Replacement Visible EN'], $product->englishGenres->pluck('title')->all());
+        $this->assertDatabaseMissing('genre_product', [
+            'product_id' => $product->getKey(),
+            'genre_id' => $oldEnglishGenre->getKey(),
+        ]);
+    }
+
     public function test_store_rejects_invalid_rj_code(): void
     {
         $response = $this->from('/create')->post('/store', [

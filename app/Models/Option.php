@@ -8,6 +8,8 @@ class Option extends Model
 {
     public const INDEX_PER_PAGE = 'index_per_page';
 
+    public const EDIT_FETCHED_TAGS = 'edit_fetched_tags';
+
     public const INDEX_PER_PAGE_UNLIMITED = 'unlimited';
 
     public const DEFAULT_INDEX_PER_PAGE = 100;
@@ -44,6 +46,21 @@ class Option extends Model
         );
     }
 
+    public static function canEditFetchedTags(): bool
+    {
+        return self::query()
+            ->where('key', self::EDIT_FETCHED_TAGS)
+            ->value('value') === '1';
+    }
+
+    public static function setCanEditFetchedTags(bool $enabled): void
+    {
+        self::query()->updateOrCreate(
+            ['key' => self::EDIT_FETCHED_TAGS],
+            ['value' => $enabled ? '1' : '0'],
+        );
+    }
+
     public static function normalizeIndexPerPage(mixed $value): int|string
     {
         if ($value === self::INDEX_PER_PAGE_UNLIMITED) {
@@ -63,7 +80,7 @@ class Option extends Model
     public static function fixedIndexPerPageOptions(): array
     {
         return collect(self::FIXED_INDEX_PER_PAGE_OPTIONS)
-            ->mapWithKeys(fn (int $value): array => [$value => (string) $value])
+            ->mapWithKeys(fn(int $value): array => [$value => (string) $value])
             ->all();
     }
 }

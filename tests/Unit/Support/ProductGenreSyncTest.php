@@ -58,4 +58,53 @@ class ProductGenreSyncTest extends TestCase
         $this->assertSame(['Fetched'], $product->englishGenres->pluck('title')->all());
         $this->assertSame(['Custom'], $product->customGenres->pluck('title')->all());
     }
+
+    public function test_editable_english_sync_replaces_english_and_preserves_japanese_rows(): void
+    {
+        $product = Product::factory()->create();
+        $japaneseGenre = Genre::query()->create(['title' => 'Japanese Only']);
+        $oldEnglishGenre = Genre::query()->create(['title' => 'Old English']);
+        $newEnglishGenre = Genre::query()->create(['title' => 'New English']);
+        $sync = app(ProductGenreSync::class);
+
+        $sync->sync($product, [
+            Genre::LANGUAGE_JAPANESE => [$japaneseGenre->getKey()],
+            Genre::LANGUAGE_ENGLISH => [$oldEnglishGenre->getKey()],
+        ], []);
+
+        $changed = $sync->syncEditableEnglishGenres($product, [$newEnglishGenre->getKey()], []);
+
+        $this->assertTrue($changed);
+        $product->refresh()->load(['japaneseGenres', 'englishGenres']);
+        $this->assertSame(['Japanese Only'], $product->japaneseGenres->pluck('title')->all());
+        $this->assertSame(['New English'], $product->englishGenres->pluck('title')->all());
+        $this->assertDatabaseMissing('genre_product', [
+            'product_id' => $product->getKey(),
+            'genre_id' => $oldEnglishGenre->getKey(),
+        ]);
+    }
+
+    public function test_editable_english_sync_keeps_fetched_over_custom_precedence(): void
+    {
+        $product = Product::factory()->create();
+        $sharedGenre = Genre::query()->create(['title' => 'Shared']);
+        $customGenre = Genre::query()->create(['title' => 'Custom']);
+
+        app(ProductGenreSync::class)->syncEditableEnglishGenres(
+            $product,
+            [$sharedGenre->getKey()],
+            [$sharedGenre->getKey(), $customGenre->getKey()],
+        );
+
+        $product->refresh()->load(['englishGenres', 'customGenres']);
+        $this->assertSame(['Shared'], $product->englishGenres->pluck('title')->all());
+        $this->assertSame(['Custom'], $product->customGenres->pluck('title')->all());
+
+        $pivot = DB::table('genre_product')
+            ->where('product_id', $product->getKey())
+            ->where('genre_id', $sharedGenre->getKey())
+            ->first();
+
+        $this->assertSame(Genre::PIVOT_SOURCE_FETCHED, $pivot->source);
+    }
 }

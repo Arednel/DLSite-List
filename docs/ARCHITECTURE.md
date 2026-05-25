@@ -48,6 +48,7 @@
 - Livewire components:
   - `app/Livewire/ProductIndex.php`
   - `app/Livewire/IndexPaginationSettings.php`
+  - `app/Livewire/FetchedTagEditingSettings.php`
   - `app/Livewire/OptionsWorkSearch.php`
   - `app/Livewire/OptionsRefetchProgress.php`
 - Views: `resources/views/*.blade.php`
@@ -125,12 +126,9 @@ Queue tables:
 - `job_batches` stores Laravel batch metadata
 
 `options` stores app-level settings as scalar string values:
-- `index_per_page` controls Index pagination
-- default is `100`
-- fixed choices are `10`, `25`, `50`, `100`, `250`, `500`, `1000`
-- custom values accept any positive integer
-- `unlimited` disables Index pagination links and renders all matching works
-- `App\Models\Option` normalizes the stored scalar string into the `int|string` runtime value the app uses
+- `index_per_page` controls Index pagination, defaults to `100`, accepts fixed choices (`10`, `25`, `50`, `100`, `250`, `500`, `1000`) or any positive integer, and can be set to `unlimited`
+- `edit_fetched_tags` controls whether fetched English tags can be edited from Edit Work, and defaults to disabled
+- `App\Models\Option` normalizes stored scalar strings into the runtime values the app uses
 
 Current repo-level Index sort-key indexes:
 - `products.id` remains the primary key
@@ -165,6 +163,7 @@ Runtime note:
 - create/store resolves scraped/custom titles into `genres` rows and syncs the pivot
 - edit loads only the fetched English/custom genre rows it renders, while keeping fetched non-custom genres attached automatically
 - update reads user-added genres from the form, stores them as `genre_product.source = custom`, and can reuse an existing fetched genre row while keeping it editable for that product
+- when `options.edit_fetched_tags` is enabled, edit also renders fetched English tags as an editable CSV field; update replaces only the `en` fetched language bucket, preserves hidden `jp` fetched rows, and still keeps fetched-over-custom precedence
 - custom create stores user-uploaded covers/samples in `storage/app/public/Works/{RJ}`, saves the uploaded cover public path in `products.work_image`, and attaches custom tags through the same genre resolver used by update
 - product create/update and refetch apply use `app/Support/ProductGenreSync.php` to sync `genre_product.source` and `genre_product_languages` together
 - `app/Support/GenreSyncPayload.php` keeps fetched-over-custom source precedence and builds the fetched language map used by `ProductGenreSync`
@@ -173,6 +172,7 @@ Runtime note:
 - the Options page has separate `Options` and `Refetch` tabs; validation errors from refetch forms reopen the Refetch tab
 - the Refetch tab links to the latest refetch run when at least one run exists
 - the Options tab includes an Index Pagination setting powered by Livewire and persisted in `options.index_per_page`; changing the mode can reveal the custom-value input immediately, but the setting is only persisted when Save is submitted
+- the Options tab includes a Livewire fetched-tag editing toggle persisted in `options.edit_fetched_tags`
 - the selected-work search on the Refetch tab is rendered by Livewire and uses Laravel query helpers for the ID/title match
 - the Refetch tab work list and queued all/selected refetch ids use numeric RJ descending order, matching the Index default order
 - custom-only works are skipped during refetch because they do not have DLSite metadata to fetch from

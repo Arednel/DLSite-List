@@ -150,6 +150,11 @@ abstract class BaseProductRequest extends FormRequest
 
     protected function normalizeGenreCustom(?string $value): array
     {
+        return $this->normalizeGenreList($value);
+    }
+
+    protected function normalizeGenreList(?string $value): array
+    {
         return TagInput::parse($value);
     }
 

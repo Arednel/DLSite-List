@@ -49,8 +49,12 @@
                                                     <x-fields.series-field :value="$product->series" />
                                                     <x-fields.title-japanese :value="$product->work_name" required />
                                                     <x-fields.title-english :value="$product->work_name_english" />
-                                                    <x-fields.genre-readonly label="Fetched EN Genres"
-                                                        :genres="$englishGenres" />
+                                                    @if ($canEditFetchedTags)
+                                                        <x-fields.genre-fetched-editable :value="$genreFetchedEnglishInput" />
+                                                    @else
+                                                        <x-fields.genre-readonly label="Fetched EN Genres"
+                                                            :genres="$englishGenres" />
+                                                    @endif
                                                     <x-fields.genre-custom :value="$genreCustomInput" />
                                                     <x-fields.notes :value="$product->notes" />
                                                     <x-fields.start-date :month-labels="$monthLabels" :days="$days"

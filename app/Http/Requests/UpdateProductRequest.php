@@ -21,6 +21,16 @@ class UpdateProductRequest extends BaseProductRequest
     {
         return array_merge([
             'work_name' => ['required', 'string'],
+            'genre_fetched_english' => ['nullable', 'array'],
         ], $this->commonRules());
+    }
+
+    protected function prepareForValidation(): void
+    {
+        parent::prepareForValidation();
+
+        $this->merge([
+            'genre_fetched_english' => $this->normalizeGenreList($this->input('genre_fetched_english')),
+        ]);
     }
 }
