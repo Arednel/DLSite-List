@@ -1,3 +1,14 @@
+@props([
+    'run',
+    'moveAction',
+    'removeAction',
+    'addAction',
+    'ignoreAction',
+    'promoteCustomAction',
+    'keepCustomAction',
+    'showControls',
+])
+
 <div class="result-list">
     @foreach ($run->results as $result)
         <details class="result-card">
@@ -16,6 +27,10 @@
                             @endif
                             @if ($result->hasStaleEnglishTags())
                                 <span class="result-indicator result-indicator--stale" title="Stale EN tags">-EN</span>
+                            @endif
+                            @if ($result->hasCustomToFetchedTags())
+                                <span class="result-indicator result-indicator--new"
+                                    title="Custom tags now fetched">C->F</span>
                             @endif
                         </span>
                     @endif
@@ -97,10 +112,48 @@
                             @endforelse
                         </div>
                     </div>
+
+                    <div>
+                        <h3>Custom -> Fetched JP</h3>
+                        <div class="tag-row">
+                            @forelse ($result->custom_to_fetched_japanese_tags ?? [] as $tag)
+                                <span class="tag tag--soft tag--sm">{{ $tag }}</span>
+                            @empty
+                                <span class="empty-state">None</span>
+                            @endforelse
+                        </div>
+                    </div>
+
+                    <div>
+                        <h3>Custom -> Fetched EN</h3>
+                        <div class="tag-row">
+                            @forelse ($result->custom_to_fetched_english_tags ?? [] as $tag)
+                                <span class="tag tag--soft tag--sm">{{ $tag }}</span>
+                            @empty
+                                <span class="empty-state">None</span>
+                            @endforelse
+                        </div>
+                    </div>
                 </div>
 
                 @if ($showControls)
                     <div class="review-actions review-actions--compact">
+                        <label>
+                            This work New JP
+                            <select name="work_actions[{{ $result->product_id }}][added_japanese]">
+                                <option value="inherit" selected>Use global choice</option>
+                                <option value="{{ $addAction }}">Add as fetched</option>
+                                <option value="{{ $ignoreAction }}">Ignore</option>
+                            </select>
+                        </label>
+                        <label>
+                            This work New EN
+                            <select name="work_actions[{{ $result->product_id }}][added_english]">
+                                <option value="inherit" selected>Use global choice</option>
+                                <option value="{{ $addAction }}">Add as fetched</option>
+                                <option value="{{ $ignoreAction }}">Ignore</option>
+                            </select>
+                        </label>
                         <label>
                             This work Stale JP
                             <select name="work_actions[{{ $result->product_id }}][japanese]">
@@ -115,6 +168,14 @@
                                 <option value="inherit" selected>Use global choice</option>
                                 <option value="{{ $moveAction }}">Move to custom tags</option>
                                 <option value="{{ $removeAction }}">Remove</option>
+                            </select>
+                        </label>
+                        <label>
+                            This work Custom -> Fetched
+                            <select name="work_actions[{{ $result->product_id }}][custom_to_fetched]">
+                                <option value="inherit" selected>Use global choice</option>
+                                <option value="{{ $promoteCustomAction }}">Promote to fetched</option>
+                                <option value="{{ $keepCustomAction }}">Keep custom</option>
                             </select>
                         </label>
                     </div>

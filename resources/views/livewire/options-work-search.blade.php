@@ -18,7 +18,7 @@
             <label class="work-checklist__item" wire:key="refetch-work-{{ $product->id }}">
                 <input type="checkbox" name="product_ids[]" value="{{ $product->id }}" wire:model="selectedProductIds">
                 <span>
-                    <strong>{{ $product->id }}</strong>
+                    <strong>{{ $product->id }} - </strong>
                     {{ $product->work_name }}
                     @if ($product->work_name_english)
                         <span class="work-checklist__muted">{{ $product->work_name_english }}</span>

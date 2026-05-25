@@ -174,7 +174,6 @@ section.panel:nth-of-type(6) {
     font-weight: 600;
     line-height: 1;
     text-decoration: none;
-    user-select: none;
     transition:
         transform 0.16s ease,
         box-shadow 0.16s ease,

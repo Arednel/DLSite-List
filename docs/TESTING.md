@@ -3,7 +3,7 @@
 ## Scope
 Current automated coverage is in Laravel PHPUnit tests:
 - `tests/Feature/ProductControllerTest.php`
-  - covers index filtering/sorting, create/edit pages, index-only return navigation with visible-work anchors, visibility-filter return redirects, custom-sort return page calculation, a full visible-update return workflow, Laravel previous URL create back links, malformed create back-link input, create-mode back-link preservation, filtered delete page fallback, custom create/upload flow, editable custom tag source behavior, index image selection, validation, update flow, and logged destroy cleanup failures
+  - covers index filtering/sorting, English/custom-visible genre search and tag filters, create/edit pages, tag library English/custom visibility, index-only return navigation with visible-work anchors, visibility-filter return redirects, custom-sort return page calculation, a full visible-update return workflow, Laravel previous URL create back links, malformed create back-link input, create-mode back-link preservation, filtered delete page fallback, custom create/upload flow, editable custom tag source behavior, DLSite store with one fetched tag in both JP/EN buckets, index image selection, validation, update flow, and logged destroy cleanup failures
 - `tests/Feature/ReturnTargetProductTest.php`
   - covers product-aware return URLs for unlimited pagination, first-page omission, saved-page redirect fast paths, full-query visibility fast paths, unchanged-visibility fallback cleanup, and multi-filter visible-work cleanup
 - `tests/Feature/ProductIndexLivewireTest.php`
@@ -15,9 +15,9 @@ Current automated coverage is in Laravel PHPUnit tests:
 - `tests/Feature/IndexPaginationSettingsTest.php`
   - covers the Options page-size setting component, including default, fixed, custom positive integer, unlimited, deferred save behavior, scalar option persistence, Livewire-only mode state, Livewire dirty-state saved notice behavior, and invalid custom values
 - `tests/Feature/ProductGenreMigrationTest.php`
-  - covers migration of legacy product genre JSON into `genres` + `genre_product`, including pivot source values
+  - covers migration of legacy product genre JSON into `genres` + `genre_product`, language row backfill into `genre_product_languages`, removal of old `genres.type` / `genres.language`, and same product/tag attachments with both JP and EN language rows
 - `tests/Feature/OptionsControllerTest.php`
-  - covers the Options/Refetch page tabs, latest-refetch link, Refetch Tags request validation, queue batch creation, selected/all work scopes including numeric RJ-desc queued order, progress JSON, tags-only job results, relationship-backed tag diff ordering, skipped errors/custom-only works, review rendering/change indicators, newest-run-only apply controls, and apply behavior for stale tag move/remove choices
+  - covers the Options/Refetch page tabs, latest-refetch link, Refetch Tags request validation, queue batch creation, selected/all work scopes including numeric RJ-desc queued order, progress JSON, tags-only job results, relationship-backed tag diff ordering, skipped errors/custom-only works, review rendering/change indicators, newest-run-only apply controls, new-tag add/ignore behavior, stale-language move/remove behavior, JP-only to JP+EN and EN-only transitions, and custom-to-fetched promote/keep choices
 - `tests/Feature/OptionsRefetchProgressTest.php`
   - covers the Livewire refetch progress panel polling only while a run is active and redirecting once review results are ready
 - `tests/Feature/OptionsWorkSearchTest.php`
@@ -30,7 +30,11 @@ Current automated coverage is in Laravel PHPUnit tests:
 - `tests/Unit/Support/DLSite/DLSitePythonRunnerTest.php`
   - covers the Laravel Process command arrays used for scraper and tag-fetcher Python calls, including the project venv executable and disabled timeout
 - `tests/Unit/Support/GenreSyncPayloadTest.php`
-  - covers shared `genre_product.source` sync payload creation, deduplication, and fetched-over-custom precedence
+  - covers shared `genre_product.source` sync payload creation, deduplication, fetched-over-custom precedence, and fetched language map creation
+- `tests/Unit/Support/ProductGenreSyncTest.php`
+  - covers syncing one product/tag attachment with multiple fetched language rows and preserving fetched language rows when custom tags are updated
+- `tests/Unit/Support/VisibleGenreAttachmentTest.php`
+  - covers the shared English/custom-visible genre attachment query helper for custom, fetched EN, JP-only hidden, and same-title JP+EN cases
 - `tests/Unit/Support/TagRefetch/DLSiteTagFetcherTest.php`
   - covers Process-faked tag fetch output parsing, failed-process error messages, and invalid JSON handling
 - `tests/Unit/Support/ReturnTargetTest.php`
@@ -92,6 +96,8 @@ The Docker test service is one-off and does not run during the normal app startu
   - `php artisan test --filter=OptionsWorkSearchTest`
   - `php artisan test --filter=DLSite`
   - `php artisan test --filter=GenreSyncPayloadTest`
+  - `php artisan test --filter=ProductGenreSyncTest`
+  - `php artisan test --filter=VisibleGenreAttachmentTest`
   - `php artisan test --filter=PerformanceSmokeTest`
   - `php artisan test tests\Feature\PerformanceSmokeTest.php --do-not-fail-on-phpunit-warning`
 - Run a filtered subset inside Docker:

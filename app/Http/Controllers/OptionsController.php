@@ -31,7 +31,7 @@ class OptionsController extends Controller
 
         $batch = Bus::batch(
             collect($productIds)
-                ->map(fn (string $productId): FetchProductTagsJob => new FetchProductTagsJob($run->getKey(), $productId))
+                ->map(fn(string $productId): FetchProductTagsJob => new FetchProductTagsJob($run->getKey(), $productId))
                 ->all()
         )
             ->name("Refetch tags #{$run->getKey()}")
@@ -52,6 +52,10 @@ class OptionsController extends Controller
             'canApply' => $run->canBeApplied(),
             'moveAction' => TagRefetchWorkResult::STALE_ACTION_MOVE_TO_CUSTOM,
             'removeAction' => TagRefetchWorkResult::STALE_ACTION_REMOVE,
+            'addAction' => TagRefetchWorkResult::ADDED_ACTION_ADD,
+            'ignoreAction' => TagRefetchWorkResult::ADDED_ACTION_IGNORE,
+            'promoteCustomAction' => TagRefetchWorkResult::CUSTOM_TO_FETCHED_ACTION_PROMOTE,
+            'keepCustomAction' => TagRefetchWorkResult::CUSTOM_TO_FETCHED_ACTION_KEEP_CUSTOM,
         ]);
     }
 
@@ -81,6 +85,9 @@ class OptionsController extends Controller
             $run,
             $request->globalJapaneseAction(),
             $request->globalEnglishAction(),
+            $request->globalAddedJapaneseAction(),
+            $request->globalAddedEnglishAction(),
+            $request->globalCustomToFetchedAction(),
             $request->workActions(),
         );
 

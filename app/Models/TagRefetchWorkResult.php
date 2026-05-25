@@ -20,6 +20,14 @@ class TagRefetchWorkResult extends Model
 
     public const STALE_ACTION_REMOVE = 'remove';
 
+    public const ADDED_ACTION_ADD = 'add_as_fetched';
+
+    public const ADDED_ACTION_IGNORE = 'ignore';
+
+    public const CUSTOM_TO_FETCHED_ACTION_PROMOTE = 'promote_to_fetched';
+
+    public const CUSTOM_TO_FETCHED_ACTION_KEEP_CUSTOM = 'keep_custom';
+
     protected $fillable = [
         'tag_refetch_run_id',
         'product_id',
@@ -30,9 +38,14 @@ class TagRefetchWorkResult extends Model
         'added_english_tags',
         'stale_japanese_tags',
         'stale_english_tags',
+        'custom_to_fetched_japanese_tags',
+        'custom_to_fetched_english_tags',
         'error',
+        'added_japanese_action',
+        'added_english_action',
         'stale_japanese_action',
         'stale_english_action',
+        'custom_to_fetched_action',
     ];
 
     protected $casts = [
@@ -42,6 +55,8 @@ class TagRefetchWorkResult extends Model
         'added_english_tags' => 'array',
         'stale_japanese_tags' => 'array',
         'stale_english_tags' => 'array',
+        'custom_to_fetched_japanese_tags' => 'array',
+        'custom_to_fetched_english_tags' => 'array',
     ];
 
     public function run(): BelongsTo
@@ -89,12 +104,29 @@ class TagRefetchWorkResult extends Model
         return $this->hasTags($this->stale_english_tags);
     }
 
+    public function hasCustomToFetchedJapaneseTags(): bool
+    {
+        return $this->hasTags($this->custom_to_fetched_japanese_tags);
+    }
+
+    public function hasCustomToFetchedEnglishTags(): bool
+    {
+        return $this->hasTags($this->custom_to_fetched_english_tags);
+    }
+
+    public function hasCustomToFetchedTags(): bool
+    {
+        return $this->hasCustomToFetchedJapaneseTags()
+            || $this->hasCustomToFetchedEnglishTags();
+    }
+
     public function hasTagChanges(): bool
     {
         return $this->hasAddedJapaneseTags()
             || $this->hasAddedEnglishTags()
             || $this->hasStaleJapaneseTags()
-            || $this->hasStaleEnglishTags();
+            || $this->hasStaleEnglishTags()
+            || $this->hasCustomToFetchedTags();
     }
 
     private function hasTags(?array $tags): bool

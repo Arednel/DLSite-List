@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use App\Enums\ProductIndexTagMatch;
+use App\Support\VisibleGenreAttachment;
 use Illuminate\Database\Eloquent\Attributes\Scope;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -62,27 +63,35 @@ class Product extends Model
     public function genres(): BelongsToMany
     {
         return $this->belongsToMany(Genre::class)
-            ->withPivot('source')
+            ->withPivot(['id', 'source'])
             ->withTimestamps();
     }
 
     public function japaneseGenres(): BelongsToMany
     {
-        return $this->genres()
-            ->where('genres.type', Genre::TYPE_AUTO_GENERATED_JAPANESE)
-            ->wherePivot('source', Genre::PIVOT_SOURCE_FETCHED);
+        return $this->fetchedGenresForLanguage(Genre::LANGUAGE_JAPANESE);
     }
 
     public function englishGenres(): BelongsToMany
     {
-        return $this->genres()
-            ->where('genres.type', Genre::TYPE_AUTO_GENERATED_ENGLISH)
-            ->wherePivot('source', Genre::PIVOT_SOURCE_FETCHED);
+        return $this->fetchedGenresForLanguage(Genre::LANGUAGE_ENGLISH);
     }
 
     public function customGenres(): BelongsToMany
     {
         return $this->genres()->wherePivot('source', Genre::PIVOT_SOURCE_CUSTOM);
+    }
+
+    private function fetchedGenresForLanguage(string $language): BelongsToMany
+    {
+        return $this->genres()
+            ->wherePivot('source', Genre::PIVOT_SOURCE_FETCHED)
+            ->whereExists(function ($query) use ($language): void {
+                $query->select('genre_product_languages.id')
+                    ->from('genre_product_languages')
+                    ->whereColumn('genre_product_languages.genre_product_id', 'genre_product.id')
+                    ->where('genre_product_languages.language', $language);
+            });
     }
 
     #[Scope]
@@ -97,11 +106,11 @@ class Product extends Model
         $query->whereHas('genres', function (Builder $genreQuery) use ($genreFilter): void {
             if (ctype_digit($genreFilter)) {
                 $genreQuery->whereKey((int) $genreFilter);
-
-                return;
+            } else {
+                $genreQuery->where('title', $genreFilter);
             }
 
-            $genreQuery->where('title', $genreFilter);
+            $genreQuery->where(VisibleGenreAttachment::query());
         });
     }
 
@@ -114,7 +123,7 @@ class Product extends Model
     #[Scope]
     protected function searchIndex(Builder $query, string $search): void
     {
-        $search = '%'.trim($search).'%';
+        $search = '%' . trim($search) . '%';
 
         $query->where(function (Builder $searchQuery) use ($search): void {
             $searchQuery->whereAny([
@@ -124,14 +133,17 @@ class Product extends Model
                 'series',
                 'notes',
             ], 'like', $search)
-                ->orWhereHas('genres', fn (Builder $genreQuery) => $genreQuery->whereLike('title', $search));
+                ->orWhereHas('genres', function (Builder $genreQuery) use ($search): void {
+                    $genreQuery->whereLike('title', $search);
+                    $genreQuery->where(VisibleGenreAttachment::query());
+                });
         });
     }
 
     #[Scope]
     protected function filterTitle(Builder $query, string $title): void
     {
-        $title = '%'.trim($title).'%';
+        $title = '%' . trim($title) . '%';
 
         $query->where(function (Builder $titleQuery) use ($title): void {
             $titleQuery->whereLike('work_name', $title)
@@ -142,7 +154,7 @@ class Product extends Model
     #[Scope]
     protected function filterNotes(Builder $query, string $notes): void
     {
-        $query->whereLike('notes', '%'.trim($notes).'%');
+        $query->whereLike('notes', '%' . trim($notes) . '%');
     }
 
     #[Scope]
@@ -164,7 +176,7 @@ class Product extends Model
         }
 
         $normalizedTags = collect($tags)
-            ->map(fn (string $tag) => mb_strtolower($tag))
+            ->map(fn(string $tag) => mb_strtolower($tag))
             ->unique()
             ->values()
             ->all();
@@ -172,7 +184,8 @@ class Product extends Model
         if ($tagMatch === ProductIndexTagMatch::All) {
             foreach ($normalizedTags as $tag) {
                 $query->whereHas('genres', function (Builder $genreQuery) use ($tag): void {
-                    $genreQuery->whereRaw('LOWER(title) = ?', [$tag]);
+                    $genreQuery->whereLike('title', $tag);
+                    $genreQuery->where(VisibleGenreAttachment::query());
                 });
             }
 
@@ -183,14 +196,15 @@ class Product extends Model
             $genreQuery->where(function (Builder $tagQuery) use ($normalizedTags): void {
                 foreach ($normalizedTags as $index => $tag) {
                     if ($index === 0) {
-                        $tagQuery->whereRaw('LOWER(title) = ?', [$tag]);
+                        $tagQuery->whereLike('title', $tag);
 
                         continue;
                     }
 
-                    $tagQuery->orWhereRaw('LOWER(title) = ?', [$tag]);
+                    $tagQuery->orWhereLike('title', $tag);
                 }
             });
+            $genreQuery->where(VisibleGenreAttachment::query());
         });
     }
 

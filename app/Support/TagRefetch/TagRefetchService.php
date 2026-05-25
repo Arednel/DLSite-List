@@ -6,12 +6,16 @@ use App\Models\Genre;
 use App\Models\Product;
 use App\Models\TagRefetchRun;
 use App\Models\TagRefetchWorkResult;
-use App\Support\GenreSyncPayload;
+use App\Support\ProductGenreSync;
 use Illuminate\Support\Facades\DB;
 use Throwable;
 
 class TagRefetchService
 {
+    public function __construct(
+        private readonly ProductGenreSync $genreSync,
+    ) {}
+
     /**
      * @param  list<string>  $productIds
      */
@@ -30,7 +34,7 @@ class TagRefetchService
 
             $run->results()->createMany(
                 collect($productIds)
-                    ->map(fn (string $productId): array => [
+                    ->map(fn(string $productId): array => [
                         'product_id' => $productId,
                         'status' => TagRefetchWorkResult::STATUS_PENDING,
                         'fetched_japanese_tags' => [],
@@ -39,6 +43,8 @@ class TagRefetchService
                         'added_english_tags' => [],
                         'stale_japanese_tags' => [],
                         'stale_english_tags' => [],
+                        'custom_to_fetched_japanese_tags' => [],
+                        'custom_to_fetched_english_tags' => [],
                     ])
                     ->all()
             );
@@ -74,6 +80,8 @@ class TagRefetchService
             'added_english_tags' => $diff['added_english_tags'],
             'stale_japanese_tags' => $diff['stale_japanese_tags'],
             'stale_english_tags' => $diff['stale_english_tags'],
+            'custom_to_fetched_japanese_tags' => $diff['custom_to_fetched_japanese_tags'],
+            'custom_to_fetched_english_tags' => $diff['custom_to_fetched_english_tags'],
             'error' => null,
         ])->save();
 
@@ -143,13 +151,23 @@ class TagRefetchService
         TagRefetchRun $run,
         string $globalJapaneseAction = TagRefetchWorkResult::STALE_ACTION_MOVE_TO_CUSTOM,
         string $globalEnglishAction = TagRefetchWorkResult::STALE_ACTION_MOVE_TO_CUSTOM,
+        string $globalAddedJapaneseAction = TagRefetchWorkResult::ADDED_ACTION_ADD,
+        string $globalAddedEnglishAction = TagRefetchWorkResult::ADDED_ACTION_ADD,
+        string $globalCustomToFetchedAction = TagRefetchWorkResult::CUSTOM_TO_FETCHED_ACTION_PROMOTE,
         array $workActions = [],
     ): void {
         $run->results()
             ->where('status', TagRefetchWorkResult::STATUS_FETCHED)
             ->with('product')
             ->get()
-            ->each(function (TagRefetchWorkResult $result) use ($globalJapaneseAction, $globalEnglishAction, $workActions): void {
+            ->each(function (TagRefetchWorkResult $result) use (
+                $globalJapaneseAction,
+                $globalEnglishAction,
+                $globalAddedJapaneseAction,
+                $globalAddedEnglishAction,
+                $globalCustomToFetchedAction,
+                $workActions,
+            ): void {
                 $japaneseAction = $this->resolveWorkAction(
                     data_get($workActions, "{$result->product_id}.japanese"),
                     $globalJapaneseAction
@@ -158,8 +176,27 @@ class TagRefetchService
                     data_get($workActions, "{$result->product_id}.english"),
                     $globalEnglishAction
                 );
+                $addedJapaneseAction = $this->resolveAddedAction(
+                    data_get($workActions, "{$result->product_id}.added_japanese"),
+                    $globalAddedJapaneseAction
+                );
+                $addedEnglishAction = $this->resolveAddedAction(
+                    data_get($workActions, "{$result->product_id}.added_english"),
+                    $globalAddedEnglishAction
+                );
+                $customToFetchedAction = $this->resolveCustomToFetchedAction(
+                    data_get($workActions, "{$result->product_id}.custom_to_fetched"),
+                    $globalCustomToFetchedAction
+                );
 
-                DB::transaction(fn () => $this->applyResult($result, $japaneseAction, $englishAction));
+                DB::transaction(fn() => $this->applyResult(
+                    $result,
+                    $japaneseAction,
+                    $englishAction,
+                    $addedJapaneseAction,
+                    $addedEnglishAction,
+                    $customToFetchedAction,
+                ));
             });
 
         $run->forceFill([
@@ -175,7 +212,9 @@ class TagRefetchService
      *     added_japanese_tags: list<string>,
      *     added_english_tags: list<string>,
      *     stale_japanese_tags: list<string>,
-     *     stale_english_tags: list<string>
+     *     stale_english_tags: list<string>,
+     *     custom_to_fetched_japanese_tags: list<string>,
+     *     custom_to_fetched_english_tags: list<string>
      * }
      */
     public function diffProductTags(Product $product, array $fetchedJapanese, array $fetchedEnglish): array
@@ -183,8 +222,8 @@ class TagRefetchService
         $fetchedJapanese = $this->normalizeTags($fetchedJapanese);
         $fetchedEnglish = $this->normalizeTags($fetchedEnglish);
 
-        $currentJapanese = $this->currentFetchedTitles($product, Genre::TYPE_AUTO_GENERATED_JAPANESE);
-        $currentEnglish = $this->currentFetchedTitles($product, Genre::TYPE_AUTO_GENERATED_ENGLISH);
+        $currentJapanese = $this->currentFetchedTitles($product, Genre::LANGUAGE_JAPANESE);
+        $currentEnglish = $this->currentFetchedTitles($product, Genre::LANGUAGE_ENGLISH);
         $customTitles = $this->currentCustomTitles($product);
 
         return [
@@ -194,11 +233,19 @@ class TagRefetchService
             'added_english_tags' => $this->titleDiff($fetchedEnglish, $currentEnglish, $customTitles),
             'stale_japanese_tags' => $this->titleDiff($currentJapanese, $fetchedJapanese),
             'stale_english_tags' => $this->titleDiff($currentEnglish, $fetchedEnglish),
+            'custom_to_fetched_japanese_tags' => $this->titleIntersection($fetchedJapanese, $customTitles),
+            'custom_to_fetched_english_tags' => $this->titleIntersection($fetchedEnglish, $customTitles),
         ];
     }
 
-    private function applyResult(TagRefetchWorkResult $result, string $japaneseAction, string $englishAction): void
-    {
+    private function applyResult(
+        TagRefetchWorkResult $result,
+        string $japaneseAction,
+        string $englishAction,
+        string $addedJapaneseAction,
+        string $addedEnglishAction,
+        string $customToFetchedAction,
+    ): void {
         $product = $result->product;
 
         if (! $product) {
@@ -206,35 +253,54 @@ class TagRefetchService
         }
 
         $customTitles = $this->currentCustomTitles($product);
-        $fetchedJapanese = $this->titleDiff($result->fetched_japanese_tags ?? [], $customTitles);
-        $fetchedEnglish = $this->titleDiff($result->fetched_english_tags ?? [], $customTitles);
-
-        $fetchedGenreIds = array_merge(
-            Genre::resolveIdsFromTitles($fetchedJapanese, Genre::TYPE_AUTO_GENERATED_JAPANESE, Genre::LANGUAGE_JAPANESE),
-            Genre::resolveIdsFromTitles($fetchedEnglish, Genre::TYPE_AUTO_GENERATED_ENGLISH, Genre::LANGUAGE_ENGLISH),
+        $customToFetchedTags = array_merge(
+            $result->custom_to_fetched_japanese_tags ?? [],
+            $result->custom_to_fetched_english_tags ?? [],
         );
 
-        $customGenreIds = $this->currentCustomGenreIds($product);
+        $fetchedJapanese = $result->fetched_japanese_tags ?? [];
+        $fetchedEnglish = $result->fetched_english_tags ?? [];
+
+        if ($addedJapaneseAction === TagRefetchWorkResult::ADDED_ACTION_IGNORE) {
+            $fetchedJapanese = $this->titleDiff($fetchedJapanese, $result->added_japanese_tags ?? []);
+        }
+
+        if ($addedEnglishAction === TagRefetchWorkResult::ADDED_ACTION_IGNORE) {
+            $fetchedEnglish = $this->titleDiff($fetchedEnglish, $result->added_english_tags ?? []);
+        }
+
+        if ($customToFetchedAction === TagRefetchWorkResult::CUSTOM_TO_FETCHED_ACTION_KEEP_CUSTOM) {
+            $fetchedJapanese = $this->titleDiff($fetchedJapanese, $customToFetchedTags);
+            $fetchedEnglish = $this->titleDiff($fetchedEnglish, $customToFetchedTags);
+        } else {
+            $customTitles = $this->titleDiff($customTitles, $customToFetchedTags);
+        }
 
         if ($japaneseAction === TagRefetchWorkResult::STALE_ACTION_MOVE_TO_CUSTOM) {
-            $customGenreIds = array_merge(
-                $customGenreIds,
-                Genre::resolveIdsFromTitles($result->stale_japanese_tags ?? [], Genre::TYPE_CUSTOM, Genre::LANGUAGE_ENGLISH)
+            $customTitles = array_merge(
+                $customTitles,
+                $this->titleDiff($result->stale_japanese_tags ?? [], $fetchedJapanese, $fetchedEnglish)
             );
         }
 
         if ($englishAction === TagRefetchWorkResult::STALE_ACTION_MOVE_TO_CUSTOM) {
-            $customGenreIds = array_merge(
-                $customGenreIds,
-                Genre::resolveIdsFromTitles($result->stale_english_tags ?? [], Genre::TYPE_CUSTOM, Genre::LANGUAGE_ENGLISH)
+            $customTitles = array_merge(
+                $customTitles,
+                $this->titleDiff($result->stale_english_tags ?? [], $fetchedJapanese, $fetchedEnglish)
             );
         }
 
-        $product->genres()->sync(GenreSyncPayload::build($fetchedGenreIds, $customGenreIds));
+        $this->genreSync->sync($product, [
+            Genre::LANGUAGE_JAPANESE => Genre::resolveIdsFromTitles($fetchedJapanese),
+            Genre::LANGUAGE_ENGLISH => Genre::resolveIdsFromTitles($fetchedEnglish),
+        ], Genre::resolveIdsFromTitles($customTitles));
 
         $result->forceFill([
+            'added_japanese_action' => $addedJapaneseAction,
+            'added_english_action' => $addedEnglishAction,
             'stale_japanese_action' => $japaneseAction,
             'stale_english_action' => $englishAction,
+            'custom_to_fetched_action' => $customToFetchedAction,
         ])->save();
     }
 
@@ -243,6 +309,22 @@ class TagRefetchService
         return in_array($workAction, [
             TagRefetchWorkResult::STALE_ACTION_MOVE_TO_CUSTOM,
             TagRefetchWorkResult::STALE_ACTION_REMOVE,
+        ], true) ? $workAction : $globalAction;
+    }
+
+    private function resolveAddedAction(?string $workAction, string $globalAction): string
+    {
+        return in_array($workAction, [
+            TagRefetchWorkResult::ADDED_ACTION_ADD,
+            TagRefetchWorkResult::ADDED_ACTION_IGNORE,
+        ], true) ? $workAction : $globalAction;
+    }
+
+    private function resolveCustomToFetchedAction(?string $workAction, string $globalAction): string
+    {
+        return in_array($workAction, [
+            TagRefetchWorkResult::CUSTOM_TO_FETCHED_ACTION_PROMOTE,
+            TagRefetchWorkResult::CUSTOM_TO_FETCHED_ACTION_KEEP_CUSTOM,
         ], true) ? $workAction : $globalAction;
     }
 
@@ -256,14 +338,14 @@ class TagRefetchService
     /**
      * @return list<string>
      */
-    private function currentFetchedTitles(Product $product, string $type): array
+    private function currentFetchedTitles(Product $product, string $language): array
     {
-        return match ($type) {
-            Genre::TYPE_AUTO_GENERATED_JAPANESE => $product->japaneseGenres()
+        return match ($language) {
+            Genre::LANGUAGE_JAPANESE => $product->japaneseGenres()
                 ->orderBy('genres.title')
                 ->pluck('genres.title')
                 ->all(),
-            Genre::TYPE_AUTO_GENERATED_ENGLISH => $product->englishGenres()
+            Genre::LANGUAGE_ENGLISH => $product->englishGenres()
                 ->orderBy('genres.title')
                 ->pluck('genres.title')
                 ->all(),
@@ -282,22 +364,12 @@ class TagRefetchService
     }
 
     /**
-     * @return list<int>
-     */
-    private function currentCustomGenreIds(Product $product): array
-    {
-        return $product->customGenres()
-            ->pluck('genres.id')
-            ->all();
-    }
-
-    /**
      * @return list<string>
      */
     private function normalizeTags(array $tags): array
     {
         return collect($tags)
-            ->map(fn (mixed $tag): string => trim((string) $tag))
+            ->map(fn(mixed $tag): string => trim((string) $tag))
             ->filter()
             ->unique()
             ->values()
@@ -314,7 +386,20 @@ class TagRefetchService
         $without = array_merge(...$withoutLists);
 
         return collect($source)
-            ->reject(fn (string $title): bool => in_array($title, $without, true))
+            ->reject(fn(string $title): bool => in_array($title, $without, true))
+            ->values()
+            ->all();
+    }
+
+    /**
+     * @param  list<string>  $source
+     * @param  list<string>  $only
+     * @return list<string>
+     */
+    private function titleIntersection(array $source, array $only): array
+    {
+        return collect($source)
+            ->filter(fn(string $title): bool => in_array($title, $only, true))
             ->values()
             ->all();
     }

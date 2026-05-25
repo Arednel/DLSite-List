@@ -25,4 +25,26 @@ final class GenreSyncPayload
 
         return $payload;
     }
+
+    /**
+     * @param  array<string, list<int|string>>  $fetchedGenreIdsByLanguage
+     * @return array<int|string, list<string>>
+     */
+    public static function languageMap(array $fetchedGenreIdsByLanguage): array
+    {
+        $languageMap = [];
+
+        foreach ($fetchedGenreIdsByLanguage as $language => $genreIds) {
+            foreach (array_unique($genreIds) as $genreId) {
+                $languageMap[$genreId] ??= [];
+                $languageMap[$genreId][] = $language;
+            }
+        }
+
+        foreach ($languageMap as $genreId => $languages) {
+            $languageMap[$genreId] = array_values(array_unique($languages));
+        }
+
+        return $languageMap;
+    }
 }

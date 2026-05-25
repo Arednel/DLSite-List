@@ -34,6 +34,7 @@
                         <div>New EN <strong>{{ $summary['added_english'] }}</strong></div>
                         <div>Stale JP <strong>{{ $summary['stale_japanese'] }}</strong></div>
                         <div>Stale EN <strong>{{ $summary['stale_english'] }}</strong></div>
+                        <div>Custom -> Fetched <strong>{{ $summary['custom_to_fetched'] }}</strong></div>
                         <div>Skipped <strong>{{ $summary['skipped'] }}</strong></div>
                     </div>
 
@@ -48,6 +49,20 @@
                             @csrf
                             <div class="review-actions">
                                 <label>
+                                    New JP
+                                    <select name="global_added_japanese_action">
+                                        <option value="{{ $addAction }}" selected>Add as fetched</option>
+                                        <option value="{{ $ignoreAction }}">Ignore</option>
+                                    </select>
+                                </label>
+                                <label>
+                                    New EN
+                                    <select name="global_added_english_action">
+                                        <option value="{{ $addAction }}" selected>Add as fetched</option>
+                                        <option value="{{ $ignoreAction }}">Ignore</option>
+                                    </select>
+                                </label>
+                                <label>
                                     Stale JP
                                     <select name="global_japanese_action">
                                         <option value="{{ $moveAction }}" selected>Move to custom tags</option>
@@ -61,12 +76,20 @@
                                         <option value="{{ $removeAction }}">Remove</option>
                                     </select>
                                 </label>
+                                <label>
+                                    Custom -> Fetched
+                                    <select name="global_custom_to_fetched_action">
+                                        <option value="{{ $promoteCustomAction }}" selected>Promote to fetched</option>
+                                        <option value="{{ $keepCustomAction }}">Keep custom</option>
+                                    </select>
+                                </label>
                                 <button type="submit" class="tag tag--gradient tag--lg is-clickable">
                                     Apply Changes
                                 </button>
                             </div>
 
                             <x-options.refetch-results :run="$run" :move-action="$moveAction" :remove-action="$removeAction"
+                                :add-action="$addAction" :ignore-action="$ignoreAction" :promote-custom-action="$promoteCustomAction" :keep-custom-action="$keepCustomAction"
                                 :show-controls="true" />
                         </form>
                     @else
@@ -78,6 +101,7 @@
                             @endif
                         </div>
                         <x-options.refetch-results :run="$run" :move-action="$moveAction" :remove-action="$removeAction"
+                            :add-action="$addAction" :ignore-action="$ignoreAction" :promote-custom-action="$promoteCustomAction" :keep-custom-action="$keepCustomAction"
                             :show-controls="false" />
                     @endif
                 </section>

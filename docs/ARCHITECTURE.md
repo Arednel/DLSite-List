@@ -40,8 +40,11 @@
   - `app/Support/DLSite/DLSitePythonRunner.php`
   - `app/Support/TagRefetch/DLSiteTagFetcher.php`
   - `app/Support/TagRefetch/TagRefetchService.php`
-- Shared genre sync payload helper:
+- Shared genre sync helpers:
+  - `app/Support/ProductGenreSync.php`
   - `app/Support/GenreSyncPayload.php`
+- Shared visible tag helper:
+  - `app/Support/VisibleGenreAttachment.php`
 - Livewire components:
   - `app/Livewire/ProductIndex.php`
   - `app/Livewire/IndexPaginationSettings.php`
@@ -78,10 +81,8 @@ Shared UI note:
 - progress/listening metadata (`progress`, dates, re-listen fields, priority)
 - local image paths
 
-`genres` table stores the visible genre title text and metadata:
+`genres` table stores one row per visible genre title:
 - `title`
-- `type` (`auto_generated_japanese`, `auto_generated_english`, `custom`)
-- `language` (`jp` or `en`)
 - optional `group_id`
 
 `genre_groups` stores optional genre group definitions.
@@ -91,8 +92,17 @@ It also stores a `source` value:
 - `fetched` for scraper-provided genre attachments
 - `custom` for tags the user typed into the editable Custom Tags field
 
-If the same title text already exists, the existing `genres` row is reused. Auto-generated
-genres still take priority over `custom` when a title collision happens.
+`genre_product_languages` stores the fetched language buckets for each product/tag attachment:
+- `genre_product_id`
+- `language`
+
+Current language values are `jp` and `en`, but the column is a string so future language codes can be added without changing the global genre row. Custom pivot rows do not have language rows. A fetched tag can have both `jp` and `en` rows for the same product, so titles like `ASMR` and `VTuber` remain a single `genres` row while still recording that DLSite returned the tag in both languages.
+
+Current English/custom UI surfaces show:
+- custom pivot rows
+- fetched pivot rows with an `en` language row
+
+JP-only fetched tags stay attached and stored, but are hidden from the current Index/Edit/Tag Library UI until a Japanese tag UI exists.
 
 `tag_refetch_runs` stores each Options -> Refetch Tags batch:
 - batch id and status
@@ -104,8 +114,11 @@ genres still take priority over `custom` when a title collision happens.
 - fetched JP/EN tags
 - new JP/EN tags
 - stale JP/EN tags
+- custom tags that DLSite now returns as JP/EN fetched tags
 - skipped error text
+- chosen new-tag handling for JP/EN
 - chosen stale-tag handling for JP/EN
+- chosen custom-to-fetched handling
 
 Queue tables:
 - `jobs` stores pending database queue jobs
@@ -127,6 +140,9 @@ Migration note:
 - legacy `products.genre`, `products.genre_english`, and `products.genre_custom` JSON columns are migrated into
   `genres` + `genre_product` by `2026_03_16_160000_convert_product_genre_titles_to_ids.php`
 - after conversion, those legacy JSON columns are dropped
+- legacy global `genres.type` / `genres.language` metadata is migrated into product-specific
+  `genre_product_languages` rows by `2026_05_24_000000_create_genre_product_languages_table.php`
+- the `genre_product_languages` down migration restores old global metadata best-effort because one fetched title can now belong to multiple languages for the same product
 
 Runtime note:
 - `ProductIndex` shows English + custom genres through one lightweight grouped query from `genre_product` + `genres` for the current page
@@ -134,6 +150,7 @@ Runtime note:
 - `products.start_date` and `products.end_date` JSON remain the editable/display source of truth; their `*_sort` columns store `YYYYMMDD` integers with missing month/day as `00`
 - `ProductIndex` keeps its filter/sort state in the URL through Livewire's `queryString()` config, then normalizes that state into `app/Support/ProductIndexFilters.php`
 - `app/Support/ProductIndexFilters.php` provides the normalized filter query used by progress tabs, preserved search state, tag links, explicit Livewire query-string keys, and the visibility-affecting filter groups used by return redirects
+- Index genre links, tag filters, genre-backed search, edit tag loading, and Tag Library use `VisibleGenreAttachment` for the same visible-tag rule as rendered tags: custom source or fetched `en` language row
 - opening and closing the advanced filter modal is local Alpine state registered in `public/scripts/index-advanced-filters.js`, not Livewire state, so showing the modal does not rerun the Index query or reset draft filter values
 - changing advanced sort draft fields is client-side/deferred through that Alpine component until Apply, so the modal does not send requests while choosing primary/secondary sort columns
 - desktop table headers and the advanced sort modal both update the same Livewire-backed server-side sort state
@@ -149,7 +166,8 @@ Runtime note:
 - edit loads only the fetched English/custom genre rows it renders, while keeping fetched non-custom genres attached automatically
 - update reads user-added genres from the form, stores them as `genre_product.source = custom`, and can reuse an existing fetched genre row while keeping it editable for that product
 - custom create stores user-uploaded covers/samples in `storage/app/public/Works/{RJ}`, saves the uploaded cover public path in `products.work_image`, and attaches custom tags through the same genre resolver used by update
-- product create/update and refetch apply use `app/Support/GenreSyncPayload.php` to build `genre_product.source` sync payloads consistently; fetched tags keep precedence over custom tags when the same genre id appears in both lists
+- product create/update and refetch apply use `app/Support/ProductGenreSync.php` to sync `genre_product.source` and `genre_product_languages` together
+- `app/Support/GenreSyncPayload.php` keeps fetched-over-custom source precedence and builds the fetched language map used by `ProductGenreSync`
 - Options -> Refetch Tags dispatches one queued `FetchProductTagsJob` per selected product and stores results before any product tags are changed
 - the refetch progress panel is rendered by Livewire and polls every second only while the run is still running
 - the Options page has separate `Options` and `Refetch` tabs; validation errors from refetch forms reopen the Refetch tab
@@ -158,12 +176,13 @@ Runtime note:
 - the selected-work search on the Refetch tab is rendered by Livewire and uses Laravel query helpers for the ID/title match
 - the Refetch tab work list and queued all/selected refetch ids use numeric RJ descending order, matching the Index default order
 - custom-only works are skipped during refetch because they do not have DLSite metadata to fetch from
-- applying a refetch run attaches new fetched tags with `genre_product.source = fetched`
-- stale fetched tags move to `genre_product.source = custom` by default, but the review form can remove them instead
+- applying a refetch run attaches new fetched tags with `genre_product.source = fetched` and one language row per fetched bucket, unless the review form ignores new JP/EN tags globally or for that work
+- stale fetched JP/EN actions remove only that language row when another fetched language remains; the tag moves to `genre_product.source = custom` only when no fetched language rows remain and the selected stale action is move-to-custom
+- custom tags that DLSite now returns as fetched are promoted to fetched by default; the review form has global and per-work controls to keep those tags custom instead
 - refetch diff/apply reads current fetched/custom tags through the Product genre relationships
-- existing custom tags are preserved, and unused global auto-generated `genres` rows are detached from products but not deleted
+- existing custom tags are preserved, and unused global fetched `genres` rows are detached from products but not deleted
 - only the newest review run shows apply controls; older review runs are read-only to avoid applying stale review decisions after a newer fetch
-- each review result row shows compact indicators for new JP, new EN, stale JP, and stale EN changes when those buckets are present
+- each review result row shows compact indicators for new JP, new EN, stale JP, stale EN, and custom-to-fetched changes when those buckets are present
 - refetch Blade views use small state/summary helpers on `TagRefetchRun` and `TagRefetchWorkResult` instead of checking raw status constants or counting buckets in controllers
 
 ## Scraper Integration
@@ -180,7 +199,7 @@ Runtime note:
 - `BaseProductRequest` normalizes the create/edit `add[...]` fields in `prepareForValidation()`, then runs date-part and date-order checks through the form request `after()` hook.
 - `StoreCustomProductRequest` keeps RJ-format and uniqueness validation, requires Japanese title, age category, and cover image, and validates cover/sample uploads as images up to 20 MB each.
 - `StartTagRefetchRequest` validates all/selected refetch scope and resolves the product ids before the controller creates a run.
-- `ApplyTagRefetchRequest` validates stale-tag actions and blocks applying any run except the newest review run.
+- `ApplyTagRefetchRequest` validates new-tag, stale-tag, and custom-to-fetched actions, then blocks applying any run except the newest review run.
 - Custom tags are comma-separated and parsed with CSV rules:
   - commas inside a tag are supported via quotes
   - example: `"Junior / Senior (at work, school, etc)", Office Lady`

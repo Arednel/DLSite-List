@@ -14,12 +14,17 @@ class PerformanceSmokeTest extends TestCase
 
     // Adjust these three values to resize the performance smoke dataset.
     private const WORK_COUNT = 500;
+
     private const TAG_COUNT = 500;
+
     private const PIVOT_COUNT = 10000;
 
     private const PERFORMANCE_ITERATIONS = 3;
+
     private const WARNING_THRESHOLD_MS = 500;
+
     private const STRONG_WARNING_THRESHOLD_MS = 1000;
+
     private const HOT_TAG_NUMBER = 1;
 
     /**
@@ -167,8 +172,6 @@ class PerformanceSmokeTest extends TestCase
                             'title' => $this->tagTitle($number),
                             'description' => null,
                             'order' => null,
-                            'type' => Genre::TYPE_CUSTOM,
-                            'language' => Genre::LANGUAGE_ENGLISH,
                             'created_at' => $now,
                             'updated_at' => $now,
                         ])
@@ -243,7 +246,7 @@ class PerformanceSmokeTest extends TestCase
             throw new \RuntimeException('Performance smoke counts must use at least one work, one tag, and zero or more pivots.');
         }
 
-        if (self::PIVOT_COUNT > self::WORK_COUNT * self::TAG_COUNT) {
+        if (self::WORK_COUNT * self::TAG_COUNT < self::PIVOT_COUNT) {
             throw new \RuntimeException('Performance smoke pivot count cannot exceed unique work/tag pairs.');
         }
     }

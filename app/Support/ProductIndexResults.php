@@ -3,7 +3,6 @@
 namespace App\Support;
 
 use App\Enums\ProductIndexSortField;
-use App\Models\Genre;
 use App\Models\Option;
 use App\Models\Product;
 use Illuminate\Database\Eloquent\Builder;
@@ -159,11 +158,7 @@ final class ProductIndexResults
         return DB::table('genre_product')
             ->join('genres', 'genres.id', '=', 'genre_product.genre_id')
             ->whereIn('genre_product.product_id', $productIds)
-            ->where(function ($query): void {
-                $query->where('genre_product.source', Genre::PIVOT_SOURCE_CUSTOM)
-                    ->orWhere('genres.type', Genre::TYPE_AUTO_GENERATED_ENGLISH)
-                    ->orWhere('genres.type', Genre::TYPE_CUSTOM);
-            })
+            ->where(VisibleGenreAttachment::query())
             ->orderBy('genres.title')
             ->get([
                 'genre_product.product_id',

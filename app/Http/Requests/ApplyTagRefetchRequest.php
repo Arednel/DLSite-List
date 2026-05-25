@@ -30,13 +30,35 @@ class ApplyTagRefetchRequest extends FormRequest
             self::ACTION_INHERIT,
             ...$staleActions,
         ];
+        $addedActions = [
+            TagRefetchWorkResult::ADDED_ACTION_ADD,
+            TagRefetchWorkResult::ADDED_ACTION_IGNORE,
+        ];
+        $workAddedActions = [
+            self::ACTION_INHERIT,
+            ...$addedActions,
+        ];
+        $customToFetchedActions = [
+            TagRefetchWorkResult::CUSTOM_TO_FETCHED_ACTION_PROMOTE,
+            TagRefetchWorkResult::CUSTOM_TO_FETCHED_ACTION_KEEP_CUSTOM,
+        ];
+        $workCustomToFetchedActions = [
+            self::ACTION_INHERIT,
+            ...$customToFetchedActions,
+        ];
 
         return [
             'global_japanese_action' => ['required', Rule::in($staleActions)],
             'global_english_action' => ['required', Rule::in($staleActions)],
+            'global_added_japanese_action' => ['nullable', Rule::in($addedActions)],
+            'global_added_english_action' => ['nullable', Rule::in($addedActions)],
+            'global_custom_to_fetched_action' => ['nullable', Rule::in($customToFetchedActions)],
             'work_actions' => ['nullable', 'array'],
             'work_actions.*.japanese' => ['nullable', Rule::in($workActions)],
             'work_actions.*.english' => ['nullable', Rule::in($workActions)],
+            'work_actions.*.added_japanese' => ['nullable', Rule::in($workAddedActions)],
+            'work_actions.*.added_english' => ['nullable', Rule::in($workAddedActions)],
+            'work_actions.*.custom_to_fetched' => ['nullable', Rule::in($workCustomToFetchedActions)],
         ];
     }
 
@@ -71,6 +93,30 @@ class ApplyTagRefetchRequest extends FormRequest
     public function globalEnglishAction(): string
     {
         return $this->validated('global_english_action');
+    }
+
+    public function globalAddedJapaneseAction(): string
+    {
+        return $this->validated(
+            'global_added_japanese_action',
+            TagRefetchWorkResult::ADDED_ACTION_ADD
+        );
+    }
+
+    public function globalAddedEnglishAction(): string
+    {
+        return $this->validated(
+            'global_added_english_action',
+            TagRefetchWorkResult::ADDED_ACTION_ADD
+        );
+    }
+
+    public function globalCustomToFetchedAction(): string
+    {
+        return $this->validated(
+            'global_custom_to_fetched_action',
+            TagRefetchWorkResult::CUSTOM_TO_FETCHED_ACTION_PROMOTE
+        );
     }
 
     /**

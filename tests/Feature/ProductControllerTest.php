@@ -9,9 +9,11 @@ use App\Enums\ProductScore;
 use App\Models\Genre;
 use App\Models\Option;
 use App\Models\Product;
+use App\Support\ProductGenreSync;
 use Illuminate\Contracts\Filesystem\Filesystem;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Process;
 use Illuminate\Support\Facades\Storage;
@@ -101,6 +103,7 @@ class ProductControllerTest extends TestCase
         $customToken = "SEARCH_CUSTOM_{$token}";
         $genre = $this->createGenre($genreToken, Genre::TYPE_AUTO_GENERATED_ENGLISH);
         $customGenre = $this->createGenre($customToken, Genre::TYPE_CUSTOM);
+        $hiddenJapaneseGenre = $this->createGenre("SEARCH_HIDDEN_JP_{$token}", Genre::TYPE_AUTO_GENERATED_JAPANESE);
         $noiseGenre = $this->createGenre("SEARCH_NOISE_GENRE_{$token}", Genre::TYPE_AUTO_GENERATED_ENGLISH);
         $noiseCustomGenre = $this->createGenre("SEARCH_NOISE_CUSTOM_{$token}", Genre::TYPE_CUSTOM);
 
@@ -110,6 +113,13 @@ class ProductControllerTest extends TestCase
             'series' => $seriesToken,
         ]);
         $this->attachGenres($target, [$genre, $customGenre]);
+
+        $hiddenJapanese = Product::factory()->create([
+            'work_name' => "SEARCH_HIDDEN_PRODUCT_{$token}",
+            'work_name_english' => null,
+            'series' => null,
+        ]);
+        $this->attachGenres($hiddenJapanese, [$hiddenJapaneseGenre]);
 
         $noise = Product::factory()->create([
             'work_name' => $noiseToken,
@@ -147,6 +157,10 @@ class ProductControllerTest extends TestCase
             ->assertOk()
             ->assertSee($target->work_name)
             ->assertDontSee($noise->work_name);
+
+        $this->get('/?search=' . strtolower($hiddenJapaneseGenre->title))
+            ->assertOk()
+            ->assertDontSee($hiddenJapanese->work_name);
     }
 
     public function test_index_ignores_invalid_filter_values(): void
@@ -185,11 +199,17 @@ class ProductControllerTest extends TestCase
     public function test_index_filters_by_genre_id_from_view_links(): void
     {
         $sharedGenre = $this->createGenre('Linked Tag', Genre::TYPE_AUTO_GENERATED_ENGLISH);
+        $hiddenJapaneseGenre = $this->createGenre('Hidden Linked JP Tag', Genre::TYPE_AUTO_GENERATED_JAPANESE);
 
         $matching = Product::factory()->create([
             'work_name' => 'GENRE_ID_MATCH_TOKEN',
         ]);
         $this->attachGenres($matching, [$sharedGenre]);
+
+        $hiddenJapanese = Product::factory()->create([
+            'work_name' => 'GENRE_ID_HIDDEN_JP_TOKEN',
+        ]);
+        $this->attachGenres($hiddenJapanese, [$hiddenJapaneseGenre]);
 
         $noise = Product::factory()->create([
             'work_name' => 'GENRE_ID_NOISE_TOKEN',
@@ -199,6 +219,10 @@ class ProductControllerTest extends TestCase
             ->assertOk()
             ->assertSee($matching->work_name)
             ->assertDontSee($noise->work_name);
+
+        $this->get('/?genre=' . $hiddenJapaneseGenre->getKey())
+            ->assertOk()
+            ->assertDontSee($hiddenJapanese->work_name);
     }
 
     public function test_progress_links_drop_current_genre_filter_from_request(): void
@@ -375,6 +399,7 @@ class ProductControllerTest extends TestCase
     {
         $firstTag = $this->createGenre('Junior / Senior (at work, school, etc)', Genre::TYPE_CUSTOM);
         $secondTag = $this->createGenre('Office Lady', Genre::TYPE_CUSTOM);
+        $hiddenJapaneseTag = $this->createGenre('Hidden JP Filter Tag', Genre::TYPE_AUTO_GENERATED_JAPANESE);
 
         $matchingAll = Product::factory()->create([
             'work_name' => 'FILTER_TAGS_ALL_TOKEN',
@@ -391,19 +416,32 @@ class ProductControllerTest extends TestCase
         ]);
         $this->attachGenres($matchingSecondOnly, [$secondTag]);
 
+        $hiddenJapaneseOnly = Product::factory()->create([
+            'work_name' => 'FILTER_TAGS_HIDDEN_JP_TOKEN',
+        ]);
+        $this->attachGenres($hiddenJapaneseOnly, [$hiddenJapaneseTag]);
+
         $tagsQuery = rawurlencode('"Junior / Senior (at work, school, etc)", Office Lady');
 
         $this->get("/?tags={$tagsQuery}&tag_match=any")
             ->assertOk()
             ->assertSee($matchingAll->work_name)
             ->assertSee($matchingFirstOnly->work_name)
-            ->assertSee($matchingSecondOnly->work_name);
+            ->assertSee($matchingSecondOnly->work_name)
+            ->assertDontSee($hiddenJapaneseOnly->work_name);
 
         $this->get("/?tags={$tagsQuery}&tag_match=all")
             ->assertOk()
             ->assertSee($matchingAll->work_name)
             ->assertDontSee($matchingFirstOnly->work_name)
-            ->assertDontSee($matchingSecondOnly->work_name);
+            ->assertDontSee($matchingSecondOnly->work_name)
+            ->assertDontSee($hiddenJapaneseOnly->work_name);
+
+        $hiddenTagsQuery = rawurlencode('Hidden JP Filter Tag');
+
+        $this->get("/?tags={$hiddenTagsQuery}&tag_match=any")
+            ->assertOk()
+            ->assertDontSee($hiddenJapaneseOnly->work_name);
     }
 
     public function test_index_sorts_by_start_and_finish_date_with_primary_and_secondary_server_side_sort(): void
@@ -481,6 +519,7 @@ class ProductControllerTest extends TestCase
         $englishGenre = $this->createGenre('Library English Tag', Genre::TYPE_AUTO_GENERATED_ENGLISH);
         $customGenre = $this->createGenre('Library Custom Tag', Genre::TYPE_CUSTOM);
         $this->createGenre('Library Japanese Tag', Genre::TYPE_AUTO_GENERATED_JAPANESE);
+        $sharedLanguageGenre = $this->createGenre('Library Shared Language Tag', Genre::TYPE_AUTO_GENERATED_ENGLISH);
 
         $firstProduct = Product::factory()->create([
             'work_name' => 'LIBRARY_TAG_COUNT_FIRST_TOKEN',
@@ -488,9 +527,14 @@ class ProductControllerTest extends TestCase
         $secondProduct = Product::factory()->create([
             'work_name' => 'LIBRARY_TAG_COUNT_SECOND_TOKEN',
         ]);
+        $japaneseOnlyProduct = Product::factory()->create([
+            'work_name' => 'LIBRARY_TAG_COUNT_JP_ONLY_TOKEN',
+        ]);
 
-        $this->attachGenres($firstProduct, [$englishGenre, $customGenre]);
+        $this->attachGenres($firstProduct, [$englishGenre, $customGenre, $sharedLanguageGenre]);
         $this->attachGenres($secondProduct, [$englishGenre]);
+        $sharedLanguageGenre->setAttribute('type', Genre::TYPE_AUTO_GENERATED_JAPANESE);
+        $this->attachGenres($japaneseOnlyProduct, [$sharedLanguageGenre]);
 
         $response = $this->from('/?progress=Listening')->get('/tags');
 
@@ -499,6 +543,7 @@ class ProductControllerTest extends TestCase
             ->assertSee('Quick Add')
             ->assertSee('Library English Tag (2)')
             ->assertSee('Library Custom Tag (1)')
+            ->assertSee('Library Shared Language Tag (1)')
             ->assertDontSee('Library Japanese Tag')
             ->assertSee('data-list-menu-toggle', false)
             ->assertSee('data-list-menu-overlay', false)
@@ -506,6 +551,11 @@ class ProductControllerTest extends TestCase
             ->assertSee('genre=' . $customGenre->getKey(), false)
             ->assertSee('href="/create"', false)
             ->assertDontSee('hero__back', false);
+
+        $this->get('/?genre=' . $sharedLanguageGenre->getKey())
+            ->assertOk()
+            ->assertSee($firstProduct->work_name)
+            ->assertDontSee($japaneseOnlyProduct->work_name);
     }
 
     public function test_create_renders_form_page(): void
@@ -767,12 +817,12 @@ class ProductControllerTest extends TestCase
                 'age_category' => ['_name_' => 'R18'],
                 'circle' => 'SCRAPED_CIRCLE_TOKEN',
                 'sample_images' => [],
-                'genre' => ['Scraped JP Tag'],
+                'genre' => ['Scraped JP Tag', 'ASMR'],
                 'description' => 'SCRAPED_JP_DESCRIPTION_TOKEN',
             ],
             'english' => [
                 'work_name' => 'SCRAPED_EN_TITLE_TOKEN',
-                'genre' => ['Scraped EN Tag'],
+                'genre' => ['Scraped EN Tag', 'ASMR'],
                 'description' => 'SCRAPED_EN_DESCRIPTION_TOKEN',
             ],
         ]));
@@ -801,9 +851,24 @@ class ProductControllerTest extends TestCase
         $this->assertSame('SCRAPED_JP_TITLE_TOKEN', $product->work_name);
         $this->assertSame('SCRAPED_EN_TITLE_TOKEN', $product->work_name_english);
         $this->assertSame('Completed', $product->progress);
-        $this->assertSame(['Scraped JP Tag'], $product->japaneseGenres->pluck('title')->all());
-        $this->assertSame(['Scraped EN Tag'], $product->englishGenres->pluck('title')->all());
+        $this->assertEqualsCanonicalizing(['ASMR', 'Scraped JP Tag'], $product->japaneseGenres->pluck('title')->all());
+        $this->assertEqualsCanonicalizing(['ASMR', 'Scraped EN Tag'], $product->englishGenres->pluck('title')->all());
         $this->assertSame(['Scraped Custom Tag'], $product->customGenres->pluck('title')->all());
+        $this->assertSame(1, Genre::query()->where('title', 'ASMR')->count());
+
+        $asmrGenre = Genre::query()->where('title', 'ASMR')->firstOrFail();
+        $asmrPivotId = DB::table('genre_product')
+            ->where('product_id', $product->getKey())
+            ->where('genre_id', $asmrGenre->getKey())
+            ->value('id');
+
+        $this->assertEqualsCanonicalizing(
+            [Genre::LANGUAGE_JAPANESE, Genre::LANGUAGE_ENGLISH],
+            DB::table('genre_product_languages')
+                ->where('genre_product_id', $asmrPivotId)
+                ->pluck('language')
+                ->all()
+        );
     }
 
     public function test_store_rejects_invalid_date_order(): void
@@ -2003,31 +2068,35 @@ class ProductControllerTest extends TestCase
 
     private function createGenre(string $title, string $type): Genre
     {
-        return Genre::query()->create([
+        $genre = Genre::query()->create([
             'group_id' => null,
             'title' => $title,
             'description' => null,
             'order' => null,
-            'type' => $type,
-            'language' => $type === Genre::TYPE_AUTO_GENERATED_JAPANESE
-                ? Genre::LANGUAGE_JAPANESE
-                : Genre::LANGUAGE_ENGLISH,
         ]);
+
+        $genre->setAttribute('type', $type);
+
+        return $genre;
     }
 
     private function attachGenres(Product $product, array $genres): void
     {
-        $product->genres()->sync(
-            collect($genres)
-                ->mapWithKeys(fn(Genre $genre) => [
-                    $genre->getKey() => [
-                        'source' => $genre->type === Genre::TYPE_CUSTOM
-                            ? Genre::PIVOT_SOURCE_CUSTOM
-                            : Genre::PIVOT_SOURCE_FETCHED,
-                    ],
-                ])
-                ->all()
-        );
+        $fetchedByLanguage = [
+            Genre::LANGUAGE_JAPANESE => [],
+            Genre::LANGUAGE_ENGLISH => [],
+        ];
+        $customGenreIds = [];
+
+        foreach ($genres as $genre) {
+            match ($genre->getAttribute('type')) {
+                Genre::TYPE_AUTO_GENERATED_JAPANESE => $fetchedByLanguage[Genre::LANGUAGE_JAPANESE][] = $genre->getKey(),
+                Genre::TYPE_AUTO_GENERATED_ENGLISH => $fetchedByLanguage[Genre::LANGUAGE_ENGLISH][] = $genre->getKey(),
+                default => $customGenreIds[] = $genre->getKey(),
+            };
+        }
+
+        app(ProductGenreSync::class)->sync($product, $fetchedByLanguage, $customGenreIds);
     }
 
     private function customStorePayload(string $workId, array $overrides = []): array

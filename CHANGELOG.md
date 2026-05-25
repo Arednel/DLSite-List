@@ -2,6 +2,13 @@
 
 ## Development
 
+* 2026-05-24 -- 1.3.5 Multilingual Tag Sync
+  * Reworked genre language handling so one tag title can be attached as fetched JP, fetched EN, or custom per product
+  * Updated Index, Edit, Tag Library, and Refetch Tags to show English/custom-visible tags while preserving JP-only fetched tags
+  * Added Refetch Tags review controls for new tags, stale tags, and custom-to-fetched overlaps
+  * Simplified shared genre sync and visible-tag query logic with expanded tests and documentation
+  * Cleaned up CSS, HTML
+
 * 2026-05-23 -- 1.3.4.1 Docker Tests
   * Added "--rm", so docker test container automatically removed after tests
 

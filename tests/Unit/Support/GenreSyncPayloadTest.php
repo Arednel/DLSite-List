@@ -31,4 +31,15 @@ class GenreSyncPayloadTest extends TestCase
             20 => ['source' => Genre::PIVOT_SOURCE_CUSTOM],
         ], GenreSyncPayload::build([10], [10, 20]));
     }
+
+    public function test_it_builds_language_map_for_fetched_language_buckets(): void
+    {
+        $this->assertSame([
+            10 => [Genre::LANGUAGE_JAPANESE, Genre::LANGUAGE_ENGLISH],
+            20 => [Genre::LANGUAGE_ENGLISH],
+        ], GenreSyncPayload::languageMap([
+            Genre::LANGUAGE_JAPANESE => [10, 10],
+            Genre::LANGUAGE_ENGLISH => [10, 20],
+        ]));
+    }
 }

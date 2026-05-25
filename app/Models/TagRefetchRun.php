@@ -84,10 +84,14 @@ class TagRefetchRun extends Model
         $results = $this->results;
 
         return [
-            'added_japanese' => $results->sum(fn (TagRefetchWorkResult $result): int => count($result->added_japanese_tags ?? [])),
-            'added_english' => $results->sum(fn (TagRefetchWorkResult $result): int => count($result->added_english_tags ?? [])),
-            'stale_japanese' => $results->sum(fn (TagRefetchWorkResult $result): int => count($result->stale_japanese_tags ?? [])),
-            'stale_english' => $results->sum(fn (TagRefetchWorkResult $result): int => count($result->stale_english_tags ?? [])),
+            'added_japanese' => $results->sum(fn(TagRefetchWorkResult $result): int => count($result->added_japanese_tags ?? [])),
+            'added_english' => $results->sum(fn(TagRefetchWorkResult $result): int => count($result->added_english_tags ?? [])),
+            'stale_japanese' => $results->sum(fn(TagRefetchWorkResult $result): int => count($result->stale_japanese_tags ?? [])),
+            'stale_english' => $results->sum(fn(TagRefetchWorkResult $result): int => count($result->stale_english_tags ?? [])),
+            'custom_to_fetched' => $results->sum(
+                fn(TagRefetchWorkResult $result): int => count($result->custom_to_fetched_japanese_tags ?? [])
+                    + count($result->custom_to_fetched_english_tags ?? [])
+            ),
             'skipped' => $results->filter->isSkipped()->count(),
         ];
     }

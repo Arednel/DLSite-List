@@ -7,11 +7,13 @@ use App\Models\Genre;
 use App\Models\Product;
 use App\Models\TagRefetchRun;
 use App\Models\TagRefetchWorkResult;
+use App\Support\ProductGenreSync;
 use App\Support\TagRefetch\DLSiteTagFetcher;
 use App\Support\TagRefetch\TagRefetchService;
 use Illuminate\Bus\PendingBatch;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Bus;
+use Illuminate\Support\Facades\DB;
 use RuntimeException;
 use Tests\TestCase;
 
@@ -295,6 +297,27 @@ class OptionsControllerTest extends TestCase
         $this->assertSame([], $diff['added_english_tags']);
     }
 
+    public function test_tag_diff_detects_language_bucket_changes_and_custom_to_fetched_overlap(): void
+    {
+        $product = Product::factory()->create();
+        $asmr = $this->createGenre('ASMR', Genre::TYPE_AUTO_GENERATED_JAPANESE);
+        $customOverlap = $this->createGenre('Custom Overlap', Genre::TYPE_CUSTOM);
+        $this->attachGenres($product, [$asmr, $customOverlap]);
+
+        $diff = app(TagRefetchService::class)->diffProductTags(
+            $product,
+            ['ASMR', 'Custom Overlap'],
+            ['ASMR', 'Custom Overlap'],
+        );
+
+        $this->assertSame([], $diff['added_japanese_tags']);
+        $this->assertSame(['ASMR'], $diff['added_english_tags']);
+        $this->assertSame([], $diff['stale_japanese_tags']);
+        $this->assertSame([], $diff['stale_english_tags']);
+        $this->assertSame(['Custom Overlap'], $diff['custom_to_fetched_japanese_tags']);
+        $this->assertSame(['Custom Overlap'], $diff['custom_to_fetched_english_tags']);
+    }
+
     public function test_fetch_job_skips_errors_and_custom_only_works(): void
     {
         $service = app(TagRefetchService::class);
@@ -350,22 +373,39 @@ class OptionsControllerTest extends TestCase
     public function test_review_screen_shows_summary_and_expandable_work_details(): void
     {
         $product = Product::factory()->create(['work_name' => 'REVIEW_DETAILS_TOKEN']);
-        $run = $this->createReviewRun($product, ['Old JP'], ['Old EN'], ['New JP'], ['New EN']);
+        $run = $this->createReviewRun(
+            $product,
+            ['Old JP'],
+            ['Old EN'],
+            ['New JP'],
+            ['New EN'],
+            ['Custom JP'],
+            ['Custom EN'],
+        );
 
         $this->get(route('options.refetch-tags.show', $run))
             ->assertOk()
             ->assertSee('Review')
             ->assertSee('New JP')
             ->assertSee('Stale EN')
+            ->assertSee('Custom -> Fetched', false)
             ->assertSee('options-refetch-progress', false)
             ->assertSee('+JP')
             ->assertSee('+EN')
             ->assertSee('-JP')
             ->assertSee('-EN')
+            ->assertSee('C->F', false)
             ->assertSee('title="New JP tags"', false)
             ->assertSee('title="Stale EN tags"', false)
+            ->assertSee('title="Custom tags now fetched"', false)
             ->assertSee('REVIEW_DETAILS_TOKEN')
             ->assertSee('<details', false)
+            ->assertSee('name="global_added_japanese_action"', false)
+            ->assertSee('name="global_added_english_action"', false)
+            ->assertSee('name="work_actions[' . $product->id . '][added_japanese]"', false)
+            ->assertSee('name="work_actions[' . $product->id . '][added_english]"', false)
+            ->assertSee('name="global_custom_to_fetched_action"', false)
+            ->assertSee('name="work_actions[' . $product->id . '][custom_to_fetched]"', false)
             ->assertSee('Apply Changes');
     }
 
@@ -451,12 +491,147 @@ class OptionsControllerTest extends TestCase
         $this->assertDatabaseHas('genres', ['title' => 'Override Old EN']);
     }
 
+    public function test_apply_can_ignore_new_fetched_tags_with_global_actions(): void
+    {
+        $product = Product::factory()->create();
+        $run = $this->createReviewRun($product, [], [], ['Ignore New JP'], ['Ignore New EN']);
+
+        $this->post(route('options.refetch-tags.apply', $run), [
+            'global_japanese_action' => TagRefetchWorkResult::STALE_ACTION_MOVE_TO_CUSTOM,
+            'global_english_action' => TagRefetchWorkResult::STALE_ACTION_MOVE_TO_CUSTOM,
+            'global_added_japanese_action' => TagRefetchWorkResult::ADDED_ACTION_IGNORE,
+            'global_added_english_action' => TagRefetchWorkResult::ADDED_ACTION_IGNORE,
+        ])->assertRedirect(route('options.refetch-tags.show', $run));
+
+        $product->refresh()->load(['japaneseGenres', 'englishGenres', 'customGenres']);
+        $result = $run->results()->firstOrFail();
+
+        $this->assertSame([], $product->japaneseGenres->pluck('title')->all());
+        $this->assertSame([], $product->englishGenres->pluck('title')->all());
+        $this->assertSame([], $product->customGenres->pluck('title')->all());
+        $this->assertSame(TagRefetchWorkResult::ADDED_ACTION_IGNORE, $result->added_japanese_action);
+        $this->assertSame(TagRefetchWorkResult::ADDED_ACTION_IGNORE, $result->added_english_action);
+    }
+
+    public function test_apply_can_override_new_fetched_tag_action_per_work(): void
+    {
+        $product = Product::factory()->create();
+        $run = $this->createReviewRun($product, [], [], ['Override New JP'], ['Override New EN']);
+
+        $this->post(route('options.refetch-tags.apply', $run), [
+            'global_japanese_action' => TagRefetchWorkResult::STALE_ACTION_MOVE_TO_CUSTOM,
+            'global_english_action' => TagRefetchWorkResult::STALE_ACTION_MOVE_TO_CUSTOM,
+            'global_added_japanese_action' => TagRefetchWorkResult::ADDED_ACTION_IGNORE,
+            'global_added_english_action' => TagRefetchWorkResult::ADDED_ACTION_IGNORE,
+            'work_actions' => [
+                $product->id => [
+                    'added_english' => TagRefetchWorkResult::ADDED_ACTION_ADD,
+                ],
+            ],
+        ])->assertRedirect(route('options.refetch-tags.show', $run));
+
+        $product->refresh()->load(['japaneseGenres', 'englishGenres', 'customGenres']);
+        $result = $run->results()->firstOrFail();
+
+        $this->assertSame([], $product->japaneseGenres->pluck('title')->all());
+        $this->assertSame(['Override New EN'], $product->englishGenres->pluck('title')->all());
+        $this->assertSame([], $product->customGenres->pluck('title')->all());
+        $this->assertSame(TagRefetchWorkResult::ADDED_ACTION_IGNORE, $result->added_japanese_action);
+        $this->assertSame(TagRefetchWorkResult::ADDED_ACTION_ADD, $result->added_english_action);
+    }
+
+    public function test_apply_promotes_custom_to_fetched_overlap_by_default(): void
+    {
+        $product = Product::factory()->create();
+        $overlap = $this->createGenre('Promote Overlap', Genre::TYPE_CUSTOM);
+        $this->attachGenres($product, [$overlap]);
+        $run = $this->createReviewRun(
+            $product,
+            [],
+            [],
+            ['Promote Overlap'],
+            ['Promote Overlap'],
+            ['Promote Overlap'],
+            ['Promote Overlap'],
+        );
+
+        $this->post(route('options.refetch-tags.apply', $run), [
+            'global_japanese_action' => TagRefetchWorkResult::STALE_ACTION_MOVE_TO_CUSTOM,
+            'global_english_action' => TagRefetchWorkResult::STALE_ACTION_MOVE_TO_CUSTOM,
+            'global_custom_to_fetched_action' => TagRefetchWorkResult::CUSTOM_TO_FETCHED_ACTION_PROMOTE,
+        ])->assertRedirect(route('options.refetch-tags.show', $run));
+
+        $product->refresh()->load(['japaneseGenres', 'englishGenres', 'customGenres']);
+
+        $this->assertSame(['Promote Overlap'], $product->japaneseGenres->pluck('title')->all());
+        $this->assertSame(['Promote Overlap'], $product->englishGenres->pluck('title')->all());
+        $this->assertSame([], $product->customGenres->pluck('title')->all());
+        $this->assertGenreLanguages($product, $overlap, [Genre::LANGUAGE_JAPANESE, Genre::LANGUAGE_ENGLISH]);
+    }
+
+    public function test_apply_can_keep_custom_to_fetched_overlap_with_per_work_override(): void
+    {
+        $product = Product::factory()->create();
+        $overlap = $this->createGenre('Keep Overlap', Genre::TYPE_CUSTOM);
+        $this->attachGenres($product, [$overlap]);
+        $run = $this->createReviewRun(
+            $product,
+            [],
+            [],
+            [],
+            ['Keep Overlap'],
+            [],
+            ['Keep Overlap'],
+        );
+
+        $this->post(route('options.refetch-tags.apply', $run), [
+            'global_japanese_action' => TagRefetchWorkResult::STALE_ACTION_MOVE_TO_CUSTOM,
+            'global_english_action' => TagRefetchWorkResult::STALE_ACTION_MOVE_TO_CUSTOM,
+            'global_custom_to_fetched_action' => TagRefetchWorkResult::CUSTOM_TO_FETCHED_ACTION_PROMOTE,
+            'work_actions' => [
+                $product->id => [
+                    'custom_to_fetched' => TagRefetchWorkResult::CUSTOM_TO_FETCHED_ACTION_KEEP_CUSTOM,
+                ],
+            ],
+        ])->assertRedirect(route('options.refetch-tags.show', $run));
+
+        $product->refresh()->load(['japaneseGenres', 'englishGenres', 'customGenres']);
+
+        $this->assertSame([], $product->japaneseGenres->pluck('title')->all());
+        $this->assertSame([], $product->englishGenres->pluck('title')->all());
+        $this->assertSame(['Keep Overlap'], $product->customGenres->pluck('title')->all());
+        $this->assertGenreLanguages($product, $overlap, []);
+    }
+
+    public function test_apply_removes_only_stale_language_when_tag_is_still_fetched_in_another_language(): void
+    {
+        $product = Product::factory()->create();
+        $asmr = $this->createGenre('Language Move ASMR', Genre::TYPE_AUTO_GENERATED_JAPANESE);
+        $this->attachGenres($product, [$asmr]);
+        $run = $this->createReviewRun($product, ['Language Move ASMR'], [], [], ['Language Move ASMR']);
+
+        $this->post(route('options.refetch-tags.apply', $run), [
+            'global_japanese_action' => TagRefetchWorkResult::STALE_ACTION_REMOVE,
+            'global_english_action' => TagRefetchWorkResult::STALE_ACTION_MOVE_TO_CUSTOM,
+            'global_custom_to_fetched_action' => TagRefetchWorkResult::CUSTOM_TO_FETCHED_ACTION_PROMOTE,
+        ])->assertRedirect(route('options.refetch-tags.show', $run));
+
+        $product->refresh()->load(['japaneseGenres', 'englishGenres', 'customGenres']);
+
+        $this->assertSame([], $product->japaneseGenres->pluck('title')->all());
+        $this->assertSame(['Language Move ASMR'], $product->englishGenres->pluck('title')->all());
+        $this->assertSame([], $product->customGenres->pluck('title')->all());
+        $this->assertGenreLanguages($product, $asmr, [Genre::LANGUAGE_ENGLISH]);
+    }
+
     private function createReviewRun(
         Product $product,
         array $staleJapanese,
         array $staleEnglish,
         array $fetchedJapanese,
         array $fetchedEnglish,
+        array $customToFetchedJapanese = [],
+        array $customToFetchedEnglish = [],
     ): TagRefetchRun {
         $service = app(TagRefetchService::class);
         $run = $service->createRun([$product->id]);
@@ -469,6 +644,8 @@ class OptionsControllerTest extends TestCase
             'added_english_tags' => $fetchedEnglish,
             'stale_japanese_tags' => $staleJapanese,
             'stale_english_tags' => $staleEnglish,
+            'custom_to_fetched_japanese_tags' => $customToFetchedJapanese,
+            'custom_to_fetched_english_tags' => $customToFetchedEnglish,
         ])->save();
 
         $run->forceFill([
@@ -483,16 +660,16 @@ class OptionsControllerTest extends TestCase
 
     private function createGenre(string $title, string $type): Genre
     {
-        return Genre::query()->create([
+        $genre = Genre::query()->create([
             'group_id' => null,
             'title' => $title,
             'description' => null,
             'order' => null,
-            'type' => $type,
-            'language' => $type === Genre::TYPE_AUTO_GENERATED_JAPANESE
-                ? Genre::LANGUAGE_JAPANESE
-                : Genre::LANGUAGE_ENGLISH,
         ]);
+
+        $genre->setAttribute('type', $type);
+
+        return $genre;
     }
 
     /**
@@ -500,15 +677,35 @@ class OptionsControllerTest extends TestCase
      */
     private function attachGenres(Product $product, array $genres): void
     {
-        $product->genres()->sync(
-            collect($genres)
-                ->mapWithKeys(fn(Genre $genre): array => [
-                    $genre->id => [
-                        'source' => $genre->type === Genre::TYPE_CUSTOM
-                            ? Genre::PIVOT_SOURCE_CUSTOM
-                            : Genre::PIVOT_SOURCE_FETCHED,
-                    ],
-                ])
+        $fetchedByLanguage = [
+            Genre::LANGUAGE_JAPANESE => [],
+            Genre::LANGUAGE_ENGLISH => [],
+        ];
+        $customGenreIds = [];
+
+        foreach ($genres as $genre) {
+            match ($genre->getAttribute('type')) {
+                Genre::TYPE_AUTO_GENERATED_JAPANESE => $fetchedByLanguage[Genre::LANGUAGE_JAPANESE][] = $genre->getKey(),
+                Genre::TYPE_AUTO_GENERATED_ENGLISH => $fetchedByLanguage[Genre::LANGUAGE_ENGLISH][] = $genre->getKey(),
+                default => $customGenreIds[] = $genre->getKey(),
+            };
+        }
+
+        app(ProductGenreSync::class)->sync($product, $fetchedByLanguage, $customGenreIds);
+    }
+
+    private function assertGenreLanguages(Product $product, Genre $genre, array $languages): void
+    {
+        $pivotId = DB::table('genre_product')
+            ->where('product_id', $product->getKey())
+            ->where('genre_id', $genre->getKey())
+            ->value('id');
+
+        $this->assertEqualsCanonicalizing(
+            $languages,
+            DB::table('genre_product_languages')
+                ->where('genre_product_id', $pivotId)
+                ->pluck('language')
                 ->all()
         );
     }

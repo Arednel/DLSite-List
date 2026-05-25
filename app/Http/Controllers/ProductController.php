@@ -9,9 +9,10 @@ use App\Http\Requests\UpdateProductRequest;
 use App\Models\Genre;
 use App\Models\Product;
 use App\Support\DLSite\DLSitePythonRunner;
-use App\Support\GenreSyncPayload;
+use App\Support\ProductGenreSync;
 use App\Support\ReturnTarget;
 use App\Support\TagInput;
+use App\Support\VisibleGenreAttachment;
 use Illuminate\Http\Request;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Carbon;
@@ -24,6 +25,10 @@ use Illuminate\Validation\ValidationException;
 
 class ProductController extends Controller
 {
+    public function __construct(
+        private readonly ProductGenreSync $genreSync,
+    ) {}
+
     private const VISIBILITY_AFFECTING_PRODUCT_FIELDS = [
         'work_name',
         'work_name_english',
@@ -57,13 +62,12 @@ class ProductController extends Controller
     public function tagLibrary()
     {
         $genres = Genre::query()
-            ->withCount('products')
-            ->whereIn('type', [
-                Genre::TYPE_AUTO_GENERATED_ENGLISH,
-                Genre::TYPE_CUSTOM,
+            ->whereHas('products', VisibleGenreAttachment::query())
+            ->withCount([
+                'products' => VisibleGenreAttachment::query(),
             ])
             ->orderBy('title')
-            ->get(['id', 'title', 'type']);
+            ->get(['id', 'title']);
 
         return view('TagLibrary', [
             'genres' => $genres,
@@ -214,9 +218,9 @@ class ProductController extends Controller
 
         return view('Edit', [
             'product' => $product,
-            'englishGenres' => $editGenres->get(Genre::TYPE_AUTO_GENERATED_ENGLISH, collect()),
+            'englishGenres' => $editGenres->get(Genre::LANGUAGE_ENGLISH, collect()),
             'genreCustomInput' => $this->formatGenreCustomForInput(
-                $editGenres->get(Genre::TYPE_CUSTOM, collect())->pluck('title')->all()
+                $editGenres->get(Genre::PIVOT_SOURCE_CUSTOM, collect())->pluck('title')->all()
             ),
             'returnQuery' => $returnTarget->query,
             'returnFragment' => $returnTarget->fragment,
@@ -396,63 +400,27 @@ class ProductController extends Controller
         return DB::table('genre_product')
             ->join('genres', 'genres.id', '=', 'genre_product.genre_id')
             ->where('genre_product.product_id', $productId)
-            ->where(function ($query): void {
-                $query->where('genre_product.source', Genre::PIVOT_SOURCE_CUSTOM)
-                    ->orWhere('genres.type', Genre::TYPE_AUTO_GENERATED_ENGLISH);
-            })
+            ->where(VisibleGenreAttachment::query())
             ->orderBy('genres.title')
             ->get([
                 'genres.title',
-                'genres.type',
                 'genre_product.source',
             ])
             ->groupBy(fn(object $genre): string => $genre->source === Genre::PIVOT_SOURCE_CUSTOM
-                ? Genre::TYPE_CUSTOM
-                : $genre->type);
+                ? Genre::PIVOT_SOURCE_CUSTOM
+                : Genre::LANGUAGE_ENGLISH);
     }
 
     private function syncProductGenres(Product $product, array $japaneseTitles, array $englishTitles, array $customTitles): void
     {
-        $fetchedGenreIds = array_merge(
-            Genre::resolveIdsFromTitles($japaneseTitles, Genre::TYPE_AUTO_GENERATED_JAPANESE, Genre::LANGUAGE_JAPANESE),
-            Genre::resolveIdsFromTitles($englishTitles, Genre::TYPE_AUTO_GENERATED_ENGLISH, Genre::LANGUAGE_ENGLISH),
-        );
-        $customGenreIds = Genre::resolveIdsFromTitles($customTitles, Genre::TYPE_CUSTOM, Genre::LANGUAGE_ENGLISH);
-
-        $product->genres()->sync(GenreSyncPayload::build($fetchedGenreIds, $customGenreIds));
+        $this->genreSync->sync($product, [
+            Genre::LANGUAGE_JAPANESE => Genre::resolveIdsFromTitles($japaneseTitles),
+            Genre::LANGUAGE_ENGLISH => Genre::resolveIdsFromTitles($englishTitles),
+        ], Genre::resolveIdsFromTitles($customTitles));
     }
 
     private function syncProductCustomGenres(Product $product, array $customTitles): bool
     {
-        $fetchedGenreIds = DB::table('genre_product')
-            ->where('product_id', $product->getKey())
-            ->where('source', Genre::PIVOT_SOURCE_FETCHED)
-            ->pluck('genre_id')
-            ->all();
-
-        $currentCustomGenreIds = DB::table('genre_product')
-            ->where('product_id', $product->getKey())
-            ->where('source', Genre::PIVOT_SOURCE_CUSTOM)
-            ->pluck('genre_id')
-            ->map(fn(int|string $genreId): int => (int) $genreId)
-            ->sort()
-            ->values()
-            ->all();
-
-        $customGenreIds = Genre::resolveIdsFromTitles(
-            $customTitles,
-            Genre::TYPE_CUSTOM,
-            Genre::LANGUAGE_ENGLISH
-        );
-        $normalizedCustomGenreIds = collect($customGenreIds)
-            ->map(fn(int|string $genreId): int => (int) $genreId)
-            ->unique()
-            ->sort()
-            ->values()
-            ->all();
-
-        $product->genres()->sync(GenreSyncPayload::build($fetchedGenreIds, $customGenreIds));
-
-        return $currentCustomGenreIds !== $normalizedCustomGenreIds;
+        return $this->genreSync->syncCustom($product, Genre::resolveIdsFromTitles($customTitles));
     }
 }
