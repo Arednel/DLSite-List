@@ -38,4 +38,5 @@ Route::get('/options', [OptionsController::class, 'index'])->name('options.index
 Route::post('/options/refetch-tags', [OptionsController::class, 'startRefetchTags'])->name('options.refetch-tags.start');
 Route::get('/options/refetch-tags/{run}', [OptionsController::class, 'showRefetchTags'])->name('options.refetch-tags.show');
 Route::get('/options/refetch-tags/{run}/status', [OptionsController::class, 'refetchTagsStatus'])->name('options.refetch-tags.status');
+Route::post('/options/refetch-tags/{run}/cancel', [OptionsController::class, 'cancelRefetchTags'])->name('options.refetch-tags.cancel');
 Route::post('/options/refetch-tags/{run}/apply', [OptionsController::class, 'applyRefetchTags'])->name('options.refetch-tags.apply');

@@ -663,6 +663,34 @@ class ProductControllerTest extends TestCase
             ->assertDontSee('href="http://localhost/create"', false);
     }
 
+    public function test_create_preserves_go_back_target_after_scraper_validation_error(): void
+    {
+        Process::fake([
+            '*' => Process::result(
+                errorOutput: 'Deleted or Non-existing DLSite work',
+                exitCode: 2,
+            ),
+        ])->preventStrayProcesses();
+
+        $this->followingRedirects()
+            ->from('/create')
+            ->post('/store', [
+                'id' => 'RJ000000404',
+                'return_url' => 'http://localhost/?progress=Listening',
+                'return_query' => [
+                    'progress' => 'Listening',
+                    'search' => 'rain',
+                ],
+            ])
+            ->assertOk()
+            ->assertSee('Deleted or Non-existing DLSite work')
+            ->assertSee('name="return_url" value="http://localhost/?progress=Listening"', false)
+            ->assertSeeInOrder(['name="return_query[search]"', 'value="rain"'], false)
+            ->assertSeeInOrder(['name="return_query[progress]"', 'value="Listening"'], false)
+            ->assertSee('href="http://localhost/?progress=Listening"', false)
+            ->assertDontSee('href="http://localhost/create"', false);
+    }
+
     public function test_create_go_back_uses_laravel_previous_url_for_external_referrer(): void
     {
         $this->withHeader('referer', 'https://example.com/tags')

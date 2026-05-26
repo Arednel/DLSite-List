@@ -2,6 +2,11 @@
 
 ## Development
 
+* 2026-05-26 -- 1.3.8 Refetch Cancellation and Fixes
+  * Added a Cancel Refetch action for running Refetch Tags batches
+  * Preserved the Create page Go Back target after DLSite scraper validation errors
+  * Updated tests and docs
+
 * 2026-05-26 -- 1.3.7 Tag Identity Key
   * Moved genre uniqueness from display titles to case-insensitive `title_key` values
   * Kept Hiragana/Katakana tag variants distinct so both kana forms can coexist on one work

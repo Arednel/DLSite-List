@@ -10,10 +10,12 @@ use App\Models\TagRefetchWorkResult;
 use App\Support\ProductGenreSync;
 use App\Support\TagRefetch\DLSiteTagFetcher;
 use App\Support\TagRefetch\TagRefetchService;
+use Carbon\CarbonImmutable;
 use Illuminate\Bus\PendingBatch;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Bus;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Str;
 use RuntimeException;
 use Tests\TestCase;
 
@@ -232,6 +234,27 @@ class OptionsControllerTest extends TestCase
             ]);
     }
 
+    public function test_status_endpoint_reports_cancelling_state_and_cancel_metadata(): void
+    {
+        $product = Product::factory()->create();
+        $run = app(TagRefetchService::class)->createRun([$product->id]);
+        $run->forceFill([
+            'status' => TagRefetchRun::STATUS_CANCELLING,
+            'cancelled_at' => now(),
+        ])->save();
+
+        $response = $this->getJson(route('options.refetch-tags.status', $run))
+            ->assertOk()
+            ->assertJson([
+                'status' => TagRefetchRun::STATUS_CANCELLING,
+                'total' => 1,
+                'processed' => 0,
+                'complete' => false,
+            ]);
+
+        $this->assertNotNull($response->json('cancelled_at'));
+    }
+
     public function test_fetch_job_stores_fetched_tags_and_diff_without_touching_product_tags(): void
     {
         $product = Product::factory()->create();
@@ -271,6 +294,109 @@ class OptionsControllerTest extends TestCase
         $this->assertSame(['Old JP Tag'], $product->japaneseGenres->pluck('title')->all());
         $this->assertSame(['Old EN Tag'], $product->englishGenres->pluck('title')->all());
         $this->assertSame(['Keep Custom Tag'], $product->customGenres->pluck('title')->all());
+    }
+
+    public function test_fetch_job_marks_cancelled_batch_work_as_skipped_without_fetching(): void
+    {
+        $product = Product::factory()->create();
+        $service = app(TagRefetchService::class);
+        $run = $service->createRun([$product->id]);
+        $fetcher = new class extends DLSiteTagFetcher
+        {
+            public bool $called = false;
+
+            public function __construct() {}
+
+            public function fetch(string $workId): array
+            {
+                $this->called = true;
+
+                return ['japanese' => ['Should Not Fetch'], 'english' => []];
+            }
+        };
+
+        [$job] = (new FetchProductTagsJob($run->id, $product->id))
+            ->withFakeBatch(cancelledAt: CarbonImmutable::now());
+
+        $job->handle($fetcher, $service);
+
+        $result = $run->results()->firstOrFail();
+        $run->refresh();
+
+        $this->assertFalse($fetcher->called);
+        $this->assertSame(TagRefetchWorkResult::STATUS_SKIPPED, $result->status);
+        $this->assertSame(TagRefetchService::CANCELLED_BEFORE_FETCH_MESSAGE, $result->error);
+        $this->assertSame(TagRefetchRun::STATUS_REVIEW, $run->status);
+        $this->assertSame(1, $run->skipped_count);
+    }
+
+    public function test_fetch_job_records_current_fetch_when_run_is_cancelled_during_python_fetch(): void
+    {
+        $product = Product::factory()->create();
+        $service = app(TagRefetchService::class);
+        $run = $service->createRun([$product->id]);
+        $fetcher = new class($run) extends DLSiteTagFetcher
+        {
+            public function __construct(private TagRefetchRun $run) {}
+
+            public function fetch(string $workId): array
+            {
+                $this->run->forceFill([
+                    'status' => TagRefetchRun::STATUS_CANCELLING,
+                    'cancelled_at' => now(),
+                ])->save();
+
+                return ['japanese' => ['During Cancel JP'], 'english' => []];
+            }
+        };
+
+        (new FetchProductTagsJob($run->id, $product->id))->handle($fetcher, $service);
+
+        $result = $run->results()->firstOrFail();
+        $run->refresh();
+
+        $this->assertSame(TagRefetchWorkResult::STATUS_FETCHED, $result->status);
+        $this->assertSame(['During Cancel JP'], $result->fetched_japanese_tags);
+        $this->assertTrue($run->wasCancelled());
+        $this->assertSame(TagRefetchRun::STATUS_REVIEW, $run->status);
+        $this->assertSame(1, $run->fetched_count);
+    }
+
+    public function test_cancelling_run_moves_to_review_after_pending_results_settle(): void
+    {
+        $service = app(TagRefetchService::class);
+        $first = Product::factory()->create();
+        $second = Product::factory()->create();
+        $run = $service->createRun([$first->id, $second->id]);
+
+        $run->forceFill([
+            'status' => TagRefetchRun::STATUS_CANCELLING,
+            'cancelled_at' => now(),
+        ])->save();
+
+        $run->results()->where('product_id', $first->id)->firstOrFail()->forceFill([
+            'status' => TagRefetchWorkResult::STATUS_FETCHED,
+        ])->save();
+
+        $service->refreshRunProgress($run);
+        $run->refresh();
+
+        $this->assertSame(TagRefetchRun::STATUS_CANCELLING, $run->status);
+        $this->assertSame(1, $run->processed_count);
+
+        $run->results()->where('product_id', $second->id)->firstOrFail()->forceFill([
+            'status' => TagRefetchWorkResult::STATUS_SKIPPED,
+            'error' => TagRefetchService::CANCELLED_BEFORE_FETCH_MESSAGE,
+        ])->save();
+
+        $service->refreshRunProgress($run);
+        $run->refresh();
+
+        $this->assertSame(TagRefetchRun::STATUS_REVIEW, $run->status);
+        $this->assertSame(2, $run->processed_count);
+        $this->assertSame(1, $run->fetched_count);
+        $this->assertSame(1, $run->skipped_count);
+        $this->assertNotNull($run->completed_at);
     }
 
     public function test_tag_diff_uses_relationship_titles_and_sorted_fetched_tags(): void
@@ -397,6 +523,107 @@ class OptionsControllerTest extends TestCase
         $this->assertFalse($fetcher->calledForCustomOnly);
         $this->assertSame(TagRefetchRun::STATUS_REVIEW, $run->status);
         $this->assertSame(3, $run->skipped_count);
+    }
+
+    public function test_running_refetch_page_shows_cancel_form_only_while_running(): void
+    {
+        $product = Product::factory()->create(['work_name' => 'CANCEL_FORM_TOKEN']);
+        $run = app(TagRefetchService::class)->createRun([$product->id]);
+
+        $this->get(route('options.refetch-tags.show', $run))
+            ->assertOk()
+            ->assertSee('Cancel Refetch')
+            ->assertSee('action="' . route('options.refetch-tags.cancel', $run) . '"', false);
+
+        $run->forceFill([
+            'status' => TagRefetchRun::STATUS_CANCELLING,
+            'cancelled_at' => now(),
+        ])->save();
+
+        $this->get(route('options.refetch-tags.show', $run))
+            ->assertOk()
+            ->assertSee('Cancelling')
+            ->assertDontSee('Cancel Refetch');
+
+        $run->forceFill([
+            'status' => TagRefetchRun::STATUS_REVIEW,
+            'completed_at' => now(),
+        ])->save();
+
+        $this->get(route('options.refetch-tags.show', $run))
+            ->assertOk()
+            ->assertDontSee('Cancel Refetch');
+    }
+
+    public function test_cancel_refetch_cancels_only_the_selected_run_batch(): void
+    {
+        $first = Product::factory()->create();
+        $second = Product::factory()->create();
+        $service = app(TagRefetchService::class);
+        $run = $service->createRun([$first->id]);
+        $newerRun = $service->createRun([$second->id]);
+        $batchId = $this->createBatchRecord();
+        $newerBatchId = $this->createBatchRecord();
+
+        $run->forceFill(['batch_id' => $batchId])->save();
+        $newerRun->forceFill(['batch_id' => $newerBatchId])->save();
+
+        $this->post(route('options.refetch-tags.cancel', $run))
+            ->assertRedirect(route('options.refetch-tags.show', $run))
+            ->assertSessionHasNoErrors();
+
+        $run->refresh();
+        $newerRun->refresh();
+
+        $this->assertSame(TagRefetchRun::STATUS_CANCELLING, $run->status);
+        $this->assertTrue($run->wasCancelled());
+        $this->assertSame(TagRefetchRun::STATUS_RUNNING, $newerRun->status);
+        $this->assertNull($newerRun->cancelled_at);
+        $this->assertNotNull(DB::table('job_batches')->where('id', $batchId)->value('cancelled_at'));
+        $this->assertNull(DB::table('job_batches')->where('id', $newerBatchId)->value('cancelled_at'));
+    }
+
+    public function test_cancel_refetch_is_harmless_when_run_is_already_cancelling(): void
+    {
+        $product = Product::factory()->create();
+        $run = app(TagRefetchService::class)->createRun([$product->id]);
+        $cancelledAt = now()->subMinute();
+
+        $run->forceFill([
+            'status' => TagRefetchRun::STATUS_CANCELLING,
+            'cancelled_at' => $cancelledAt,
+        ])->save();
+
+        $this->post(route('options.refetch-tags.cancel', $run))
+            ->assertRedirect(route('options.refetch-tags.show', $run))
+            ->assertSessionHasNoErrors();
+
+        $run->refresh();
+
+        $this->assertSame(TagRefetchRun::STATUS_CANCELLING, $run->status);
+        $this->assertNotNull($run->cancelled_at);
+    }
+
+    public function test_review_and_applied_refetch_runs_cannot_be_cancelled(): void
+    {
+        $product = Product::factory()->create();
+        $reviewRun = $this->createReviewRun($product, [], [], [], []);
+        $appliedRun = $this->createReviewRun($product, [], [], [], []);
+        $appliedRun->forceFill([
+            'status' => TagRefetchRun::STATUS_APPLIED,
+            'applied_at' => now(),
+        ])->save();
+
+        $this->post(route('options.refetch-tags.cancel', $reviewRun))
+            ->assertRedirect(route('options.refetch-tags.show', $reviewRun))
+            ->assertSessionHasErrors(['run']);
+
+        $this->post(route('options.refetch-tags.cancel', $appliedRun))
+            ->assertRedirect(route('options.refetch-tags.show', $appliedRun))
+            ->assertSessionHasErrors(['run']);
+
+        $this->assertSame(TagRefetchRun::STATUS_REVIEW, $reviewRun->refresh()->status);
+        $this->assertSame(TagRefetchRun::STATUS_APPLIED, $appliedRun->refresh()->status);
     }
 
     public function test_review_screen_shows_summary_and_expandable_work_details(): void
@@ -567,6 +794,53 @@ class OptionsControllerTest extends TestCase
         $this->assertSame([], $product->customGenres->pluck('title')->all());
         $this->assertSame(TagRefetchWorkResult::ADDED_ACTION_IGNORE, $result->added_japanese_action);
         $this->assertSame(TagRefetchWorkResult::ADDED_ACTION_ADD, $result->added_english_action);
+    }
+
+    public function test_cancelled_partial_review_run_can_apply_completed_fetched_results(): void
+    {
+        $fetchedProduct = Product::factory()->create();
+        $skippedProduct = Product::factory()->create();
+        $run = app(TagRefetchService::class)->createRun([$fetchedProduct->id, $skippedProduct->id]);
+
+        $run->results()->where('product_id', $fetchedProduct->id)->firstOrFail()->forceFill([
+            'status' => TagRefetchWorkResult::STATUS_FETCHED,
+            'fetched_japanese_tags' => ['Partial JP'],
+            'fetched_english_tags' => [],
+            'added_japanese_tags' => ['Partial JP'],
+            'added_english_tags' => [],
+            'stale_japanese_tags' => [],
+            'stale_english_tags' => [],
+            'custom_to_fetched_japanese_tags' => [],
+            'custom_to_fetched_english_tags' => [],
+        ])->save();
+
+        $run->results()->where('product_id', $skippedProduct->id)->firstOrFail()->forceFill([
+            'status' => TagRefetchWorkResult::STATUS_SKIPPED,
+            'error' => TagRefetchService::CANCELLED_BEFORE_FETCH_MESSAGE,
+        ])->save();
+
+        $run->forceFill([
+            'status' => TagRefetchRun::STATUS_REVIEW,
+            'processed_count' => 2,
+            'fetched_count' => 1,
+            'skipped_count' => 1,
+            'cancelled_at' => now(),
+            'completed_at' => now(),
+        ])->save();
+
+        $this->post(route('options.refetch-tags.apply', $run), [
+            'global_japanese_action' => TagRefetchWorkResult::STALE_ACTION_MOVE_TO_CUSTOM,
+            'global_english_action' => TagRefetchWorkResult::STALE_ACTION_MOVE_TO_CUSTOM,
+        ])->assertRedirect(route('options.refetch-tags.show', $run));
+
+        $fetchedProduct->refresh()->load('japaneseGenres');
+        $skippedProduct->refresh()->load('japaneseGenres');
+        $run->refresh();
+
+        $this->assertSame(TagRefetchRun::STATUS_APPLIED, $run->status);
+        $this->assertTrue($run->wasCancelled());
+        $this->assertSame(['Partial JP'], $fetchedProduct->japaneseGenres->pluck('title')->all());
+        $this->assertSame([], $skippedProduct->japaneseGenres->pluck('title')->all());
     }
 
     public function test_apply_can_store_hiragana_and_katakana_fetched_tags_on_the_same_work(): void
@@ -760,5 +1034,25 @@ class OptionsControllerTest extends TestCase
                 ->pluck('language')
                 ->all()
         );
+    }
+
+    private function createBatchRecord(): string
+    {
+        $id = (string) Str::orderedUuid();
+
+        DB::table('job_batches')->insert([
+            'id' => $id,
+            'name' => "Refetch tags {$id}",
+            'total_jobs' => 1,
+            'pending_jobs' => 1,
+            'failed_jobs' => 0,
+            'failed_job_ids' => '[]',
+            'options' => serialize([]),
+            'cancelled_at' => null,
+            'created_at' => time(),
+            'finished_at' => null,
+        ]);
+
+        return $id;
     }
 }

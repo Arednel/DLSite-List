@@ -337,8 +337,14 @@ class ProductController extends Controller
 
     private function createView(Request $request, bool $isCustomCreate)
     {
+        if (! $request->has('return_query') && $request->old('return_query') !== null) {
+            $request->merge(['return_query' => $request->old('return_query')]);
+        }
+
         $returnTarget = ReturnTarget::fromRequest($request);
-        $returnUrl = $request->input('return_url');
+        $returnUrl = $request->has('return_url')
+            ? $request->input('return_url')
+            : $request->old('return_url');
         $returnUrl = is_scalar($returnUrl) ? trim((string) $returnUrl) : '';
 
         // Keep the original back target when switching between DLSite and Custom create.

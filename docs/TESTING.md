@@ -3,7 +3,7 @@
 ## Scope
 Current automated coverage is in Laravel PHPUnit tests:
 - `tests/Feature/ProductControllerTest.php`
-  - covers index filtering/sorting, English/custom-visible genre search and tag filters, create/edit pages, optional fetched English tag editing, tag library English/custom visibility, index-only return navigation with visible-work anchors, visibility-filter return redirects, custom-sort return page calculation, a full visible-update return workflow, Laravel previous URL create back links, malformed create back-link input, create-mode back-link preservation, filtered delete page fallback, custom create/upload flow, editable custom tag source behavior, DLSite store with one fetched tag in both JP/EN buckets, index image selection, validation, update flow, and logged destroy cleanup failures
+  - covers index filtering/sorting, English/custom-visible genre search and tag filters, create/edit pages, optional fetched English tag editing, tag library English/custom visibility, index-only return navigation with visible-work anchors, visibility-filter return redirects, custom-sort return page calculation, a full visible-update return workflow, Laravel previous URL create back links, malformed create back-link input, create-mode back-link preservation, Create Go Back preservation after scraper validation errors, filtered delete page fallback, custom create/upload flow, editable custom tag source behavior, DLSite store with one fetched tag in both JP/EN buckets, index image selection, validation, update flow, and logged destroy cleanup failures
 - `tests/Feature/ReturnTargetProductTest.php`
   - covers product-aware return URLs for unlimited pagination, first-page omission, saved-page redirect fast paths, full-query visibility fast paths, unchanged-visibility fallback cleanup, and multi-filter visible-work cleanup
 - `tests/Feature/ProductIndexLivewireTest.php`
@@ -19,9 +19,9 @@ Current automated coverage is in Laravel PHPUnit tests:
 - `tests/Feature/ProductGenreMigrationTest.php`
   - covers migration of legacy product genre JSON into `genres` + `genre_product`, language row backfill into `genre_product_languages`, removal of old `genres.type` / `genres.language`, same product/tag attachments with both JP and EN language rows, and legacy migration compatibility when `genres.title_key` exists
 - `tests/Feature/OptionsControllerTest.php`
-  - covers the Options/Refetch page tabs, latest-refetch link, Refetch Tags request validation, queue batch creation, selected/all work scopes including numeric RJ-desc queued order, progress JSON, tags-only job results, relationship-backed tag diff ordering, case-insensitive/kana-sensitive tag identity, skipped errors/custom-only works, review rendering/change indicators, newest-run-only apply controls, new-tag add/ignore behavior, stale-language move/remove behavior, JP-only to JP+EN and EN-only transitions, and custom-to-fetched promote/keep choices
+  - covers the Options/Refetch page tabs, latest-refetch link, Refetch Tags request validation, queue batch creation, selected/all work scopes including numeric RJ-desc queued order, progress JSON including cancellation metadata, cancel route behavior, tags-only job results, cancelled-before-fetch skips, during-fetch cancellation, relationship-backed tag diff ordering, case-insensitive/kana-sensitive tag identity, skipped errors/custom-only works, review rendering/change indicators, newest-run-only apply controls, partial cancelled run apply, new-tag add/ignore behavior, stale-language move/remove behavior, JP-only to JP+EN and EN-only transitions, and custom-to-fetched promote/keep choices
 - `tests/Feature/OptionsRefetchProgressTest.php`
-  - covers the Livewire refetch progress panel polling only while a run is active and redirecting once review results are ready
+  - covers the Livewire refetch progress panel polling while a run is running/cancelling, showing the cancel action only while running, and redirecting once review results are ready
 - `tests/Feature/OptionsWorkSearchTest.php`
   - covers the Livewire selected-work search, numeric RJ-desc visible order, and selected product preservation when filtered results change
 - `tests/Feature/PerformanceSmokeTest.php`
@@ -46,7 +46,7 @@ Current automated coverage is in Laravel PHPUnit tests:
 - `tests/Unit/View/Components/Fields/EnumSelectFieldTest.php`
   - covers enum-backed field component defaults and option maps
 - `tests/Unit/Models/TagRefetchStateTest.php`
-  - covers refetch run/result state helper methods used by Blade and controller code, including run summaries and result change-bucket helpers
+  - covers refetch run/result state helper methods used by Blade and controller code, including active/cancelling/cancelled run state, run summaries, and result change-bucket helpers
 - `tests/Unit/ExampleTest.php`
   - contains the default baseline unit test
 

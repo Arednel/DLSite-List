@@ -12,16 +12,36 @@ class TagRefetchStateTest extends TestCase
     public function test_run_state_helpers_describe_review_visibility(): void
     {
         $running = new TagRefetchRun(['status' => TagRefetchRun::STATUS_RUNNING]);
+        $cancelling = new TagRefetchRun;
+        $cancelling->setRawAttributes([
+            'status' => TagRefetchRun::STATUS_CANCELLING,
+            'cancelled_at' => '2026-05-26 00:00:00',
+        ], true);
         $review = new TagRefetchRun(['status' => TagRefetchRun::STATUS_REVIEW]);
         $applied = new TagRefetchRun(['status' => TagRefetchRun::STATUS_APPLIED]);
 
         $this->assertTrue($running->isRunning());
+        $this->assertTrue($running->isActive());
+        $this->assertTrue($running->canBeCancelled());
+        $this->assertFalse($running->wasCancelled());
         $this->assertFalse($running->hasReviewResults());
 
+        $this->assertTrue($cancelling->isCancelling());
+        $this->assertTrue($cancelling->isActive());
+        $this->assertTrue($cancelling->wasCancelled());
+        $this->assertFalse($cancelling->canBeCancelled());
+        $this->assertFalse($cancelling->hasReviewResults());
+        $this->assertFalse($cancelling->canBeApplied());
+        $this->assertSame('This refetch run is still cancelling.', $cancelling->applyUnavailableMessage());
+
         $this->assertTrue($review->isReview());
+        $this->assertFalse($review->isActive());
+        $this->assertFalse($review->canBeCancelled());
         $this->assertTrue($review->hasReviewResults());
 
         $this->assertTrue($applied->isApplied());
+        $this->assertFalse($applied->isActive());
+        $this->assertFalse($applied->canBeCancelled());
         $this->assertTrue($applied->hasReviewResults());
     }
 

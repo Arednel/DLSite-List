@@ -87,6 +87,8 @@ Run the queue worker from the project root while using Refetch Tags:
 php artisan queue:work
 ```
 
+Cancelling a Refetch Tags run is cooperative. Keep the queue worker running after pressing Cancel so the active fetch can finish and the remaining queued jobs can mark their work results as skipped.
+
 `php artisan schedule:work` is only needed if a scheduled command is added. The project does not currently register a scheduled batch-pruning command.
 
 ## App Options

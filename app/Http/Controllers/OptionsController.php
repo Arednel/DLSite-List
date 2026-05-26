@@ -71,9 +71,21 @@ class OptionsController extends Controller
             'fetched' => $run->fetched_count,
             'skipped' => $run->skipped_count,
             'failed' => $failed,
+            'cancelled_at' => $run->cancelled_at?->toIso8601String(),
             'complete' => $run->hasReviewResults(),
             'review_url' => route('options.refetch-tags.show', $run, false),
         ]);
+    }
+
+    public function cancelRefetchTags(TagRefetchRun $run, TagRefetchService $service): RedirectResponse
+    {
+        if (! $service->cancelRun($run)) {
+            return redirect()
+                ->route('options.refetch-tags.show', $run)
+                ->withErrors(['run' => 'Only running refetch runs can be cancelled.']);
+        }
+
+        return redirect()->route('options.refetch-tags.show', $run);
     }
 
     public function applyRefetchTags(

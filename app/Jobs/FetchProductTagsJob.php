@@ -29,16 +29,19 @@ class FetchProductTagsJob implements ShouldQueue
 
     public function handle(DLSiteTagFetcher $fetcher, TagRefetchService $service): void
     {
-        if ($this->batch()?->cancelled()) {
-            return;
-        }
-
         $result = TagRefetchWorkResult::query()
+            ->with('run')
             ->where('tag_refetch_run_id', $this->runId)
             ->where('product_id', $this->productId)
             ->first();
 
-        if (! $result) {
+        if (! $result || ! $result->isPending()) {
+            return;
+        }
+
+        if ($this->batch()?->cancelled() || $result->run?->isCancelling()) {
+            $service->recordSkippedResult($result, TagRefetchService::CANCELLED_BEFORE_FETCH_MESSAGE);
+
             return;
         }
 

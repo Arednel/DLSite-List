@@ -17,7 +17,7 @@
 7. Custom store flow (`POST /store/custom`) validates manual input, skips scraper/network checks, stores the required local cover plus optional sample images, and creates a `products` row.
 8. Update flow (`POST /update/{id}`) validates and updates editable fields.
 9. Destroy flow (`POST /destroy/{id}`) removes DB row and related local files.
-10. Refetch Tags starts a queued batch, stores per-work fetched/skipped results, shows progress, then applies reviewed tag changes.
+10. Refetch Tags starts a queued batch, stores per-work fetched/skipped results, shows progress, can cancel a running batch, then applies reviewed tag changes.
 
 ## Key Components
 - Routes: `routes/web.php`
@@ -112,7 +112,7 @@ JP-only fetched tags stay attached and stored, but are hidden from the current I
 - batch id and status
 - selected product ids
 - total/processed/fetched/skipped counts
-- started/completed/applied timestamps
+- started/completed/cancelled/applied timestamps
 
 `tag_refetch_work_results` stores each product result for a run:
 - fetched JP/EN tags
@@ -163,7 +163,7 @@ Runtime note:
 - successful create/update redirects prioritize showing the created/edited work on the Index: `ReturnTarget` first keeps the saved page when the work is already visible there, then avoids per-filter cleanup when the full query still matches, otherwise drops filters that would hide the work, preserves matching filters and sort state, and uses `ProductIndexResults` to calculate the correct page before appending the work anchor
 - update detects whether visibility-affecting product fields or custom tags changed before redirecting, so unchanged edits can trust the current index query unless the saved return state no longer contains the work
 - destroy keeps the saved index query but clamps stale page numbers to the last valid page after deletion; storage cleanup uses Laravel storage deletes and logs cleanup failures without blocking product deletion
-- create-page Go Back ignores malformed `return_url` input, uses Laravel previous URL behavior with the Index as fallback, then preserves that back URL while switching between DLSite Create and Custom Create
+- create-page Go Back ignores malformed `return_url` input, uses Laravel previous URL behavior with the Index as fallback, preserves that back URL while switching between DLSite Create and Custom Create, and restores the flashed return target after validation or scraper errors
 - create/store resolves scraped/custom titles into `genres` rows and syncs the pivot
 - edit loads only the fetched English/custom genre rows it renders, while keeping fetched non-custom genres attached automatically
 - update reads user-added genres from the form, stores them as `genre_product.source = custom`, and can reuse an existing fetched genre row while keeping it editable for that product
@@ -173,7 +173,9 @@ Runtime note:
 - `app/Support/GenreSyncPayload.php` keeps fetched-over-custom source precedence and builds the fetched language map used by `ProductGenreSync`
 - `app/Models/Genre.php` resolves tag titles by `title_key`, preserving the existing display title when the new input only differs by case
 - Options -> Refetch Tags dispatches one queued `FetchProductTagsJob` per selected product and stores results before any product tags are changed
-- the refetch progress panel is rendered by Livewire and polls every second only while the run is still running
+- running refetch runs can be cancelled from the progress page; cancellation changes the run from `running` to `cancelling`, cancels that run's Laravel batch, lets any already-started Python fetch finish, and moves the run to `review` after pending results become fetched or skipped
+- cancelled-before-fetch work results are stored as skipped results, while fetched results completed before or during cancellation remain reviewable and can be applied
+- the refetch progress panel is rendered by Livewire and polls every second while the run is active (`running` or `cancelling`)
 - the Options page has separate `Options` and `Refetch` tabs; validation errors from refetch forms reopen the Refetch tab
 - the Refetch tab links to the latest refetch run when at least one run exists
 - the Options tab includes an Index Pagination setting powered by Livewire and persisted in `options.index_per_page`; changing the mode can reveal the custom-value input immediately, but the setting is only persisted when Save is submitted

@@ -7,11 +7,14 @@ use App\Models\Product;
 use App\Models\TagRefetchRun;
 use App\Models\TagRefetchWorkResult;
 use App\Support\ProductGenreSync;
+use Illuminate\Support\Facades\Bus;
 use Illuminate\Support\Facades\DB;
 use Throwable;
 
 class TagRefetchService
 {
+    public const CANCELLED_BEFORE_FETCH_MESSAGE = 'Refetch was cancelled before this work was fetched.';
+
     public function __construct(
         private readonly ProductGenreSync $genreSync,
     ) {}
@@ -139,12 +142,38 @@ class TagRefetchService
             'skipped_count' => $skipped,
         ];
 
-        if ($run->status === TagRefetchRun::STATUS_RUNNING && $pending === 0) {
+        if ($run->isActive() && $pending === 0) {
             $updates['status'] = TagRefetchRun::STATUS_REVIEW;
             $updates['completed_at'] = now();
         }
 
         $run->forceFill($updates)->save();
+    }
+
+    public function cancelRun(TagRefetchRun $run): bool
+    {
+        $run->refresh();
+
+        if ($run->isCancelling()) {
+            return true;
+        }
+
+        if (! $run->canBeCancelled()) {
+            return false;
+        }
+
+        $run->forceFill([
+            'status' => TagRefetchRun::STATUS_CANCELLING,
+            'cancelled_at' => $run->cancelled_at ?? now(),
+        ])->save();
+
+        if ($run->batch_id !== null) {
+            Bus::findBatch($run->batch_id)?->cancel();
+        }
+
+        $this->refreshRunProgress($run);
+
+        return true;
     }
 
     public function applyRun(

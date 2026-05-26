@@ -12,6 +12,8 @@ class TagRefetchRun extends Model
 
     public const STATUS_RUNNING = 'running';
 
+    public const STATUS_CANCELLING = 'cancelling';
+
     public const STATUS_REVIEW = 'review';
 
     public const STATUS_APPLIED = 'applied';
@@ -26,6 +28,7 @@ class TagRefetchRun extends Model
         'skipped_count',
         'started_at',
         'completed_at',
+        'cancelled_at',
         'applied_at',
     ];
 
@@ -33,6 +36,7 @@ class TagRefetchRun extends Model
         'selected_product_ids' => 'array',
         'started_at' => 'datetime',
         'completed_at' => 'datetime',
+        'cancelled_at' => 'datetime',
         'applied_at' => 'datetime',
     ];
 
@@ -51,9 +55,29 @@ class TagRefetchRun extends Model
         return $this->status === self::STATUS_REVIEW;
     }
 
+    public function isCancelling(): bool
+    {
+        return $this->status === self::STATUS_CANCELLING;
+    }
+
     public function isApplied(): bool
     {
         return $this->status === self::STATUS_APPLIED;
+    }
+
+    public function isActive(): bool
+    {
+        return $this->isRunning() || $this->isCancelling();
+    }
+
+    public function wasCancelled(): bool
+    {
+        return ($this->attributes['cancelled_at'] ?? null) !== null;
+    }
+
+    public function canBeCancelled(): bool
+    {
+        return $this->isRunning();
     }
 
     public function hasReviewResults(): bool
@@ -63,12 +87,19 @@ class TagRefetchRun extends Model
 
     public function canBeApplied(): bool
     {
-        return $this->isReview()
-            && $this->getKey() === self::query()->max($this->getKeyName());
+        if (! $this->isReview()) {
+            return false;
+        }
+
+        return $this->getKey() === self::query()->max($this->getKeyName());
     }
 
     public function applyUnavailableMessage(): string
     {
+        if ($this->isCancelling()) {
+            return 'This refetch run is still cancelling.';
+        }
+
         if (! $this->isReview()) {
             return 'This refetch run is not ready to apply.';
         }
