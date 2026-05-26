@@ -61,6 +61,11 @@ Relevant variables:
 MySQL engine is configured as InnoDB in:
 - `config/database.php` (`mysql.engine`)
 
+Tag identity uses `genres.title_key` instead of the display `genres.title` column:
+- `genres.title_key` is trimmed and Unicode case-folded by PHP
+- `genres.title_key` uses binary collation so kana variants stay distinct
+- `genres.title` keeps the user/DLSite display casing and is not the uniqueness column
+
 Docker database services:
 - `database` stores normal app data in the `dbdata` Docker volume
 - `database_test` stores test data in the `dbdata_test` Docker volume and is used only by the `tests` service

@@ -2,6 +2,11 @@
 
 ## Development
 
+* 2026-05-26 -- 1.3.7 Tag Identity Key
+  * Moved genre uniqueness from display titles to case-insensitive `title_key` values
+  * Kept Hiragana/Katakana tag variants distinct so both kana forms can coexist on one work
+  * Updated Refetch Tags comparisons, tests, and docs for the new tag identity rule
+
 * 2026-05-24 -- 1.3.6 Tag Edit Toggle
   * Added an Options toggle for editing fetched English tags from Edit Work
 

@@ -17,9 +17,9 @@ Current automated coverage is in Laravel PHPUnit tests:
 - `tests/Feature/FetchedTagEditingSettingsTest.php`
   - covers the Options fetched-tag editing setting component, including default disabled state, scalar option persistence, and Livewire dirty-state saved notice behavior
 - `tests/Feature/ProductGenreMigrationTest.php`
-  - covers migration of legacy product genre JSON into `genres` + `genre_product`, language row backfill into `genre_product_languages`, removal of old `genres.type` / `genres.language`, and same product/tag attachments with both JP and EN language rows
+  - covers migration of legacy product genre JSON into `genres` + `genre_product`, language row backfill into `genre_product_languages`, removal of old `genres.type` / `genres.language`, same product/tag attachments with both JP and EN language rows, and legacy migration compatibility when `genres.title_key` exists
 - `tests/Feature/OptionsControllerTest.php`
-  - covers the Options/Refetch page tabs, latest-refetch link, Refetch Tags request validation, queue batch creation, selected/all work scopes including numeric RJ-desc queued order, progress JSON, tags-only job results, relationship-backed tag diff ordering, skipped errors/custom-only works, review rendering/change indicators, newest-run-only apply controls, new-tag add/ignore behavior, stale-language move/remove behavior, JP-only to JP+EN and EN-only transitions, and custom-to-fetched promote/keep choices
+  - covers the Options/Refetch page tabs, latest-refetch link, Refetch Tags request validation, queue batch creation, selected/all work scopes including numeric RJ-desc queued order, progress JSON, tags-only job results, relationship-backed tag diff ordering, case-insensitive/kana-sensitive tag identity, skipped errors/custom-only works, review rendering/change indicators, newest-run-only apply controls, new-tag add/ignore behavior, stale-language move/remove behavior, JP-only to JP+EN and EN-only transitions, and custom-to-fetched promote/keep choices
 - `tests/Feature/OptionsRefetchProgressTest.php`
   - covers the Livewire refetch progress panel polling only while a run is active and redirecting once review results are ready
 - `tests/Feature/OptionsWorkSearchTest.php`
@@ -35,6 +35,8 @@ Current automated coverage is in Laravel PHPUnit tests:
   - covers shared `genre_product.source` sync payload creation, deduplication, fetched-over-custom precedence, and fetched language map creation
 - `tests/Unit/Support/ProductGenreSyncTest.php`
   - covers syncing one product/tag attachment with multiple fetched language rows, preserving fetched language rows when custom tags are updated, replacing editable English fetched rows, and fetched-over-custom precedence
+- `tests/Unit/Models/GenreTest.php`
+  - covers title-key identity, including case-insensitive tag reuse, preserved display casing, and distinct Hiragana/Katakana variants
 - `tests/Unit/Support/VisibleGenreAttachmentTest.php`
   - covers the shared English/custom-visible genre attachment query helper for custom, fetched EN, JP-only hidden, and same-title JP+EN cases
 - `tests/Unit/Support/TagRefetch/DLSiteTagFetcherTest.php`
@@ -99,6 +101,7 @@ The Docker test service is one-off and does not run during the normal app startu
   - `php artisan test --filter=OptionsRefetchProgressTest`
   - `php artisan test --filter=OptionsWorkSearchTest`
   - `php artisan test --filter=DLSite`
+  - `php artisan test --filter=GenreTest`
   - `php artisan test --filter=GenreSyncPayloadTest`
   - `php artisan test --filter=ProductGenreSyncTest`
   - `php artisan test --filter=VisibleGenreAttachmentTest`

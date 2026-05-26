@@ -25,6 +25,7 @@ class ProductGenreMigrationTest extends TestCase
         $sharedGenreId = DB::table('genres')->insertGetId([
             'group_id' => null,
             'title' => 'Shared Genre',
+            'title_key' => Genre::titleKey('Shared Genre'),
             'description' => null,
             'order' => null,
             'type' => Genre::TYPE_AUTO_GENERATED_ENGLISH,
@@ -86,6 +87,7 @@ class ProductGenreMigrationTest extends TestCase
         $sharedGenreId = DB::table('genres')->insertGetId([
             'group_id' => null,
             'title' => 'Shared Genre',
+            'title_key' => Genre::titleKey('Shared Genre'),
             'description' => null,
             'order' => null,
             'type' => Genre::TYPE_CUSTOM,

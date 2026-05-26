@@ -170,6 +170,7 @@ class PerformanceSmokeTest extends TestCase
                         ->map(fn(int $number): array => [
                             'group_id' => null,
                             'title' => $this->tagTitle($number),
+                            'title_key' => Genre::titleKey($this->tagTitle($number)),
                             'description' => null,
                             'order' => null,
                             'created_at' => $now,

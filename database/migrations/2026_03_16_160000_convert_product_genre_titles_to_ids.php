@@ -151,7 +151,6 @@ return new class extends Migration
                         ),
                     ]);
             });
-
     }
 
     private function decodeJsonArray(mixed $value): array
@@ -172,9 +171,9 @@ return new class extends Migration
     private function resolveGenreIds(array $values, string $preferredType, string $language): array
     {
         return collect($values)
-            ->map(fn (mixed $value) => $this->normalizeValue($value))
-            ->filter(fn (?string $value) => $value !== null)
-            ->map(fn (string $value): int => $this->resolveGenreId($value, $preferredType, $language))
+            ->map(fn(mixed $value) => $this->normalizeValue($value))
+            ->filter(fn(?string $value) => $value !== null)
+            ->map(fn(string $value): int => $this->resolveGenreId($value, $preferredType, $language))
             ->unique()
             ->values()
             ->all();
@@ -208,9 +207,15 @@ return new class extends Migration
 
     private function resolveGenreId(string $title, string $preferredType, string $language): int
     {
-        $genre = DB::table(self::GENRES_TABLE)
-            ->where('title', $title)
-            ->first();
+        $genreQuery = DB::table(self::GENRES_TABLE);
+
+        if (Schema::hasColumn(self::GENRES_TABLE, 'title_key')) {
+            $genreQuery->where('title_key', $this->titleKey($title));
+        } else {
+            $genreQuery->where('title', $title);
+        }
+
+        $genre = $genreQuery->first();
 
         if ($genre !== null) {
             if ($this->shouldPromoteType($genre->type, $preferredType)) {
@@ -228,7 +233,7 @@ return new class extends Migration
 
         $now = now();
 
-        return (int) DB::table(self::GENRES_TABLE)->insertGetId([
+        $payload = [
             'group_id' => null,
             'title' => $title,
             'description' => null,
@@ -238,7 +243,13 @@ return new class extends Migration
             'language' => $language,
             'created_at' => $now,
             'updated_at' => $now,
-        ]);
+        ];
+
+        if (Schema::hasColumn(self::GENRES_TABLE, 'title_key')) {
+            $payload['title_key'] = $this->titleKey($title);
+        }
+
+        return (int) DB::table(self::GENRES_TABLE)->insertGetId($payload);
     }
 
     private function shouldPromoteType(?string $currentType, string $preferredType): bool
@@ -256,5 +267,10 @@ return new class extends Migration
         return Schema::hasColumn(self::PRODUCTS_TABLE, 'genre')
             && Schema::hasColumn(self::PRODUCTS_TABLE, 'genre_english')
             && Schema::hasColumn(self::PRODUCTS_TABLE, 'genre_custom');
+    }
+
+    private function titleKey(string $title): string
+    {
+        return mb_convert_case(trim($title), MB_CASE_FOLD, 'UTF-8');
     }
 };

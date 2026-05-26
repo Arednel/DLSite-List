@@ -32,6 +32,15 @@ class Genre extends Model
         'order',
     ];
 
+    protected static function booted(): void
+    {
+        static::saving(function (Genre $genre): void {
+            if ($genre->isDirty('title') || blank($genre->title_key)) {
+                $genre->title_key = self::titleKey($genre->title);
+            }
+        });
+    }
+
     public function group(): BelongsTo
     {
         return $this->belongsTo(GenreGroup::class, 'group_id');
@@ -47,22 +56,34 @@ class Genre extends Model
         return collect($titles)
             ->map(fn(mixed $title) => self::normalizeTitle($title))
             ->filter()
+            ->unique(fn(string $title): string => self::titleKey($title))
             ->map(fn(string $title) => self::resolveByTitle($title)->getKey())
-            ->unique()
             ->values()
             ->all();
     }
 
     public static function resolveByTitle(string $title): self
     {
+        $normalizedTitle = self::normalizeTitle($title);
+
+        if ($normalizedTitle === null) {
+            throw new \InvalidArgumentException('Genre title must not be empty.');
+        }
+
         return self::query()->firstOrCreate(
-            ['title' => $title],
+            ['title_key' => self::titleKey($normalizedTitle)],
             [
+                'title' => $normalizedTitle,
                 'group_id' => null,
                 'description' => null,
                 'order' => null,
             ],
         );
+    }
+
+    public static function titleKey(mixed $title): string
+    {
+        return mb_convert_case(trim((string) $title), MB_CASE_FOLD, 'UTF-8');
     }
 
     private static function normalizeTitle(mixed $title): ?string

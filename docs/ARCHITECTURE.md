@@ -83,8 +83,11 @@ Shared UI note:
 - local image paths
 
 `genres` table stores one row per visible genre title:
-- `title`
+- `title` as the display text
+- `title_key` as the unique identity key
 - optional `group_id`
+
+`title_key` is built from the trimmed title with Unicode case folding, then stored with a binary collation. This keeps tag matching case-insensitive while still treating Hiragana/Katakana variants as separate tags.
 
 `genre_groups` stores optional genre group definitions.
 
@@ -141,6 +144,7 @@ Migration note:
 - legacy global `genres.type` / `genres.language` metadata is migrated into product-specific
   `genre_product_languages` rows by `2026_05_24_000000_create_genre_product_languages_table.php`
 - the `genre_product_languages` down migration restores old global metadata best-effort because one fetched title can now belong to multiple languages for the same product
+- `2026_05_26_000000_add_title_key_to_genres_table.php` moves tag uniqueness from `genres.title` to `genres.title_key`; rollback can fail if kana-distinct tags were added because the old `genres.title` unique index used MySQL's broader text collation
 
 Runtime note:
 - `ProductIndex` shows English + custom genres through one lightweight grouped query from `genre_product` + `genres` for the current page
@@ -167,6 +171,7 @@ Runtime note:
 - custom create stores user-uploaded covers/samples in `storage/app/public/Works/{RJ}`, saves the uploaded cover public path in `products.work_image`, and attaches custom tags through the same genre resolver used by update
 - product create/update and refetch apply use `app/Support/ProductGenreSync.php` to sync `genre_product.source` and `genre_product_languages` together
 - `app/Support/GenreSyncPayload.php` keeps fetched-over-custom source precedence and builds the fetched language map used by `ProductGenreSync`
+- `app/Models/Genre.php` resolves tag titles by `title_key`, preserving the existing display title when the new input only differs by case
 - Options -> Refetch Tags dispatches one queued `FetchProductTagsJob` per selected product and stores results before any product tags are changed
 - the refetch progress panel is rendered by Livewire and polls every second only while the run is still running
 - the Options page has separate `Options` and `Refetch` tabs; validation errors from refetch forms reopen the Refetch tab
@@ -179,7 +184,7 @@ Runtime note:
 - applying a refetch run attaches new fetched tags with `genre_product.source = fetched` and one language row per fetched bucket, unless the review form ignores new JP/EN tags globally or for that work
 - stale fetched JP/EN actions remove only that language row when another fetched language remains; the tag moves to `genre_product.source = custom` only when no fetched language rows remain and the selected stale action is move-to-custom
 - custom tags that DLSite now returns as fetched are promoted to fetched by default; the review form has global and per-work controls to keep those tags custom instead
-- refetch diff/apply reads current fetched/custom tags through the Product genre relationships
+- refetch diff/apply reads current fetched/custom tags through the Product genre relationships and compares titles by the same `Genre::titleKey()` identity rule used for storage
 - existing custom tags are preserved, and unused global fetched `genres` rows are detached from products but not deleted
 - only the newest review run shows apply controls; older review runs are read-only to avoid applying stale review decisions after a newer fetch
 - each review result row shows compact indicators for new JP, new EN, stale JP, stale EN, and custom-to-fetched changes when those buckets are present

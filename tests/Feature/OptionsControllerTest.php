@@ -318,6 +318,35 @@ class OptionsControllerTest extends TestCase
         $this->assertSame(['Custom Overlap'], $diff['custom_to_fetched_english_tags']);
     }
 
+    public function test_tag_diff_uses_case_insensitive_but_kana_sensitive_tag_identity(): void
+    {
+        $product = Product::factory()->create();
+        $caseOnly = $this->createGenre('ASMR', Genre::TYPE_AUTO_GENERATED_JAPANESE);
+        $hiragana = $this->createGenre('かなタグ', Genre::TYPE_AUTO_GENERATED_JAPANESE);
+        $this->attachGenres($product, [$caseOnly, $hiragana]);
+
+        $diff = app(TagRefetchService::class)->diffProductTags(
+            $product,
+            ['asmr', 'かなタグ', 'カナタグ'],
+            [],
+        );
+
+        $this->assertSame(['カナタグ'], $diff['added_japanese_tags']);
+        $this->assertSame([], $diff['stale_japanese_tags']);
+    }
+
+    public function test_tag_diff_detects_custom_to_fetched_overlap_case_insensitively(): void
+    {
+        $product = Product::factory()->create();
+        $custom = $this->createGenre('ASMR', Genre::TYPE_CUSTOM);
+        $this->attachGenres($product, [$custom]);
+
+        $diff = app(TagRefetchService::class)->diffProductTags($product, ['asmr'], []);
+
+        $this->assertSame([], $diff['added_japanese_tags']);
+        $this->assertSame(['asmr'], $diff['custom_to_fetched_japanese_tags']);
+    }
+
     public function test_fetch_job_skips_errors_and_custom_only_works(): void
     {
         $service = app(TagRefetchService::class);
@@ -538,6 +567,29 @@ class OptionsControllerTest extends TestCase
         $this->assertSame([], $product->customGenres->pluck('title')->all());
         $this->assertSame(TagRefetchWorkResult::ADDED_ACTION_IGNORE, $result->added_japanese_action);
         $this->assertSame(TagRefetchWorkResult::ADDED_ACTION_ADD, $result->added_english_action);
+    }
+
+    public function test_apply_can_store_hiragana_and_katakana_fetched_tags_on_the_same_work(): void
+    {
+        $product = Product::factory()->create();
+        $hiragana = $this->createGenre('かなタグ', Genre::TYPE_AUTO_GENERATED_JAPANESE);
+        $this->attachGenres($product, [$hiragana]);
+        $run = $this->createReviewRun($product, [], [], ['かなタグ', 'カナタグ'], []);
+
+        $this->post(route('options.refetch-tags.apply', $run), [
+            'global_japanese_action' => TagRefetchWorkResult::STALE_ACTION_MOVE_TO_CUSTOM,
+            'global_english_action' => TagRefetchWorkResult::STALE_ACTION_MOVE_TO_CUSTOM,
+        ])->assertRedirect(route('options.refetch-tags.show', $run));
+
+        $product->refresh()->load('japaneseGenres');
+
+        $this->assertEqualsCanonicalizing(
+            ['かなタグ', 'カナタグ'],
+            $product->japaneseGenres->pluck('title')->all(),
+        );
+        $this->assertSame(2, Genre::query()
+            ->whereIn('title_key', [Genre::titleKey('かなタグ'), Genre::titleKey('カナタグ')])
+            ->count());
     }
 
     public function test_apply_promotes_custom_to_fetched_overlap_by_default(): void

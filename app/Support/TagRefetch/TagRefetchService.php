@@ -371,7 +371,7 @@ class TagRefetchService
         return collect($tags)
             ->map(fn(mixed $tag): string => trim((string) $tag))
             ->filter()
-            ->unique()
+            ->unique(fn(string $tag): string => Genre::titleKey($tag))
             ->values()
             ->all();
     }
@@ -384,9 +384,13 @@ class TagRefetchService
     private function titleDiff(array $source, array ...$withoutLists): array
     {
         $without = array_merge(...$withoutLists);
+        $withoutKeys = array_flip(array_map(
+            fn(string $title): string => Genre::titleKey($title),
+            $without,
+        ));
 
         return collect($source)
-            ->reject(fn(string $title): bool => in_array($title, $without, true))
+            ->reject(fn(string $title): bool => isset($withoutKeys[Genre::titleKey($title)]))
             ->values()
             ->all();
     }
@@ -398,8 +402,13 @@ class TagRefetchService
      */
     private function titleIntersection(array $source, array $only): array
     {
+        $onlyKeys = array_flip(array_map(
+            fn(string $title): string => Genre::titleKey($title),
+            $only,
+        ));
+
         return collect($source)
-            ->filter(fn(string $title): bool => in_array($title, $only, true))
+            ->filter(fn(string $title): bool => isset($onlyKeys[Genre::titleKey($title)]))
             ->values()
             ->all();
     }
