@@ -1057,6 +1057,28 @@ class ProductControllerTest extends TestCase
         $response->assertSessionHasErrors(['add.start_date']);
     }
 
+    public function test_store_rejects_invalid_progress(): void
+    {
+        $response = $this->from('/create')->post('/store', [
+            'id' => Product::factory()->make()->id,
+            'progress' => 'Paused',
+        ]);
+
+        $response->assertRedirect('/create');
+        $response->assertSessionHasErrors(['progress']);
+    }
+
+    public function test_store_rejects_invalid_score(): void
+    {
+        $response = $this->from('/create')->post('/store', [
+            'id' => Product::factory()->make()->id,
+            'score' => '999',
+        ]);
+
+        $response->assertRedirect('/create');
+        $response->assertSessionHasErrors(['score']);
+    }
+
     public function test_store_rejects_negative_num_re_listen_times(): void
     {
         $existing = Product::factory()->create();

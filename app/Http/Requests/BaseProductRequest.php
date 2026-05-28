@@ -2,9 +2,14 @@
 
 namespace App\Http\Requests;
 
+use App\Enums\ProductPriority;
+use App\Enums\ProductProgress;
+use App\Enums\ProductReListenValue;
+use App\Enums\ProductScore;
 use App\Support\TagInput;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Support\Carbon;
+use Illuminate\Validation\Rule;
 use Illuminate\Validation\Validator;
 
 abstract class BaseProductRequest extends FormRequest
@@ -23,8 +28,8 @@ abstract class BaseProductRequest extends FormRequest
     protected function commonRules(): array
     {
         return [
-            'progress' => ['nullable', 'string'],
-            'score' => ['nullable', 'integer'],
+            'progress' => ['nullable', Rule::enum(ProductProgress::class)],
+            'score' => ['nullable', Rule::enum(ProductScore::class)],
             'series' => ['nullable', 'string'],
             'genre_custom' => ['nullable', 'array'],
             'work_name_english' => ['nullable', 'string'],
@@ -32,8 +37,8 @@ abstract class BaseProductRequest extends FormRequest
             'start_date' => ['nullable', 'array'],
             'end_date' => ['nullable', 'array'],
             'num_re_listen_times' => ['nullable', 'integer', 'min:0'],
-            're_listen_value' => ['nullable', 'integer', 'between:1,5'],
-            'priority' => ['nullable', 'integer', 'between:0,2'],
+            're_listen_value' => ['nullable', Rule::enum(ProductReListenValue::class)],
+            'priority' => ['nullable', Rule::enum(ProductPriority::class)],
         ];
     }
 

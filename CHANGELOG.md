@@ -2,6 +2,10 @@
 
 ## Development
 
+* 2026-05-29 -- 1.3.9 Enum Validation
+  * Tightened product form validation with enum-backed rules for progress, score, priority, and re-listen value
+  * Updated tests and docs
+
 * 2026-05-26 -- 1.3.8 Refetch Cancellation and Fixes
   * Added a Cancel Refetch action for running Refetch Tags batches
   * Preserved the Create page Go Back target after DLSite scraper validation errors

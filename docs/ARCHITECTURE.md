@@ -204,6 +204,7 @@ Runtime note:
 ## Validation / Normalization Notes
 - RJ input can be raw RJ code or URL containing RJ code.
 - `BaseProductRequest` normalizes the create/edit `add[...]` fields in `prepareForValidation()`, then runs date-part and date-order checks through the form request `after()` hook.
+- `BaseProductRequest` validates progress, score, priority, and re-listen value against the matching product enums so form input cannot drift from the UI option sets.
 - `StoreCustomProductRequest` keeps RJ-format and uniqueness validation, requires Japanese title, age category, and cover image, and validates cover/sample uploads as images up to 20 MB each.
 - `StartTagRefetchRequest` validates all/selected refetch scope and resolves the product ids before the controller creates a run.
 - `ApplyTagRefetchRequest` validates new-tag, stale-tag, and custom-to-fetched actions, then blocks applying any run except the newest review run.
