@@ -23,6 +23,7 @@
 - Routes: `routes/web.php`
 - Controller: `app/Http/Controllers/ProductController.php`
 - Options controller: `app/Http/Controllers/OptionsController.php`
+- Autocomplete controller: `app/Http/Controllers/AutocompleteController.php`
 - Requests:
   - `app/Http/Requests/StartTagRefetchRequest.php`
   - `app/Http/Requests/ApplyTagRefetchRequest.php`
@@ -45,9 +46,14 @@
   - `app/Support/GenreSyncPayload.php`
 - Shared visible tag helper:
   - `app/Support/VisibleGenreAttachment.php`
+- Autocomplete helpers:
+  - `app/Support/Autocomplete/AutocompleteMatcher.php`
+  - `app/Support/Autocomplete/TagAutocompleteSearch.php`
+  - `app/Support/Autocomplete/SeriesAutocompleteSearch.php`
 - Livewire components:
   - `app/Livewire/ProductIndex.php`
   - `app/Livewire/IndexPaginationSettings.php`
+  - `app/Livewire/AutocompleteSettings.php`
   - `app/Livewire/FetchedTagEditingSettings.php`
   - `app/Livewire/OptionsWorkSearch.php`
   - `app/Livewire/OptionsRefetchProgress.php`
@@ -67,6 +73,7 @@ Shared UI note:
 - `AppServiceProvider` registers the enum-backed field component aliases used by `<x-fields.* />`
 - the progress, score, priority, and re-listen field component classes read their select options from the matching enums in `app/Enums/*.php`
 - Blade pages load CSS and JS from `public/` with `filemtime(public_path(...))` query strings for cache busting
+- `public/scripts/autocomplete-text.js` and `public/css/autocomplete.css` provide opt-in autocomplete for tag CSV fields and single-value series fields through `data-autocomplete-*` attributes
 - `resources/views/components/index/advanced-filters.blade.php` renders the index filter/sort modal
 - `resources/views/components/index/*.blade.php` contains the reusable filter/select/radio pieces used by the index modal
 - `app/Livewire/ProductIndex.php` binds filter/sort properties to the URL query string, then normalizes that state into a `ProductIndexFilters` object
@@ -131,6 +138,8 @@ Queue tables:
 `options` stores app-level settings as scalar string values:
 - `index_per_page` controls Index pagination, defaults to `100`, accepts fixed choices (`10`, `25`, `50`, `100`, `250`, `500`, `1000`) or any positive integer, and can be set to `unlimited`
 - `edit_fetched_tags` controls whether fetched English tags can be edited from Edit Work, and defaults to disabled
+- `tag_autocomplete_order` controls tag suggestion ordering, defaults to `usage`, and can be set to `first_word`
+- `series_autocomplete_order` controls series suggestion ordering, defaults to `usage`, and can be set to `first_word`
 - `App\Models\Option` normalizes stored scalar strings into the runtime values the app uses
 
 Current repo-level Index sort-key indexes:
@@ -159,6 +168,11 @@ Runtime note:
 - Index pagination uses Livewire/Laravel paginator links with the project pagination view and Livewire's scroll target data to return to `#progress-menu`, keeping progress tabs, search, and Filter visible after page changes
 - switching progress tabs keeps the rest of the index request state, but intentionally drops the current `genre` filter
 - clicking a series link opens the index with only the exact `series` filter applied
+- `/autocomplete/tags` returns all stored genre titles, including JP/EN/custom tags
+- `/autocomplete/series` returns distinct non-empty series values
+- autocomplete matching uses word-prefix behavior for Latin-style text and substring matching for non-ASCII input so Japanese tag text can be found naturally
+- autocomplete search is split into small tag and series search helpers that share the same matcher/ranking logic
+- autocomplete ordering is configurable per source from Options: `usage` orders all matches by attached work count and then title; `first_word` puts values starting with the typed query before later-word matches, then orders each group by attached work count and title
 - `app/Support/ReturnTarget.php` normalizes index-only return state (`return_query`, `return_fragment`) used by create/edit/update/destroy flows and builds index URLs with Laravel URI helpers
 - successful create/update redirects prioritize showing the created/edited work on the Index: `ReturnTarget` first keeps the saved page when the work is already visible there, then avoids per-filter cleanup when the full query still matches, otherwise drops filters that would hide the work, preserves matching filters and sort state, and uses `ProductIndexResults` to calculate the correct page before appending the work anchor
 - update detects whether visibility-affecting product fields or custom tags changed before redirecting, so unchanged edits can trust the current index query unless the saved return state no longer contains the work
@@ -180,6 +194,7 @@ Runtime note:
 - the Refetch tab links to the latest refetch run when at least one run exists
 - the Options tab includes an Index Pagination setting powered by Livewire and persisted in `options.index_per_page`; changing the mode can reveal the custom-value input immediately, but the setting is only persisted when Save is submitted
 - the Options tab includes a Livewire fetched-tag editing toggle persisted in `options.edit_fetched_tags`
+- the Options tab includes Livewire autocomplete ordering settings persisted in `options.tag_autocomplete_order` and `options.series_autocomplete_order`
 - the selected-work search on the Refetch tab is rendered by Livewire and uses Laravel query helpers for the ID/title match
 - the Refetch tab work list and queued all/selected refetch ids use numeric RJ descending order, matching the Index default order
 - custom-only works are skipped during refetch because they do not have DLSite metadata to fetch from
@@ -211,3 +226,4 @@ Runtime note:
 - Custom tags are comma-separated and parsed with CSV rules:
   - commas inside a tag are supported via quotes
   - example: `"Junior / Senior (at work, school, etc)", Office Lady`
+- autocomplete inserts selected tag suggestions with the same CSV quote rules and appends `, ` so the next tag can be typed immediately

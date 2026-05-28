@@ -5,19 +5,14 @@
 ])
 
 <div x-data="indexAdvancedFilters()">
-    <button type="button" class="advanced-options-button {{ $filterActive ? 'is-active' : '' }}"
-        data-index-filter-open aria-controls="advanced-options-modal"
-        x-bind:aria-expanded="filtersOpen.toString()"
-        x-on:click="openFilters()">
+    <button type="button" class="advanced-options-button {{ $filterActive ? 'is-active' : '' }}" data-index-filter-open
+        aria-controls="advanced-options-modal" x-bind:aria-expanded="filtersOpen.toString()" x-on:click="openFilters()">
         <i class="fa-solid fa-sliders"></i>
         Filter
     </button>
 
-    <div id="advanced-options-modal" class="advanced-options-modal" data-index-filter-modal
-        x-cloak
-        x-show="filtersOpen"
-        x-bind:aria-hidden="(!filtersOpen).toString()"
-        x-on:keydown.escape.window="closeFilters()">
+    <div id="advanced-options-modal" class="advanced-options-modal" data-index-filter-modal x-cloak x-show="filtersOpen"
+        x-bind:aria-hidden="(!filtersOpen).toString()" x-on:keydown.escape.window="closeFilters()">
         <button type="button" class="advanced-options-backdrop" data-index-filter-close aria-label="Close filters"
             x-on:click="closeFilters()"></button>
         <div class="advanced-options-panel" data-index-filter-panel role="dialog" aria-modal="true"
@@ -41,7 +36,8 @@
                 <div class="filter-widget series">
                     <label class="widget-header" for="filter_series">Series</label>
                     <input id="filter_series" type="text" name="series" wire:model="draft.series"
-                        placeholder="Series name">
+                        placeholder="Series name" data-autocomplete-source="series" data-autocomplete-mode="single"
+                        data-autocomplete-url="{{ route('autocomplete.series', [], false) }}">
                 </div>
 
                 <div class="filter-widget notes">
@@ -75,8 +71,11 @@
                     <label class="widget-header" for="filter_tags">Tags</label>
                     <div class="filter-field-stack">
                         <textarea id="filter_tags" name="tags" rows="3" wire:model="draft.tags"
-                            placeholder='Comma-separated. Use double quotes for tags that contain commas, e.g. "Junior / Senior (at work, school, etc)", Office Lady'></textarea>
-                        <x-index.segmented-radio-group name="tag_match" :options="$filterOptions['tag_match'] ?? []" wire:model="draft.tag_match" />
+                            placeholder='Comma-separated. Use double quotes for tags that contain commas, e.g. "Junior / Senior (at work, school, etc)", Office Lady'
+                            data-autocomplete-source="tags" data-autocomplete-mode="csv"
+                            data-autocomplete-url="{{ route('autocomplete.tags', [], false) }}"></textarea>
+                        <x-index.segmented-radio-group name="tag_match" :options="$filterOptions['tag_match'] ?? []"
+                            wire:model="draft.tag_match" />
                     </div>
                 </div>
 
@@ -96,16 +95,16 @@
                     group-class="sort-widget first" :options="$filterOptions['sort_fields']" placeholder="None"
                     wire:model="draft.sort_first_field" x-ref="primarySortSelect"
                     x-on:change="setPrimarySort($event.target.value)">
-                    <x-index.sort-direction-group name="sort_first_direction" :options="$filterOptions['sort_directions']" wire:model="draft.sort_first_direction"
-                        x-bind:disabled="primarySort === ''" />
+                    <x-index.sort-direction-group name="sort_first_direction" :options="$filterOptions['sort_directions']"
+                        wire:model="draft.sort_first_direction" x-bind:disabled="primarySort === ''" />
                 </x-index.filter-select>
 
                 <x-index.filter-select id="sort_second_field" name="sort_second_field" label="Secondary"
                     group-class="sort-widget second" :options="$filterOptions['sort_fields']" placeholder="None"
                     wire:model="draft.sort_second_field" x-ref="secondarySortSelect"
-                    x-on:change="setSecondarySort($event.target.value)"
-                    x-bind:disabled="primarySort === ''">
-                    <x-index.sort-direction-group name="sort_second_direction" :options="$filterOptions['sort_directions']" wire:model="draft.sort_second_direction"
+                    x-on:change="setSecondarySort($event.target.value)" x-bind:disabled="primarySort === ''">
+                    <x-index.sort-direction-group name="sort_second_direction" :options="$filterOptions['sort_directions']"
+                        wire:model="draft.sort_second_direction"
                         x-bind:disabled="primarySort === '' || secondarySort === ''" />
                 </x-index.filter-select>
 

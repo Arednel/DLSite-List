@@ -33,6 +33,7 @@ class OptionsControllerTest extends TestCase
         $this->get('/options')
             ->assertOk()
             ->assertSee('Options')
+            ->assertSee('font-awesome/7.0.1/css/all.min.css', false)
             ->assertSee('href="/options?tab=options"', false)
             ->assertSee('href="/options?tab=refetch"', false)
             ->assertSee('Index Pagination')

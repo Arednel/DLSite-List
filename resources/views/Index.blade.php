@@ -8,6 +8,8 @@
     <link rel="stylesheet" href="{{ asset('css/index.css') }}?v={{ filemtime(public_path('css/index.css')) }}">
     <link rel="stylesheet"
         href="{{ asset('css/list-menu-float.css') }}?v={{ filemtime(public_path('css/list-menu-float.css')) }}">
+    <link rel="stylesheet"
+        href="{{ asset('css/autocomplete.css') }}?v={{ filemtime(public_path('css/autocomplete.css')) }}">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.6.0/css/all.min.css">
 
     @livewireStyles
@@ -26,6 +28,8 @@
 
     <script
         src="{{ asset('scripts/index-advanced-filters.js') }}?v={{ filemtime(public_path('scripts/index-advanced-filters.js')) }}"
+        defer></script>
+    <script src="{{ asset('scripts/autocomplete-text.js') }}?v={{ filemtime(public_path('scripts/autocomplete-text.js')) }}"
         defer></script>
     @livewireScripts
 </body>

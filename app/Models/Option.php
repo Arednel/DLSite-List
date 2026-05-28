@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Enums\AutocompleteOrder;
 use Illuminate\Database\Eloquent\Model;
 
 class Option extends Model
@@ -9,6 +10,10 @@ class Option extends Model
     public const INDEX_PER_PAGE = 'index_per_page';
 
     public const EDIT_FETCHED_TAGS = 'edit_fetched_tags';
+
+    public const TAG_AUTOCOMPLETE_ORDER = 'tag_autocomplete_order';
+
+    public const SERIES_AUTOCOMPLETE_ORDER = 'series_autocomplete_order';
 
     public const INDEX_PER_PAGE_UNLIMITED = 'unlimited';
 
@@ -61,6 +66,26 @@ class Option extends Model
         );
     }
 
+    public static function tagAutocompleteOrder(): AutocompleteOrder
+    {
+        return self::autocompleteOrder(self::TAG_AUTOCOMPLETE_ORDER);
+    }
+
+    public static function setTagAutocompleteOrder(AutocompleteOrder|string $order): void
+    {
+        self::setAutocompleteOrder(self::TAG_AUTOCOMPLETE_ORDER, $order);
+    }
+
+    public static function seriesAutocompleteOrder(): AutocompleteOrder
+    {
+        return self::autocompleteOrder(self::SERIES_AUTOCOMPLETE_ORDER);
+    }
+
+    public static function setSeriesAutocompleteOrder(AutocompleteOrder|string $order): void
+    {
+        self::setAutocompleteOrder(self::SERIES_AUTOCOMPLETE_ORDER, $order);
+    }
+
     public static function normalizeIndexPerPage(mixed $value): int|string
     {
         if ($value === self::INDEX_PER_PAGE_UNLIMITED) {
@@ -82,5 +107,29 @@ class Option extends Model
         return collect(self::FIXED_INDEX_PER_PAGE_OPTIONS)
             ->mapWithKeys(fn(int $value): array => [$value => (string) $value])
             ->all();
+    }
+
+    private static function autocompleteOrder(string $key): AutocompleteOrder
+    {
+        return self::normalizeAutocompleteOrder(
+            self::query()->where('key', $key)->value('value')
+        );
+    }
+
+    private static function setAutocompleteOrder(string $key, AutocompleteOrder|string $order): void
+    {
+        self::query()->updateOrCreate(
+            ['key' => $key],
+            ['value' => self::normalizeAutocompleteOrder($order)->value],
+        );
+    }
+
+    private static function normalizeAutocompleteOrder(AutocompleteOrder|string|null $order): AutocompleteOrder
+    {
+        if ($order instanceof AutocompleteOrder) {
+            return $order;
+        }
+
+        return AutocompleteOrder::tryFrom((string) $order) ?? AutocompleteOrder::Usage;
     }
 }

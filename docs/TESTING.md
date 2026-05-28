@@ -2,6 +2,10 @@
 
 ## Scope
 Current automated coverage is in Laravel PHPUnit tests:
+- `tests/Feature/AutocompleteControllerTest.php`
+  - covers database-backed tag and series suggestion endpoints, language-agnostic tag results, word-prefix and non-ASCII matching, local popularity ordering, first-word ordering, separate tag/series ordering settings, result limits, and autocomplete asset/data-attribute rendering on Index/Create/Edit
+- `tests/Unit/Support/AutocompleteMatcherTest.php`
+  - covers autocomplete PHP match ranking and usage-order comparison behavior
 - `tests/Feature/ProductControllerTest.php`
   - covers index filtering/sorting, English/custom-visible genre search and tag filters, create/edit pages, optional fetched English tag editing, tag library English/custom visibility, index-only return navigation with visible-work anchors, visibility-filter return redirects, custom-sort return page calculation, a full visible-update return workflow, Laravel previous URL create back links, malformed create back-link input, create-mode back-link preservation, Create Go Back preservation after scraper validation errors, filtered delete page fallback, custom create/upload flow, editable custom tag source behavior, DLSite store with one fetched tag in both JP/EN buckets, index image selection, enum-backed product field validation, update flow, and logged destroy cleanup failures
 - `tests/Feature/ReturnTargetProductTest.php`
@@ -14,6 +18,8 @@ Current automated coverage is in Laravel PHPUnit tests:
   - covers derived product index keys for numeric RJ sorting, partial start/finish date sorting, and exact series filtering behavior
 - `tests/Feature/IndexPaginationSettingsTest.php`
   - covers the Options page-size setting component, including default, fixed, custom positive integer, unlimited, deferred save behavior, scalar option persistence, Livewire-only mode state, Livewire dirty-state saved notice behavior, and invalid custom values
+- `tests/Feature/AutocompleteSettingsTest.php`
+  - covers the Options autocomplete ordering setting component, including default usage ordering, separate tag and series persistence, invalid enum values, and Livewire dirty-state saved notice behavior
 - `tests/Feature/FetchedTagEditingSettingsTest.php`
   - covers the Options fetched-tag editing setting component, including default disabled state, scalar option persistence, and Livewire dirty-state saved notice behavior
 - `tests/Feature/ProductGenreMigrationTest.php`
@@ -77,6 +83,7 @@ Python process tests use Laravel's `Process::fake()` and `Process::preventStrayP
 
 Livewire component tests use `Livewire::test()` to update component state without a browser.
 Index pagination tests set `options.index_per_page` through `App\Models\Option` so fixed, custom, and unlimited list sizes can be verified without touching application config.
+Autocomplete settings tests set `options.tag_autocomplete_order` and `options.series_autocomplete_order` through `App\Models\Option` so tag and series suggestion ranking can be verified independently.
 Fetched tag editing tests set `options.edit_fetched_tags` through `App\Models\Option` so the disabled and enabled edit flows can be verified without changing environment config.
 
 ### Docker test setup
@@ -96,6 +103,7 @@ The Docker test service is one-off and does not run during the normal app startu
   - `php artisan test --filter=ProductControllerTest`
   - `php artisan test --filter=ProductIndexLivewireTest`
   - `php artisan test --filter=IndexPaginationSettingsTest`
+  - `php artisan test --filter=AutocompleteSettingsTest`
   - `php artisan test --filter=FetchedTagEditingSettingsTest`
   - `php artisan test --filter=OptionsControllerTest`
   - `php artisan test --filter=OptionsRefetchProgressTest`

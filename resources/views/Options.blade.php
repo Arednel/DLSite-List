@@ -11,6 +11,7 @@
     <link rel="stylesheet" href="{{ asset('css/options.css') }}?v={{ filemtime(public_path('css/options.css')) }}">
     <link rel="stylesheet"
         href="{{ asset('css/list-menu-float.css') }}?v={{ filemtime(public_path('css/list-menu-float.css')) }}">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/7.0.1/css/all.min.css">
 
     @livewireStyles
 </head>
@@ -58,6 +59,13 @@
                     </p>
 
                     <livewire:fetched-tag-editing-settings />
+
+                    <h2>Autocomplete</h2>
+                    <p class="option-description">
+                        Choose how tag and series suggestions are ordered in autocomplete dropdowns.
+                    </p>
+
+                    <livewire:autocomplete-settings />
                 </section>
             @endif
 

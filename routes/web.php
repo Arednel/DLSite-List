@@ -2,6 +2,7 @@
 
 use Illuminate\Support\Facades\Route;
 
+use App\Http\Controllers\AutocompleteController;
 use App\Http\Controllers\ProductController;
 use App\Http\Controllers\OptionsController;
 
@@ -40,3 +41,7 @@ Route::get('/options/refetch-tags/{run}', [OptionsController::class, 'showRefetc
 Route::get('/options/refetch-tags/{run}/status', [OptionsController::class, 'refetchTagsStatus'])->name('options.refetch-tags.status');
 Route::post('/options/refetch-tags/{run}/cancel', [OptionsController::class, 'cancelRefetchTags'])->name('options.refetch-tags.cancel');
 Route::post('/options/refetch-tags/{run}/apply', [OptionsController::class, 'applyRefetchTags'])->name('options.refetch-tags.apply');
+
+// Autocomplete
+Route::get('/autocomplete/tags', [AutocompleteController::class, 'tags'])->name('autocomplete.tags');
+Route::get('/autocomplete/series', [AutocompleteController::class, 'series'])->name('autocomplete.series');

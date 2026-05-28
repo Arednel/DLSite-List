@@ -97,6 +97,8 @@ The `options` table stores app settings as scalar string values keyed by `option
 Current settings:
 - `index_per_page`: controls how many works the Index list renders per page
 - `edit_fetched_tags`: controls whether fetched English tags can be edited from Edit Work
+- `tag_autocomplete_order`: controls how tag autocomplete suggestions are ordered
+- `series_autocomplete_order`: controls how series autocomplete suggestions are ordered
 
 Runtime note:
 - `App\Models\Option` normalizes stored strings into the runtime values the app uses
@@ -120,6 +122,13 @@ Fetched tag editing default:
 - disabled
 
 When enabled, Edit Work allows changing fetched English tags. Japanese-only fetched tags remain stored but hidden.
+
+Autocomplete ordering default:
+- `usage`
+
+Autocomplete ordering choices:
+- `usage`: orders matching suggestions by attached work count and then title
+- `first_word`: shows values that start with the typed query before later-word matches, then orders each group by attached work count and title
 
 ## Scraper Runtime Paths
 - Python script: `python/DLSiteScraper.py`

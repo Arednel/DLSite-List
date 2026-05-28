@@ -5,7 +5,8 @@
     <td class="form-table-cell">
         <textarea id="genre_custom" name="genre_custom" class="form-textarea"
             placeholder="Comma-separated. Use double quotes for tags that contain commas, e.g. &quot;Junior / Senior (at work, school, etc)&quot;, Office Lady"
-            rows="5" cols="65">{{ old('genre_custom', $value) }}</textarea>
+            rows="5" cols="65" data-autocomplete-source="tags" data-autocomplete-mode="csv"
+            data-autocomplete-url="{{ route('autocomplete.tags', [], false) }}">{{-- Add ", " faster tag input, if there is any tag --}}{{ old('genre_custom', filled($value) ? $value . ', ' : '') }}</textarea>
         <i class="fa-solid fa-circle-question"
             title='Comma-separated. Use double quotes for tags that contain commas, e.g. "Junior / Senior (at work, school, etc)", Office Lady'></i>
     </td>

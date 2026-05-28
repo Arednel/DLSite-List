@@ -2,6 +2,13 @@
 
 ## Development
 
+* 2026-05-29 -- 1.4.0 Autocomplete
+  * Added database-backed Danbooru-style autocomplete for tag and series fields
+  * Added reusable autocomplete CSS/JS for Index, Create, and Edit fields
+  * Added Options controls for tag and series autocomplete ordering
+  * Small fixes
+  * Updated tests and docs
+
 * 2026-05-29 -- 1.3.9 Enum Validation
   * Tightened product form validation with enum-backed rules for progress, score, priority, and re-listen value
   * Updated tests and docs
