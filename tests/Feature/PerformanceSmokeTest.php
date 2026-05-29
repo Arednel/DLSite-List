@@ -80,6 +80,14 @@ class PerformanceSmokeTest extends TestCase
                 'tag_match' => 'all',
             ]))->assertOk(),
         );
+        $measurements['options tab'] = $this->averageResponseTime(
+            'options tab',
+            fn() => $this->get('/options')->assertOk(),
+        );
+        $measurements['options refetch tab'] = $this->averageResponseTime(
+            'options refetch tab',
+            fn() => $this->get('/options?tab=refetch')->assertOk(),
+        );
 
         Option::setIndexPerPage(Option::INDEX_PER_PAGE_UNLIMITED);
         $measurements['unlimited index'] = $this->averageResponseTime(

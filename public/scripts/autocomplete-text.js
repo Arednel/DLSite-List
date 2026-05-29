@@ -44,9 +44,19 @@
             results: [],
             activeIndex: 0,
             query: '',
+            suppressNextInputFetch: false,
         });
 
-        field.addEventListener('input', () => scheduleFetch(field));
+        field.addEventListener('input', () => {
+            const state = fieldStates.get(field);
+
+            if (state.suppressNextInputFetch) {
+                state.suppressNextInputFetch = false;
+                return;
+            }
+
+            scheduleFetch(field);
+        });
         field.addEventListener('focus', () => scheduleFetch(field));
         field.addEventListener('click', () => scheduleFetch(field));
         field.addEventListener('keydown', (event) => handleKeydown(field, event));
@@ -242,6 +252,7 @@
         } else {
             field.value = result.value;
             setCaret(field, field.value.length);
+            state.suppressNextInputFetch = true;
         }
 
         dispatchFieldChange(field);

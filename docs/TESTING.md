@@ -31,7 +31,7 @@ Current automated coverage is in Laravel PHPUnit tests:
 - `tests/Feature/OptionsWorkSearchTest.php`
   - covers the Livewire selected-work search, numeric RJ-desc visible order, and selected product preservation when filtered results change
 - `tests/Feature/PerformanceSmokeTest.php`
-  - defaults to 500 works, 500 tags, and 10000 pivot rows through constants at the top of the test, then reports average response times for plain/filtered/search/tag/unlimited Index paths plus common, recalculated, and filter-cleanup update redirects and delete page clamp redirects
+  - defaults to 500 works, 500 tags, and 10000 pivot rows through constants at the top of the test, then reports average response times for plain/filtered/search/tag/unlimited Index paths, Options tabs, common/recalculated/filter-cleanup update redirects, and delete page clamp redirects
   - performance smoke timings emit PHPUnit warning issues above 500ms and stronger warning text above 1000ms; use `--do-not-fail-on-phpunit-warning` when you want the command to exit successfully while still showing those warnings
 - `tests/Unit/Support/ProductIndexFiltersTest.php`
   - covers query normalization, defaults, explicit input keys, visibility filter group coverage, and query export helpers

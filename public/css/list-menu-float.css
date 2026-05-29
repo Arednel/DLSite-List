@@ -133,17 +133,26 @@
         border-right: #ee9898 1px solid;
         background-color: #fffdf8;
         box-shadow: 12px 0 36px rgba(125, 106, 106, 0.18);
+        opacity: 0;
         transform: translateX(calc(-100% - 12px));
         visibility: hidden;
         pointer-events: none;
-        transition: transform 0.28s ease;
+        transition:
+            transform 0.28s ease,
+            opacity 0.28s ease;
         z-index: 5;
     }
 
     .list-menu-float.is-open {
+        opacity: 1;
         transform: translateX(0);
         visibility: visible;
         pointer-events: auto;
+    }
+
+    .list-menu-float.is-closing {
+        visibility: visible;
+        pointer-events: none;
     }
 
     .list-menu-float .list-menu-link {

@@ -817,6 +817,7 @@ body.filter-modal-open {
         border-left: 0;
         border-right: 0;
         margin-inline: 0;
+        border: none;
     }
 
     .cover-block .image-container {

@@ -2,6 +2,11 @@
 
 ## Development
 
+* 2026-05-30 -- 1.4.1 UI Polish
+  * Fixed single-value autocomplete reopening after selection and smoothed mobile menu closing
+  * Added Options page timings to performance smoke coverage
+  * Small fixes
+
 * 2026-05-29 -- 1.4.0 Autocomplete
   * Added database-backed Danbooru-style autocomplete for tag and series fields
   * Added reusable autocomplete CSS/JS for Index, Create, and Edit fields

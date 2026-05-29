@@ -49,3 +49,12 @@
     color: #64748b;
     font-size: 0.85em;
 }
+
+@media (max-width: 768px) {
+
+    /* Bigger font size for easier mobile use */
+    .autocomplete-option__label,
+    .autocomplete-option__count {
+        font-size: 14px;
+    }
+}

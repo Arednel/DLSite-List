@@ -9,16 +9,36 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         const desktopQuery = window.matchMedia('(min-width: 993px)');
+        const closeTransitionFallbackMs = 340;
+        let closeTimer = null;
 
-        const closeMenu = () => {
-            menu.classList.remove('is-open');
-            menu.setAttribute('aria-hidden', 'true');
+        const finishClosing = () => {
+            window.clearTimeout(closeTimer);
+            closeTimer = null;
+            menu.classList.remove('is-closing');
             overlay.classList.remove('is-visible');
-            toggle.setAttribute('aria-expanded', 'false');
             document.body.classList.remove('list-menu-mobile-open');
         };
 
+        const closeMenu = () => {
+            if (!menu.classList.contains('is-open') && !menu.classList.contains('is-closing')) {
+                return;
+            }
+
+            window.clearTimeout(closeTimer);
+            menu.classList.add('is-closing');
+            menu.classList.remove('is-open');
+            menu.setAttribute('aria-hidden', 'true');
+            toggle.setAttribute('aria-expanded', 'false');
+
+            // Keep the body locked until the slide-out finishes so mobile browsers do not resize mid-animation.
+            closeTimer = window.setTimeout(finishClosing, closeTransitionFallbackMs);
+        };
+
         const openMenu = () => {
+            window.clearTimeout(closeTimer);
+            closeTimer = null;
+            menu.classList.remove('is-closing');
             menu.classList.add('is-open');
             menu.setAttribute('aria-hidden', 'false');
             overlay.classList.add('is-visible');
@@ -36,6 +56,12 @@ document.addEventListener('DOMContentLoaded', () => {
         });
 
         overlay.addEventListener('click', closeMenu);
+
+        menu.addEventListener('transitionend', (event) => {
+            if (event.target === menu && event.propertyName === 'transform' && menu.classList.contains('is-closing')) {
+                finishClosing();
+            }
+        });
 
         menu.querySelectorAll('a').forEach((link) => {
             link.addEventListener('click', closeMenu);
