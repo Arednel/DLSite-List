@@ -5,6 +5,7 @@ namespace App\Livewire;
 use App\Enums\ProductIndexSortDirection;
 use App\Enums\ProductIndexSortField;
 use App\Enums\ProductIndexTagMatch;
+use App\Enums\ProductField;
 use App\Models\Option;
 use App\Support\ProductIndexFilters;
 use App\Support\ProductIndexResults;
@@ -24,6 +25,12 @@ class ProductIndex extends Component
     public string $notes = '';
     public string $genre = '';
     public string $series = '';
+    public string $circle = '';
+    public string $scenario = '';
+    public string $voice_actor = '';
+    public string $illustration = '';
+    public string $author = '';
+    public string $description = '';
     public string $tags = '';
     public string $tag_match = '';
     public string $age_category = '';
@@ -63,18 +70,30 @@ class ProductIndex extends Component
         $productIndexResults = app(ProductIndexResults::class);
         $filters = $this->filters;
         $filterQuery = $this->filterQuery;
-        $perPage = Option::indexPerPage();
-        $products = $productIndexResults->getProducts($filters, $perPage);
-        $isUnlimited = $perPage === Option::INDEX_PER_PAGE_UNLIMITED;
+        $settings = Option::productIndexSettings();
+        $products = $productIndexResults->getProducts($filters, $settings->perPage, $settings->visibleIndexFields);
+        $isUnlimited = $settings->perPage === Option::INDEX_PER_PAGE_UNLIMITED;
         $visibleProducts = $products instanceof LengthAwarePaginator
             ? new EloquentCollection($products->items())
             : $products;
+        $visibleProductIds = $visibleProducts->modelKeys();
+        $productGenres = in_array(ProductField::Tags->value, $settings->visibleIndexFields, true)
+            ? $productIndexResults->loadVisibleGenres($visibleProductIds)
+            : collect();
+        $productContributors = collect($settings->indexColumns)->contains(fn(array $column): bool => $column['contributor_role'] !== null)
+            ? $productIndexResults->loadContributors($visibleProductIds, $settings->visibleIndexFields)
+            : collect();
         $currentQuery = $this->queryWithCurrentPage($filterQuery, $isUnlimited);
+        $tagLinkQuery = $filters->toQueryWithout('genre');
 
         return view('livewire.product-index', [
             'products' => $products,
-            'productGenres' => $productIndexResults->loadVisibleGenres($visibleProducts->modelKeys()),
+            'visibleProducts' => $visibleProducts,
+            'productGenres' => $productGenres,
+            'productContributors' => $productContributors,
             'filterOptions' => $this->filterOptions,
+            'indexColumns' => $settings->indexColumns,
+            'filterFields' => $settings->filterFields,
             'filterActive' => $filterQuery !== [],
             'hasCurrentTagFilter' => $filters->genre !== '',
             'progressHeading' => $filters->progressHeading(),
@@ -82,11 +101,13 @@ class ProductIndex extends Component
             'isUnlimited' => $isUnlimited,
             'totalProducts' => $products instanceof LengthAwarePaginator ? $products->total() : $products->count(),
             'currentQuery' => $currentQuery,
-            'tagBaseQuery' => $filterQuery,
+            'tagHrefBase' => route('index', $tagLinkQuery, false),
+            'tagHrefSeparator' => $tagLinkQuery === [] ? '?' : '&',
             'quickAddUrl' => route('products.create', [
                 'return_query' => $currentQuery,
             ], false),
             'sortIcons' => $this->sortIcons,
+            'tableWidthCss' => $settings->tableWidthCss,
         ]);
     }
 

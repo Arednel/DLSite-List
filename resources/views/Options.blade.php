@@ -53,12 +53,26 @@
 
                     <livewire:index-pagination-settings />
 
-                    <h2>Tag Editing</h2>
+                    <h2>Index Table Width</h2>
                     <p class="option-description">
-                        Choose whether fetched English tags can be changed from the Edit Work page.
+                        Choose how wide the Index table can be before horizontal scrolling is used.
                     </p>
 
-                    <livewire:fetched-tag-editing-settings />
+                    <livewire:index-table-width-settings />
+
+                    <h2>Field Layouts</h2>
+                    <p class="option-description">
+                        Choose which product fields are visible, editable, and how configurable columns are ordered.
+                    </p>
+
+                    <livewire:product-field-layout-settings />
+
+                    <h2>Series Metadata</h2>
+                    <p class="option-description">
+                        Choose whether DLSite Create fills Series from the fetched title name when Series is empty.
+                    </p>
+
+                    <livewire:auto-series-settings />
 
                     <h2>Autocomplete</h2>
                     <p class="option-description">
@@ -66,6 +80,8 @@
                     </p>
 
                     <livewire:autocomplete-settings />
+
+                    <livewire:options-reset-defaults />
                 </section>
             @endif
 

@@ -1,4 +1,4 @@
-<div>
+<div style="--index-table-width: {{ $tableWidthCss }}">
     <div class="header"></div>
 
     <x-list-menu-float :quick-add-url="$quickAddUrl" />
@@ -58,7 +58,7 @@
                     <span class="progress-heading">
                         {{ $progressHeading }}
                     </span>
-                    <x-index.advanced-filters :filter-options="$filterOptions" :filter-active="$filterActive" :has-current-tag-filter="$hasCurrentTagFilter" />
+                    <x-index.advanced-filters :filter-options="$filterOptions" :filter-active="$filterActive" :has-current-tag-filter="$hasCurrentTagFilter" :filter-fields="$filterFields" />
                 </div>
 
                 <table class="list-table">
@@ -66,40 +66,29 @@
                         <tr class="list-table-header">
                             <th class="header-title status"></th>
                             <th class="header-title number"></th>
-                            <th class="header-title image">Image</th>
-                            <th class="header-title title" data-column="Title">
-                                <button type="button" class="table-sort-button" wire:click="sortByHeader('rj')">
-                                    Title <span class="sort-icon">{{ $sortIcons['rj'] }}</span>
-                                </button>
-                            </th>
-                            <th class="header-title score" data-column="Score">
-                                <button type="button" class="table-sort-button" wire:click="sortByHeader('score')">
-                                    Score <span class="sort-icon">{{ $sortIcons['score'] }}</span>
-                                </button>
-                            </th>
-                            <th class="header-title series" data-column="Series">
-                                <button type="button" class="table-sort-button" wire:click="sortByHeader('series')">
-                                    Series <span class="sort-icon">{{ $sortIcons['series'] }}</span>
-                                </button>
-                            </th>
-                            <th class="header-title age-category" data-column="Age">
-                                <button type="button" class="table-sort-button"
-                                    wire:click="sortByHeader('age_category')">
-                                    Age <span class="sort-icon">{{ $sortIcons['age_category'] }}</span>
-                                </button>
-                            </th>
-                            <th class="header-title progress" data-column="Progress">
-                                <button type="button" class="table-sort-button" wire:click="sortByHeader('progress')">
-                                    Progress <span class="sort-icon">{{ $sortIcons['progress'] }}</span>
-                                </button>
-                            </th>
-                            <th class="header-title tags">Tags</th>
+                            @foreach ($indexColumns as $column)
+                                <th @class([
+                                    'header-title',
+                                    'configurable' => !in_array($column['field'], ['title', 'image'], true),
+                                    $column['class'],
+                                ]) data-column="{{ $column['label'] }}">
+                                    @if ($column['sort_field'])
+                                        <button type="button" class="table-sort-button"
+                                            wire:click="sortByHeader('{{ $column['sort_field'] }}')">
+                                            {{ $column['label'] }}
+                                            <span class="sort-icon">{{ $sortIcons[$column['sort_field']] }}</span>
+                                        </button>
+                                    @else
+                                        {{ $column['label'] }}
+                                    @endif
+                                </th>
+                            @endforeach
                             <th class="header-title actions"></th>
                         </tr>
                     </tbody>
 
                     <tbody class="list-item">
-                        @forelse ($products as $product)
+                        @forelse ($visibleProducts as $product)
                             <tr class="list-table-data" id="{{ $product->id }}"
                                 wire:key="product-{{ $product->id }}">
                                 <td @class([
@@ -111,110 +100,163 @@
                                 ])>
                                 </td>
                                 <td class="data number"></td>
-                                <td class="data image" data-label="Image"><a
-                                        href="https://www.dlsite.com/maniax/work/=/product_id/{{ $product->id }}.html"
-                                        class="product-link" target="_blank">
-                                        <img src="{{ $product->work_image }}" class="image"></a>
-                                </td>
-                                <td class="data title clearfix" data-label="Title">
-                                    <a href="https://www.dlsite.com/maniax/work/=/product_id/{{ $product->id }}.html"
-                                        class="product-link" target="_blank">{{ $product->id }} -
-                                        {{ $product->work_name }}</a>
-                                    <div class="notes">
-                                        <div class="note-text">
-                                            @if ($product->work_name != $product->work_name_english && $product->work_name_english)
+
+                                @foreach ($indexColumns as $column)
+                                    <td @class([
+                                        'data',
+                                        'configurable' => !in_array($column['field'], ['title', 'image'], true),
+                                        'clearfix' => $column['field'] === 'title',
+                                        $column['class'],
+                                    ]) data-label="{{ $column['label'] }}">
+                                        @switch($column['field'])
+                                            @case('image')
                                                 <a href="https://www.dlsite.com/maniax/work/=/product_id/{{ $product->id }}.html"
                                                     class="product-link" target="_blank">
-                                                    {{ $product->id }} - {{ $product->work_name_english }}</a>
-                                            @endif
+                                                    <img src="{{ $product->work_image }}" class="image"></a>
+                                            @break
+
+                                            @case('title')
+                                                <a href="https://www.dlsite.com/maniax/work/=/product_id/{{ $product->id }}.html"
+                                                    class="product-link" target="_blank">{{ $product->id }} -
+                                                    {{ $product->work_name }}</a>
+                                                <div class="notes">
+                                                    <div class="note-text">
+                                                        @if ($product->work_name != $product->work_name_english && $product->work_name_english)
+                                                            <a href="https://www.dlsite.com/maniax/work/=/product_id/{{ $product->id }}.html"
+                                                                class="product-link" target="_blank">
+                                                                {{ $product->id }} - {{ $product->work_name_english }}</a>
+                                                        @endif
+                                                    </div>
+                                                </div>
+
+                                                <div class="notes">
+                                                    <div class="note-text">
+                                                        {!! nl2br(e($product->notes)) !!}
+                                                    </div>
+                                                </div>
+                                            @break
+
+                                            @case('score')
+                                                <span class="cell-value">{{ $product->score ?? '-' }}</span>
+                                            @break
+
+                                            @case('series')
+                                                <span class="cell-value">
+                                                    @if ($product->series == null)
+                                                        -
+                                                    @else
+                                                        <a href="{{ route('index', ['series' => $product->series], false) }}">
+                                                            {{ $product->series }}
+                                                        </a>
+                                                    @endif
+                                                </span>
+                                            @break
+
+                                            @case('age_category')
+                                                {{ $product->age_category === 'ALL_AGES' ? 'All Ages' : $product->age_category ?? '-' }}
+                                            @break
+
+                                            @case('progress')
+                                                <div class="progress"><span>{{ $product->progress }}</span></div>
+                                            @break
+
+                                            @case('circle')
+                                                @forelse (($productContributors[$product->getKey()] ?? [])[$column['contributor_role']] ?? [] as $contributor)
+                                                    <a href="{{ route('index', ['circle' => $contributor->name], false) }}">
+                                                        {{ $contributor->name }}</a>
+                                                    @if ($contributor->maker_id)
+                                                        <span class="metadata-note">({{ $contributor->maker_id }})</span>
+                                                    @endif{{ !$loop->last ? ',' : '' }}
+                                                @empty
+                                                    @if ($product->circle)
+                                                        <a href="{{ route('index', ['circle' => $product->circle], false) }}">
+                                                            {{ $product->circle }}</a>
+                                                        @if ($product->maker_id)
+                                                            <span class="metadata-note">({{ $product->maker_id }})</span>
+                                                        @endif
+                                                    @else
+                                                        -
+                                                    @endif
+                                                @endforelse
+                                                @break
+
+                                                @case('scenario')
+                                                @case('illustration')
+
+                                                @case('voice_actor')
+                                                @case('author')
+                                                    @forelse (($productContributors[$product->getKey()] ?? [])[$column['contributor_role']] ?? [] as $contributor)
+                                                        <a
+                                                            href="{{ route('index', [$column['field'] => $contributor->name], false) }}">
+                                                            {{ $contributor->name }}</a>{{ !$loop->last ? ',' : '' }}
+                                                    @empty
+                                                        -
+                                                    @endforelse
+                                                @break
+
+                                                @case('description')
+                                                    <div class="description-cell">
+                                                        @if ($product->description)
+                                                            <div>{{ $product->description }}</div>
+                                                        @endif
+                                                        @if ($product->description_english)
+                                                            <div>{{ $product->description_english }}</div>
+                                                        @endif
+                                                        @if (!$product->description && !$product->description_english)
+                                                            -
+                                                        @endif
+                                                    </div>
+                                                @break
+
+                                                @case('tags')
+                                                    <div class="tags">
+                                                        @foreach ($productGenres[$product->getKey()] ?? [] as $genre)
+                                                            <a
+                                                                href="{{ $tagHrefBase }}{{ $tagHrefSeparator }}genre={{ $genre->id }}">
+                                                                {{ $genre->title }}</a>{{ !$loop->last ? ',' : '' }}
+                                                        @endforeach
+                                                    </div>
+                                                @break
+                                            @endswitch
+                                        </td>
+                                    @endforeach
+                                    <td class="data actions" data-label="Actions">
+                                        <div class="row-actions">
+                                            <span class="edit-action">
+                                                <a href="{{ route(
+                                                    'products.edit',
+                                                    [
+                                                        'id' => $product->id,
+                                                        'return_query' => $currentQuery,
+                                                        'return_fragment' => $product->id,
+                                                    ],
+                                                    false,
+                                                ) }}"
+                                                    class="product-edit-link">Edit</a>
+                                            </span>
                                         </div>
-                                    </div>
+                                    </td>
+                                </tr>
+                                @empty
+                                    <tr class="list-table-empty-row">
+                                        <td class="list-table-empty" colspan="{{ 3 + count($indexColumns) }}">
+                                            Nothing found for the current filters.
+                                        </td>
+                                    </tr>
+                                @endforelse
+                            </tbody>
+                        </table>
 
-                                    <div class="notes">
-                                        <div class="note-text">
-                                            {!! nl2br(e($product->notes)) !!}
-                                        </div>
-                                    </div>
-                                </td>
-
-                                <td class="data score" data-label="Score">
-                                    <span class="cell-value">
-                                        @if ($product->score == null)
-                                            -
-                                        @endif
-                                        {{ $product->score }}
-                                    </span>
-                                </td>
-
-                                <td class="data series" data-label="Series">
-                                    <span class="cell-value">
-                                        @if ($product->series == null)
-                                            -
-                                        @else
-                                            <a href="{{ route('index', ['series' => $product->series], false) }}">
-                                                {{ $product->series }}
-                                            </a>
-                                        @endif
-                                    </span>
-                                </td>
-
-                                <td class="data age-category" data-label="Age">
-                                    @if ($product->age_category == 'ALL_AGES')
-                                        All Ages
-                                    @else
-                                        {{ $product->age_category }}
-                                    @endif
-                                </td>
-                                <td class="data progress" data-label="Progress">
-                                    <div class="progress"><span>{{ $product->progress }}</span> </div>
-                                </td>
-
-                                <td id="tags" class="data tags" data-label="Tags">
-                                    <div class="tags">
-                                        @foreach ($productGenres->get($product->id) ?? [] as $genre)
-                                            <a
-                                                href="{{ route('index', array_merge($tagBaseQuery, ['genre' => $genre->id]), false) }}">
-                                                {{ $genre->title }}</a>{{ !$loop->last ? ',' : '' }}
-                                        @endforeach
-                                    </div>
-                                </td>
-                                <td class="data actions" data-label="Actions">
-                                    <div class="row-actions">
-                                        <span class="edit-action">
-                                            <a href="{{ route(
-                                                'products.edit',
-                                                [
-                                                    'id' => $product->id,
-                                                    'return_query' => $currentQuery,
-                                                    'return_fragment' => $product->id,
-                                                ],
-                                                false,
-                                            ) }}"
-                                                class="product-edit-link">Edit</a>
-                                        </span>
-                                    </div>
-                                </td>
-                            </tr>
-                        @empty
-                            <tr class="list-table-empty-row">
-                                <td class="list-table-empty" colspan="10">
-                                    Nothing found for the current filters.
-                                </td>
-                            </tr>
-                        @endforelse
-                    </tbody>
-                </table>
-
-                @if (!$isUnlimited && $products->total() > 0)
-                    {{ $products->links('livewire.index-pagination-links', data: ['scrollTo' => '#progress-menu']) }}
-                @elseif ($isUnlimited)
-                    <div class="index-pagination">
-                        <div class="index-pagination__summary">
-                            Showing all {{ $totalProducts }} works
-                        </div>
+                        @if (!$isUnlimited && $products->total() > 0)
+                            {{ $products->links('livewire.index-pagination-links', data: ['scrollTo' => '#progress-menu']) }}
+                        @elseif ($isUnlimited)
+                            <div class="index-pagination">
+                                <div class="index-pagination__summary">
+                                    Showing all {{ $totalProducts }} works
+                                </div>
+                            </div>
+                        @endif
                     </div>
-                @endif
+                </div>
             </div>
         </div>
-    </div>
-</div>

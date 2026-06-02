@@ -32,6 +32,7 @@
   - `app/Http/Requests/UpdateProductRequest.php`
   - shared normalization/validation in `app/Http/Requests/BaseProductRequest.php`
 - Model: `app/Models/Product.php`
+- Contributor model: `app/Models/Contributor.php`
 - App option model: `app/Models/Option.php`
 - Refetch models:
   - `app/Models/TagRefetchRun.php`
@@ -44,6 +45,13 @@
 - Shared genre sync helpers:
   - `app/Support/ProductGenreSync.php`
   - `app/Support/GenreSyncPayload.php`
+- Shared contributor and DLSite metadata helpers:
+  - `app/Support/ProductContributorSync.php`
+  - `app/Support/DLSite/DLSiteWorkData.php`
+- Product layout helpers:
+  - `app/Enums/ProductContributorRole.php`
+  - `app/Enums/ProductField.php`
+  - `app/Support/ProductFieldLayout.php`
 - Shared visible tag helper:
   - `app/Support/VisibleGenreAttachment.php`
 - Autocomplete helpers:
@@ -54,9 +62,13 @@
   - `app/Livewire/ProductIndex.php`
   - `app/Livewire/IndexPaginationSettings.php`
   - `app/Livewire/AutocompleteSettings.php`
-  - `app/Livewire/FetchedTagEditingSettings.php`
+  - `app/Livewire/ProductFieldLayoutSettings.php`
+  - `app/Livewire/AutoSeriesSettings.php`
+  - `app/Livewire/IndexTableWidthSettings.php`
   - `app/Livewire/OptionsWorkSearch.php`
   - `app/Livewire/OptionsRefetchProgress.php`
+- Livewire shared settings concern:
+  - `app/Livewire/Concerns/ConfirmsOptionReset.php`
 - Views: `resources/views/*.blade.php`
 - Livewire views: `resources/views/livewire/*.blade.php`
 - UI field components: `resources/views/components/fields/*.blade.php`
@@ -68,24 +80,33 @@ Shared UI note:
 - desktop keeps the floating hover menu
 - mobile uses a toggle button that opens the same menu as a left-side drawer
 - `resources/views/Index.blade.php` hosts `ProductIndex`; the Livewire view keeps the desktop table on larger screens and switches to stacked cards on mobile so search/actions still fit
-- `resources/views/Create.blade.php` switches between DLSite create and custom create modes; `resources/views/Create.blade.php` and `resources/views/Edit.blade.php` use `public/css/edit.css` for both desktop and mobile form layouts and render reusable field components from `resources/views/components/fields/*.blade.php`
+- `resources/views/Create.blade.php` switches between DLSite create and custom create modes, renders the saved Quick Add or Custom Quick Add field layout through a configurable row component, includes the same optional metadata/creator/description rows as Edit Work hidden by default, and keeps required create fields locked visible; `resources/views/Create.blade.php` and `resources/views/Edit.blade.php` use `public/css/edit.css` for both desktop and mobile form layouts and render reusable field components from `resources/views/components/fields/*.blade.php`
 - `app/View/Components/Fields/*.php` provides the class-based field components used by those Blade views
 - `AppServiceProvider` registers the enum-backed field component aliases used by `<x-fields.* />`
 - the progress, score, priority, and re-listen field component classes read their select options from the matching enums in `app/Enums/*.php`
 - Blade pages load CSS and JS from `public/` with `filemtime(public_path(...))` query strings for cache busting
 - `public/scripts/autocomplete-text.js` and `public/css/autocomplete.css` provide opt-in autocomplete for tag CSV fields and single-value series fields through `data-autocomplete-*` attributes
-- `resources/views/components/index/advanced-filters.blade.php` renders the index filter/sort modal
-- `resources/views/components/index/*.blade.php` contains the reusable filter/select/radio pieces used by the index modal
+- `resources/views/components/index/advanced-filters.blade.php` renders the index filter/sort modal; dynamic filter rows are prepared by `ProductFieldLayout` and rendered through anonymous index field components
+- `resources/views/components/index/*.blade.php` contains the reusable filter/select/radio pieces used by the index modal; configurable Index table cells render inline in the Livewire view to avoid per-cell component overhead
+- Index mobile cards place row actions after all rendered metadata fields so the edit action stays at the bottom of each work card
 - `app/Livewire/ProductIndex.php` binds filter/sort properties to the URL query string, then normalizes that state into a `ProductIndexFilters` object
 - `app/Enums/*.php` holds enum-backed filter options for progress, priority, tag match, sort fields including `Added to the site Date`, sort backend metadata, and the numeric rating scales
 - `app/Models/Product.php` owns the Laravel 12 local scopes used by index filtering/search and keeps derived index keys in sync for RJ sorting and partial date sorting
-- `app/Support/ProductIndexResults.php` builds the filtered product query, selects only the columns rendered by the Index, and uses enum-defined SQL-backed pagination for default/RJ/scalar/date sorts
-- `ProductIndex` reads `options.index_per_page` once per render, uses Livewire computed properties for derived filter/query/options/sort-icon state, and derives return/progress/tag query arrays from that normalized state
+- `app/Support/ProductIndexResults.php` builds the filtered product query, hydrates only Index title/status base columns plus attributes needed by visible Index fields, and keeps filter/sort-only columns in SQL for default/RJ/scalar/date sorts
+- `ProductIndex` reads page size, Index layout, Filter layout, and table width through one batched `ProductIndexSettings` option lookup per render, uses Livewire computed properties for derived filter/query/options/sort-icon state, and derives return/progress/tag query arrays from that normalized state
 - the advanced filter modal defaults to `All tags` matching and `Desc` sort direction until the user chooses something else
+- `ProductIndexSettings` carries prepared Index columns, visible field ids, Filter fields, and table width CSS; `ProductIndex` only loads row-level tag/contributor data when those columns are visible and passes the grouped relation data directly to Blade before configurable columns render in the saved order
+- Index tag links use one prepared base URL per render and append the numeric genre id in Blade, avoiding route generation for every rendered tag link
+- Index Title and Image are part of the Index field layout; Title is locked visible but reorderable, while Image can be hidden or reordered like the optional metadata columns
+- Edit Work keeps the RJ Code + Title display row fixed first, then renders the Edit field layout; the `title` layout row is locked visible and expands to the Japanese/English title inputs, while Age Category is hidden by default
+- Index creator/circle filters query normalized contributor rows, circle filters also match `products.maker_id`, and description filters search both Japanese and English description text
+- `ProductContributorRole` owns the role-to-`ProductField` mapping used when Create/Edit field layouts decide whether contributor inputs are visible or editable
 
 ## Data Model
 `products` table stores:
 - DLSite identifiers and titles
+- fetched maker/circle metadata
+- Japanese and English descriptions
 - progress/listening metadata (`progress`, dates, re-listen fields, priority)
 - local image paths
 
@@ -102,6 +123,19 @@ Shared UI note:
 It also stores a `source` value:
 - `fetched` for scraper-provided genre attachments
 - `custom` for tags the user typed into the editable Custom Tags field
+
+`contributors` stores normalized creator/circle names:
+- `name` as the display text
+- `name_key` as the unique identity key, using the same trimmed Unicode case-folding approach as `Genre::titleKey()`
+- optional `maker_id`
+
+`contributor_product` is the many-to-many pivot table between `products` and `contributors`.
+It stores a `role` value for the product-specific relationship:
+- `circle`
+- `scenario`
+- `voice_actor`
+- `illustration`
+- `author`
 
 `genre_product_languages` stores the fetched language buckets for each product/tag attachment:
 - `genre_product_id`
@@ -137,9 +171,11 @@ Queue tables:
 
 `options` stores app-level settings as scalar string values:
 - `index_per_page` controls Index pagination, defaults to `100`, accepts fixed choices (`10`, `25`, `50`, `100`, `250`, `500`, `1000`) or any positive integer, and can be set to `unlimited`
-- `edit_fetched_tags` controls whether fetched English tags can be edited from Edit Work, and defaults to disabled
 - `tag_autocomplete_order` controls tag suggestion ordering, defaults to `usage`, and can be set to `first_word`
 - `series_autocomplete_order` controls series suggestion ordering, defaults to `usage`, and can be set to `first_word`
+- `auto_series_from_title_name` controls whether DLSite create fills an empty Series field from `japanese.title_name`, and defaults to enabled
+- `index_field_layout`, `edit_field_layout`, `filter_field_layout`, `quick_add_field_layout`, and `custom_quick_add_field_layout` store surface-specific configurable field order/visibility/editability layouts
+- `index_table_width` controls the Index list/table width
 - `App\Models\Option` normalizes stored scalar strings into the runtime values the app uses
 
 Current repo-level Index sort-key indexes:
@@ -154,10 +190,14 @@ Migration note:
   `genre_product_languages` rows by `2026_05_24_000000_create_genre_product_languages_table.php`
 - the `genre_product_languages` down migration restores old global metadata best-effort because one fetched title can now belong to multiple languages for the same product
 - `2026_05_26_000000_add_title_key_to_genres_table.php` moves tag uniqueness from `genres.title` to `genres.title_key`; rollback can fail if kana-distinct tags were added because the old `genres.title` unique index used MySQL's broader text collation
+- `2026_05_30_000000_create_contributors_table.php` adds normalized creator/circle metadata in `contributors` and `contributor_product`
+- `2026_05_30_000001_expand_metadata_options_columns.php` changes description and option values to nullable text so longer descriptions/layout JSON can be stored
+- `2026_05_30_000002_backfill_product_metadata_from_storage.php` reads matching `storage/app/Works/{RJ}.json` files to backfill maker/circle, descriptions, and contributor pivots; missing or invalid JSON is skipped and `series` is not backfilled
 
 Runtime note:
-- `ProductIndex` shows English + custom genres through one lightweight grouped query from `genre_product` + `genres` for the current page
-- index cover images are rendered directly from `products.work_image`
+- `ProductIndex` shows English + custom genres through one lightweight grouped query from `genre_product` + `genres` for the current page only when the Tags column is visible, loads contributor pivots only when visible contributor columns need them, and passes those grouped results directly to Blade keyed by product id
+- `ProductContributorSync` syncs contributor pivots through `Product::contributorsForRole()` and Laravel's role-scoped many-to-many `syncWithPivotValues()` so replacing one creator role does not detach the same contributor from another role
+- index cover images are rendered directly from `products.work_image` only when the Image column is visible
 - `products.start_date` and `products.end_date` JSON remain the editable/display source of truth; their `*_sort` columns store `YYYYMMDD` integers with missing month/day as `00`
 - `ProductIndex` keeps its filter/sort state in the URL through Livewire's `queryString()` config, then normalizes that state into `app/Support/ProductIndexFilters.php`
 - `app/Support/ProductIndexFilters.php` provides the normalized filter query used by progress tabs, preserved search state, tag links, explicit Livewire query-string keys, and the visibility-affecting filter groups used by return redirects
@@ -175,13 +215,17 @@ Runtime note:
 - autocomplete ordering is configurable per source from Options: `usage` orders all matches by attached work count and then title; `first_word` puts values starting with the typed query before later-word matches, then orders each group by attached work count and title
 - `app/Support/ReturnTarget.php` normalizes index-only return state (`return_query`, `return_fragment`) used by create/edit/update/destroy flows and builds index URLs with Laravel URI helpers
 - successful create/update redirects prioritize showing the created/edited work on the Index: `ReturnTarget` first keeps the saved page when the work is already visible there, then avoids per-filter cleanup when the full query still matches, otherwise drops filters that would hide the work, preserves matching filters and sort state, and uses `ProductIndexResults` to calculate the correct page before appending the work anchor
-- update detects whether visibility-affecting product fields or custom tags changed before redirecting, so unchanged edits can trust the current index query unless the saved return state no longer contains the work
+- update detects whether visibility-affecting product fields or custom tags changed before redirecting, so unchanged edits can trust the current index query unless the saved return state no longer contains the work; `maker_id` is included in that product-field check because circle filters also match maker IDs
 - destroy keeps the saved index query but clamps stale page numbers to the last valid page after deletion; storage cleanup uses Laravel storage deletes and logs cleanup failures without blocking product deletion
 - create-page Go Back ignores malformed `return_url` input, uses Laravel previous URL behavior with the Index as fallback, preserves that back URL while switching between DLSite Create and Custom Create, and restores the flashed return target after validation or scraper errors
+- Create pages read Quick Add or Custom Quick Add field layouts from Options and render only the visible rows, while keeping required RJ/custom title/age/cover rows visible even if stored option JSON tries to hide them. Hidden Create layout fields are ignored on submit; DLSite Create keeps scraped metadata for hidden age/circle/creator/description rows, while visible rows can override those scraped values. Custom Quick Add saves visible custom metadata directly because it has no scraper fallback
 - create/store resolves scraped/custom titles into `genres` rows and syncs the pivot
+- DLSite create parses scraped JSON through `DLSiteWorkData`, collapses duplicate English title/description values to `null`, syncs contributor roles, and fills an empty Series from `japanese.title_name` only when `auto_series_from_title_name` is enabled
 - edit loads only the fetched English/custom genre rows it renders, while keeping fetched non-custom genres attached automatically
 - update reads user-added genres from the form, stores them as `genre_product.source = custom`, and can reuse an existing fetched genre row while keeping it editable for that product
-- when `options.edit_fetched_tags` is enabled, edit also renders fetched English tags as an editable CSV field; update replaces only the `en` fetched language bucket, preserves hidden `jp` fetched rows, and still keeps fetched-over-custom precedence
+- the Edit Form field layout controls Custom Tags and Fetched EN Tags separately; update only syncs tag buckets whose edit toggle is enabled, preserves disabled/hidden buckets, preserves hidden `jp` fetched rows, and still keeps fetched-over-custom precedence
+- Edit Work reads the edit field layout from Options; hidden or read-only metadata/listening fields are not cleared during save because the update request only applies submitted/editable field groups, including nested `add[...]` date/re-listen/priority inputs
+- `ProductController` builds the editable product update payload from a field-to-column map keyed by `ProductField`, while keeping special cases such as duplicate English descriptions and contributor/tag syncing outside the map
 - custom create stores user-uploaded covers/samples in `storage/app/public/Works/{RJ}`, saves the uploaded cover public path in `products.work_image`, and attaches custom tags through the same genre resolver used by update
 - product create/update and refetch apply use `app/Support/ProductGenreSync.php` to sync `genre_product.source` and `genre_product_languages` together
 - `app/Support/GenreSyncPayload.php` keeps fetched-over-custom source precedence and builds the fetched language map used by `ProductGenreSync`
@@ -193,8 +237,11 @@ Runtime note:
 - the Options page has separate `Options` and `Refetch` tabs; validation errors from refetch forms reopen the Refetch tab
 - the Refetch tab links to the latest refetch run when at least one run exists
 - the Options tab includes an Index Pagination setting powered by Livewire and persisted in `options.index_per_page`; changing the mode can reveal the custom-value input immediately, but the setting is only persisted when Save is submitted
-- the Options tab includes a Livewire fetched-tag editing toggle persisted in `options.edit_fetched_tags`
+- the Options tab includes Custom Tags and Fetched EN Tags edit toggles inside the Edit Form field layout settings, grouped in one edit-control column on desktop
 - the Options tab includes Livewire autocomplete ordering settings persisted in `options.tag_autocomplete_order` and `options.series_autocomplete_order`
+- the Options tab includes Livewire settings for Index/Edit/Filter/Quick Add/Custom Quick Add field layouts, automatic Series from DLSite `title_name`, and Index table width; field layout rows use Livewire `wire:sort` drag handles plus Up/Down buttons, keep checkbox state in field-keyed maps while editing, and are persisted only when Save is submitted
+- Options Livewire settings components share saved notice, validation-reset, and reset-confirmation state through `ConfirmsOptionReset`
+- the Options tab includes right-aligned, body-teleported, modal-confirmed reset actions for each visible setting group plus a global `Reset All Options` action; modal confirm buttons use a destructive red style, modals close from Cancel/Escape/backdrop clicks, global reset adds a 3-second client-side countdown before its confirm button unlocks, and global reset only restores visible Options settings while leaving product/refetch data and unrelated option rows alone
 - the selected-work search on the Refetch tab is rendered by Livewire and uses Laravel query helpers for the ID/title match
 - the Refetch tab work list and queued all/selected refetch ids use numeric RJ descending order, matching the Index default order
 - custom-only works are skipped during refetch because they do not have DLSite metadata to fetch from
@@ -211,6 +258,7 @@ Runtime note:
 - `app/Support/DLSite/DLSitePythonRunner.php` runs Python scripts through Laravel's Process facade with the project `python/venv`.
 - Product create runs `python/DLSiteScraper.py` through `DLSitePythonRunner`.
 - Python fetches Japanese/English DLSite metadata, stores JSON in `storage/app/Works`, and downloads images to `storage/app/public/Works/{RJ}`.
+- The stored JSON is also the source for metadata backfill migrations when a matching `products.rj_number` exists.
 - Custom create does not run the scraper and does not create or read scraped JSON.
 - `DLSiteTagFetcher` runs `python/DLSiteTagFetcher.py` through `DLSitePythonRunner` for the Refetch Tags queue job.
 - `python/DLSiteTagFetcher.py` fetches tags only, returns `japanese.genre` and `english.genre` JSON through stdout, and does not write files.

@@ -78,7 +78,7 @@
     opacity: 1;
 }
 
-@media (max-width: 992px) {
+@media (max-width: 768px) {
     body.list-menu-mobile-open {
         overflow: hidden;
     }

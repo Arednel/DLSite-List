@@ -1,0 +1,361 @@
+<?php
+
+namespace Tests\Unit\Support;
+
+use App\Enums\ProductField;
+use App\Support\ProductFieldLayout;
+use PHPUnit\Framework\TestCase;
+
+class ProductFieldLayoutTest extends TestCase
+{
+    public function test_default_layout_matches_field_order_and_visibility(): void
+    {
+        $layout = ProductFieldLayout::normalize(null, ProductFieldLayout::SURFACE_INDEX);
+
+        $this->assertSame([
+            ProductField::Image->value,
+            ProductField::Title->value,
+            ProductField::Score->value,
+            ProductField::Series->value,
+            ProductField::AgeCategory->value,
+            ProductField::Progress->value,
+            ProductField::Circle->value,
+            ProductField::Scenario->value,
+            ProductField::Illustration->value,
+            ProductField::VoiceActor->value,
+            ProductField::Author->value,
+            ProductField::Description->value,
+            ProductField::Tags->value,
+        ], collect($layout)->pluck('field')->all());
+
+        $this->assertSame([
+            ProductField::Image->value,
+            ProductField::Title->value,
+            ProductField::Score->value,
+            ProductField::Series->value,
+            ProductField::AgeCategory->value,
+            ProductField::Progress->value,
+            ProductField::Tags->value,
+        ], ProductFieldLayout::visibleFields($layout));
+
+        $this->assertTrue($layout[1]['visibility_locked']);
+    }
+
+    public function test_surface_defaults_include_requested_edit_and_filter_rows(): void
+    {
+        $editLayout = ProductFieldLayout::normalize(null, ProductFieldLayout::SURFACE_EDIT);
+
+        $this->assertSame([
+            ProductField::Progress->value,
+            ProductField::Score->value,
+            ProductField::Series->value,
+            ProductField::Title->value,
+            ProductField::Tags->value,
+            ProductField::Notes->value,
+            ProductField::StartDate->value,
+            ProductField::FinishDate->value,
+            ProductField::TotalTimesReListened->value,
+            ProductField::ReListenValue->value,
+            ProductField::Priority->value,
+            ProductField::AgeCategory->value,
+            ProductField::Circle->value,
+            ProductField::Scenario->value,
+            ProductField::Illustration->value,
+            ProductField::VoiceActor->value,
+            ProductField::Author->value,
+            ProductField::Description->value,
+        ], collect($editLayout)->pluck('field')->all());
+
+        $this->assertSame([
+            ProductField::Progress->value,
+            ProductField::Score->value,
+            ProductField::Series->value,
+            ProductField::Title->value,
+            ProductField::Tags->value,
+            ProductField::Notes->value,
+            ProductField::StartDate->value,
+            ProductField::FinishDate->value,
+            ProductField::TotalTimesReListened->value,
+            ProductField::ReListenValue->value,
+            ProductField::Priority->value,
+        ], ProductFieldLayout::visibleFields($editLayout));
+
+        $titleRow = collect($editLayout)->firstWhere('field', ProductField::Title->value);
+        $ageRow = collect($editLayout)->firstWhere('field', ProductField::AgeCategory->value);
+
+        $this->assertTrue($titleRow['visible']);
+        $this->assertTrue($titleRow['visibility_locked']);
+        $this->assertTrue($titleRow['editable']);
+        $this->assertFalse($ageRow['visible']);
+        $this->assertFalse($ageRow['editable']);
+
+        $this->assertSame([
+            ProductField::Title->value,
+            ProductField::Series->value,
+            ProductField::Notes->value,
+            ProductField::AgeCategory->value,
+            ProductField::Progress->value,
+            ProductField::Score->value,
+            ProductField::Priority->value,
+            ProductField::TotalTimesReListened->value,
+            ProductField::ReListenValue->value,
+            ProductField::Tags->value,
+            ProductField::Circle->value,
+            ProductField::Scenario->value,
+            ProductField::Illustration->value,
+            ProductField::VoiceActor->value,
+            ProductField::Author->value,
+            ProductField::Description->value,
+        ], collect(ProductFieldLayout::normalize(null, ProductFieldLayout::SURFACE_FILTER))->pluck('field')->all());
+
+        $this->assertSame([
+            ProductField::Title->value,
+            ProductField::Series->value,
+            ProductField::Notes->value,
+            ProductField::AgeCategory->value,
+            ProductField::Progress->value,
+            ProductField::Score->value,
+            ProductField::Priority->value,
+            ProductField::TotalTimesReListened->value,
+            ProductField::ReListenValue->value,
+            ProductField::Tags->value,
+        ], ProductFieldLayout::visibleFields(ProductFieldLayout::normalize(null, ProductFieldLayout::SURFACE_FILTER)));
+    }
+
+    public function test_edit_tags_default_to_custom_editing_with_fetched_editing_disabled(): void
+    {
+        $layout = ProductFieldLayout::normalize(null, ProductFieldLayout::SURFACE_EDIT);
+        $tagsRow = collect($layout)->firstWhere('field', ProductField::Tags->value);
+
+        $this->assertTrue($tagsRow['visible']);
+        $this->assertTrue($tagsRow['editable']);
+        $this->assertFalse($tagsRow['fetched_editable']);
+        $this->assertFalse(ProductFieldLayout::fetchedTagsEditable($layout));
+    }
+
+    public function test_quick_add_defaults_match_create_form_order_and_visibility(): void
+    {
+        $layout = ProductFieldLayout::normalize(null, ProductFieldLayout::SURFACE_QUICK_ADD);
+
+        $this->assertSame([
+            ProductField::RjCode->value,
+            ProductField::Progress->value,
+            ProductField::Score->value,
+            ProductField::Series->value,
+            ProductField::Title->value,
+            ProductField::Tags->value,
+            ProductField::Notes->value,
+            ProductField::StartDate->value,
+            ProductField::FinishDate->value,
+            ProductField::TotalTimesReListened->value,
+            ProductField::ReListenValue->value,
+            ProductField::Priority->value,
+            ProductField::AgeCategory->value,
+            ProductField::Circle->value,
+            ProductField::Scenario->value,
+            ProductField::Illustration->value,
+            ProductField::VoiceActor->value,
+            ProductField::Author->value,
+            ProductField::Description->value,
+        ], collect($layout)->pluck('field')->all());
+
+        $this->assertSame([
+            ProductField::RjCode->value,
+            ProductField::Progress->value,
+            ProductField::Score->value,
+            ProductField::Series->value,
+            ProductField::Title->value,
+            ProductField::Tags->value,
+            ProductField::Notes->value,
+            ProductField::StartDate->value,
+            ProductField::FinishDate->value,
+            ProductField::TotalTimesReListened->value,
+            ProductField::ReListenValue->value,
+            ProductField::Priority->value,
+        ], ProductFieldLayout::visibleFields($layout));
+        $this->assertTrue($layout[0]['visibility_locked']);
+    }
+
+    public function test_custom_quick_add_defaults_match_create_form_order_and_visibility(): void
+    {
+        $layout = ProductFieldLayout::normalize(null, ProductFieldLayout::SURFACE_CUSTOM_QUICK_ADD);
+
+        $this->assertSame([
+            ProductField::RjCode->value,
+            ProductField::Progress->value,
+            ProductField::Score->value,
+            ProductField::Series->value,
+            ProductField::Title->value,
+            ProductField::Tags->value,
+            ProductField::Notes->value,
+            ProductField::AgeCategory->value,
+            ProductField::Image->value,
+            ProductField::SampleImages->value,
+            ProductField::StartDate->value,
+            ProductField::FinishDate->value,
+            ProductField::TotalTimesReListened->value,
+            ProductField::ReListenValue->value,
+            ProductField::Priority->value,
+            ProductField::Circle->value,
+            ProductField::Scenario->value,
+            ProductField::Illustration->value,
+            ProductField::VoiceActor->value,
+            ProductField::Author->value,
+            ProductField::Description->value,
+        ], collect($layout)->pluck('field')->all());
+
+        $this->assertSame([
+            ProductField::RjCode->value,
+            ProductField::Progress->value,
+            ProductField::Score->value,
+            ProductField::Series->value,
+            ProductField::Title->value,
+            ProductField::Tags->value,
+            ProductField::Notes->value,
+            ProductField::AgeCategory->value,
+            ProductField::Image->value,
+            ProductField::SampleImages->value,
+            ProductField::StartDate->value,
+            ProductField::FinishDate->value,
+            ProductField::TotalTimesReListened->value,
+            ProductField::ReListenValue->value,
+            ProductField::Priority->value,
+        ], ProductFieldLayout::visibleFields($layout));
+
+        foreach ([ProductField::RjCode, ProductField::Title, ProductField::AgeCategory, ProductField::Image] as $field) {
+            $row = collect($layout)->firstWhere('field', $field->value);
+
+            $this->assertTrue($row['visible']);
+            $this->assertTrue($row['visibility_locked']);
+        }
+    }
+
+    public function test_quick_add_layouts_normalize_invalid_duplicate_hidden_and_locked_rows(): void
+    {
+        $quickAddLayout = ProductFieldLayout::normalize([
+            ['field' => ProductField::RjCode->value, 'visible' => false],
+            ['field' => ProductField::Notes->value, 'visible' => false],
+            ['field' => ProductField::Notes->value, 'visible' => true],
+            ['field' => 'not_real', 'visible' => true],
+        ], ProductFieldLayout::SURFACE_QUICK_ADD);
+
+        $this->assertSame(ProductField::RjCode->value, $quickAddLayout[0]['field']);
+        $this->assertTrue($quickAddLayout[0]['visible']);
+        $this->assertTrue($quickAddLayout[0]['visibility_locked']);
+        $this->assertFalse(collect($quickAddLayout)->firstWhere('field', ProductField::Notes->value)['visible']);
+        $this->assertNotContains('not_real', collect($quickAddLayout)->pluck('field')->all());
+        $this->assertNotContains(
+            ProductField::Notes->value,
+            collect(ProductFieldLayout::quickAddFields($quickAddLayout))->pluck('field')->all(),
+        );
+
+        $customLayout = ProductFieldLayout::normalize([
+            ['field' => ProductField::RjCode->value, 'visible' => false],
+            ['field' => ProductField::Title->value, 'visible' => false],
+            ['field' => ProductField::AgeCategory->value, 'visible' => false],
+            ['field' => ProductField::Image->value, 'visible' => false],
+            ['field' => ProductField::SampleImages->value, 'visible' => false],
+        ], ProductFieldLayout::SURFACE_CUSTOM_QUICK_ADD);
+
+        foreach ([ProductField::RjCode, ProductField::Title, ProductField::AgeCategory, ProductField::Image] as $field) {
+            $this->assertTrue(collect($customLayout)->firstWhere('field', $field->value)['visible']);
+        }
+
+        $this->assertFalse(collect($customLayout)->firstWhere('field', ProductField::SampleImages->value)['visible']);
+    }
+
+    public function test_it_normalizes_invalid_duplicate_and_missing_rows(): void
+    {
+        $layout = ProductFieldLayout::normalize([
+            ['field' => 'voice_actor', 'visible' => false],
+            ['field' => 'voice_actor', 'visible' => true],
+            ['field' => 'not_real', 'visible' => true],
+            ['field' => 'description', 'visible' => true],
+        ], ProductFieldLayout::SURFACE_EDIT);
+
+        $this->assertSame('voice_actor', $layout[0]['field']);
+        $this->assertFalse($layout[0]['visible']);
+        $this->assertFalse($layout[0]['editable']);
+        $this->assertSame('description', $layout[1]['field']);
+        $this->assertTrue($layout[1]['visible']);
+        $this->assertFalse($layout[1]['editable']);
+        $this->assertContains(ProductField::Score->value, collect($layout)->pluck('field')->all());
+    }
+
+    public function test_index_columns_prepare_visible_rendering_metadata(): void
+    {
+        $columns = ProductFieldLayout::indexColumns([
+            ['field' => ProductField::Description->value, 'label' => 'Description', 'visible' => false],
+            ['field' => ProductField::Circle->value, 'label' => 'Circle', 'visible' => true],
+            ['field' => ProductField::Score->value, 'label' => 'Score', 'visible' => true],
+            ['field' => 'not_real', 'label' => 'Broken', 'visible' => true],
+        ]);
+
+        $this->assertSame([
+            [
+                'field' => ProductField::Circle->value,
+                'label' => 'Circle',
+                'class' => 'circle',
+                'sort_field' => null,
+                'contributor_role' => 'circle',
+            ],
+            [
+                'field' => ProductField::Score->value,
+                'label' => 'Score',
+                'class' => 'score',
+                'sort_field' => 'score',
+                'contributor_role' => null,
+            ],
+        ], $columns);
+    }
+
+    public function test_edit_fields_prepare_visible_rendering_metadata(): void
+    {
+        $fields = ProductFieldLayout::editFields([
+            ['field' => ProductField::Description->value, 'label' => 'Description', 'visible' => false, 'editable' => true],
+            ['field' => ProductField::VoiceActor->value, 'label' => 'Voice Actor', 'visible' => true, 'editable' => true],
+            ['field' => ProductField::Tags->value, 'label' => 'Tags', 'visible' => true, 'editable' => false, 'fetched_editable' => true],
+            ['field' => 'not_real', 'label' => 'Broken', 'visible' => true, 'editable' => true],
+        ]);
+
+        $this->assertSame([
+            [
+                'field' => ProductField::VoiceActor->value,
+                'label' => 'Voice Actor',
+                'editable' => true,
+                'fetched_editable' => false,
+                'contributor_role' => 'voice_actor',
+            ],
+            [
+                'field' => ProductField::Tags->value,
+                'label' => 'Tags',
+                'editable' => false,
+                'fetched_editable' => true,
+                'contributor_role' => null,
+            ],
+        ], $fields);
+    }
+
+    public function test_filter_fields_prepare_visible_rendering_metadata(): void
+    {
+        $fields = ProductFieldLayout::filterFields([
+            ['field' => ProductField::Description->value, 'label' => 'Description', 'visible' => false],
+            ['field' => ProductField::VoiceActor->value, 'label' => 'Voice Actor', 'visible' => true],
+            ['field' => ProductField::AgeCategory->value, 'label' => 'Age', 'visible' => true],
+            ['field' => 'not_real', 'label' => 'Broken', 'visible' => true],
+        ]);
+
+        $this->assertSame([
+            [
+                'field' => ProductField::VoiceActor->value,
+                'label' => 'Voice Actor',
+                'class' => 'voice-actor',
+            ],
+            [
+                'field' => ProductField::AgeCategory->value,
+                'label' => 'Age',
+                'class' => 'age-category',
+            ],
+        ], $fields);
+    }
+}

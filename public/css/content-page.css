@@ -300,7 +300,7 @@ button.tag {
     }
 }
 
-@media (max-width: 48rem) {
+@media (max-width: 768px) {
     .page {
         padding-inline: 0.8rem;
     }
@@ -308,9 +308,7 @@ button.tag {
     .panel {
         border-radius: 1.15rem;
     }
-}
 
-@media (max-width: 40rem) {
     .hero h1 {
         line-height: 1.1;
     }

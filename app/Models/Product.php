@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Enums\ProductContributorRole;
 use App\Enums\ProductIndexTagMatch;
 use App\Support\VisibleGenreAttachment;
 use Illuminate\Database\Eloquent\Attributes\Scope;
@@ -67,6 +68,23 @@ class Product extends Model
             ->withTimestamps();
     }
 
+    public function contributors(): BelongsToMany
+    {
+        return $this->belongsToMany(Contributor::class)
+            ->withPivot(['role'])
+            ->withTimestamps();
+    }
+
+    public function contributorsForRole(ProductContributorRole|string $role): BelongsToMany
+    {
+        $role = $role instanceof ProductContributorRole
+            ? $role
+            : ProductContributorRole::from($role);
+
+        return $this->contributors()
+            ->withPivotValue('role', $role->value);
+    }
+
     public function japaneseGenres(): BelongsToMany
     {
         return $this->fetchedGenresForLanguage(Genre::LANGUAGE_JAPANESE);
@@ -121,6 +139,53 @@ class Product extends Model
     }
 
     #[Scope]
+    protected function filterContributor(Builder $query, string $role, string $name): void
+    {
+        $name = trim($name);
+
+        if ($name === '') {
+            return;
+        }
+
+        $query->whereHas('contributors', function (Builder $contributorQuery) use ($role, $name): void {
+            $contributorQuery->where('contributor_product.role', $role)
+                ->whereLike('contributors.name', '%' . $name . '%');
+        });
+    }
+
+    #[Scope]
+    protected function filterCircle(Builder $query, string $circle): void
+    {
+        $circle = trim($circle);
+
+        if ($circle === '') {
+            return;
+        }
+
+        $query->where(function (Builder $circleQuery) use ($circle): void {
+            $circleQuery
+                ->whereLike('circle', '%' . $circle . '%')
+                ->orWhereLike('maker_id', '%' . $circle . '%')
+                ->orWhereHas('contributors', function (Builder $contributorQuery) use ($circle): void {
+                    $contributorQuery->where('contributor_product.role', 'circle')
+                        ->whereLike('contributors.name', '%' . $circle . '%');
+                });
+        });
+    }
+
+    #[Scope]
+    protected function filterDescription(Builder $query, string $description): void
+    {
+        $description = '%' . trim($description) . '%';
+
+        $query->where(function (Builder $descriptionQuery) use ($description): void {
+            $descriptionQuery
+                ->whereLike('description', $description)
+                ->orWhereLike('description_english', $description);
+        });
+    }
+
+    #[Scope]
     protected function searchIndex(Builder $query, string $search): void
     {
         $search = '%' . trim($search) . '%';
@@ -132,7 +197,13 @@ class Product extends Model
                 'work_name_english',
                 'series',
                 'notes',
+                'circle',
+                'description',
+                'description_english',
             ], 'like', $search)
+                ->orWhereHas('contributors', function (Builder $contributorQuery) use ($search): void {
+                    $contributorQuery->whereLike('contributors.name', $search);
+                })
                 ->orWhereHas('genres', function (Builder $genreQuery) use ($search): void {
                     $genreQuery->whereLike('title', $search);
                     $genreQuery->where(VisibleGenreAttachment::query());

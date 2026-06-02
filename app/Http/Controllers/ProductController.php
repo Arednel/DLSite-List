@@ -3,6 +3,11 @@
 namespace App\Http\Controllers;
 
 use App\Enums\ProductAgeCategory;
+use App\Enums\ProductContributorRole;
+use App\Enums\ProductField;
+use App\Enums\ProductPriority;
+use App\Enums\ProductReListenValue;
+use App\Http\Requests\BaseProductRequest;
 use App\Http\Requests\StoreCustomProductRequest;
 use App\Http\Requests\StoreProductRequest;
 use App\Http\Requests\UpdateProductRequest;
@@ -10,6 +15,9 @@ use App\Models\Genre;
 use App\Models\Option;
 use App\Models\Product;
 use App\Support\DLSite\DLSitePythonRunner;
+use App\Support\DLSite\DLSiteWorkData;
+use App\Support\ProductContributorSync;
+use App\Support\ProductFieldLayout;
 use App\Support\ProductGenreSync;
 use App\Support\ReturnTarget;
 use App\Support\TagInput;
@@ -28,13 +36,19 @@ class ProductController extends Controller
 {
     public function __construct(
         private readonly ProductGenreSync $genreSync,
+        private readonly ProductContributorSync $contributorSync,
     ) {}
 
     private const VISIBILITY_AFFECTING_PRODUCT_FIELDS = [
         'work_name',
         'work_name_english',
+        'description',
+        'description_english',
         'notes',
         'series',
+        'age_category',
+        'circle',
+        'maker_id',
         'progress',
         'score',
         'priority',
@@ -90,46 +104,45 @@ class ProductController extends Controller
 
         // Get JSON info
         $json = Storage::disk('local')->get("Works/{$workID}.json");
-        $workData = json_decode($json, true);
+        $workData = DLSiteWorkData::fromArray(json_decode($json, true), $workID);
+        $visibleCreateFields = ProductFieldLayout::visibleFields(Option::quickAddFieldLayout());
 
-        $dlsite_product_id = $workData['japanese']['product_id'];
-        $maker_id = $workData['japanese']['maker_id'];
-        $work_name = $workData['japanese']['work_name'];
+        $dlsite_product_id = $workData->productId;
+        [$work_name, $work_name_english] = $this->dlsiteCreateTitleValues($request, $validated, $visibleCreateFields, $workData);
+        [$circle, $maker_id] = $this->dlsiteCreateCircleValues($request, $validated, $visibleCreateFields, $workData);
 
-        // If user isn't specified english title
-        if ($request->work_name_english == null) {
-            $work_name_english = $workData['english']['work_name'];
-            if ($work_name == $work_name_english) {
-                $work_name_english = null;
-            }
-        } else {
-            $work_name_english = $request->work_name_english;
-        }
-
-        // If user passed work name - store it instead
-        if ($request->work_name != null) {
-            $work_name = $request->work_name;
-        }
-
-        $age_category = $workData['japanese']['age_category']['_name_'];
-        $circle = $workData['japanese']['circle'];
-
+        $age_category = $this->dlsiteCreateTextOverride(
+            $request,
+            $validated,
+            $visibleCreateFields,
+            ProductField::AgeCategory,
+            'age_category',
+            $workData->ageCategory,
+        );
         $work_image = "storage/Works/{$dlsite_product_id}/cover.jpg";
-        if (!empty($workData['japanese']['sample_images'])) {
-            foreach ($workData['japanese']['sample_images'] as $index => $img) {
-                $sample_images[] = "storage/Works/{$dlsite_product_id}/sample_" . ($index + 1) . ".jpg";
-            }
-        }
+        $genre = $workData->japaneseGenres;
+        $genre_english = $workData->englishGenres;
+        $genre_custom = $this->createFieldVisible($visibleCreateFields, ProductField::Tags)
+            ? ($validated['genre_custom'] ?? [])
+            : [];
 
-        $genre = $workData['japanese']['genre'];
-        $genre_english = $workData['english']['genre'];
-        $genre_custom = $validated['genre_custom'] ?? [];
-
-        $description = $workData['japanese']['description'];
-        $description_english = $workData['english']['description'];
-        $notes = $validated['notes'] ?? null;
-        $series = $validated['series'] ?? null;
-        $sample_images = $workData['japanese']['sample_images'];
+        [$description, $description_english] = $this->dlsiteCreateDescriptionValues(
+            $request,
+            $validated,
+            $visibleCreateFields,
+            $workData,
+        );
+        $notes = $this->createFieldSubmitted($request, $visibleCreateFields, ProductField::Notes, 'notes')
+            ? ($validated['notes'] ?? null)
+            : null;
+        $series = $this->dlsiteCreateSeriesValue($request, $validated, $visibleCreateFields, $workData);
+        $sample_images = $workData->sampleImages;
+        $contributorsByRole = $this->dlsiteCreateContributorsByRole(
+            $validated,
+            $visibleCreateFields,
+            $workData,
+            $circle,
+        );
 
         $data = [
             'id' => $dlsite_product_id,
@@ -144,17 +157,32 @@ class ProductController extends Controller
             'notes' => $notes,
             'series' => $series,
             'sample_images' => json_encode($sample_images),
-            'score' => $validated['score'] ?? null,
-            'progress' => $validated['progress'] ?? null,
-            'start_date' => $validated['start_date'] ?? null,
-            'end_date' => $validated['end_date'] ?? null,
-            'num_re_listen_times' => $validated['num_re_listen_times'] ?? null,
-            're_listen_value' => $validated['re_listen_value'] ?? null,
-            'priority' => $validated['priority'] ?? null,
+            'score' => $this->createFieldSubmitted($request, $visibleCreateFields, ProductField::Score, 'score')
+                ? ($validated['score'] ?? null)
+                : null,
+            'progress' => $this->createFieldSubmitted($request, $visibleCreateFields, ProductField::Progress, 'progress')
+                ? ($validated['progress'] ?? null)
+                : null,
+            'start_date' => $this->createFieldSubmitted($request, $visibleCreateFields, ProductField::StartDate, 'add.start_date')
+                ? ($validated['start_date'] ?? null)
+                : null,
+            'end_date' => $this->createFieldSubmitted($request, $visibleCreateFields, ProductField::FinishDate, 'add.finish_date')
+                ? ($validated['end_date'] ?? null)
+                : null,
+            'num_re_listen_times' => $this->createFieldSubmitted($request, $visibleCreateFields, ProductField::TotalTimesReListened, 'add.num_re_listen_times')
+                ? ($validated['num_re_listen_times'] ?? null)
+                : null,
+            're_listen_value' => $this->createFieldSubmitted($request, $visibleCreateFields, ProductField::ReListenValue, 'add.re_listen_value')
+                ? ($validated['re_listen_value'] ?? null)
+                : null,
+            'priority' => $this->createFieldSubmitted($request, $visibleCreateFields, ProductField::Priority, 'add.priority')
+                ? ($validated['priority'] ?? null)
+                : null,
         ];
 
         $product = Product::create($data);
         $this->syncProductGenres($product, $genre, $genre_english, $genre_custom);
+        $this->contributorSync->sync($product, $contributorsByRole, $maker_id);
 
         $returnTarget = ReturnTarget::fromRequest($request)
             ->forProduct($product);
@@ -166,33 +194,70 @@ class ProductController extends Controller
     {
         $validated = $request->validated();
         $workID = $validated['id'];
+        $visibleCreateFields = ProductFieldLayout::visibleFields(Option::customQuickAddFieldLayout());
 
         $work_image = $this->storeCustomCoverImage($request->file('work_image'), $workID);
-        $sampleImages = $this->storeCustomSampleImages($request, $workID);
+        $sampleImages = $this->createFieldVisible($visibleCreateFields, ProductField::SampleImages)
+            ? $this->storeCustomSampleImages($request, $workID)
+            : [];
+        [$description, $descriptionEnglish] = $this->customCreateDescriptionValues(
+            $request,
+            $validated,
+            $visibleCreateFields,
+        );
+        [$circle, $makerId] = $this->customCreateCircleValues($request, $validated, $visibleCreateFields);
 
         $product = Product::create([
             'id' => $workID,
-            'maker_id' => null,
+            'maker_id' => $makerId,
             'work_name' => $validated['work_name'],
             'work_name_english' => $validated['work_name_english'] ?? null,
             'age_category' => $validated['age_category'],
-            'circle' => null,
+            'circle' => $circle,
             'work_image' => $work_image,
-            'description' => null,
-            'description_english' => null,
-            'notes' => $validated['notes'] ?? null,
-            'series' => $validated['series'] ?? null,
+            'description' => $description,
+            'description_english' => $descriptionEnglish,
+            'notes' => $this->createFieldSubmitted($request, $visibleCreateFields, ProductField::Notes, 'notes')
+                ? ($validated['notes'] ?? null)
+                : null,
+            'series' => $this->createFieldSubmitted($request, $visibleCreateFields, ProductField::Series, 'series')
+                ? ($validated['series'] ?? null)
+                : null,
             'sample_images' => json_encode($sampleImages),
-            'score' => $validated['score'] ?? null,
-            'progress' => $validated['progress'] ?? null,
-            'start_date' => $validated['start_date'] ?? null,
-            'end_date' => $validated['end_date'] ?? null,
-            'num_re_listen_times' => $validated['num_re_listen_times'] ?? null,
-            're_listen_value' => $validated['re_listen_value'] ?? null,
-            'priority' => $validated['priority'] ?? null,
+            'score' => $this->createFieldSubmitted($request, $visibleCreateFields, ProductField::Score, 'score')
+                ? ($validated['score'] ?? null)
+                : null,
+            'progress' => $this->createFieldSubmitted($request, $visibleCreateFields, ProductField::Progress, 'progress')
+                ? ($validated['progress'] ?? null)
+                : null,
+            'start_date' => $this->createFieldSubmitted($request, $visibleCreateFields, ProductField::StartDate, 'add.start_date')
+                ? ($validated['start_date'] ?? null)
+                : null,
+            'end_date' => $this->createFieldSubmitted($request, $visibleCreateFields, ProductField::FinishDate, 'add.finish_date')
+                ? ($validated['end_date'] ?? null)
+                : null,
+            'num_re_listen_times' => $this->createFieldSubmitted($request, $visibleCreateFields, ProductField::TotalTimesReListened, 'add.num_re_listen_times')
+                ? ($validated['num_re_listen_times'] ?? null)
+                : null,
+            're_listen_value' => $this->createFieldSubmitted($request, $visibleCreateFields, ProductField::ReListenValue, 'add.re_listen_value')
+                ? ($validated['re_listen_value'] ?? null)
+                : null,
+            'priority' => $this->createFieldSubmitted($request, $visibleCreateFields, ProductField::Priority, 'add.priority')
+                ? ($validated['priority'] ?? null)
+                : null,
         ]);
 
-        $this->syncProductCustomGenres($product, $validated['genre_custom'] ?? []);
+        $this->syncProductCustomGenres(
+            $product,
+            $this->createFieldVisible($visibleCreateFields, ProductField::Tags)
+                ? ($validated['genre_custom'] ?? [])
+                : [],
+        );
+        $this->contributorSync->sync(
+            $product,
+            $this->customCreateContributorsByRole($validated, $visibleCreateFields, $circle),
+            $makerId,
+        );
 
         $returnTarget = ReturnTarget::fromRequest($request)
             ->forProduct($product);
@@ -220,15 +285,20 @@ class ProductController extends Controller
 
         return view('Edit', [
             'product' => $product,
-            'canEditFetchedTags' => Option::canEditFetchedTags(),
             'englishGenres' => $englishGenres,
+            'customGenres' => $editGenres->get(Genre::PIVOT_SOURCE_CUSTOM, collect()),
             'genreFetchedEnglishInput' => $this->formatGenreInput($englishGenres->pluck('title')->all()),
             'genreCustomInput' => $this->formatGenreInput(
                 $editGenres->get(Genre::PIVOT_SOURCE_CUSTOM, collect())->pluck('title')->all()
             ),
+            'editFields' => ProductFieldLayout::editFields(Option::editFieldLayout()),
+            'contributorInputs' => $this->formatContributorInputs($product),
+            'readonlyDescription' => $this->readonlyDescription($product),
+            'readonlyFieldValues' => $this->readonlyFieldValues($product),
             'returnQuery' => $returnTarget->query,
             'returnFragment' => $returnTarget->fragment,
             'returnUrl' => $returnTarget->toUrl(),
+            'ageCategoryOptions' => ProductAgeCategory::options(),
             ...$this->buildDateFieldOptions(),
         ]);
     }
@@ -244,25 +314,20 @@ class ProductController extends Controller
 
         $data = $request->validated();
 
-        $product->fill([
-            'progress' => $data['progress'] ?? null,
-            'score' => $data['score'] ?? null,
-            'series' => $data['series'] ?? null,
-            'work_name' => $data['work_name'],
-            'work_name_english' => $data['work_name_english'] ?? null,
-            'notes' => $data['notes'] ?? null,
-            'start_date' => $data['start_date'] ?? null,
-            'end_date' => $data['end_date'] ?? null,
-            'num_re_listen_times' => $data['num_re_listen_times'] ?? null,
-            're_listen_value' => $data['re_listen_value'] ?? null,
-            'priority' => $data['priority'] ?? null,
-        ]);
+        $editFieldLayout = Option::editFieldLayout();
+        $editableFields = ProductFieldLayout::editableFields($editFieldLayout);
+        $product->fill($this->updatePayload($request, $data, $editableFields));
         $productFieldsChanged = $product->isDirty(self::VISIBILITY_AFFECTING_PRODUCT_FIELDS);
         $product->save();
-        $genresChanged = $this->syncProductEditGenres($product, $data);
+        $contributorsChanged = $this->syncProductEditContributors($request, $product, $data, $editableFields);
+        $genresChanged = ProductFieldLayout::visible($editFieldLayout, ProductField::Tags)
+            ? $this->syncProductEditGenres($request, $product, $data, $editFieldLayout)
+            : false;
 
         $returnTarget = ReturnTarget::fromRequest($request, $product->getKey());
-        $newProgress = $data['progress'] ?? null;
+        $newProgress = in_array(ProductField::Progress->value, $editableFields, true) && $request->wasSubmitted('progress')
+            ? ($data['progress'] ?? null)
+            : $oldProgress;
 
         if ($oldProgress !== $newProgress) {
             $returnTarget = $returnTarget->withIndexProgress($newProgress);
@@ -270,7 +335,7 @@ class ProductController extends Controller
 
         return redirect($returnTarget->forProduct(
             $product,
-            visibilityMayHaveChanged: $productFieldsChanged || $genresChanged,
+            visibilityMayHaveChanged: $productFieldsChanged || $genresChanged || $contributorsChanged,
         )->toUrl());
     }
 
@@ -335,6 +400,279 @@ class ProductController extends Controller
         return TagInput::format($tags ?? []);
     }
 
+    private function formatContributorInputs(Product $product): array
+    {
+        return collect($this->contributorSync->namesByRole($product))
+            ->map(fn(array $names): string => TagInput::format($names))
+            ->all();
+    }
+
+    private function readonlyDescription(Product $product): ?string
+    {
+        $description = collect([$product->description, $product->description_english])
+            ->filter(fn(mixed $value): bool => filled($value))
+            ->implode(PHP_EOL . PHP_EOL);
+
+        return $description === '' ? null : $description;
+    }
+
+    private function readonlyFieldValues(Product $product): array
+    {
+        return [
+            ProductField::Notes->value => $product->notes,
+            ProductField::StartDate->value => $this->readonlyDate($product->start_date),
+            ProductField::FinishDate->value => $this->readonlyDate($product->end_date),
+            ProductField::TotalTimesReListened->value => $product->num_re_listen_times,
+            ProductField::ReListenValue->value => ProductReListenValue::tryFrom((string) $product->re_listen_value)?->label(),
+            ProductField::Priority->value => ProductPriority::tryFrom((string) $product->priority)?->label(),
+        ];
+    }
+
+    private function readonlyDate(?array $date): ?string
+    {
+        $parts = collect([
+            'Year' => data_get($date, 'year'),
+            'Month' => data_get($date, 'month'),
+            'Day' => data_get($date, 'day'),
+        ])
+            ->filter(fn(mixed $value): bool => filled($value))
+            ->map(fn(mixed $value, string $label): string => "{$label}: {$value}")
+            ->implode(', ');
+
+        return $parts === '' ? null : $parts;
+    }
+
+    /**
+     * @return array{0: ?string, 1: ?string}
+     */
+    private function dlsiteCreateTitleValues(
+        StoreProductRequest $request,
+        array $data,
+        array $visibleFields,
+        DLSiteWorkData $workData,
+    ): array {
+        if (! $this->createFieldVisible($visibleFields, ProductField::Title)) {
+            return [$workData->workName, $workData->englishWorkName];
+        }
+
+        $workName = $request->wasSubmitted('work_name') && filled($data['work_name'] ?? null)
+            ? $data['work_name']
+            : $workData->workName;
+        $englishWorkName = $request->wasSubmitted('work_name_english') && filled($data['work_name_english'] ?? null)
+            ? $data['work_name_english']
+            : $workData->englishWorkName;
+
+        return [$workName, $englishWorkName === $workName ? null : $englishWorkName];
+    }
+
+    /**
+     * @return array{0: ?string, 1: ?string}
+     */
+    private function dlsiteCreateCircleValues(
+        StoreProductRequest $request,
+        array $data,
+        array $visibleFields,
+        DLSiteWorkData $workData,
+    ): array {
+        $circle = $this->dlsiteCreateTextOverride(
+            $request,
+            $data,
+            $visibleFields,
+            ProductField::Circle,
+            'circle',
+            $workData->circle,
+        );
+        $makerId = $this->dlsiteCreateTextOverride(
+            $request,
+            $data,
+            $visibleFields,
+            ProductField::Circle,
+            'maker_id',
+            $workData->makerId,
+        );
+
+        return [$circle, $makerId];
+    }
+
+    private function dlsiteCreateTextOverride(
+        StoreProductRequest $request,
+        array $data,
+        array $visibleFields,
+        ProductField $field,
+        string $key,
+        ?string $default,
+    ): ?string {
+        if (! $this->createFieldSubmitted($request, $visibleFields, $field, $key)) {
+            return $default;
+        }
+
+        return filled($data[$key] ?? null) ? $data[$key] : $default;
+    }
+
+    private function dlsiteCreateSeriesValue(
+        StoreProductRequest $request,
+        array $data,
+        array $visibleFields,
+        DLSiteWorkData $workData,
+    ): ?string {
+        if (
+            $this->createFieldSubmitted($request, $visibleFields, ProductField::Series, 'series')
+            && filled($data['series'] ?? null)
+        ) {
+            return $data['series'];
+        }
+
+        return Option::autoSeriesFromTitleName() ? $workData->autoSeries() : null;
+    }
+
+    /**
+     * @return array{0: ?string, 1: ?string}
+     */
+    private function dlsiteCreateDescriptionValues(
+        StoreProductRequest $request,
+        array $data,
+        array $visibleFields,
+        DLSiteWorkData $workData,
+    ): array {
+        $description = $this->dlsiteCreateTextOverride(
+            $request,
+            $data,
+            $visibleFields,
+            ProductField::Description,
+            'description',
+            $workData->description,
+        );
+        $englishDescription = $this->dlsiteCreateTextOverride(
+            $request,
+            $data,
+            $visibleFields,
+            ProductField::Description,
+            'description_english',
+            $workData->englishDescription,
+        );
+
+        return [
+            $description,
+            $englishDescription === $description ? null : $englishDescription,
+        ];
+    }
+
+    /**
+     * @return array<string, list<string>>
+     */
+    private function dlsiteCreateContributorsByRole(
+        array $data,
+        array $visibleFields,
+        DLSiteWorkData $workData,
+        ?string $circle,
+    ): array {
+        $contributors = $workData->contributorsByRole;
+        $contributors[ProductContributorRole::Circle->value] = filled($circle) ? [$circle] : [];
+
+        foreach (ProductContributorRole::cases() as $role) {
+            if ($role === ProductContributorRole::Circle) {
+                continue;
+            }
+
+            $field = $role->productField();
+
+            if ($this->createFieldVisible($visibleFields, $field) && ($data[$role->value] ?? []) !== []) {
+                $contributors[$role->value] = array_values($data[$role->value]);
+            }
+        }
+
+        return $contributors;
+    }
+
+    /**
+     * @return array{0: ?string, 1: ?string}
+     */
+    private function customCreateCircleValues(
+        StoreCustomProductRequest $request,
+        array $data,
+        array $visibleFields,
+    ): array {
+        if (! $this->createFieldVisible($visibleFields, ProductField::Circle)) {
+            return [null, null];
+        }
+
+        return [
+            $request->wasSubmitted('circle') ? ($data['circle'] ?? null) : null,
+            $request->wasSubmitted('maker_id') ? ($data['maker_id'] ?? null) : null,
+        ];
+    }
+
+    /**
+     * @return array{0: ?string, 1: ?string}
+     */
+    private function customCreateDescriptionValues(
+        StoreCustomProductRequest $request,
+        array $data,
+        array $visibleFields,
+    ): array {
+        if (! $this->createFieldVisible($visibleFields, ProductField::Description)) {
+            return [null, null];
+        }
+
+        $description = $request->wasSubmitted('description') ? ($data['description'] ?? null) : null;
+        $englishDescription = $request->wasSubmitted('description_english')
+            ? ($data['description_english'] ?? null)
+            : null;
+
+        return [
+            $description,
+            $englishDescription === $description ? null : $englishDescription,
+        ];
+    }
+
+    /**
+     * @return array<string, list<string>>
+     */
+    private function customCreateContributorsByRole(array $data, array $visibleFields, ?string $circle): array
+    {
+        $contributors = [
+            ProductContributorRole::Circle->value => filled($circle) ? [$circle] : [],
+        ];
+
+        foreach (ProductContributorRole::cases() as $role) {
+            if ($role === ProductContributorRole::Circle) {
+                continue;
+            }
+
+            $field = $role->productField();
+
+            if ($this->createFieldVisible($visibleFields, $field)) {
+                $contributors[$role->value] = array_values($data[$role->value] ?? []);
+            }
+        }
+
+        return $contributors;
+    }
+
+    private function createFieldSubmitted(
+        BaseProductRequest $request,
+        array $visibleFields,
+        ProductField $field,
+        string|array $submittedKeys,
+    ): bool {
+        if (! $this->createFieldVisible($visibleFields, $field)) {
+            return false;
+        }
+
+        foreach ((array) $submittedKeys as $submittedKey) {
+            if ($request->wasSubmitted($submittedKey)) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    private function createFieldVisible(array $visibleFields, ProductField $field): bool
+    {
+        return in_array($field->value, $visibleFields, true);
+    }
+
     private function createView(Request $request, bool $isCustomCreate)
     {
         if (! $request->has('return_query') && $request->old('return_query') !== null) {
@@ -360,6 +698,9 @@ class ProductController extends Controller
 
         return view('Create', [
             'isCustomCreate' => $isCustomCreate,
+            'quickAddFields' => $isCustomCreate
+                ? ProductFieldLayout::customQuickAddFields(Option::customQuickAddFieldLayout())
+                : ProductFieldLayout::quickAddFields(Option::quickAddFieldLayout()),
             'returnQuery' => $returnTarget->query,
             'returnUrl' => $returnUrl,
             'returnParameters' => $returnParameters,
@@ -388,6 +729,150 @@ class ProductController extends Controller
 
                 return "storage/{$path}";
             })
+            ->all();
+    }
+
+    private function updatePayload(UpdateProductRequest $request, array $data, array $editableFields): array
+    {
+        $payload = [
+            'work_name' => $data['work_name'],
+            'work_name_english' => $data['work_name_english'] ?? null,
+        ];
+
+        foreach ($this->updatePayloadFieldMap() as $field => $submittedColumns) {
+            if (
+                ! in_array($field, $editableFields, true)
+                || ! $this->wasAnySubmitted($request, array_keys($submittedColumns))
+            ) {
+                continue;
+            }
+
+            $payload = [
+                ...$payload,
+                ...$this->updatePayloadForField($field, $data, $submittedColumns),
+            ];
+        }
+
+        return $payload;
+    }
+
+    /**
+     * @return array<string, array<string, string>>
+     */
+    private function updatePayloadFieldMap(): array
+    {
+        return [
+            ProductField::Progress->value => ['progress' => 'progress'],
+            ProductField::Score->value => ['score' => 'score'],
+            ProductField::Series->value => ['series' => 'series'],
+            ProductField::AgeCategory->value => ['age_category' => 'age_category'],
+            ProductField::Circle->value => [
+                'circle' => 'circle',
+                'maker_id' => 'maker_id',
+            ],
+            ProductField::Description->value => ['description' => 'description', 'description_english' => 'description_english'],
+            ProductField::Notes->value => ['notes' => 'notes'],
+            ProductField::StartDate->value => ['add.start_date' => 'start_date'],
+            ProductField::FinishDate->value => ['add.finish_date' => 'end_date'],
+            ProductField::TotalTimesReListened->value => ['add.num_re_listen_times' => 'num_re_listen_times'],
+            ProductField::ReListenValue->value => ['add.re_listen_value' => 're_listen_value'],
+            ProductField::Priority->value => ['add.priority' => 'priority'],
+        ];
+    }
+
+    /**
+     * @param  list<string>  $keys
+     */
+    private function wasAnySubmitted(UpdateProductRequest $request, array $keys): bool
+    {
+        foreach ($keys as $key) {
+            if ($request->wasSubmitted($key)) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    /**
+     * @param  array<string, string>  $submittedColumns
+     */
+    private function updatePayloadForField(string $field, array $data, array $submittedColumns): array
+    {
+        if ($field === ProductField::Description->value) {
+            return $this->descriptionUpdatePayload($data);
+        }
+
+        return collect($submittedColumns)
+            ->mapWithKeys(fn(string $column): array => [$column => $data[$column] ?? null])
+            ->all();
+    }
+
+    private function descriptionUpdatePayload(array $data): array
+    {
+        return [
+            'description' => $data['description'] ?? null,
+            'description_english' => ($data['description_english'] ?? null) === ($data['description'] ?? null)
+                ? null
+                : ($data['description_english'] ?? null),
+        ];
+    }
+
+    private function syncProductEditContributors(
+        UpdateProductRequest $request,
+        Product $product,
+        array $data,
+        array $editableFields,
+    ): bool {
+        $changed = false;
+        $currentNamesByRole = $this->contributorSync->namesByRole($product);
+
+        foreach (ProductField::cases() as $field) {
+            $role = $field->contributorRole();
+
+            if (! $role || ! in_array($field->value, $editableFields, true)) {
+                continue;
+            }
+
+            if (
+                $role === ProductContributorRole::Circle
+                && ! $request->wasSubmitted('circle')
+                && ! $request->wasSubmitted('maker_id')
+            ) {
+                continue;
+            }
+
+            if ($role !== ProductContributorRole::Circle && ! $request->wasSubmitted($role->value)) {
+                continue;
+            }
+
+            $newNames = $role === ProductContributorRole::Circle
+                ? array_values(array_filter([$product->circle]))
+                : ($data[$role->value] ?? []);
+            $currentNames = $currentNamesByRole[$role->value] ?? [];
+
+            if ($this->normalizedNameList($newNames) !== $this->normalizedNameList($currentNames)) {
+                $changed = true;
+            }
+
+            $this->contributorSync->syncRole(
+                $product,
+                $role,
+                $newNames,
+                $role === ProductContributorRole::Circle ? $product->maker_id : null,
+            );
+        }
+
+        return $changed;
+    }
+
+    private function normalizedNameList(array $names): array
+    {
+        return collect($names)
+            ->map(fn(mixed $name): string => mb_convert_case(trim((string) $name), MB_CASE_FOLD, 'UTF-8'))
+            ->filter()
+            ->sort()
+            ->values()
             ->all();
     }
 
@@ -434,16 +919,37 @@ class ProductController extends Controller
         return $this->genreSync->syncCustom($product, Genre::resolveIdsFromTitles($customTitles));
     }
 
-    private function syncProductEditGenres(Product $product, array $data): bool
-    {
-        if (! Option::canEditFetchedTags()) {
-            return $this->syncProductCustomGenres($product, $data['genre_custom'] ?? []);
+    private function syncProductEditGenres(
+        UpdateProductRequest $request,
+        Product $product,
+        array $data,
+        array $editFieldLayout,
+    ): bool {
+        $customGenreIds = null;
+        $englishFetchedGenreIds = null;
+
+        if (
+            ProductFieldLayout::editable($editFieldLayout, ProductField::Tags)
+            && $request->wasSubmitted('genre_custom')
+        ) {
+            $customGenreIds = Genre::resolveIdsFromTitles($data['genre_custom'] ?? []);
         }
 
-        return $this->genreSync->syncEditableEnglishGenres(
+        if (
+            ProductFieldLayout::fetchedTagsEditable($editFieldLayout)
+            && $request->wasSubmitted('genre_fetched_english')
+        ) {
+            $englishFetchedGenreIds = Genre::resolveIdsFromTitles($data['genre_fetched_english'] ?? []);
+        }
+
+        if ($customGenreIds === null && $englishFetchedGenreIds === null) {
+            return false;
+        }
+
+        return $this->genreSync->syncEditableTagBuckets(
             $product,
-            Genre::resolveIdsFromTitles($data['genre_fetched_english'] ?? []),
-            Genre::resolveIdsFromTitles($data['genre_custom'] ?? []),
+            $englishFetchedGenreIds,
+            $customGenreIds,
         );
     }
 }

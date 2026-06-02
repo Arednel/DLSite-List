@@ -93,7 +93,7 @@ a {
     position: relative;
     background-color: #FFFDF8 !important;
     border: #EE9898 1px solid;
-    width: 1058px;
+    width: min(calc(var(--index-table-width, 1024px) + 34px), calc(100vw - 16px));
     margin-bottom: 0;
     margin-right: auto;
     margin-left: auto;
@@ -104,26 +104,31 @@ a {
  */
 .cover-block {
     display: block;
-    width: 1024px;
+    width: var(--index-table-width, 1024px);
     margin: 0 auto;
     text-align: center;
 }
 
 .cover-block .image-container {
-    display: table-cell;
+    display: block;
     padding-top: 16px;
-    width: 1024px;
+    width: var(--index-table-width, 1024px);
+    max-height: 480px;
+    overflow: hidden;
 }
 
 .cover-block .image-container img {
-    max-width: 1024px;
+    display: block;
+    width: 100%;
+    max-width: var(--index-table-width, 1024px);
+    height: auto;
 }
 
 /**
  * List Container - Status Menu
  */
 .progress-menu-container {
-    width: 1058px;
+    width: 100%;
     height: 46px;
     background-color: #FFFDF8 !important;
     border-bottom: #EE9898 1px solid;
@@ -199,7 +204,8 @@ a {
 .list-unit {
     display: block;
     margin: 0 auto;
-    width: 1024px
+    width: min(var(--index-table-width, 1024px), calc(100vw - 50px));
+    overflow-x: auto;
 }
 
 /**
@@ -209,7 +215,8 @@ a {
     position: relative;
     display: table;
     background-color: #F9E0DC;
-    width: 1024px;
+    width: 100%;
+    min-width: var(--index-table-width, 1024px);
     height: 38px;
     border: 0px solid #EE9898 !important;
     color: #7D6A6A;
@@ -217,7 +224,7 @@ a {
 
 .list-unit .list-status-title .progress-heading {
     display: table-cell;
-    width: 1024px;
+    width: 100%;
     height: 38px;
     font-size: 2.0em;
     color: #7D6A6A;
@@ -233,6 +240,7 @@ a {
 
 .list-table {
     width: 100%;
+    min-width: var(--index-table-width, 1024px);
     margin: 0 auto;
     border-collapse: collapse;
     border: #EE9898 0px solid;
@@ -271,7 +279,8 @@ a {
 
 .list-table .list-table-header .header-title.title {
     padding-left: 8px;
-    text-align: left
+    text-align: left;
+    min-width: 140px;
 }
 
 .list-table .list-table-header .header-title.score {
@@ -288,6 +297,14 @@ a {
 
 .list-table .list-table-header .header-title.tags {
     width: 120px
+}
+
+.list-table .list-table-header .header-title.configurable {
+    padding-inline: 6px;
+}
+
+.list-table .list-table-header .header-title.description {
+    min-width: 220px;
 }
 
 .list-table .list-table-header .header-title.actions {
@@ -347,8 +364,34 @@ a {
     word-wrap: break-word
 }
 
+.list-table .list-table-data .data.configurable {
+    padding-inline: 6px;
+    word-wrap: break-word;
+}
+
+.list-table .list-table-data .data.actions {
+    padding-inline: 6px;
+}
+
+.list-table .list-table-data .data.description {
+    text-align: left;
+}
+
+.description-cell {
+    display: -webkit-box;
+    max-height: 6.3em;
+    overflow: hidden;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 4;
+}
+
+.metadata-note {
+    color: #7D6A6A;
+    font-size: 0.9em;
+}
+
 .list-table .list-table-data .data.status {
-    width: 4px
+    min-width: 4px
 }
 
 .list-table .list-table-data .data.status .status-label {
@@ -796,7 +839,7 @@ body.filter-modal-open {
     border-color: transparent;
 }
 
-@media (max-width: 992px) {
+@media (max-width: 768px) {
     body {
         overflow-x: hidden;
     }
@@ -811,6 +854,7 @@ body.filter-modal-open {
     .list-unit .list-status-title .progress-heading {
         width: 100%;
         max-width: 100%;
+        min-width: 0;
     }
 
     .list-container {
@@ -823,6 +867,8 @@ body.filter-modal-open {
     .cover-block .image-container {
         display: block;
         padding-top: 0;
+        max-height: none;
+        overflow: visible;
     }
 
     .cover-block .image-container img {
@@ -879,6 +925,7 @@ body.filter-modal-open {
 
     .list-unit .list-status-title {
         height: auto;
+        box-sizing: border-box;
     }
 
     .list-unit .list-status-title .progress-heading {
@@ -954,6 +1001,7 @@ body.filter-modal-open {
     .list-table tbody {
         display: block;
         width: 100%;
+        min-width: 0;
     }
 
     .list-table .list-table-header {
@@ -983,8 +1031,7 @@ body.filter-modal-open {
             "image title"
             "score series"
             "age progress"
-            "tags tags"
-            "actions actions";
+            "tags tags";
         gap: 10px 12px;
         margin-bottom: 12px;
         padding: 12px;
@@ -1060,8 +1107,15 @@ body.filter-modal-open {
         grid-area: tags;
     }
 
+    .list-table .list-table-data .data.configurable {
+        grid-area: auto;
+        grid-column: 1 / -1;
+    }
+
     .list-table .list-table-data .data.actions {
-        grid-area: actions;
+        grid-area: auto;
+        grid-column: 1 / -1;
+        order: 100;
     }
 
     .list-table .list-table-data .data.actions .row-actions {
@@ -1080,17 +1134,7 @@ body.filter-modal-open {
     .index-pagination {
         padding: 14px 0 32px;
     }
-}
 
-@supports not (height: 100dvh) {
-    @media (max-width: 992px) {
-        .advanced-options-panel {
-            max-height: calc(100vh - 20px);
-        }
-    }
-}
-
-@media (max-width: 640px) {
     .progress-menu-container .progress-menu {
         gap: 6px 10px;
     }
@@ -1105,5 +1149,13 @@ body.filter-modal-open {
 
     .list-table .list-table-data .data.image .image {
         max-width: 74px;
+    }
+}
+
+@supports not (height: 100dvh) {
+    @media (max-width: 992px) {
+        .advanced-options-panel {
+            max-height: calc(100vh - 20px);
+        }
     }
 }

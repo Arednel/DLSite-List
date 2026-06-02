@@ -18,14 +18,14 @@ class StoreCustomProductRequest extends BaseProductRequest
      */
     public function rules(): array
     {
-        return array_merge([
+        return array_merge($this->commonRules(), [
             'id' => ['bail', 'required', 'regex:/^RJ\d+$/', Rule::unique('products', 'id')],
             'work_name' => ['required', 'string'],
             'age_category' => ['required', Rule::enum(ProductAgeCategory::class)],
             'work_image' => ['required', File::image()->max('20mb')],
             'sample_images' => ['nullable', 'array'],
             'sample_images.*' => [File::image()->max('20mb')],
-        ], $this->commonRules());
+        ]);
     }
 
     /**

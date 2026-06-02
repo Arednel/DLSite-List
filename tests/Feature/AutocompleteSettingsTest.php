@@ -69,6 +69,24 @@ class AutocompleteSettingsTest extends TestCase
         $this->assertSame(AutocompleteOrder::Usage, Option::seriesAutocompleteOrder());
     }
 
+    public function test_settings_component_resets_to_default_with_confirmation(): void
+    {
+        Livewire::test(AutocompleteSettings::class)
+            ->set('tagOrder', AutocompleteOrder::FirstWord->value)
+            ->set('seriesOrder', AutocompleteOrder::FirstWord->value)
+            ->call('save')
+            ->call('askResetToDefault')
+            ->assertSet('confirmingResetToDefault', true)
+            ->call('resetToDefault')
+            ->assertSet('confirmingResetToDefault', false)
+            ->assertSet('tagOrder', AutocompleteOrder::Usage->value)
+            ->assertSet('seriesOrder', AutocompleteOrder::Usage->value)
+            ->assertSee('Autocomplete settings reset to default.');
+
+        $this->assertSame(AutocompleteOrder::Usage, Option::tagAutocompleteOrder());
+        $this->assertSame(AutocompleteOrder::Usage, Option::seriesAutocompleteOrder());
+    }
+
     public function test_settings_component_clears_saved_notice_when_inputs_change(): void
     {
         Livewire::test(AutocompleteSettings::class)

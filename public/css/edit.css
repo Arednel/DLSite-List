@@ -615,9 +615,6 @@ body.product-form-page {
         margin-top: 10px !important;
         margin-bottom: 15px !important;
     }
-}
-
-@media (max-width: 480px) {
 
     .product-form-page #content,
     .dark-mode .product-form-page #content {

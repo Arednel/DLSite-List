@@ -6,9 +6,12 @@ use App\Enums\ProductPriority;
 use App\Enums\ProductProgress;
 use App\Enums\ProductReListenValue;
 use App\Enums\ProductScore;
+use App\Enums\ProductContributorRole;
+use App\Enums\ProductField;
 use App\Models\Genre;
 use App\Models\Option;
 use App\Models\Product;
+use App\Support\ProductContributorSync;
 use App\Support\ProductGenreSync;
 use Illuminate\Contracts\Filesystem\Filesystem;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -90,6 +93,42 @@ class ProductControllerTest extends TestCase
             ->assertSee($gamma->work_name)
             ->assertDontSee($alpha->work_name)
             ->assertDontSee($beta->work_name);
+    }
+
+    public function test_index_filters_by_contributor_circle_and_description(): void
+    {
+        $voiceMatch = Product::factory()->create([
+            'work_name' => 'VOICE_FILTER_MATCH_TOKEN',
+            'description' => 'DESCRIPTION_FILTER_MATCH_TOKEN',
+        ]);
+        $circleMatch = Product::factory()->create([
+            'work_name' => 'CIRCLE_FILTER_MATCH_TOKEN',
+            'maker_id' => 'RG_FILTER_MATCH_TOKEN',
+            'circle' => 'Circle Filter Match',
+        ]);
+        $noise = Product::factory()->create([
+            'work_name' => 'CONTRIBUTOR_FILTER_NOISE_TOKEN',
+            'description' => 'Different text',
+        ]);
+
+        app(ProductContributorSync::class)->sync($voiceMatch, [
+            ProductContributorRole::VoiceActor->value => ['Voice Filter Person'],
+        ]);
+        app(ProductContributorSync::class)->sync($circleMatch, [
+            ProductContributorRole::Circle->value => ['Circle Filter Match'],
+        ], 'RG_FILTER_MATCH_TOKEN');
+
+        $this->get('/?voice_actor=Voice%20Filter')
+            ->assertSee($voiceMatch->work_name)
+            ->assertDontSee($noise->work_name);
+
+        $this->get('/?circle=RG_FILTER_MATCH_TOKEN')
+            ->assertSee($circleMatch->work_name)
+            ->assertDontSee($noise->work_name);
+
+        $this->get('/?description=DESCRIPTION_FILTER_MATCH')
+            ->assertSee($voiceMatch->work_name)
+            ->assertDontSee($noise->work_name);
     }
 
     public function test_index_search_matches_id_titles_series_and_related_genres(): void
@@ -595,6 +634,97 @@ class ProductControllerTest extends TestCase
             ->assertSee('Select age category');
     }
 
+    public function test_create_default_field_layout_order_matches_existing_form(): void
+    {
+        $this->get('/create')
+            ->assertOk()
+            ->assertSeeInOrder([
+                'RJ Code or Link',
+                'Status',
+                'Your Score',
+                'Series',
+                'Title Japanese',
+                'Title English',
+                'Custom Tags',
+                'Notes',
+                'Start Date',
+                'Finish Date',
+                'Total Times',
+                'Re-listened',
+                'Re-listen Value',
+                'Priority',
+            ]);
+    }
+
+    public function test_custom_create_default_field_layout_order_matches_existing_form(): void
+    {
+        $this->get('/create/custom')
+            ->assertOk()
+            ->assertSeeInOrder([
+                'RJ Code or Link',
+                'Status',
+                'Your Score',
+                'Series',
+                'Title Japanese',
+                'Title English',
+                'Custom Tags',
+                'Notes',
+                'Age Category',
+                'Work Image',
+                'Sample Images',
+                'Start Date',
+                'Finish Date',
+                'Total Times',
+                'Re-listened',
+                'Re-listen Value',
+                'Priority',
+            ]);
+    }
+
+    public function test_quick_add_layout_can_hide_optional_fields_and_keep_required_rj_visible(): void
+    {
+        Option::setQuickAddFieldLayout([
+            ['field' => ProductField::RjCode->value, 'visible' => false],
+            ['field' => ProductField::Priority->value, 'visible' => true],
+            ['field' => ProductField::Notes->value, 'visible' => false],
+        ]);
+
+        $this->get('/create')
+            ->assertOk()
+            ->assertSee('name="id"', false)
+            ->assertSeeInOrder(['RJ Code or Link', 'Priority'])
+            ->assertDontSee('name="notes"', false);
+    }
+
+    public function test_custom_quick_add_layout_can_hide_optional_fields_and_keep_required_fields_visible(): void
+    {
+        Option::setCustomQuickAddFieldLayout([
+            ['field' => ProductField::RjCode->value, 'visible' => false],
+            ['field' => ProductField::Title->value, 'visible' => false],
+            ['field' => ProductField::AgeCategory->value, 'visible' => false],
+            ['field' => ProductField::Image->value, 'visible' => false],
+            ['field' => ProductField::SampleImages->value, 'visible' => false],
+            ['field' => ProductField::Notes->value, 'visible' => false],
+            ['field' => ProductField::Priority->value, 'visible' => true],
+        ]);
+
+        $this->get('/create/custom')
+            ->assertOk()
+            ->assertSee('name="id"', false)
+            ->assertSee('name="work_name"', false)
+            ->assertSee('name="age_category"', false)
+            ->assertSee('name="work_image"', false)
+            ->assertSeeInOrder([
+                'RJ Code or Link',
+                'Title Japanese',
+                'Age Category',
+                'Work Image',
+                'Priority',
+            ])
+            ->assertDontSee('name="sample_images[]"', false)
+            ->assertDontSee('name="notes"', false);
+    }
+
     public function test_create_preserves_index_return_state_for_go_back_and_mode_switch(): void
     {
         $query = http_build_query([
@@ -752,6 +882,22 @@ class ProductControllerTest extends TestCase
             ->assertSee($product->id)
             ->assertSee($product->work_name)
             ->assertSee($product->work_name_english)
+            ->assertSeeInOrder([
+                'RJ Code + Title',
+                'Status',
+                'Your Score',
+                'Series',
+                'Title Japanese',
+                'Title English',
+                'Custom Tags',
+                'Notes',
+                'Start Date',
+                'Finish Date',
+                'Total Times',
+                'Re-listen Value',
+                'Priority',
+            ], false)
+            ->assertDontSee('name="age_category"', false)
             ->assertSee('Fetched EN Genres')
             ->assertSee('Sleep Guidance EN')
             ->assertDontSee('JP_ONLY_GUIDANCE_TOKEN')
@@ -761,6 +907,138 @@ class ProductControllerTest extends TestCase
             ->assertSee('name="return_fragment"', false)
             ->assertSee('href="/?progress=Listening#' . $product->id . '"', false)
             ->assertDontSee('name="redirect"', false);
+    }
+
+    public function test_edit_renders_readonly_description_from_prepared_value(): void
+    {
+        Option::setEditFieldLayout([
+            ['field' => ProductField::Description->value, 'visible' => true, 'editable' => false],
+        ]);
+
+        $product = Product::factory()->create([
+            'work_name' => 'READONLY_DESCRIPTION_EDIT_TOKEN',
+            'description' => 'READONLY_JP_DESCRIPTION_TOKEN',
+            'description_english' => 'READONLY_EN_DESCRIPTION_TOKEN',
+        ]);
+
+        $this->get("/edit/{$product->id}")
+            ->assertOk()
+            ->assertSee('Description')
+            ->assertSee('READONLY_JP_DESCRIPTION_TOKEN')
+            ->assertSee('READONLY_EN_DESCRIPTION_TOKEN')
+            ->assertSee('readonly', false)
+            ->assertDontSee('name="description"', false);
+    }
+
+    public function test_edit_layout_can_hide_new_configurable_edit_rows(): void
+    {
+        Option::setEditFieldLayout([
+            ['field' => ProductField::Notes->value, 'visible' => false, 'editable' => false],
+            ['field' => ProductField::StartDate->value, 'visible' => false, 'editable' => false],
+            ['field' => ProductField::FinishDate->value, 'visible' => false, 'editable' => false],
+            ['field' => ProductField::TotalTimesReListened->value, 'visible' => false, 'editable' => false],
+            ['field' => ProductField::ReListenValue->value, 'visible' => false, 'editable' => false],
+            ['field' => ProductField::Priority->value, 'visible' => false, 'editable' => false],
+        ]);
+
+        $product = Product::factory()->create([
+            'work_name' => 'HIDDEN_EDIT_ROWS_TOKEN',
+            'notes' => 'HIDDEN_NOTES_SHOULD_NOT_RENDER',
+        ]);
+
+        $this->get("/edit/{$product->id}")
+            ->assertOk()
+            ->assertDontSee('name="notes"', false)
+            ->assertDontSee('name="add[start_date][month]"', false)
+            ->assertDontSee('name="add[finish_date][month]"', false)
+            ->assertDontSee('name="add[num_re_listen_times]"', false)
+            ->assertDontSee('name="add[re_listen_value]"', false)
+            ->assertDontSee('name="add[priority]"', false)
+            ->assertDontSee('HIDDEN_NOTES_SHOULD_NOT_RENDER');
+    }
+
+    public function test_editable_metadata_fields_save_product_and_creator_values(): void
+    {
+        Option::setEditFieldLayout([
+            ['field' => ProductField::Circle->value, 'visible' => true, 'editable' => true],
+            ['field' => ProductField::Scenario->value, 'visible' => true, 'editable' => true],
+            ['field' => ProductField::VoiceActor->value, 'visible' => true, 'editable' => true],
+            ['field' => ProductField::Illustration->value, 'visible' => true, 'editable' => true],
+            ['field' => ProductField::Author->value, 'visible' => true, 'editable' => true],
+            ['field' => ProductField::Description->value, 'visible' => true, 'editable' => true],
+        ]);
+
+        $product = Product::factory()->create([
+            'work_name' => 'EDITABLE_METADATA_TOKEN',
+            'circle' => 'Old Circle',
+            'maker_id' => null,
+            'description' => null,
+            'description_english' => null,
+        ]);
+
+        $this->get("/edit/{$product->id}")
+            ->assertOk()
+            ->assertSee('name="circle"', false)
+            ->assertSee('name="maker_id"', false)
+            ->assertSee('name="scenario"', false)
+            ->assertSee('name="voice_actor"', false)
+            ->assertSee('name="illustration"', false)
+            ->assertSee('name="author"', false)
+            ->assertSee('name="description"', false)
+            ->assertSee('name="description_english"', false);
+
+        $this->post("/update/{$product->id}", [
+            'work_name' => $product->work_name,
+            'circle' => 'New Circle',
+            'maker_id' => 'RG_EDITABLE_METADATA',
+            'scenario' => 'Scenario One, Scenario Two',
+            'voice_actor' => 'Voice One',
+            'illustration' => 'Illustration One',
+            'author' => 'Author One',
+            'description' => 'Japanese metadata description',
+            'description_english' => 'English metadata description',
+        ])->assertSessionHasNoErrors();
+
+        $product->refresh();
+        $namesByRole = app(ProductContributorSync::class)->namesByRole($product);
+
+        $this->assertSame('New Circle', $product->circle);
+        $this->assertSame('RG_EDITABLE_METADATA', $product->maker_id);
+        $this->assertSame('Japanese metadata description', $product->description);
+        $this->assertSame('English metadata description', $product->description_english);
+        $this->assertSame(['New Circle'], $namesByRole[ProductContributorRole::Circle->value]);
+        $this->assertSame(['Scenario One', 'Scenario Two'], $namesByRole[ProductContributorRole::Scenario->value]);
+        $this->assertSame(['Voice One'], $namesByRole[ProductContributorRole::VoiceActor->value]);
+        $this->assertSame(['Illustration One'], $namesByRole[ProductContributorRole::Illustration->value]);
+        $this->assertSame(['Author One'], $namesByRole[ProductContributorRole::Author->value]);
+        $this->assertDatabaseHas('contributors', [
+            'name' => 'New Circle',
+            'maker_id' => 'RG_EDITABLE_METADATA',
+        ]);
+    }
+
+    public function test_update_collapses_duplicate_english_description_to_null(): void
+    {
+        Option::setEditFieldLayout([
+            ['field' => ProductField::Description->value, 'visible' => true, 'editable' => true],
+        ]);
+
+        $product = Product::factory()->create([
+            'work_name' => 'DUPLICATE_DESCRIPTION_TOKEN',
+            'description' => 'Old Japanese description',
+            'description_english' => 'Old English description',
+        ]);
+
+        $this->post("/update/{$product->id}", [
+            'work_name' => $product->work_name,
+            'description' => 'Same description',
+            'description_english' => 'Same description',
+        ])->assertSessionHasNoErrors();
+
+        $product->refresh();
+
+        $this->assertSame('Same description', $product->description);
+        $this->assertNull($product->description_english);
     }
 
     public function test_edit_defaults_go_back_fragment_to_current_product_when_not_provided(): void
@@ -807,9 +1085,9 @@ class ProductControllerTest extends TestCase
             ->assertDontSee('name="genre_fetched_english"', false);
     }
 
-    public function test_edit_renders_editable_fetched_english_tags_when_option_enabled(): void
+    public function test_edit_renders_editable_fetched_english_tags_when_edit_layout_enables_it(): void
     {
-        Option::setCanEditFetchedTags(true);
+        $this->setTagEditLayout(visible: true, customEditable: true, fetchedEditable: true);
 
         $englishGenre = $this->createGenre('EDITABLE_FETCHED_EN_TOKEN', Genre::TYPE_AUTO_GENERATED_ENGLISH);
         $product = Product::factory()->create([
@@ -844,9 +1122,9 @@ class ProductControllerTest extends TestCase
         ]);
     }
 
-    public function test_update_can_replace_fetched_english_tags_when_option_enabled(): void
+    public function test_update_can_replace_fetched_english_tags_when_edit_layout_enables_it(): void
     {
-        Option::setCanEditFetchedTags(true);
+        $this->setTagEditLayout(visible: true, customEditable: true, fetchedEditable: true);
 
         $product = Product::factory()->create([
             'work_name' => 'REPLACE_FETCHED_EDIT_TOKEN',
@@ -882,7 +1160,7 @@ class ProductControllerTest extends TestCase
 
     public function test_update_preserves_japanese_fetched_tags_when_editing_fetched_english_tags(): void
     {
-        Option::setCanEditFetchedTags(true);
+        $this->setTagEditLayout(visible: true, customEditable: true, fetchedEditable: true);
 
         $product = Product::factory()->create([
             'work_name' => 'PRESERVE_JP_FETCHED_EDIT_TOKEN',
@@ -907,6 +1185,87 @@ class ProductControllerTest extends TestCase
         $this->assertDatabaseMissing('genre_product', [
             'product_id' => $product->getKey(),
             'genre_id' => $oldEnglishGenre->getKey(),
+        ]);
+    }
+
+    public function test_update_with_custom_tag_editing_only_preserves_fetched_english_tags(): void
+    {
+        $this->setTagEditLayout(visible: true, customEditable: true, fetchedEditable: false);
+
+        $englishGenre = $this->createGenre('CUSTOM_ONLY_PRESERVED_FETCHED_EN', Genre::TYPE_AUTO_GENERATED_ENGLISH);
+        $customGenre = $this->createGenre('CUSTOM_ONLY_OLD_CUSTOM', Genre::TYPE_CUSTOM);
+        $product = Product::factory()->create([
+            'work_name' => 'CUSTOM_ONLY_TAG_EDIT_TOKEN',
+        ]);
+        $this->attachGenres($product, [$englishGenre, $customGenre]);
+
+        $this->post("/update/{$product->id}", [
+            'work_name' => $product->work_name,
+            'genre_custom' => 'CUSTOM_ONLY_NEW_CUSTOM',
+            'genre_fetched_english' => 'CUSTOM_ONLY_MALICIOUS_FETCHED',
+        ])->assertSessionHasNoErrors();
+
+        $product->refresh()->load(['englishGenres', 'customGenres']);
+
+        $this->assertSame(['CUSTOM_ONLY_PRESERVED_FETCHED_EN'], $product->englishGenres->pluck('title')->all());
+        $this->assertSame(['CUSTOM_ONLY_NEW_CUSTOM'], $product->customGenres->pluck('title')->all());
+        $this->assertDatabaseMissing('genres', [
+            'title' => 'CUSTOM_ONLY_MALICIOUS_FETCHED',
+        ]);
+    }
+
+    public function test_update_with_fetched_tag_editing_only_preserves_custom_tags(): void
+    {
+        $this->setTagEditLayout(visible: true, customEditable: false, fetchedEditable: true);
+
+        $englishGenre = $this->createGenre('FETCHED_ONLY_OLD_FETCHED_EN', Genre::TYPE_AUTO_GENERATED_ENGLISH);
+        $customGenre = $this->createGenre('FETCHED_ONLY_PRESERVED_CUSTOM', Genre::TYPE_CUSTOM);
+        $product = Product::factory()->create([
+            'work_name' => 'FETCHED_ONLY_TAG_EDIT_TOKEN',
+        ]);
+        $this->attachGenres($product, [$englishGenre, $customGenre]);
+
+        $this->post("/update/{$product->id}", [
+            'work_name' => $product->work_name,
+            'genre_fetched_english' => 'FETCHED_ONLY_NEW_FETCHED_EN',
+            'genre_custom' => 'FETCHED_ONLY_MALICIOUS_CUSTOM',
+        ])->assertSessionHasNoErrors();
+
+        $product->refresh()->load(['englishGenres', 'customGenres']);
+
+        $this->assertSame(['FETCHED_ONLY_NEW_FETCHED_EN'], $product->englishGenres->pluck('title')->all());
+        $this->assertSame(['FETCHED_ONLY_PRESERVED_CUSTOM'], $product->customGenres->pluck('title')->all());
+        $this->assertDatabaseMissing('genres', [
+            'title' => 'FETCHED_ONLY_MALICIOUS_CUSTOM',
+        ]);
+    }
+
+    public function test_update_preserves_all_tags_when_tag_field_is_hidden(): void
+    {
+        $this->setTagEditLayout(visible: false, customEditable: true, fetchedEditable: true);
+
+        $englishGenre = $this->createGenre('HIDDEN_TAGS_PRESERVED_FETCHED_EN', Genre::TYPE_AUTO_GENERATED_ENGLISH);
+        $customGenre = $this->createGenre('HIDDEN_TAGS_PRESERVED_CUSTOM', Genre::TYPE_CUSTOM);
+        $product = Product::factory()->create([
+            'work_name' => 'HIDDEN_TAGS_EDIT_TOKEN',
+        ]);
+        $this->attachGenres($product, [$englishGenre, $customGenre]);
+
+        $this->post("/update/{$product->id}", [
+            'work_name' => $product->work_name,
+            'genre_fetched_english' => 'HIDDEN_TAGS_MALICIOUS_FETCHED',
+            'genre_custom' => 'HIDDEN_TAGS_MALICIOUS_CUSTOM',
+        ])->assertSessionHasNoErrors();
+
+        $product->refresh()->load(['englishGenres', 'customGenres']);
+
+        $this->assertSame(['HIDDEN_TAGS_PRESERVED_FETCHED_EN'], $product->englishGenres->pluck('title')->all());
+        $this->assertSame(['HIDDEN_TAGS_PRESERVED_CUSTOM'], $product->customGenres->pluck('title')->all());
+        $this->assertDatabaseMissing('genres', [
+            'title' => 'HIDDEN_TAGS_MALICIOUS_FETCHED',
+        ]);
+        $this->assertDatabaseMissing('genres', [
+            'title' => 'HIDDEN_TAGS_MALICIOUS_CUSTOM',
         ]);
     }
 
@@ -965,7 +1324,12 @@ class ProductControllerTest extends TestCase
                 'circle' => 'SCRAPED_CIRCLE_TOKEN',
                 'sample_images' => [],
                 'genre' => ['Scraped JP Tag', 'ASMR'],
+                'scenario' => ['Scraped Scenario Author'],
+                'voice_actor' => ['Scraped Voice Actor'],
+                'illustration' => ['Scraped Illustrator'],
+                'author' => ['Scraped Author'],
                 'description' => 'SCRAPED_JP_DESCRIPTION_TOKEN',
+                'title_name' => 'SCRAPED_TITLE_NAME_SERIES',
             ],
             'english' => [
                 'work_name' => 'SCRAPED_EN_TITLE_TOKEN',
@@ -997,6 +1361,7 @@ class ProductControllerTest extends TestCase
 
         $this->assertSame('SCRAPED_JP_TITLE_TOKEN', $product->work_name);
         $this->assertSame('SCRAPED_EN_TITLE_TOKEN', $product->work_name_english);
+        $this->assertSame('SCRAPED_TITLE_NAME_SERIES', $product->series);
         $this->assertSame('Completed', $product->progress);
         $this->assertEqualsCanonicalizing(['ASMR', 'Scraped JP Tag'], $product->japaneseGenres->pluck('title')->all());
         $this->assertEqualsCanonicalizing(['ASMR', 'Scraped EN Tag'], $product->englishGenres->pluck('title')->all());
@@ -1016,6 +1381,107 @@ class ProductControllerTest extends TestCase
                 ->pluck('language')
                 ->all()
         );
+
+        foreach (
+            [
+                ProductContributorRole::Circle->value => 'SCRAPED_CIRCLE_TOKEN',
+                ProductContributorRole::Scenario->value => 'Scraped Scenario Author',
+                ProductContributorRole::VoiceActor->value => 'Scraped Voice Actor',
+                ProductContributorRole::Illustration->value => 'Scraped Illustrator',
+                ProductContributorRole::Author->value => 'Scraped Author',
+            ] as $role => $name
+        ) {
+            $this->assertDatabaseHas('contributors', ['name' => $name]);
+            $this->assertDatabaseHas('contributor_product', [
+                'product_id' => $product->getKey(),
+                'role' => $role,
+            ]);
+        }
+    }
+
+    public function test_store_uses_visible_quick_add_metadata_overrides_and_preserves_hidden_scraped_metadata(): void
+    {
+        Storage::fake('local');
+        Process::fake(['*' => Process::result()])->preventStrayProcesses();
+
+        Option::setQuickAddFieldLayout([
+            ['field' => ProductField::AgeCategory->value, 'visible' => true],
+            ['field' => ProductField::Circle->value, 'visible' => true],
+            ['field' => ProductField::Scenario->value, 'visible' => true],
+            ['field' => ProductField::Description->value, 'visible' => true],
+            ['field' => ProductField::VoiceActor->value, 'visible' => false],
+        ]);
+
+        $workId = Product::factory()->make()->id;
+        Storage::disk('local')->put("Works/{$workId}.json", json_encode($this->scrapedWorkPayload($workId, [
+            'age_category' => ['_name_' => 'R18'],
+            'circle' => 'SCRAPED_CREATE_CIRCLE_TOKEN',
+            'scenario' => ['SCRAPED_CREATE_SCENARIO_TOKEN'],
+            'voice_actor' => ['SCRAPED_CREATE_VOICE_TOKEN'],
+            'description' => 'SCRAPED_CREATE_DESCRIPTION_TOKEN',
+        ], [
+            'description' => 'SCRAPED_CREATE_EN_DESCRIPTION_TOKEN',
+        ])));
+
+        $response = $this->post('/store', [
+            'id' => $workId,
+            'age_category' => 'ALL_AGES',
+            'circle' => 'MANUAL_CREATE_CIRCLE_TOKEN',
+            'maker_id' => 'RG_MANUAL_CREATE',
+            'scenario' => 'MANUAL_CREATE_SCENARIO_TOKEN',
+            'voice_actor' => 'MALICIOUS_CREATE_VOICE_TOKEN',
+            'description' => 'MANUAL_CREATE_DESCRIPTION_TOKEN',
+            'description_english' => 'MANUAL_CREATE_EN_DESCRIPTION_TOKEN',
+        ]);
+
+        $response->assertSessionHasNoErrors();
+
+        $product = Product::query()->whereKey($workId)->firstOrFail();
+
+        $this->assertSame('ALL_AGES', $product->age_category);
+        $this->assertSame('MANUAL_CREATE_CIRCLE_TOKEN', $product->circle);
+        $this->assertSame('RG_MANUAL_CREATE', $product->maker_id);
+        $this->assertSame('MANUAL_CREATE_DESCRIPTION_TOKEN', $product->description);
+        $this->assertSame('MANUAL_CREATE_EN_DESCRIPTION_TOKEN', $product->description_english);
+        $this->assertDatabaseHas('contributors', ['name' => 'MANUAL_CREATE_SCENARIO_TOKEN']);
+        $this->assertDatabaseHas('contributors', ['name' => 'SCRAPED_CREATE_VOICE_TOKEN']);
+        $this->assertDatabaseMissing('contributors', ['name' => 'MALICIOUS_CREATE_VOICE_TOKEN']);
+    }
+
+    public function test_store_keeps_manual_series_when_title_name_is_fetched(): void
+    {
+        Storage::fake('local');
+        Process::fake(['*' => Process::result()])->preventStrayProcesses();
+
+        $workId = Product::factory()->make()->id;
+        Storage::disk('local')->put("Works/{$workId}.json", json_encode($this->scrapedWorkPayload($workId, [
+            'title_name' => 'FETCHED_SERIES_TOKEN',
+        ])));
+
+        $this->post('/store', [
+            'id' => $workId,
+            'series' => 'MANUAL_SERIES_TOKEN',
+        ])->assertSessionHasNoErrors();
+
+        $this->assertSame('MANUAL_SERIES_TOKEN', Product::query()->findOrFail($workId)->series);
+    }
+
+    public function test_store_can_disable_auto_series_from_title_name(): void
+    {
+        Option::setAutoSeriesFromTitleName(false);
+        Storage::fake('local');
+        Process::fake(['*' => Process::result()])->preventStrayProcesses();
+
+        $workId = Product::factory()->make()->id;
+        Storage::disk('local')->put("Works/{$workId}.json", json_encode($this->scrapedWorkPayload($workId, [
+            'title_name' => 'DISABLED_SERIES_TOKEN',
+        ])));
+
+        $this->post('/store', [
+            'id' => $workId,
+        ])->assertSessionHasNoErrors();
+
+        $this->assertNull(Product::query()->findOrFail($workId)->series);
     }
 
     public function test_store_rejects_invalid_date_order(): void
@@ -1197,6 +1663,47 @@ class ProductControllerTest extends TestCase
             ->assertOk()
             ->assertSee('src="storage/Works/' . $workId . '/cover.png"', false)
             ->assertDontSee('images/No Image.png', false);
+    }
+
+    public function test_custom_store_saves_visible_custom_quick_add_metadata_and_ignores_hidden_optional_fields(): void
+    {
+        Storage::fake('public');
+
+        Option::setCustomQuickAddFieldLayout([
+            ['field' => ProductField::Circle->value, 'visible' => true],
+            ['field' => ProductField::Author->value, 'visible' => true],
+            ['field' => ProductField::Description->value, 'visible' => true],
+            ['field' => ProductField::VoiceActor->value, 'visible' => false],
+            ['field' => ProductField::SampleImages->value, 'visible' => false],
+        ]);
+
+        $workId = Product::factory()->make()->id;
+
+        $response = $this->post('/store/custom', $this->customStorePayload($workId, [
+            'work_name' => 'CUSTOM_VISIBLE_METADATA_TOKEN',
+            'circle' => 'CUSTOM_VISIBLE_CIRCLE_TOKEN',
+            'maker_id' => 'RG_CUSTOM_VISIBLE',
+            'author' => 'CUSTOM_VISIBLE_AUTHOR_TOKEN',
+            'voice_actor' => 'MALICIOUS_CUSTOM_VOICE_TOKEN',
+            'description' => 'CUSTOM_VISIBLE_DESCRIPTION_TOKEN',
+            'description_english' => 'CUSTOM_VISIBLE_EN_DESCRIPTION_TOKEN',
+            'sample_images' => [
+                UploadedFile::fake()->image('hidden-sample.jpg')->size(1024),
+            ],
+        ]));
+
+        $response->assertSessionHasNoErrors();
+
+        $product = Product::query()->whereKey($workId)->firstOrFail();
+
+        $this->assertSame('CUSTOM_VISIBLE_CIRCLE_TOKEN', $product->circle);
+        $this->assertSame('RG_CUSTOM_VISIBLE', $product->maker_id);
+        $this->assertSame('CUSTOM_VISIBLE_DESCRIPTION_TOKEN', $product->description);
+        $this->assertSame('CUSTOM_VISIBLE_EN_DESCRIPTION_TOKEN', $product->description_english);
+        $this->assertSame([], json_decode($product->sample_images, true));
+        $this->assertDatabaseHas('contributors', ['name' => 'CUSTOM_VISIBLE_AUTHOR_TOKEN']);
+        $this->assertDatabaseMissing('contributors', ['name' => 'MALICIOUS_CUSTOM_VOICE_TOKEN']);
+        Storage::disk('public')->assertMissing("Works/{$workId}/sample_1.jpg");
     }
 
     public function test_custom_store_rejects_missing_cover_image(): void
@@ -1523,6 +2030,150 @@ class ProductControllerTest extends TestCase
         $this->assertSame(2, $product->priority);
     }
 
+    public function test_update_payload_applies_only_editable_submitted_fields(): void
+    {
+        Option::setEditFieldLayout([
+            ['field' => ProductField::Progress->value, 'visible' => true, 'editable' => true],
+            ['field' => ProductField::Score->value, 'visible' => true, 'editable' => false],
+            ['field' => ProductField::Series->value, 'visible' => false, 'editable' => false],
+            ['field' => ProductField::AgeCategory->value, 'visible' => true, 'editable' => true],
+            ['field' => ProductField::StartDate->value, 'visible' => true, 'editable' => true],
+            ['field' => ProductField::FinishDate->value, 'visible' => true, 'editable' => true],
+            ['field' => ProductField::TotalTimesReListened->value, 'visible' => true, 'editable' => true],
+            ['field' => ProductField::ReListenValue->value, 'visible' => true, 'editable' => true],
+            ['field' => ProductField::Priority->value, 'visible' => true, 'editable' => true],
+        ]);
+
+        $product = Product::factory()->create([
+            'work_name' => 'UPDATE_PAYLOAD_MAP_TOKEN',
+            'age_category' => 'R18',
+            'progress' => 'Plan to Listen',
+            'score' => 3,
+            'series' => 'Preserved Series',
+            'start_date' => ['month' => '01', 'day' => '01', 'year' => '2024'],
+            'end_date' => ['month' => '01', 'day' => '02', 'year' => '2024'],
+            'num_re_listen_times' => 1,
+            're_listen_value' => 2,
+            'priority' => 1,
+        ]);
+
+        $this->post("/update/{$product->id}", [
+            'work_name' => $product->work_name,
+            'age_category' => 'ALL_AGES',
+            'progress' => 'Completed',
+            'score' => 9,
+            'series' => 'Attempted Overwrite',
+            'add' => [
+                'start_date' => [
+                    'month' => '02',
+                    'day' => '03',
+                    'year' => '2025',
+                ],
+                'finish_date' => [
+                    'month' => '02',
+                    'day' => '04',
+                    'year' => '2025',
+                ],
+                'num_re_listen_times' => '5',
+                're_listen_value' => '4',
+                'priority' => '2',
+            ],
+        ])->assertSessionHasNoErrors();
+
+        $product->refresh();
+
+        $this->assertSame('ALL_AGES', $product->age_category);
+        $this->assertSame('Completed', $product->progress);
+        $this->assertSame(3, $product->score);
+        $this->assertSame('Preserved Series', $product->series);
+        $this->assertSame('02', (string) data_get($product->start_date, 'month'));
+        $this->assertSame('04', (string) data_get($product->end_date, 'day'));
+        $this->assertSame(5, $product->num_re_listen_times);
+        $this->assertSame(4, $product->re_listen_value);
+        $this->assertSame(2, $product->priority);
+    }
+
+    public function test_update_does_not_clear_hidden_edit_layout_fields(): void
+    {
+        Option::setEditFieldLayout([
+            ['field' => 'series', 'visible' => false, 'editable' => false],
+            ['field' => 'voice_actor', 'visible' => false, 'editable' => false],
+        ]);
+
+        $product = Product::factory()->create([
+            'work_name' => 'HIDDEN_EDIT_OLD_TITLE',
+            'series' => 'HIDDEN_EDIT_SERIES_TOKEN',
+        ]);
+        app(ProductContributorSync::class)->sync($product, [
+            ProductContributorRole::VoiceActor->value => ['Hidden Voice Actor'],
+        ]);
+
+        $this->post("/update/{$product->id}", [
+            'work_name' => 'HIDDEN_EDIT_NEW_TITLE',
+        ])->assertSessionHasNoErrors();
+
+        $product->refresh();
+
+        $this->assertSame('HIDDEN_EDIT_NEW_TITLE', $product->work_name);
+        $this->assertSame('HIDDEN_EDIT_SERIES_TOKEN', $product->series);
+        $this->assertSame(
+            ['Hidden Voice Actor'],
+            app(ProductContributorSync::class)->namesByRole($product)[ProductContributorRole::VoiceActor->value] ?? []
+        );
+    }
+
+    public function test_update_preserves_hidden_and_readonly_new_edit_rows(): void
+    {
+        Option::setEditFieldLayout([
+            ['field' => ProductField::Notes->value, 'visible' => false, 'editable' => false],
+            ['field' => ProductField::StartDate->value, 'visible' => false, 'editable' => false],
+            ['field' => ProductField::FinishDate->value, 'visible' => true, 'editable' => false],
+            ['field' => ProductField::TotalTimesReListened->value, 'visible' => true, 'editable' => false],
+            ['field' => ProductField::ReListenValue->value, 'visible' => false, 'editable' => false],
+            ['field' => ProductField::Priority->value, 'visible' => false, 'editable' => false],
+        ]);
+
+        $product = Product::factory()->create([
+            'work_name' => 'PRESERVE_NEW_EDIT_FIELDS_TOKEN',
+            'notes' => 'Preserved notes',
+            'start_date' => ['month' => '01', 'day' => '02', 'year' => '2025'],
+            'end_date' => ['month' => '01', 'day' => '03', 'year' => '2025'],
+            'num_re_listen_times' => 4,
+            're_listen_value' => 5,
+            'priority' => 2,
+        ]);
+
+        $this->post("/update/{$product->id}", [
+            'work_name' => 'PRESERVE_NEW_EDIT_FIELDS_UPDATED',
+            'notes' => 'Attempted overwrite',
+            'add' => [
+                'start_date' => [
+                    'month' => '02',
+                    'day' => '02',
+                    'year' => '2026',
+                ],
+                'finish_date' => [
+                    'month' => '02',
+                    'day' => '03',
+                    'year' => '2026',
+                ],
+                'num_re_listen_times' => '9',
+                're_listen_value' => '1',
+                'priority' => '0',
+            ],
+        ])->assertSessionHasNoErrors();
+
+        $product->refresh();
+
+        $this->assertSame('PRESERVE_NEW_EDIT_FIELDS_UPDATED', $product->work_name);
+        $this->assertSame('Preserved notes', $product->notes);
+        $this->assertSame('01', (string) data_get($product->start_date, 'month'));
+        $this->assertSame('03', (string) data_get($product->end_date, 'day'));
+        $this->assertSame(4, $product->num_re_listen_times);
+        $this->assertSame(5, $product->re_listen_value);
+        $this->assertSame(2, $product->priority);
+    }
+
     public function test_update_parses_quoted_custom_tag_with_commas_as_single_tag(): void
     {
         $product = Product::factory()->create([
@@ -1681,6 +2332,64 @@ class ProductControllerTest extends TestCase
         ])->assertRedirect("/?progress=Listening#{$product->id}");
     }
 
+    public function test_update_redirect_drops_circle_filter_when_maker_id_change_hides_target_work(): void
+    {
+        Option::setEditFieldLayout([
+            ['field' => ProductField::Circle->value, 'visible' => true, 'editable' => true],
+        ]);
+
+        $product = Product::factory()->create([
+            'work_name' => 'MAKER_ID_REDIRECT_DROPPED_TOKEN',
+            'circle' => 'Stable Circle Name',
+            'maker_id' => 'RG_OLD_MAKER_REDIRECT',
+        ]);
+        app(ProductContributorSync::class)->sync($product, [
+            ProductContributorRole::Circle->value => [$product->circle],
+        ], $product->maker_id);
+
+        $response = $this->post("/update/{$product->id}", [
+            'work_name' => $product->work_name,
+            'circle' => $product->circle,
+            'maker_id' => 'RG_NEW_MAKER_REDIRECT',
+            'return_query' => [
+                'circle' => 'RG_OLD_MAKER_REDIRECT',
+            ],
+            'return_fragment' => $product->id,
+        ]);
+
+        $response->assertSessionHasNoErrors();
+        $response->assertRedirect("/#{$product->id}");
+    }
+
+    public function test_update_redirect_keeps_circle_filter_when_maker_id_changes_but_circle_still_matches(): void
+    {
+        Option::setEditFieldLayout([
+            ['field' => ProductField::Circle->value, 'visible' => true, 'editable' => true],
+        ]);
+
+        $product = Product::factory()->create([
+            'work_name' => 'MAKER_ID_REDIRECT_KEPT_TOKEN',
+            'circle' => 'Stable Circle Name',
+            'maker_id' => 'RG_OLD_MAKER_REDIRECT',
+        ]);
+        app(ProductContributorSync::class)->sync($product, [
+            ProductContributorRole::Circle->value => [$product->circle],
+        ], $product->maker_id);
+
+        $response = $this->post("/update/{$product->id}", [
+            'work_name' => $product->work_name,
+            'circle' => $product->circle,
+            'maker_id' => 'RG_NEW_MAKER_REDIRECT',
+            'return_query' => [
+                'circle' => 'Stable Circle Name',
+            ],
+            'return_fragment' => $product->id,
+        ]);
+
+        $response->assertSessionHasNoErrors();
+        $response->assertRedirect("/?circle=Stable%20Circle%20Name#{$product->id}");
+    }
+
     public function test_update_preserves_matching_tag_filter_for_target_work(): void
     {
         $product = Product::factory()->create([
@@ -1763,6 +2472,9 @@ class ProductControllerTest extends TestCase
             'title' => ['title' => 'HIDDEN_TITLE_TOKEN'],
             'notes' => ['notes' => 'HIDDEN_NOTES_TOKEN'],
             'genre' => ['genre' => 'HiddenGenreToken'],
+            'circle' => ['circle' => 'HIDDEN_CIRCLE_TOKEN'],
+            'voice_actor' => ['voice_actor' => 'HIDDEN_VOICE_TOKEN'],
+            'description' => ['description' => 'HIDDEN_DESCRIPTION_TOKEN'],
             'age_category' => ['age_category' => 'R18'],
             'score' => ['score' => '1'],
             'priority' => ['priority' => '0'],
@@ -2268,6 +2980,24 @@ class ProductControllerTest extends TestCase
         app(ProductGenreSync::class)->sync($product, $fetchedByLanguage, $customGenreIds);
     }
 
+    private function setTagEditLayout(bool $visible, bool $customEditable, bool $fetchedEditable): void
+    {
+        $layout = Option::editFieldLayout();
+
+        foreach ($layout as &$row) {
+            if ($row['field'] !== ProductField::Tags->value) {
+                continue;
+            }
+
+            $row['visible'] = $visible;
+            $row['editable'] = $customEditable;
+            $row['fetched_editable'] = $fetchedEditable;
+        }
+        unset($row);
+
+        Option::setEditFieldLayout($layout);
+    }
+
     private function customStorePayload(string $workId, array $overrides = []): array
     {
         return array_replace_recursive([
@@ -2276,5 +3006,30 @@ class ProductControllerTest extends TestCase
             'age_category' => 'ALL_AGES',
             'work_image' => UploadedFile::fake()->image('cover.png')->size(1024),
         ], $overrides);
+    }
+
+    private function scrapedWorkPayload(string $workId, array $japaneseOverrides = [], array $englishOverrides = []): array
+    {
+        return [
+            'japanese' => array_replace([
+                'product_id' => $workId,
+                'maker_id' => 'RG12345',
+                'work_name' => 'SCRAPED_JP_TITLE_TOKEN',
+                'age_category' => ['_name_' => 'R18'],
+                'circle' => 'SCRAPED_CIRCLE_TOKEN',
+                'sample_images' => [],
+                'genre' => [],
+                'scenario' => [],
+                'voice_actor' => [],
+                'illustration' => [],
+                'author' => [],
+                'description' => 'SCRAPED_JP_DESCRIPTION_TOKEN',
+            ], $japaneseOverrides),
+            'english' => array_replace([
+                'work_name' => 'SCRAPED_EN_TITLE_TOKEN',
+                'genre' => [],
+                'description' => 'SCRAPED_EN_DESCRIPTION_TOKEN',
+            ], $englishOverrides),
+        ];
     }
 }

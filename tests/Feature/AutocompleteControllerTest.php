@@ -3,6 +3,7 @@
 namespace Tests\Feature;
 
 use App\Enums\AutocompleteOrder;
+use App\Enums\ProductField;
 use App\Models\Genre;
 use App\Models\Option;
 use App\Models\Product;
@@ -155,7 +156,12 @@ class AutocompleteControllerTest extends TestCase
             ->assertSee('id="series"', false)
             ->assertSee('data-autocomplete-source="series"', false);
 
-        Option::setCanEditFetchedTags(true);
+        Option::setEditFieldLayout(array_map(
+            fn(array $row): array => $row['field'] === ProductField::Tags->value
+                ? [...$row, 'fetched_editable' => true]
+                : $row,
+            Option::editFieldLayout()
+        ));
 
         $product = Product::factory()->create();
 

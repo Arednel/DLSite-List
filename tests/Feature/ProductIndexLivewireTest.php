@@ -2,13 +2,19 @@
 
 namespace Tests\Feature;
 
+use App\Enums\ProductContributorRole;
+use App\Enums\ProductField;
 use App\Livewire\ProductIndex;
+use App\Models\Genre;
 use App\Models\Option;
 use App\Models\Product;
+use App\Support\ProductContributorSync;
+use App\Support\ProductGenreSync;
 use App\Support\ProductIndexFilters;
 use App\Support\ProductIndexResults;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\DB;
 use Livewire\Livewire;
 use Tests\TestCase;
 
@@ -286,17 +292,118 @@ class ProductIndexLivewireTest extends TestCase
             ->assertDontSee('ADDED_DATE_NEW');
     }
 
-    public function test_index_results_hydrate_only_columns_needed_by_index(): void
+    public function test_index_results_hydrate_only_base_columns_and_sort_without_hydrating_sort_fields(): void
     {
         $this->createProduct(1, [
-            'work_name' => 'NARROW_COLUMNS_VISIBLE',
+            'work_name' => 'NARROW_PRIORITY_LOW',
+            'work_name_english' => 'NARROW_PRIORITY_LOW_EN',
+            'notes' => 'NARROW_VISIBLE_NOTES',
+            'work_image' => 'NARROW_HIDDEN_IMAGE',
+            'score' => 9,
+            'series' => 'NARROW_HIDDEN_SERIES',
+            'age_category' => 'R18',
+            'circle' => 'NARROW_HIDDEN_CIRCLE',
+            'maker_id' => 'RG000000001',
             'description' => 'NARROW_COLUMNS_HIDDEN_DESCRIPTION',
+            'description_english' => 'NARROW_COLUMNS_HIDDEN_DESCRIPTION_EN',
+            'progress' => 'Completed',
+            'priority' => 1,
+            'num_re_listen_times' => 4,
+            're_listen_value' => 2,
             'start_date' => ['year' => 2024, 'month' => null, 'day' => null],
+            'end_date' => ['year' => 2024, 'month' => '12', 'day' => null],
+            'created_at' => Carbon::parse('2026-01-01 00:00:00'),
+        ]);
+        $this->createProduct(2, [
+            'work_name' => 'NARROW_PRIORITY_HIGH',
+            'priority' => 2,
+            'created_at' => Carbon::parse('2026-02-01 00:00:00'),
+        ]);
+
+        $products = app(ProductIndexResults::class)->getProducts(
+            ProductIndexFilters::fromQuery([
+                'sort_first_field' => 'priority',
+                'sort_first_direction' => 'asc',
+            ]),
+            Option::INDEX_PER_PAGE_UNLIMITED,
+        );
+
+        $product = $products->first();
+
+        $this->assertNotNull($product);
+        $this->assertSame(['NARROW_PRIORITY_LOW', 'NARROW_PRIORITY_HIGH'], $products->pluck('work_name')->all());
+
+        $attributes = $product->getAttributes();
+
+        $this->assertArrayHasKey('id', $attributes);
+        $this->assertArrayHasKey('work_name', $attributes);
+        $this->assertArrayHasKey('work_name_english', $attributes);
+        $this->assertArrayHasKey('notes', $attributes);
+        $this->assertArrayHasKey('progress', $attributes);
+        $this->assertArrayNotHasKey('work_image', $attributes);
+        $this->assertArrayNotHasKey('score', $attributes);
+        $this->assertArrayNotHasKey('series', $attributes);
+        $this->assertArrayNotHasKey('age_category', $attributes);
+        $this->assertArrayNotHasKey('circle', $attributes);
+        $this->assertArrayNotHasKey('maker_id', $attributes);
+        $this->assertArrayNotHasKey('description', $attributes);
+        $this->assertArrayNotHasKey('description_english', $attributes);
+        $this->assertArrayNotHasKey('priority', $attributes);
+        $this->assertArrayNotHasKey('num_re_listen_times', $attributes);
+        $this->assertArrayNotHasKey('re_listen_value', $attributes);
+        $this->assertArrayNotHasKey('start_date', $attributes);
+        $this->assertArrayNotHasKey('end_date', $attributes);
+        $this->assertArrayNotHasKey('created_at', $attributes);
+        $this->assertArrayNotHasKey('rj_number', $attributes);
+        $this->assertArrayNotHasKey('start_date_sort', $attributes);
+        $this->assertArrayNotHasKey('end_date_sort', $attributes);
+
+        Livewire::test(ProductIndex::class)
+            ->assertSee('NARROW_PRIORITY_LOW')
+            ->assertDontSee('NARROW_COLUMNS_HIDDEN_DESCRIPTION');
+    }
+
+    public function test_index_results_hydrate_columns_for_visible_index_fields(): void
+    {
+        $this->createProduct(1, [
+            'work_name' => 'VISIBLE_COLUMNS_WORK',
+            'work_name_english' => 'VISIBLE_COLUMNS_WORK_EN',
+            'notes' => 'VISIBLE_COLUMNS_NOTES',
+            'work_image' => 'VISIBLE_COLUMNS_IMAGE',
+            'score' => 8,
+            'series' => 'VISIBLE_COLUMNS_SERIES',
+            'age_category' => 'R18',
+            'circle' => 'VISIBLE_COLUMNS_CIRCLE',
+            'maker_id' => 'RG000000001',
+            'description' => 'VISIBLE_COLUMNS_DESCRIPTION',
+            'description_english' => 'VISIBLE_COLUMNS_DESCRIPTION_EN',
+            'progress' => 'Listening',
+            'priority' => 2,
+            'num_re_listen_times' => 3,
+            're_listen_value' => 5,
+            'start_date' => ['year' => 2025, 'month' => '03', 'day' => '01'],
+            'end_date' => ['year' => 2025, 'month' => '03', 'day' => '02'],
+            'created_at' => Carbon::parse('2026-03-01 00:00:00'),
         ]);
 
         $products = app(ProductIndexResults::class)->getProducts(
             new ProductIndexFilters,
             Option::INDEX_PER_PAGE_UNLIMITED,
+            [
+                ProductField::Image->value,
+                ProductField::Title->value,
+                ProductField::Score->value,
+                ProductField::Series->value,
+                ProductField::AgeCategory->value,
+                ProductField::Progress->value,
+                ProductField::Circle->value,
+                ProductField::Scenario->value,
+                ProductField::Illustration->value,
+                ProductField::VoiceActor->value,
+                ProductField::Author->value,
+                ProductField::Description->value,
+                ProductField::Tags->value,
+            ],
         );
 
         $product = $products->first();
@@ -307,13 +414,221 @@ class ProductIndexLivewireTest extends TestCase
 
         $this->assertArrayHasKey('id', $attributes);
         $this->assertArrayHasKey('work_name', $attributes);
-        $this->assertArrayHasKey('start_date', $attributes);
-        $this->assertArrayHasKey('created_at', $attributes);
-        $this->assertArrayNotHasKey('description', $attributes);
+        $this->assertArrayHasKey('work_name_english', $attributes);
+        $this->assertArrayHasKey('notes', $attributes);
+        $this->assertArrayHasKey('progress', $attributes);
+        $this->assertArrayHasKey('work_image', $attributes);
+        $this->assertArrayHasKey('score', $attributes);
+        $this->assertArrayHasKey('series', $attributes);
+        $this->assertArrayHasKey('age_category', $attributes);
+        $this->assertArrayHasKey('circle', $attributes);
+        $this->assertArrayHasKey('maker_id', $attributes);
+        $this->assertArrayHasKey('description', $attributes);
+        $this->assertArrayHasKey('description_english', $attributes);
+        $this->assertArrayNotHasKey('priority', $attributes);
+        $this->assertArrayNotHasKey('num_re_listen_times', $attributes);
+        $this->assertArrayNotHasKey('re_listen_value', $attributes);
+        $this->assertArrayNotHasKey('start_date', $attributes);
+        $this->assertArrayNotHasKey('end_date', $attributes);
+        $this->assertArrayNotHasKey('created_at', $attributes);
+        $this->assertArrayNotHasKey('rj_number', $attributes);
+        $this->assertArrayNotHasKey('start_date_sort', $attributes);
+        $this->assertArrayNotHasKey('end_date_sort', $attributes);
+    }
+
+    public function test_index_field_layout_can_show_hidden_description_and_reorder_columns(): void
+    {
+        $this->createProduct(1, [
+            'work_name' => 'FIELD_LAYOUT_VISIBLE_WORK',
+            'description' => 'FIELD_LAYOUT_VISIBLE_DESCRIPTION',
+        ]);
+
+        Option::setIndexFieldLayout([
+            ['field' => 'description', 'visible' => true],
+            ['field' => 'score', 'visible' => false],
+            ['field' => 'tags', 'visible' => true],
+        ]);
+
+        $products = app(ProductIndexResults::class)->getProducts(
+            new ProductIndexFilters,
+            Option::INDEX_PER_PAGE_UNLIMITED,
+            ['description'],
+        );
+
+        $this->assertArrayHasKey('description', $products->first()->getAttributes());
 
         Livewire::test(ProductIndex::class)
-            ->assertSee('NARROW_COLUMNS_VISIBLE')
-            ->assertDontSee('NARROW_COLUMNS_HIDDEN_DESCRIPTION');
+            ->assertSee('FIELD_LAYOUT_VISIBLE_DESCRIPTION')
+            ->assertSeeInOrder(['Description', 'Tags', 'Series']);
+    }
+
+    public function test_index_layout_can_hide_image_while_title_stays_locked_visible(): void
+    {
+        $this->createProduct(1, [
+            'work_name' => 'LOCKED_TITLE_VISIBLE',
+            'work_image' => 'HIDDEN_IMAGE_PATH',
+        ]);
+
+        Option::setIndexFieldLayout([
+            ['field' => ProductField::Title->value, 'visible' => false],
+            ['field' => ProductField::Image->value, 'visible' => false],
+        ]);
+
+        Livewire::test(ProductIndex::class)
+            ->assertSee('LOCKED_TITLE_VISIBLE')
+            ->assertSee('data-column="Title"', false)
+            ->assertDontSee('data-column="Image"', false)
+            ->assertDontSee('HIDDEN_IMAGE_PATH');
+    }
+
+    public function test_index_layout_can_reorder_image_before_locked_title(): void
+    {
+        $this->createProduct(1, ['work_name' => 'REORDERED_IMAGE_TITLE']);
+
+        Option::setIndexFieldLayout([
+            ['field' => ProductField::Image->value, 'visible' => true],
+            ['field' => ProductField::Title->value, 'visible' => true],
+        ]);
+
+        Livewire::test(ProductIndex::class)
+            ->assertSeeInOrder(['data-column="Image"', 'data-column="Title"'], false)
+            ->assertSee('REORDERED_IMAGE_TITLE');
+    }
+
+    public function test_index_row_data_renders_contributors_and_tags(): void
+    {
+        $product = $this->createProduct(1, [
+            'work_name' => 'ROW_DATA_WORK',
+        ]);
+        $genre = Genre::query()->create([
+            'group_id' => null,
+            'title' => 'ROW_DATA_TAG',
+            'description' => null,
+            'order' => null,
+        ]);
+
+        app(ProductGenreSync::class)->syncCustom($product, [$genre->getKey()]);
+        app(ProductContributorSync::class)->sync($product, [
+            ProductContributorRole::VoiceActor->value => ['ROW_DATA_VOICE'],
+        ]);
+
+        Option::setIndexFieldLayout([
+            ['field' => 'voice_actor', 'visible' => true],
+            ['field' => 'tags', 'visible' => true],
+        ]);
+
+        Livewire::test(ProductIndex::class)
+            ->assertSee('ROW_DATA_WORK')
+            ->assertSee('ROW_DATA_VOICE')
+            ->assertSee('ROW_DATA_TAG');
+    }
+
+    public function test_index_tag_links_use_prepared_base_url_and_replace_current_genre_filter(): void
+    {
+        Option::setIndexFieldLayout([
+            ['field' => ProductField::Tags->value, 'visible' => true],
+        ]);
+
+        $emptyQueryProduct = $this->createProduct(1, [
+            'work_name' => 'TAG_LINK_EMPTY_QUERY_WORK',
+        ]);
+        $emptyQueryGenre = Genre::query()->create([
+            'group_id' => null,
+            'title' => 'TAG_LINK_EMPTY_QUERY_GENRE',
+            'description' => null,
+            'order' => null,
+        ]);
+
+        app(ProductGenreSync::class)->syncCustom($emptyQueryProduct, [$emptyQueryGenre->getKey()]);
+
+        Livewire::test(ProductIndex::class)
+            ->assertSee('href="/?genre=' . $emptyQueryGenre->getKey() . '"', false);
+
+        $currentGenre = Genre::query()->create([
+            'group_id' => null,
+            'title' => 'TAG_LINK_CURRENT_GENRE',
+            'description' => null,
+            'order' => null,
+        ]);
+        $linkedGenre = Genre::query()->create([
+            'group_id' => null,
+            'title' => 'TAG_LINK_LINKED_GENRE',
+            'description' => null,
+            'order' => null,
+        ]);
+        $filteredProduct = $this->createProduct(2, [
+            'work_name' => 'rain TAG_LINK_FILTERED_WORK',
+            'progress' => 'Listening',
+            'series' => 'SERIES_ALPHA',
+        ]);
+
+        app(ProductGenreSync::class)->syncCustom($filteredProduct, [
+            $currentGenre->getKey(),
+            $linkedGenre->getKey(),
+        ]);
+
+        Livewire::withQueryParams([
+            'genre' => (string) $currentGenre->getKey(),
+            'search' => 'rain',
+            'series' => 'SERIES_ALPHA',
+            'progress' => 'Listening',
+            'sort_first_field' => 'score',
+            'sort_first_direction' => 'asc',
+        ])
+            ->test(ProductIndex::class)
+            ->assertSee(
+                'href="/?search=rain&amp;series=SERIES_ALPHA&amp;progress=Listening&amp;sort_first_field=score&amp;sort_first_direction=asc&amp;genre='
+                    . $linkedGenre->getKey()
+                    . '"',
+                false,
+            )
+            ->assertDontSee('genre=' . $currentGenre->getKey() . '&amp;genre=', false);
+    }
+
+    public function test_index_table_width_option_is_applied_to_table_container(): void
+    {
+        $this->createProduct(1, ['work_name' => 'WIDTH_VISIBLE_WORK']);
+        Option::setIndexTableWidth([
+            'mode' => Option::INDEX_TABLE_WIDTH_WIDE,
+            'custom' => '',
+        ]);
+
+        Livewire::test(ProductIndex::class)
+            ->assertSee('--index-table-width: 1400px', false)
+            ->assertSee('WIDTH_VISIBLE_WORK');
+    }
+
+    public function test_index_render_batches_option_settings_lookup(): void
+    {
+        $this->createProduct(1, [
+            'work_name' => 'BATCHED_OPTION_WORK',
+            'description' => 'BATCHED_OPTION_DESCRIPTION',
+        ]);
+        Option::setIndexPerPage(25);
+        Option::setIndexFieldLayout([
+            ['field' => ProductField::Description->value, 'visible' => true],
+        ]);
+        Option::setFilterFieldLayout([
+            ['field' => ProductField::Priority->value, 'visible' => true],
+        ]);
+        Option::setIndexTableWidth([
+            'mode' => Option::INDEX_TABLE_WIDTH_WIDE,
+            'custom' => '',
+        ]);
+
+        $optionQueries = [];
+        DB::listen(function ($query) use (&$optionQueries): void {
+            if (str_contains(strtolower($query->sql), 'options')) {
+                $optionQueries[] = $query->sql;
+            }
+        });
+
+        Livewire::test(ProductIndex::class)
+            ->assertSee('BATCHED_OPTION_DESCRIPTION')
+            ->assertSee('id="filter_priority"', false)
+            ->assertSee('--index-table-width: 1400px', false);
+
+        $this->assertCount(1, $optionQueries, implode(PHP_EOL, $optionQueries));
     }
 
     public function test_search_results_paginate_across_pages(): void
@@ -400,7 +715,25 @@ class ProductIndexLivewireTest extends TestCase
             ->assertSet('sort_first_direction', '')
             ->assertSet('sort_second_direction', '')
             ->assertSee('All tags')
-            ->assertSee('Desc');
+            ->assertSee('Desc')
+            ->assertSeeInOrder([
+                'id="filter_title"',
+                'id="filter_series"',
+                'id="filter_notes"',
+                'id="filter_age_category"',
+                'id="filter_progress"',
+                'id="filter_score"',
+                'id="filter_priority"',
+                'id="filter_num_re_listen_times"',
+                'id="filter_re_listen_value"',
+                'id="filter_tags"',
+            ], false)
+            ->assertDontSee('id="filter_circle"', false)
+            ->assertDontSee('id="filter_scenario"', false)
+            ->assertDontSee('id="filter_illustration"', false)
+            ->assertDontSee('id="filter_voice_actor"', false)
+            ->assertDontSee('id="filter_author"', false)
+            ->assertDontSee('id="filter_description"', false);
     }
 
     public function test_query_string_values_initialize_livewire_index_state(): void
@@ -413,6 +746,50 @@ class ProductIndexLivewireTest extends TestCase
             ->assertSet('search', 'QUERY_VISIBLE')
             ->assertSee('QUERY_VISIBLE')
             ->assertDontSee('QUERY_HIDDEN');
+    }
+
+    public function test_filter_layout_can_hide_fixed_filter_widgets_without_disabling_url_filters(): void
+    {
+        $this->createProduct(1, ['work_name' => 'FILTER_LAYOUT_HIDDEN']);
+        $this->createProduct(2, ['work_name' => 'FILTER_LAYOUT_VISIBLE']);
+
+        Option::setFilterFieldLayout([
+            ['field' => ProductField::Title->value, 'visible' => false],
+            ['field' => ProductField::Notes->value, 'visible' => false],
+            ['field' => ProductField::Priority->value, 'visible' => false],
+            ['field' => ProductField::TotalTimesReListened->value, 'visible' => false],
+            ['field' => ProductField::ReListenValue->value, 'visible' => false],
+        ]);
+
+        Livewire::withQueryParams(['title' => 'FILTER_LAYOUT_VISIBLE'])
+            ->test(ProductIndex::class)
+            ->assertSee('FILTER_LAYOUT_VISIBLE')
+            ->assertDontSee('FILTER_LAYOUT_HIDDEN')
+            ->assertDontSee('id="filter_title"', false)
+            ->assertDontSee('id="filter_notes"', false)
+            ->assertDontSee('id="filter_priority"', false)
+            ->assertDontSee('id="filter_num_re_listen_times"', false)
+            ->assertDontSee('id="filter_re_listen_value"', false);
+    }
+
+    public function test_filter_layout_can_reorder_fixed_filter_widgets(): void
+    {
+        Option::setFilterFieldLayout([
+            ['field' => ProductField::Priority->value, 'visible' => true],
+            ['field' => ProductField::Title->value, 'visible' => true],
+            ['field' => ProductField::Notes->value, 'visible' => true],
+            ['field' => ProductField::TotalTimesReListened->value, 'visible' => true],
+            ['field' => ProductField::ReListenValue->value, 'visible' => true],
+        ]);
+
+        Livewire::test(ProductIndex::class)
+            ->assertSeeInOrder([
+                'id="filter_priority"',
+                'id="filter_title"',
+                'id="filter_notes"',
+                'id="filter_num_re_listen_times"',
+                'id="filter_re_listen_value"',
+            ], false);
     }
 
     private function createProduct(int $number, array $attributes = []): Product

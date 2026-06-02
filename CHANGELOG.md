@@ -2,6 +2,12 @@
 
 ## Development
 
+* 2026-06-02 -- 1.4.2 Contributor Info, Customizable Layouts and Performance
+  * Added normalized contributor info
+  * Added configurable field layouts for Index, Edit, Filter, Quick Add, and Custom Quick Add. Added Options controls for them.
+  * Optimized Index rendering with batched option reads, conditional relation loading, inline cells, prepared tag links, and narrower product hydration
+  * General cleanup, and updated tests/docs
+
 * 2026-05-30 -- 1.4.1 UI Polish
   * Fixed single-value autocomplete reopening after selection and smoothed mobile menu closing
   * Added Options page timings to performance smoke coverage

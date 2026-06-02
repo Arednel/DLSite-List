@@ -56,26 +56,11 @@
                                             <table class="form-fields-table" cellpadding="5" cellspacing="0"
                                                 width="100%">
                                                 <tbody>
-                                                    <x-fields.rj-input />
-                                                    <x-fields.status-select />
-                                                    <x-fields.score-select />
-                                                    <x-fields.series-field />
-                                                    <x-fields.title-japanese :required="$isCustomCreate" />
-                                                    <x-fields.title-english />
-                                                    <x-fields.genre-custom />
-                                                    <x-fields.notes />
-                                                    @if ($isCustomCreate)
-                                                        <x-fields.age-category :options="$ageCategoryOptions" />
-                                                        <x-fields.work-image-upload />
-                                                        <x-fields.sample-images-upload />
-                                                    @endif
-                                                    <x-fields.start-date :month-labels="$monthLabels" :days="$days"
-                                                        :years="$years" />
-                                                    <x-fields.finish-date :month-labels="$monthLabels" :days="$days"
-                                                        :years="$years" />
-                                                    <x-fields.num-re-listen-times />
-                                                    <x-fields.re-listen-value />
-                                                    <x-fields.priority />
+                                                    @foreach ($quickAddFields as $field)
+                                                        <x-fields.create-configurable-row :field="$field"
+                                                            :is-custom-create="$isCustomCreate" :age-category-options="$ageCategoryOptions" :month-labels="$monthLabels"
+                                                            :days="$days" :years="$years" />
+                                                    @endforeach
                                                 </tbody>
                                             </table>
                                             <div class="margin-top-8 margin-bottom-8 dialog-submit-row">

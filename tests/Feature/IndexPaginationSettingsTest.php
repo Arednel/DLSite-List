@@ -63,6 +63,34 @@ class IndexPaginationSettingsTest extends TestCase
         $this->assertSame(250, Option::indexPerPage());
     }
 
+    public function test_settings_component_resets_to_default_with_confirmation(): void
+    {
+        $component = Livewire::test(IndexPaginationSettings::class)
+            ->set('mode', '250')
+            ->call('save')
+            ->call('askResetToDefault')
+            ->assertSet('confirmingResetToDefault', true);
+
+        $this->assertSame(250, Option::indexPerPage());
+
+        $component
+            ->call('cancelResetToDefault')
+            ->assertSet('confirmingResetToDefault', false);
+
+        $this->assertSame(250, Option::indexPerPage());
+
+        $component
+            ->call('askResetToDefault')
+            ->call('resetToDefault')
+            ->assertSet('confirmingResetToDefault', false)
+            ->assertSet('mode', '100')
+            ->assertSet('customValue', '')
+            ->assertSee('Index pagination reset to default.');
+
+        $this->assertSame(Option::DEFAULT_INDEX_PER_PAGE, Option::indexPerPage());
+        $this->assertSame('100', DB::table('options')->where('key', Option::INDEX_PER_PAGE)->value('value'));
+    }
+
     public function test_settings_component_clears_saved_notice_when_inputs_change(): void
     {
         Livewire::test(IndexPaginationSettings::class)

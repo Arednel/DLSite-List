@@ -46,28 +46,13 @@
                                                 width="100%">
                                                 <tbody>
                                                     <x-fields.rj-display :id="$product->id" :work-name="$product->work_name" />
-                                                    <x-fields.status-select :value="$product->progress" />
-                                                    <x-fields.score-select :value="$product->score" />
-                                                    <x-fields.series-field :value="$product->series" />
-                                                    <x-fields.title-japanese :value="$product->work_name" required />
-                                                    <x-fields.title-english :value="$product->work_name_english" />
-                                                    @if ($canEditFetchedTags)
-                                                        <x-fields.genre-fetched-editable :value="$genreFetchedEnglishInput" />
-                                                    @else
-                                                        <x-fields.genre-readonly label="Fetched EN Genres"
-                                                            :genres="$englishGenres" />
-                                                    @endif
-                                                    <x-fields.genre-custom :value="$genreCustomInput" />
-                                                    <x-fields.notes :value="$product->notes" />
-                                                    <x-fields.start-date :month-labels="$monthLabels" :days="$days"
-                                                        :years="$years" :month-value="data_get($product->start_date, 'month')" :day-value="data_get($product->start_date, 'day')"
-                                                        :year-value="data_get($product->start_date, 'year')" />
-                                                    <x-fields.finish-date :month-labels="$monthLabels" :days="$days"
-                                                        :years="$years" :month-value="data_get($product->end_date, 'month')" :day-value="data_get($product->end_date, 'day')"
-                                                        :year-value="data_get($product->end_date, 'year')" />
-                                                    <x-fields.num-re-listen-times :value="$product->num_re_listen_times" />
-                                                    <x-fields.re-listen-value :value="$product->re_listen_value" />
-                                                    <x-fields.priority :value="$product->priority" />
+                                                    @foreach ($editFields as $field)
+                                                        <x-fields.edit-configurable-row :field="$field"
+                                                            :product="$product" :age-category-options="$ageCategoryOptions" :contributor-inputs="$contributorInputs"
+                                                            :english-genres="$englishGenres" :custom-genres="$customGenres" :genre-fetched-english-input="$genreFetchedEnglishInput"
+                                                            :genre-custom-input="$genreCustomInput" :readonly-description="$readonlyDescription" :readonly-field-values="$readonlyFieldValues"
+                                                            :month-labels="$monthLabels" :days="$days" :years="$years" />
+                                                    @endforeach
                                                 </tbody>
                                             </table>
                                             <div class="margin-top-8 margin-bottom-8 dialog-submit-row">

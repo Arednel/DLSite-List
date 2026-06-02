@@ -63,6 +63,48 @@ class ProductIndexFiltersTest extends TestCase
         $this->assertSame(ProductIndexSortDirection::Desc, $filters->primarySort?->direction);
     }
 
+    public function test_metadata_text_filters_round_trip_through_input_and_query_output(): void
+    {
+        $filters = ProductIndexFilters::fromQuery([
+            'circle' => '  Circle Token  ',
+            'scenario' => 'Scenario Token',
+            'voice_actor' => 'Voice Token',
+            'illustration' => 'Illustration Token',
+            'author' => 'Author Token',
+            'description' => 'Description Token',
+        ]);
+
+        $this->assertSame('Circle Token', $filters->circle);
+        $this->assertSame('Scenario Token', $filters->scenario);
+        $this->assertSame('Voice Token', $filters->voiceActor);
+        $this->assertSame('Illustration Token', $filters->illustration);
+        $this->assertSame('Author Token', $filters->author);
+        $this->assertSame('Description Token', $filters->description);
+        $this->assertSame([
+            'circle' => 'Circle Token',
+            'scenario' => 'Scenario Token',
+            'voice_actor' => 'Voice Token',
+            'illustration' => 'Illustration Token',
+            'author' => 'Author Token',
+            'description' => 'Description Token',
+        ], array_intersect_key($filters->toInput(), array_flip([
+            'circle',
+            'scenario',
+            'voice_actor',
+            'illustration',
+            'author',
+            'description',
+        ])));
+        $this->assertSame([
+            'circle' => 'Circle Token',
+            'scenario' => 'Scenario Token',
+            'voice_actor' => 'Voice Token',
+            'illustration' => 'Illustration Token',
+            'author' => 'Author Token',
+            'description' => 'Description Token',
+        ], $filters->toQuery());
+    }
+
     public function test_it_exposes_the_index_input_keys_in_query_order(): void
     {
         $this->assertSame(
@@ -79,6 +121,12 @@ class ProductIndexFiltersTest extends TestCase
             ['notes'],
             ['genre'],
             ['series'],
+            ['circle'],
+            ['scenario'],
+            ['voice_actor'],
+            ['illustration'],
+            ['author'],
+            ['description'],
             ['tags', 'tag_match'],
             ['age_category'],
             ['progress'],

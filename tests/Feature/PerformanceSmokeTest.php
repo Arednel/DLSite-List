@@ -2,6 +2,9 @@
 
 namespace Tests\Feature;
 
+use App\Enums\ProductContributorRole;
+use App\Enums\ProductField;
+use App\Models\Contributor;
 use App\Models\Genre;
 use App\Models\Option;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -46,9 +49,15 @@ class PerformanceSmokeTest extends TestCase
         $allTagFilter = $allTagFilter !== '' ? $allTagFilter : $this->hotTagTitle();
 
         $measurements = [];
-        $measurements['plain paginated index'] = $this->averageResponseTime(
-            'plain paginated index',
+        $measurements['default-column paginated index'] = $this->averageResponseTime(
+            'default-column paginated index',
             fn() => $this->get('/')->assertOk(),
+        );
+        $measurements['full-column paginated index'] = $this->withFullIndexLayout(
+            fn(): float => $this->averageResponseTime(
+                'full-column paginated index',
+                fn() => $this->get('/')->assertOk(),
+            ),
         );
         $measurements['filtered index with tag and sort'] = $this->averageResponseTime(
             'filtered index with tag and sort',
@@ -90,9 +99,15 @@ class PerformanceSmokeTest extends TestCase
         );
 
         Option::setIndexPerPage(Option::INDEX_PER_PAGE_UNLIMITED);
-        $measurements['unlimited index'] = $this->averageResponseTime(
-            'unlimited index',
+        $measurements['default-column unlimited index'] = $this->averageResponseTime(
+            'default-column unlimited index',
             fn() => $this->get('/')->assertOk(),
+        );
+        $measurements['full-column unlimited index'] = $this->withFullIndexLayout(
+            fn(): float => $this->averageResponseTime(
+                'full-column unlimited index',
+                fn() => $this->get('/')->assertOk(),
+            ),
         );
         Option::setIndexPerPage(Option::DEFAULT_INDEX_PER_PAGE);
 
@@ -202,8 +217,8 @@ class PerformanceSmokeTest extends TestCase
                             'age_category' => $number % 2 === 0 ? 'ALL_AGES' : 'R18',
                             'circle' => 'PERF_CIRCLE',
                             'work_image' => sprintf('storage/Works/%s/cover.jpg', $this->productId($number)),
-                            'description' => null,
-                            'description_english' => null,
+                            'description' => sprintf('PERF_DESCRIPTION_JP_%d', $number),
+                            'description_english' => sprintf('PERF_DESCRIPTION_EN_%d', $number),
                             'notes' => null,
                             'sample_images' => json_encode([]),
                             'score' => ($number % 10) + 1,
@@ -222,6 +237,8 @@ class PerformanceSmokeTest extends TestCase
                         ->all()
                 );
             });
+
+        $this->seedContributors($now);
 
         $genreIds = DB::table('genres')
             ->orderBy('title')
@@ -247,6 +264,57 @@ class PerformanceSmokeTest extends TestCase
                         ->all()
                 );
             });
+    }
+
+    private function seedContributors(\DateTimeInterface $now): void
+    {
+        foreach ($this->contributorRoles() as $role) {
+            collect(range(1, self::WORK_COUNT))
+                ->chunk(500)
+                ->each(function ($chunk) use ($role, $now): void {
+                    DB::table('contributors')->insert(
+                        $chunk
+                            ->map(function (int $number) use ($role, $now): array {
+                                $name = $this->contributorName($role, $number);
+
+                                return [
+                                    'name' => $name,
+                                    'name_key' => Contributor::nameKey($name),
+                                    'maker_id' => $role === ProductContributorRole::Circle
+                                        ? sprintf('RG%09d', $number)
+                                        : null,
+                                    'created_at' => $now,
+                                    'updated_at' => $now,
+                                ];
+                            })
+                            ->all()
+                    );
+                });
+        }
+
+        $contributorIdsByNameKey = DB::table('contributors')->pluck('id', 'name_key');
+
+        foreach ($this->contributorRoles() as $role) {
+            collect(range(1, self::WORK_COUNT))
+                ->chunk(500)
+                ->each(function ($chunk) use ($contributorIdsByNameKey, $role, $now): void {
+                    DB::table('contributor_product')->insert(
+                        $chunk
+                            ->map(function (int $number) use ($contributorIdsByNameKey, $role, $now): array {
+                                $nameKey = Contributor::nameKey($this->contributorName($role, $number));
+
+                                return [
+                                    'product_id' => $this->productId($number),
+                                    'contributor_id' => (int) $contributorIdsByNameKey->get($nameKey),
+                                    'role' => $role->value,
+                                    'created_at' => $now,
+                                    'updated_at' => $now,
+                                ];
+                            })
+                            ->all()
+                    );
+                });
+        }
     }
 
     private function validatePerformanceSeedConfig(): void
@@ -417,6 +485,63 @@ class PerformanceSmokeTest extends TestCase
     private function tagTitle(int $number): string
     {
         return sprintf('PERF_TAG_%03d', $number);
+    }
+
+    private function contributorName(ProductContributorRole $role, int $number): string
+    {
+        return sprintf('PERF_%s_%03d', strtoupper($role->value), $number);
+    }
+
+    /**
+     * @return list<ProductContributorRole>
+     */
+    private function contributorRoles(): array
+    {
+        return [
+            ProductContributorRole::Circle,
+            ProductContributorRole::Scenario,
+            ProductContributorRole::Illustration,
+            ProductContributorRole::VoiceActor,
+            ProductContributorRole::Author,
+        ];
+    }
+
+    /**
+     * @return list<array{field: string, visible: bool}>
+     */
+    private function fullIndexFieldLayout(): array
+    {
+        return collect([
+            ProductField::Image,
+            ProductField::Title,
+            ProductField::Score,
+            ProductField::Series,
+            ProductField::AgeCategory,
+            ProductField::Progress,
+            ProductField::Circle,
+            ProductField::Scenario,
+            ProductField::Illustration,
+            ProductField::VoiceActor,
+            ProductField::Author,
+            ProductField::Description,
+            ProductField::Tags,
+        ])
+            ->map(fn(ProductField $field): array => [
+                'field' => $field->value,
+                'visible' => true,
+            ])
+            ->all();
+    }
+
+    private function withFullIndexLayout(callable $callback): mixed
+    {
+        Option::setIndexFieldLayout($this->fullIndexFieldLayout());
+
+        try {
+            return $callback();
+        } finally {
+            Option::setIndexFieldLayout([]);
+        }
     }
 
     private function progressForProductNumber(int $productNumber): string

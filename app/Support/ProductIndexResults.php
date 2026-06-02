@@ -2,6 +2,7 @@
 
 namespace App\Support;
 
+use App\Enums\ProductField;
 use App\Enums\ProductIndexSortField;
 use App\Models\Option;
 use App\Models\Product;
@@ -12,27 +13,29 @@ use Illuminate\Support\Facades\DB;
 
 final class ProductIndexResults
 {
-    private const INDEX_COLUMNS = [
+    private const BASE_INDEX_COLUMNS = [
         'id',
         'work_name',
         'work_name_english',
         'notes',
-        'score',
-        'series',
-        'age_category',
         'progress',
-        'work_image',
-        'priority',
-        'num_re_listen_times',
-        're_listen_value',
-        'start_date',
-        'end_date',
-        'created_at',
     ];
 
-    public function getProducts(ProductIndexFilters $filters, int|string $perPage): EloquentCollection|LengthAwarePaginator
-    {
-        $query = $this->filteredQuery($filters);
+    private const VISIBLE_FIELD_COLUMNS = [
+        'image' => ['work_image'],
+        'score' => ['score'],
+        'series' => ['series'],
+        'age_category' => ['age_category'],
+        'circle' => ['circle', 'maker_id'],
+        'description' => ['description', 'description_english'],
+    ];
+
+    public function getProducts(
+        ProductIndexFilters $filters,
+        int|string $perPage,
+        array $visibleFields = [],
+    ): EloquentCollection|LengthAwarePaginator {
+        $query = $this->filteredQuery($filters, $this->indexColumns($visibleFields));
         $query = $this->applySqlSorting($query, $filters->sorts());
 
         return $perPage === Option::INDEX_PER_PAGE_UNLIMITED
@@ -90,10 +93,10 @@ final class ProductIndexResults
         return max(1, (int) ceil($total / $perPage));
     }
 
-    private function filteredQuery(ProductIndexFilters $filters): Builder
+    private function filteredQuery(ProductIndexFilters $filters, ?array $columns = null): Builder
     {
         return Product::query()
-            ->select(self::INDEX_COLUMNS)
+            ->select($columns ?? ['id'])
             ->when(
                 $filters->ageCategory !== null,
                 fn($query) => $query->where('age_category', $filters->ageCategory->value)
@@ -109,6 +112,30 @@ final class ProductIndexResults
             ->when(
                 $filters->series !== '',
                 fn($query) => $query->filterSeries($filters->series)
+            )
+            ->when(
+                $filters->circle !== '',
+                fn($query) => $query->filterCircle($filters->circle)
+            )
+            ->when(
+                $filters->scenario !== '',
+                fn($query) => $query->filterContributor('scenario', $filters->scenario)
+            )
+            ->when(
+                $filters->voiceActor !== '',
+                fn($query) => $query->filterContributor('voice_actor', $filters->voiceActor)
+            )
+            ->when(
+                $filters->illustration !== '',
+                fn($query) => $query->filterContributor('illustration', $filters->illustration)
+            )
+            ->when(
+                $filters->author !== '',
+                fn($query) => $query->filterContributor('author', $filters->author)
+            )
+            ->when(
+                $filters->description !== '',
+                fn($query) => $query->filterDescription($filters->description)
             )
             ->when(
                 $filters->title !== '',
@@ -168,6 +195,34 @@ final class ProductIndexResults
             ->groupBy('product_id');
     }
 
+    public function loadContributors(array $productIds, array $visibleFields): \Illuminate\Support\Collection
+    {
+        $roles = collect($visibleFields)
+            ->map(fn(string $field): ?string => ProductField::tryFrom($field)?->contributorRole()?->value)
+            ->filter()
+            ->values()
+            ->all();
+
+        if ($productIds === [] || $roles === []) {
+            return collect();
+        }
+
+        return DB::table('contributor_product')
+            ->join('contributors', 'contributors.id', '=', 'contributor_product.contributor_id')
+            ->whereIn('contributor_product.product_id', $productIds)
+            ->whereIn('contributor_product.role', $roles)
+            ->orderBy('contributors.name')
+            ->get([
+                'contributor_product.product_id',
+                'contributor_product.role',
+                'contributors.id',
+                'contributors.name',
+                'contributors.maker_id',
+            ])
+            ->groupBy('product_id')
+            ->map(fn($rows) => $rows->groupBy('role'));
+    }
+
     /**
      * @param  list<ProductIndexSort>  $sorts
      */
@@ -195,5 +250,16 @@ final class ProductIndexResults
         $query
             ->orderByRaw($query->getQuery()->getGrammar()->wrap($column) . ' IS NULL')
             ->orderBy($column, $direction);
+    }
+
+    private function indexColumns(array $visibleFields): array
+    {
+        $columns = self::BASE_INDEX_COLUMNS;
+
+        foreach ($visibleFields as $field) {
+            $columns = array_merge($columns, self::VISIBLE_FIELD_COLUMNS[$field] ?? []);
+        }
+
+        return array_values(array_unique($columns));
     }
 }

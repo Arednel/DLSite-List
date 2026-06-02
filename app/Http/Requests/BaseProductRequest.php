@@ -6,14 +6,24 @@ use App\Enums\ProductPriority;
 use App\Enums\ProductProgress;
 use App\Enums\ProductReListenValue;
 use App\Enums\ProductScore;
+use App\Enums\ProductAgeCategory;
+use App\Enums\ProductContributorRole;
 use App\Support\TagInput;
 use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Support\Arr;
 use Illuminate\Support\Carbon;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\Validator;
 
 abstract class BaseProductRequest extends FormRequest
 {
+    /**
+     * @var list<string>
+     */
+    protected array $originalInputKeys = [];
+
+    protected array $originalInput = [];
+
     protected function normalizeRjIdInput(): void
     {
         $id = $this->input('id');
@@ -31,8 +41,17 @@ abstract class BaseProductRequest extends FormRequest
             'progress' => ['nullable', Rule::enum(ProductProgress::class)],
             'score' => ['nullable', Rule::enum(ProductScore::class)],
             'series' => ['nullable', 'string'],
+            'age_category' => ['nullable', Rule::enum(ProductAgeCategory::class)],
+            'circle' => ['nullable', 'string'],
+            'maker_id' => ['nullable', 'string'],
+            ProductContributorRole::Scenario->value => ['nullable', 'array'],
+            ProductContributorRole::VoiceActor->value => ['nullable', 'array'],
+            ProductContributorRole::Illustration->value => ['nullable', 'array'],
+            ProductContributorRole::Author->value => ['nullable', 'array'],
             'genre_custom' => ['nullable', 'array'],
             'work_name_english' => ['nullable', 'string'],
+            'description' => ['nullable', 'string'],
+            'description_english' => ['nullable', 'string'],
             'notes' => ['nullable', 'string'],
             'start_date' => ['nullable', 'array'],
             'end_date' => ['nullable', 'array'],
@@ -47,14 +66,34 @@ abstract class BaseProductRequest extends FormRequest
      */
     protected function prepareForValidation(): void
     {
+        $this->originalInput = $this->all();
+        $this->originalInputKeys = array_keys($this->all());
+
         $this->merge([
             'genre_custom' => $this->normalizeGenreCustom($this->input('genre_custom')),
+            ProductContributorRole::Scenario->value => $this->normalizeGenreList($this->input(ProductContributorRole::Scenario->value)),
+            ProductContributorRole::VoiceActor->value => $this->normalizeGenreList($this->input(ProductContributorRole::VoiceActor->value)),
+            ProductContributorRole::Illustration->value => $this->normalizeGenreList($this->input(ProductContributorRole::Illustration->value)),
+            ProductContributorRole::Author->value => $this->normalizeGenreList($this->input(ProductContributorRole::Author->value)),
             'start_date' => $this->normalizeDateParts($this->input('add.start_date')),
             'end_date' => $this->normalizeDateParts($this->input('add.finish_date')),
             'num_re_listen_times' => $this->normalizeNullableInt($this->input('add.num_re_listen_times')),
             're_listen_value' => $this->normalizeNullableInt($this->input('add.re_listen_value')),
             'priority' => $this->normalizeNullableInt($this->input('add.priority')),
         ]);
+    }
+
+    public function wasSubmitted(string $key): bool
+    {
+        if (in_array($key, $this->originalInputKeys, true) || Arr::has($this->originalInput, $key)) {
+            return true;
+        }
+
+        $prefix = $key . '.';
+
+        return collect(Arr::dot($this->originalInput))
+            ->keys()
+            ->contains(fn(string $inputKey): bool => str_starts_with($inputKey, $prefix));
     }
 
     public function after(): array

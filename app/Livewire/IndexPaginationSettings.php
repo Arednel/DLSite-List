@@ -2,18 +2,20 @@
 
 namespace App\Livewire;
 
+use App\Livewire\Concerns\ConfirmsOptionReset;
 use App\Models\Option;
 use Illuminate\Validation\Rule;
 use Illuminate\View\View;
+use Livewire\Attributes\On;
 use Livewire\Component;
 
 class IndexPaginationSettings extends Component
 {
+    use ConfirmsOptionReset;
+
     public string $mode = '100';
 
     public string $customValue = '';
-
-    public bool $saved = false;
 
     public function mount(): void
     {
@@ -44,7 +46,21 @@ class IndexPaginationSettings extends Component
 
         Option::setIndexPerPage($this->resolvedValue());
         $this->fillFromSetting();
-        $this->saved = true;
+        $this->markSaved('Index pagination setting saved.');
+    }
+
+    public function resetToDefault(): void
+    {
+        Option::resetIndexPerPageToDefault();
+        $this->fillFromSetting();
+        $this->completeResetWithNotice('Index pagination reset to default.');
+    }
+
+    #[On('options-defaults-reset')]
+    public function refreshFromSettings(): void
+    {
+        $this->fillFromSetting();
+        $this->clearSavedNotice();
     }
 
     public function updated(string $property): void
@@ -53,8 +69,7 @@ class IndexPaginationSettings extends Component
             return;
         }
 
-        $this->saved = false;
-        $this->resetValidation();
+        $this->clearSavedNotice();
     }
 
     private function fillFromSetting(): void

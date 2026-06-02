@@ -35,12 +35,25 @@
     @enderror
 
     @if ($saved)
-        <div class="notice" wire:dirty.remove wire:target="tagOrder,seriesOrder">Autocomplete settings saved.</div>
+        <div class="notice" wire:dirty.remove wire:target="tagOrder,seriesOrder">{{ $notice }}</div>
     @endif
 
     <div class="option-actions">
         <button type="submit" class="tag tag--soft tag--lg is-clickable">
             Save autocomplete
         </button>
+        <button type="button" class="tag tag--soft tag--lg is-clickable option-reset-button"
+            wire:click="askResetToDefault">
+            Reset to default
+        </button>
     </div>
+
+    @include('livewire.partials.options-reset-confirmation-modal', [
+        'open' => $confirmingResetToDefault,
+        'modalId' => 'autocomplete-reset-modal',
+        'message' => 'Reset this setting to its default?',
+        'confirmLabel' => 'Reset to default',
+        'confirmAction' => 'resetToDefault',
+        'cancelAction' => 'cancelResetToDefault',
+    ])
 </form>
