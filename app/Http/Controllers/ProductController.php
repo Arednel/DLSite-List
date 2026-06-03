@@ -293,7 +293,6 @@ class ProductController extends Controller
             ),
             'editFields' => ProductFieldLayout::editFields(Option::editFieldLayout()),
             'contributorInputs' => $this->formatContributorInputs($product),
-            'readonlyDescription' => $this->readonlyDescription($product),
             'readonlyFieldValues' => $this->readonlyFieldValues($product),
             'returnQuery' => $returnTarget->query,
             'returnFragment' => $returnTarget->fragment,
@@ -409,16 +408,15 @@ class ProductController extends Controller
 
     private function readonlyDescription(Product $product): ?string
     {
-        $description = collect([$product->description, $product->description_english])
+        return collect([$product->description, $product->description_english])
             ->filter(fn(mixed $value): bool => filled($value))
-            ->implode(PHP_EOL . PHP_EOL);
-
-        return $description === '' ? null : $description;
+            ->join("\n\n") ?: null;
     }
 
     private function readonlyFieldValues(Product $product): array
     {
         return [
+            ProductField::Description->value => $this->readonlyDescription($product),
             ProductField::Notes->value => $product->notes,
             ProductField::StartDate->value => $this->readonlyDate($product->start_date),
             ProductField::FinishDate->value => $this->readonlyDate($product->end_date),
@@ -430,16 +428,14 @@ class ProductController extends Controller
 
     private function readonlyDate(?array $date): ?string
     {
-        $parts = collect([
+        return collect([
             'Year' => data_get($date, 'year'),
             'Month' => data_get($date, 'month'),
             'Day' => data_get($date, 'day'),
         ])
             ->filter(fn(mixed $value): bool => filled($value))
             ->map(fn(mixed $value, string $label): string => "{$label}: {$value}")
-            ->implode(', ');
-
-        return $parts === '' ? null : $parts;
+            ->join(', ') ?: null;
     }
 
     /**
@@ -655,17 +651,8 @@ class ProductController extends Controller
         ProductField $field,
         string|array $submittedKeys,
     ): bool {
-        if (! $this->createFieldVisible($visibleFields, $field)) {
-            return false;
-        }
-
-        foreach ((array) $submittedKeys as $submittedKey) {
-            if ($request->wasSubmitted($submittedKey)) {
-                return true;
-            }
-        }
-
-        return false;
+        return $this->createFieldVisible($visibleFields, $field)
+            && $request->wasAnySubmitted($submittedKeys);
     }
 
     private function createFieldVisible(array $visibleFields, ProductField $field): bool
@@ -742,7 +729,7 @@ class ProductController extends Controller
         foreach ($this->updatePayloadFieldMap() as $field => $submittedColumns) {
             if (
                 ! in_array($field, $editableFields, true)
-                || ! $this->wasAnySubmitted($request, array_keys($submittedColumns))
+                || ! $request->wasAnySubmitted(array_keys($submittedColumns))
             ) {
                 continue;
             }
@@ -778,20 +765,6 @@ class ProductController extends Controller
             ProductField::ReListenValue->value => ['add.re_listen_value' => 're_listen_value'],
             ProductField::Priority->value => ['add.priority' => 'priority'],
         ];
-    }
-
-    /**
-     * @param  list<string>  $keys
-     */
-    private function wasAnySubmitted(UpdateProductRequest $request, array $keys): bool
-    {
-        foreach ($keys as $key) {
-            if ($request->wasSubmitted($key)) {
-                return true;
-            }
-        }
-
-        return false;
     }
 
     /**

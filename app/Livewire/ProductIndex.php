@@ -68,21 +68,40 @@ class ProductIndex extends Component
     public function render(): View
     {
         $productIndexResults = app(ProductIndexResults::class);
+
         $filters = $this->filters;
         $filterQuery = $this->filterQuery;
         $settings = Option::productIndexSettings();
-        $products = $productIndexResults->getProducts($filters, $settings->perPage, $settings->visibleIndexFields);
+
+        $products = $productIndexResults->getProducts(
+            $filters,
+            $settings->perPage,
+            $settings->visibleIndexFields,
+        );
+
         $isUnlimited = $settings->perPage === Option::INDEX_PER_PAGE_UNLIMITED;
+
+        // The index view needs a plain Eloquent collection for IDs and related display data,
+        // even when the main product list is paginated.
         $visibleProducts = $products instanceof LengthAwarePaginator
             ? new EloquentCollection($products->items())
             : $products;
+
         $visibleProductIds = $visibleProducts->modelKeys();
+
+        // Load optional table data only when the current column layout can actually show it.
         $productGenres = in_array(ProductField::Tags->value, $settings->visibleIndexFields, true)
             ? $productIndexResults->loadVisibleGenres($visibleProductIds)
             : collect();
-        $productContributors = collect($settings->indexColumns)->contains(fn(array $column): bool => $column['contributor_role'] !== null)
+
+        $hasContributorColumns = collect($settings->indexColumns)
+            ->whereNotNull('contributor_role')
+            ->isNotEmpty();
+
+        $productContributors = $hasContributorColumns
             ? $productIndexResults->loadContributors($visibleProductIds, $settings->visibleIndexFields)
             : collect();
+
         $currentQuery = $this->queryWithCurrentPage($filterQuery, $isUnlimited);
         $tagLinkQuery = $filters->toQueryWithout('genre');
 
@@ -206,13 +225,9 @@ class ProductIndex extends Component
      */
     private function currentInput(): array
     {
-        $input = [];
-
-        foreach (ProductIndexFilters::INPUT_KEYS as $key) {
-            $input[$key] = (string) $this->{$key};
-        }
-
-        return $input;
+        return collect(ProductIndexFilters::INPUT_KEYS)
+            ->mapWithKeys(fn(string $key): array => [$key => (string) $this->{$key}])
+            ->all();
     }
 
     /**

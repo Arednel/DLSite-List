@@ -628,7 +628,7 @@ class ProductIndexLivewireTest extends TestCase
             ->assertSee('id="filter_priority"', false)
             ->assertSee('--index-table-width: 1400px', false);
 
-        $this->assertCount(1, $optionQueries, implode(PHP_EOL, $optionQueries));
+        $this->assertCount(1, $optionQueries, implode("\n", $optionQueries));
     }
 
     public function test_search_results_paginate_across_pages(): void

@@ -50,8 +50,8 @@
                                                         <x-fields.edit-configurable-row :field="$field"
                                                             :product="$product" :age-category-options="$ageCategoryOptions" :contributor-inputs="$contributorInputs"
                                                             :english-genres="$englishGenres" :custom-genres="$customGenres" :genre-fetched-english-input="$genreFetchedEnglishInput"
-                                                            :genre-custom-input="$genreCustomInput" :readonly-description="$readonlyDescription" :readonly-field-values="$readonlyFieldValues"
-                                                            :month-labels="$monthLabels" :days="$days" :years="$years" />
+                                                            :genre-custom-input="$genreCustomInput" :readonly-field-values="$readonlyFieldValues" :month-labels="$monthLabels"
+                                                            :days="$days" :years="$years" />
                                                     @endforeach
                                                 </tbody>
                                             </table>

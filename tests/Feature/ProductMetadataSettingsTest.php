@@ -185,13 +185,9 @@ class ProductMetadataSettingsTest extends TestCase
     public function test_field_layout_component_supports_drag_reordering(): void
     {
         Livewire::test(ProductFieldLayoutSettings::class)
-            ->assertSee('wire:sort="reorderIndexLayout"', false)
-            ->assertSee('wire:sort="reorderEditLayout"', false)
-            ->assertSee('wire:sort="reorderFilterLayout"', false)
-            ->assertSee('wire:sort="reorderQuickAddLayout"', false)
-            ->assertSee('wire:sort="reorderCustomQuickAddLayout"', false)
-            ->assertSee('wire:sort:item="score"', false)
-            ->assertSee('wire:sort:item="title"', false)
+            ->assertSee('wire:sort="reorderLayout"', false)
+            ->assertSee('wire:sort:item="indexOrder|score"', false)
+            ->assertSee('wire:sort:item="indexOrder|title"', false)
             ->assertSee('wire:model.live="indexFields.title.visible"', false)
             ->assertSee('wire:model.live="quickAddFields.rj_code.visible"', false)
             ->assertSee('wire:model.live="customQuickAddFields.image.visible"', false)
@@ -204,15 +200,15 @@ class ProductMetadataSettingsTest extends TestCase
             ->assertSee('wire:click.stop="move(', false)
             ->assertSee('field-layout-drag-handle', false)
             ->assertSee('fa-solid fa-arrows-up-down', false)
-            ->call('reorderIndexLayout', ProductField::Description->value, 0)
+            ->call('reorderLayout', 'indexOrder|' . ProductField::Description->value, 0)
             ->assertSet('indexOrder.0', ProductField::Description->value)
-            ->call('reorderEditLayout', ProductField::Tags->value, 0)
+            ->call('reorderLayout', 'editOrder|' . ProductField::Tags->value, 0)
             ->assertSet('editOrder.0', ProductField::Tags->value)
-            ->call('reorderFilterLayout', ProductField::VoiceActor->value, 0)
+            ->call('reorderLayout', 'filterOrder|' . ProductField::VoiceActor->value, 0)
             ->assertSet('filterOrder.0', ProductField::VoiceActor->value)
-            ->call('reorderQuickAddLayout', ProductField::Priority->value, 1)
+            ->call('reorderLayout', 'quickAddOrder|' . ProductField::Priority->value, 1)
             ->assertSet('quickAddOrder.1', ProductField::Priority->value)
-            ->call('reorderCustomQuickAddLayout', ProductField::SampleImages->value, 1)
+            ->call('reorderLayout', 'customQuickAddOrder|' . ProductField::SampleImages->value, 1)
             ->assertSet('customQuickAddOrder.1', ProductField::SampleImages->value)
             ->call('save')
             ->assertSet('saved', true);
@@ -260,7 +256,13 @@ class ProductMetadataSettingsTest extends TestCase
         $originalFields = $component->get('indexFields');
 
         $component
-            ->call('reorderIndexLayout', 'not_a_field', 0)
+            ->call('reorderLayout', 'notARealOrder|' . ProductField::VoiceActor->value, 0)
+            ->assertSet('indexOrder', $originalOrder)
+            ->assertSet('indexFields', $originalFields)
+            ->call('reorderLayout', 'indexOrder|not_a_field', 0)
+            ->assertSet('indexOrder', $originalOrder)
+            ->assertSet('indexFields', $originalFields)
+            ->call('reorderLayout', ProductField::Tags->value, 999)
             ->assertSet('indexOrder', $originalOrder)
             ->assertSet('indexFields', $originalFields);
 
@@ -268,9 +270,9 @@ class ProductMetadataSettingsTest extends TestCase
         $this->assertSame($originalFields, $component->get('indexFields'));
 
         $component
-            ->call('reorderIndexLayout', ProductField::Tags->value, 999)
+            ->call('reorderLayout', 'indexOrder|' . ProductField::Tags->value, 999)
             ->assertSet('indexOrder.12', ProductField::Tags->value)
-            ->call('reorderIndexLayout', ProductField::Tags->value, -5)
+            ->call('reorderLayout', 'indexOrder|' . ProductField::Tags->value, -5)
             ->assertSet('indexOrder.0', ProductField::Tags->value);
     }
 
@@ -281,7 +283,7 @@ class ProductMetadataSettingsTest extends TestCase
             ->call('move', 'indexOrder', 11, -1)
             ->assertSet('indexFields.description.visible', true)
             ->assertSet('indexOrder.10', ProductField::Description->value)
-            ->call('reorderIndexLayout', ProductField::Description->value, 0)
+            ->call('reorderLayout', 'indexOrder|' . ProductField::Description->value, 0)
             ->assertSet('indexFields.description.visible', true)
             ->assertSet('indexOrder.0', ProductField::Description->value)
             ->call('save')

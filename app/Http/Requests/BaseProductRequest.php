@@ -70,7 +70,7 @@ abstract class BaseProductRequest extends FormRequest
         $this->originalInputKeys = array_keys($this->all());
 
         $this->merge([
-            'genre_custom' => $this->normalizeGenreCustom($this->input('genre_custom')),
+            'genre_custom' => $this->normalizeGenreList($this->input('genre_custom')),
             ProductContributorRole::Scenario->value => $this->normalizeGenreList($this->input(ProductContributorRole::Scenario->value)),
             ProductContributorRole::VoiceActor->value => $this->normalizeGenreList($this->input(ProductContributorRole::VoiceActor->value)),
             ProductContributorRole::Illustration->value => $this->normalizeGenreList($this->input(ProductContributorRole::Illustration->value)),
@@ -122,9 +122,9 @@ abstract class BaseProductRequest extends FormRequest
         $day = $date['day'] ?? null;
         $year = $date['year'] ?? null;
 
-        $hasMonth = $this->hasValue($month);
-        $hasDay = $this->hasValue($day);
-        $hasYear = $this->hasValue($year);
+        $hasMonth = filled($month);
+        $hasDay = filled($day);
+        $hasYear = filled($year);
 
         if (!($hasMonth || $hasDay || $hasYear)) {
             return;
@@ -176,7 +176,7 @@ abstract class BaseProductRequest extends FormRequest
         $day = $date['day'] ?? null;
         $year = $date['year'] ?? null;
 
-        if (!$this->hasValue($month) || !$this->hasValue($day) || !$this->hasValue($year)) {
+        if (! filled($month) || ! filled($day) || ! filled($year)) {
             return null;
         }
 
@@ -185,16 +185,6 @@ abstract class BaseProductRequest extends FormRequest
         }
 
         return Carbon::create((int) $year, (int) $month, (int) $day)->startOfDay();
-    }
-
-    protected function hasValue($value): bool
-    {
-        return $value !== null && $value !== '';
-    }
-
-    protected function normalizeGenreCustom(?string $value): array
-    {
-        return $this->normalizeGenreList($value);
     }
 
     protected function normalizeGenreList(?string $value): array
@@ -230,5 +220,11 @@ abstract class BaseProductRequest extends FormRequest
         }
 
         return (int) $value;
+    }
+
+    public function wasAnySubmitted(string|array $keys): bool
+    {
+        return collect((array) $keys)
+            ->contains(fn(string $key): bool => $this->wasSubmitted($key));
     }
 }

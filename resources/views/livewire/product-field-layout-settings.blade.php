@@ -1,19 +1,19 @@
 <div>
     <form wire:submit.prevent="save" class="option-form option-form--wide">
         @foreach ([
-        'index' => ['heading' => 'Index Table', 'order' => 'indexOrder', 'fields' => 'indexFields', 'sortHandler' => 'reorderIndexLayout'],
-        'edit' => ['heading' => 'Edit Form', 'order' => 'editOrder', 'fields' => 'editFields', 'sortHandler' => 'reorderEditLayout'],
-        'filter' => ['heading' => 'Filter Modal', 'order' => 'filterOrder', 'fields' => 'filterFields', 'sortHandler' => 'reorderFilterLayout'],
-        'quick_add' => ['heading' => 'Quick Add', 'order' => 'quickAddOrder', 'fields' => 'quickAddFields', 'sortHandler' => 'reorderQuickAddLayout'],
-        'custom_quick_add' => ['heading' => 'Custom Quick Add', 'order' => 'customQuickAddOrder', 'fields' => 'customQuickAddFields', 'sortHandler' => 'reorderCustomQuickAddLayout'],
+        'index' => ['heading' => 'Index Table', 'order' => 'indexOrder', 'fields' => 'indexFields'],
+        'edit' => ['heading' => 'Edit Form', 'order' => 'editOrder', 'fields' => 'editFields'],
+        'filter' => ['heading' => 'Filter Modal', 'order' => 'filterOrder', 'fields' => 'filterFields'],
+        'quick_add' => ['heading' => 'Quick Add', 'order' => 'quickAddOrder', 'fields' => 'quickAddFields'],
+        'custom_quick_add' => ['heading' => 'Custom Quick Add', 'order' => 'customQuickAddOrder', 'fields' => 'customQuickAddFields'],
     ] as $layoutProperty => $layoutConfig)
             <section class="field-layout-section">
                 <h3>{{ $layoutConfig['heading'] }}</h3>
 
-                <div class="field-layout-list" wire:sort="{{ $layoutConfig['sortHandler'] }}">
+                <div class="field-layout-list" wire:sort="reorderLayout">
                     @foreach ($this->layoutRows($layoutConfig['order'], $layoutConfig['fields']) as $rowIndex => $row)
                         <div class="field-layout-row" wire:key="{{ $layoutProperty }}-{{ $row['field'] }}"
-                            wire:sort:item="{{ $row['field'] }}">
+                            wire:sort:item="{{ $layoutConfig['order'] }}|{{ $row['field'] }}">
                             <div class="field-layout-order">
                                 <button type="button" class="field-layout-drag-handle" wire:sort:handle
                                     aria-label="Drag {{ $row['label'] }}">

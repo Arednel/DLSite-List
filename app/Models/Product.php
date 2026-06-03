@@ -162,13 +162,14 @@ class Product extends Model
             return;
         }
 
-        $query->where(function (Builder $circleQuery) use ($circle): void {
+        $like = "%{$circle}%";
+
+        $query->where(function (Builder $circleQuery) use ($like): void {
             $circleQuery
-                ->whereLike('circle', '%' . $circle . '%')
-                ->orWhereLike('maker_id', '%' . $circle . '%')
-                ->orWhereHas('contributors', function (Builder $contributorQuery) use ($circle): void {
+                ->whereAny(['circle', 'maker_id'], 'like', $like)
+                ->orWhereHas('contributors', function (Builder $contributorQuery) use ($like): void {
                     $contributorQuery->where('contributor_product.role', 'circle')
-                        ->whereLike('contributors.name', '%' . $circle . '%');
+                        ->whereLike('contributors.name', $like);
                 });
         });
     }
@@ -176,13 +177,7 @@ class Product extends Model
     #[Scope]
     protected function filterDescription(Builder $query, string $description): void
     {
-        $description = '%' . trim($description) . '%';
-
-        $query->where(function (Builder $descriptionQuery) use ($description): void {
-            $descriptionQuery
-                ->whereLike('description', $description)
-                ->orWhereLike('description_english', $description);
-        });
+        $query->whereAny(['description', 'description_english'], 'like', '%' . trim($description) . '%');
     }
 
     #[Scope]
@@ -214,12 +209,7 @@ class Product extends Model
     #[Scope]
     protected function filterTitle(Builder $query, string $title): void
     {
-        $title = '%' . trim($title) . '%';
-
-        $query->where(function (Builder $titleQuery) use ($title): void {
-            $titleQuery->whereLike('work_name', $title)
-                ->orWhereLike('work_name_english', $title);
-        });
+        $query->whereAny(['work_name', 'work_name_english'], 'like', '%' . trim($title) . '%');
     }
 
     #[Scope]

@@ -7,6 +7,7 @@ use App\Models\Product;
 use App\Models\TagRefetchRun;
 use App\Models\TagRefetchWorkResult;
 use App\Support\ProductGenreSync;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Facades\Bus;
 use Illuminate\Support\Facades\DB;
 use Throwable;
@@ -126,14 +127,20 @@ class TagRefetchService
 
     public function refreshRunProgress(TagRefetchRun $run): void
     {
-        $counts = $run->results()
-            ->select('status', DB::raw('count(*) as aggregate'))
-            ->groupBy('status')
-            ->pluck('aggregate', 'status');
+        $run->loadCount([
+            'results as pending_results_count' => fn(Builder $query) => $query
+                ->where('status', TagRefetchWorkResult::STATUS_PENDING),
 
-        $pending = (int) ($counts[TagRefetchWorkResult::STATUS_PENDING] ?? 0);
-        $fetched = (int) ($counts[TagRefetchWorkResult::STATUS_FETCHED] ?? 0);
-        $skipped = (int) ($counts[TagRefetchWorkResult::STATUS_SKIPPED] ?? 0);
+            'results as fetched_results_count' => fn(Builder $query) => $query
+                ->where('status', TagRefetchWorkResult::STATUS_FETCHED),
+
+            'results as skipped_results_count' => fn(Builder $query) => $query
+                ->where('status', TagRefetchWorkResult::STATUS_SKIPPED),
+        ]);
+
+        $pending = (int) $run->pending_results_count;
+        $fetched = (int) $run->fetched_results_count;
+        $skipped = (int) $run->skipped_results_count;
         $processed = $fetched + $skipped;
 
         $updates = [

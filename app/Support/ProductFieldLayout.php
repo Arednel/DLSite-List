@@ -334,10 +334,9 @@ final class ProductFieldLayout
      */
     public static function editableFields(array $layout): array
     {
-        return collect($layout)
-            ->filter(fn(array $row): bool => (bool) ($row['visible'] ?? false) && (bool) ($row['editable'] ?? false))
-            ->pluck('field')
-            ->filter(fn(mixed $field): bool => ProductField::tryFrom((string) $field) !== null)
+        return collect(self::visibleRows($layout, self::SURFACE_EDIT))
+            ->filter(fn(array $visibleRow): bool => (bool) ($visibleRow['row']['editable'] ?? false))
+            ->map(fn(array $visibleRow): string => $visibleRow['field']->value)
             ->values()
             ->all();
     }

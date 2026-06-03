@@ -7,7 +7,6 @@
     'customGenres',
     'genreFetchedEnglishInput',
     'genreCustomInput',
-    'readonlyDescription',
     'readonlyFieldValues' => [],
     'monthLabels' => [],
     'days' => [],
@@ -98,7 +97,7 @@
                 </td>
             </tr>
         @else
-            <x-fields.readonly-text label="Description" :value="$readonlyDescription" rows="5" />
+            <x-fields.readonly-text label="Description" :value="$readonlyFieldValues['description'] ?? null" rows="5" />
         @endif
     @break
 

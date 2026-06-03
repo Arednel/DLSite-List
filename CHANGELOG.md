@@ -2,6 +2,10 @@
 
 ## Development
 
+* 2026-06-03 -- 1.4.3 Code Cleanup
+  * Simplified product form submitted-field checks, readonly edit values, index filters, layout reordering, and refetch progress counts with Laravel and Livewire helpers
+  * Updated focused tests for the shared field-layout reorder handler
+
 * 2026-06-02 -- 1.4.2 Contributor Info, Customizable Layouts and Performance
   * Added normalized contributor info
   * Added configurable field layouts for Index, Edit, Filter, Quick Add, and Custom Quick Add. Added Options controls for them.

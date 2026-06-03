@@ -96,31 +96,6 @@ class ProductFieldLayoutSettings extends Component
         $this->clearSavedNotice();
     }
 
-    public function reorderIndexLayout(string $field, int $position): void
-    {
-        $this->reorderLayout('indexOrder', $field, $position);
-    }
-
-    public function reorderEditLayout(string $field, int $position): void
-    {
-        $this->reorderLayout('editOrder', $field, $position);
-    }
-
-    public function reorderFilterLayout(string $field, int $position): void
-    {
-        $this->reorderLayout('filterOrder', $field, $position);
-    }
-
-    public function reorderQuickAddLayout(string $field, int $position): void
-    {
-        $this->reorderLayout('quickAddOrder', $field, $position);
-    }
-
-    public function reorderCustomQuickAddLayout(string $field, int $position): void
-    {
-        $this->reorderLayout('customQuickAddOrder', $field, $position);
-    }
-
     public function layoutRows(string $orderProperty, string $fieldsProperty): array
     {
         if (
@@ -160,9 +135,14 @@ class ProductFieldLayoutSettings extends Component
         );
     }
 
-    private function reorderLayout(string $layout, string $field, int $position): void
+    public function reorderLayout(string $item, int $position): void
     {
-        if (! in_array($layout, self::ORDER_PROPERTIES, true)) {
+        [$layout, $field] = array_pad(explode('|', $item, 2), 2, null);
+
+        if (
+            ! is_string($field)
+            || ! in_array($layout, self::ORDER_PROPERTIES, true)
+        ) {
             return;
         }
 
