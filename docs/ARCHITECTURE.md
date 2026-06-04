@@ -52,6 +52,7 @@
   - `app/Enums/ProductContributorRole.php`
   - `app/Enums/ProductField.php`
   - `app/Support/ProductFieldLayout.php`
+  - `ProductField` owns surface-specific field order, visibility locks, hidden defaults, and edit defaults; `ProductFieldLayout` normalizes stored layout rows and prepares Blade render metadata
 - Shared visible tag helper:
   - `app/Support/VisibleGenreAttachment.php`
 - Autocomplete helpers:
@@ -101,6 +102,7 @@ Shared UI note:
 - Edit Work keeps the RJ Code + Title display row fixed first, then renders the Edit field layout; the `title` layout row is locked visible and expands to the Japanese/English title inputs, while Age Category is hidden by default
 - Index creator/circle filters query normalized contributor rows, circle filters also match `products.maker_id`, and description filters search both Japanese and English description text
 - `ProductContributorRole` owns the role-to-`ProductField` mapping used when Create/Edit field layouts decide whether contributor inputs are visible or editable
+- `ProductField` owns the field layout metadata for Index, Edit, Filter, Quick Add, and Custom Quick Add surfaces so layout normalization and field enum behavior stay aligned
 
 ## Data Model
 `products` table stores:

@@ -8,6 +8,129 @@ use PHPUnit\Framework\TestCase;
 
 class ProductFieldLayoutTest extends TestCase
 {
+    public function test_product_field_exposes_surface_field_order(): void
+    {
+        $expectedOrders = [
+            ProductFieldLayout::SURFACE_INDEX => [
+                ProductField::Image,
+                ProductField::Title,
+                ProductField::Score,
+                ProductField::Series,
+                ProductField::AgeCategory,
+                ProductField::Progress,
+                ProductField::Circle,
+                ProductField::Scenario,
+                ProductField::Illustration,
+                ProductField::VoiceActor,
+                ProductField::Author,
+                ProductField::Description,
+                ProductField::Tags,
+            ],
+            ProductFieldLayout::SURFACE_EDIT => [
+                ProductField::Progress,
+                ProductField::Score,
+                ProductField::Series,
+                ProductField::Title,
+                ProductField::Tags,
+                ProductField::Notes,
+                ProductField::StartDate,
+                ProductField::FinishDate,
+                ProductField::TotalTimesReListened,
+                ProductField::ReListenValue,
+                ProductField::Priority,
+                ProductField::AgeCategory,
+                ProductField::Circle,
+                ProductField::Scenario,
+                ProductField::Illustration,
+                ProductField::VoiceActor,
+                ProductField::Author,
+                ProductField::Description,
+            ],
+            ProductFieldLayout::SURFACE_FILTER => [
+                ProductField::Title,
+                ProductField::Series,
+                ProductField::Notes,
+                ProductField::AgeCategory,
+                ProductField::Progress,
+                ProductField::Score,
+                ProductField::Priority,
+                ProductField::TotalTimesReListened,
+                ProductField::ReListenValue,
+                ProductField::Tags,
+                ProductField::Circle,
+                ProductField::Scenario,
+                ProductField::Illustration,
+                ProductField::VoiceActor,
+                ProductField::Author,
+                ProductField::Description,
+            ],
+            ProductFieldLayout::SURFACE_QUICK_ADD => [
+                ProductField::RjCode,
+                ProductField::Progress,
+                ProductField::Score,
+                ProductField::Series,
+                ProductField::Title,
+                ProductField::Tags,
+                ProductField::Notes,
+                ProductField::StartDate,
+                ProductField::FinishDate,
+                ProductField::TotalTimesReListened,
+                ProductField::ReListenValue,
+                ProductField::Priority,
+                ProductField::AgeCategory,
+                ProductField::Circle,
+                ProductField::Scenario,
+                ProductField::Illustration,
+                ProductField::VoiceActor,
+                ProductField::Author,
+                ProductField::Description,
+            ],
+            ProductFieldLayout::SURFACE_CUSTOM_QUICK_ADD => [
+                ProductField::RjCode,
+                ProductField::Progress,
+                ProductField::Score,
+                ProductField::Series,
+                ProductField::Title,
+                ProductField::Tags,
+                ProductField::Notes,
+                ProductField::AgeCategory,
+                ProductField::Image,
+                ProductField::SampleImages,
+                ProductField::StartDate,
+                ProductField::FinishDate,
+                ProductField::TotalTimesReListened,
+                ProductField::ReListenValue,
+                ProductField::Priority,
+                ProductField::Circle,
+                ProductField::Scenario,
+                ProductField::Illustration,
+                ProductField::VoiceActor,
+                ProductField::Author,
+                ProductField::Description,
+            ],
+        ];
+
+        foreach ($expectedOrders as $surface => $fields) {
+            $this->assertSame($fields, ProductField::forSurface($surface));
+        }
+    }
+
+    public function test_product_field_exposes_surface_availability_and_defaults(): void
+    {
+        $this->assertFalse(ProductField::SampleImages->isAvailableOn(ProductFieldLayout::SURFACE_QUICK_ADD));
+        $this->assertTrue(ProductField::SampleImages->isAvailableOn(ProductFieldLayout::SURFACE_CUSTOM_QUICK_ADD));
+
+        $this->assertTrue(ProductField::Title->isVisibilityLocked(ProductFieldLayout::SURFACE_EDIT));
+        $this->assertTrue(ProductField::Title->isEditableByDefault(ProductFieldLayout::SURFACE_EDIT));
+        $this->assertTrue(ProductField::RjCode->isVisibilityLocked(ProductFieldLayout::SURFACE_QUICK_ADD));
+        $this->assertTrue(ProductField::Image->isVisibilityLocked(ProductFieldLayout::SURFACE_CUSTOM_QUICK_ADD));
+
+        $this->assertTrue(ProductField::AgeCategory->isHiddenByDefault(ProductFieldLayout::SURFACE_EDIT));
+        $this->assertTrue(ProductField::AgeCategory->isHiddenByDefault(ProductFieldLayout::SURFACE_QUICK_ADD));
+        $this->assertFalse(ProductField::AgeCategory->isHiddenByDefault(ProductFieldLayout::SURFACE_CUSTOM_QUICK_ADD));
+        $this->assertTrue(ProductField::Description->isHiddenByDefault(ProductFieldLayout::SURFACE_FILTER));
+    }
+
     public function test_default_layout_matches_field_order_and_visibility(): void
     {
         $layout = ProductFieldLayout::normalize(null, ProductFieldLayout::SURFACE_INDEX);

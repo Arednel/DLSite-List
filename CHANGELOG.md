@@ -2,6 +2,9 @@
 
 ## Development
 
+* 2026-06-05 -- 1.4.4 Field Layout Metadata Cleanup
+  * Consolidated configurable field layout surface metadata in `ProductField`
+
 * 2026-06-03 -- 1.4.3 Code Cleanup
   * Simplified product form submitted-field checks, readonly edit values, index filters, layout reordering, and refetch progress counts with Laravel and Livewire helpers
   * Updated focused tests for the shared field-layout reorder handler

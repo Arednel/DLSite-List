@@ -91,51 +91,215 @@ enum ProductField: string
         return $this->contributorRole() !== null;
     }
 
+    /**
+     * @return list<ProductField>
+     */
+    public static function forSurface(string $surface): array
+    {
+        return self::surfaceMetadata($surface)['fields'];
+    }
+
+    public function isAvailableOn(string $surface): bool
+    {
+        return in_array($this, self::forSurface($surface), true);
+    }
+
+    /**
+     * @return list<ProductField>
+     */
+    public static function prefixedWhenMissing(string $surface): array
+    {
+        return self::surfaceMetadata($surface)['prefix_missing'];
+    }
+
     public function isHiddenByDefault(string $surface = ''): bool
     {
-        if (in_array($surface, ['edit', 'quick_add'], true) && $this === self::AgeCategory) {
-            return true;
-        }
+        return in_array($this, self::surfaceMetadata($surface)['hidden_by_default'], true);
+    }
 
-        return in_array($this, [
+    public function isEditableByDefault(string $surface = ''): bool
+    {
+        return in_array($this, self::surfaceMetadata($surface)['editable_by_default'], true);
+    }
+
+    public function isVisibilityLocked(string $surface): bool
+    {
+        return in_array($this, self::surfaceMetadata($surface)['visibility_locked'], true);
+    }
+
+    /**
+     * @return array{
+     *     fields: list<ProductField>,
+     *     visibility_locked: list<ProductField>,
+     *     hidden_by_default: list<ProductField>,
+     *     editable_by_default: list<ProductField>,
+     *     prefix_missing: list<ProductField>
+     * }
+     */
+    private static function surfaceMetadata(string $surface): array
+    {
+        return match ($surface) {
+            'edit' => [
+                'fields' => [
+                    self::Progress,
+                    self::Score,
+                    self::Series,
+                    self::Title,
+                    self::Tags,
+                    self::Notes,
+                    self::StartDate,
+                    self::FinishDate,
+                    self::TotalTimesReListened,
+                    self::ReListenValue,
+                    self::Priority,
+                    self::AgeCategory,
+                    self::Circle,
+                    self::Scenario,
+                    self::Illustration,
+                    self::VoiceActor,
+                    self::Author,
+                    self::Description,
+                ],
+                'visibility_locked' => [self::Title],
+                'hidden_by_default' => self::metadataFields(hiddenAgeCategory: true),
+                'editable_by_default' => [
+                    self::Title,
+                    self::Score,
+                    self::Series,
+                    self::AgeCategory,
+                    self::Progress,
+                    self::Tags,
+                    self::Notes,
+                    self::StartDate,
+                    self::FinishDate,
+                    self::TotalTimesReListened,
+                    self::ReListenValue,
+                    self::Priority,
+                ],
+                'prefix_missing' => [],
+            ],
+            'filter' => [
+                'fields' => [
+                    self::Title,
+                    self::Series,
+                    self::Notes,
+                    self::AgeCategory,
+                    self::Progress,
+                    self::Score,
+                    self::Priority,
+                    self::TotalTimesReListened,
+                    self::ReListenValue,
+                    self::Tags,
+                    self::Circle,
+                    self::Scenario,
+                    self::Illustration,
+                    self::VoiceActor,
+                    self::Author,
+                    self::Description,
+                ],
+                'visibility_locked' => [],
+                'hidden_by_default' => self::metadataFields(),
+                'editable_by_default' => [],
+                'prefix_missing' => [self::Title],
+            ],
+            'quick_add' => [
+                'fields' => [
+                    self::RjCode,
+                    self::Progress,
+                    self::Score,
+                    self::Series,
+                    self::Title,
+                    self::Tags,
+                    self::Notes,
+                    self::StartDate,
+                    self::FinishDate,
+                    self::TotalTimesReListened,
+                    self::ReListenValue,
+                    self::Priority,
+                    self::AgeCategory,
+                    self::Circle,
+                    self::Scenario,
+                    self::Illustration,
+                    self::VoiceActor,
+                    self::Author,
+                    self::Description,
+                ],
+                'visibility_locked' => [self::RjCode],
+                'hidden_by_default' => self::metadataFields(hiddenAgeCategory: true),
+                'editable_by_default' => [],
+                'prefix_missing' => [self::RjCode],
+            ],
+            'custom_quick_add' => [
+                'fields' => [
+                    self::RjCode,
+                    self::Progress,
+                    self::Score,
+                    self::Series,
+                    self::Title,
+                    self::Tags,
+                    self::Notes,
+                    self::AgeCategory,
+                    self::Image,
+                    self::SampleImages,
+                    self::StartDate,
+                    self::FinishDate,
+                    self::TotalTimesReListened,
+                    self::ReListenValue,
+                    self::Priority,
+                    self::Circle,
+                    self::Scenario,
+                    self::Illustration,
+                    self::VoiceActor,
+                    self::Author,
+                    self::Description,
+                ],
+                'visibility_locked' => [
+                    self::RjCode,
+                    self::Title,
+                    self::AgeCategory,
+                    self::Image,
+                ],
+                'hidden_by_default' => self::metadataFields(),
+                'editable_by_default' => [],
+                'prefix_missing' => [],
+            ],
+            default => [
+                'fields' => [
+                    self::Image,
+                    self::Title,
+                    self::Score,
+                    self::Series,
+                    self::AgeCategory,
+                    self::Progress,
+                    self::Circle,
+                    self::Scenario,
+                    self::Illustration,
+                    self::VoiceActor,
+                    self::Author,
+                    self::Description,
+                    self::Tags,
+                ],
+                'visibility_locked' => [self::Title],
+                'hidden_by_default' => self::metadataFields(),
+                'editable_by_default' => [],
+                'prefix_missing' => [self::Image, self::Title],
+            ],
+        };
+    }
+
+    /**
+     * @return list<ProductField>
+     */
+    private static function metadataFields(bool $hiddenAgeCategory = false): array
+    {
+        return [
+            ...($hiddenAgeCategory ? [self::AgeCategory] : []),
             self::Circle,
             self::Scenario,
             self::Illustration,
             self::VoiceActor,
             self::Author,
             self::Description,
-        ], true);
-    }
-
-    public function isEditableByDefault(string $surface = ''): bool
-    {
-        return in_array($this, [
-            self::Score,
-            self::Series,
-            self::AgeCategory,
-            self::Progress,
-            self::Tags,
-            self::Notes,
-            self::StartDate,
-            self::FinishDate,
-            self::TotalTimesReListened,
-            self::ReListenValue,
-            self::Priority,
-        ], true);
-    }
-
-    public function isVisibilityLocked(string $surface): bool
-    {
-        return match ($surface) {
-            'index', 'edit' => $this === self::Title,
-            'quick_add' => $this === self::RjCode,
-            'custom_quick_add' => in_array($this, [
-                self::RjCode,
-                self::Title,
-                self::AgeCategory,
-                self::Image,
-            ], true),
-            default => false,
-        };
+        ];
     }
 }

@@ -40,7 +40,7 @@ Current automated coverage is in Laravel PHPUnit tests:
 - `tests/Unit/Support/ProductIndexFiltersTest.php`
   - covers query normalization, metadata text filter round trips, defaults, explicit input keys, visibility filter group coverage, and query export helpers
 - `tests/Unit/Support/ProductFieldLayoutTest.php`
-  - covers surface-specific field layout normalization, default visibility/order including Filter modal defaults, locked Index/Edit/Quick Add/Custom Quick Add required rows, hidden-by-default optional Quick Add metadata/creator/description rows, Edit Age Category hidden by default, invalid field ids, duplicate field ids, editable flag behavior, and prepared Index/Edit/Filter/Create field metadata used by Blade components
+  - covers enum-owned surface field order/availability metadata, surface-specific field layout normalization, default visibility/order including Filter modal defaults, locked Index/Edit/Quick Add/Custom Quick Add required rows, hidden-by-default optional Quick Add metadata/creator/description rows, Edit Age Category hidden by default, invalid field ids, duplicate field ids, editable flag behavior, and prepared Index/Edit/Filter/Create field metadata used by Blade components
 - `tests/Unit/Support/DLSite/DLSiteWorkDataTest.php`
   - covers shared DLSite metadata extraction for descriptions, creator roles, maker/circle values, duplicate English fallback behavior, fallback product ids, and missing product id errors
 - `tests/Unit/Models/OptionMetadataSettingsTest.php`

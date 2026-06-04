@@ -29,7 +29,6 @@ final class ProductFieldLayout
         $surface = in_array($surface, self::SURFACES, true) ? $surface : self::SURFACE_INDEX;
         $submittedRows = is_array($layout) ? $layout : [];
         $allowedFields = self::fieldsForSurface($surface);
-        $allowedFieldValues = array_map(fn(ProductField $field): string => $field->value, $allowedFields);
         $rowsByField = [];
         $submittedOrder = [];
 
@@ -40,7 +39,7 @@ final class ProductFieldLayout
 
             $field = ProductField::tryFrom((string) ($row['field'] ?? ''));
 
-            if (! $field || ! in_array($field->value, $allowedFieldValues, true) || isset($rowsByField[$field->value])) {
+            if (! $field || ! $field->isAvailableOn($surface) || isset($rowsByField[$field->value])) {
                 continue;
             }
 
@@ -54,8 +53,10 @@ final class ProductFieldLayout
             $normalized += self::lockMetadata($field, $surface);
 
             if ($surface === self::SURFACE_EDIT) {
-                $normalized['editable'] = $field === ProductField::Title
-                    || ($visible && filter_var($row['editable'] ?? false, FILTER_VALIDATE_BOOL));
+                $normalized['editable'] = (
+                    $field->isVisibilityLocked($surface)
+                    && $field->isEditableByDefault($surface)
+                ) || ($visible && filter_var($row['editable'] ?? false, FILTER_VALIDATE_BOOL));
 
                 if ($field === ProductField::Tags) {
                     $normalized['fetched_editable'] = $visible
@@ -102,8 +103,7 @@ final class ProductFieldLayout
         $row += self::lockMetadata($field, $surface);
 
         if ($surface === self::SURFACE_EDIT) {
-            $row['editable'] = $field === ProductField::Title
-                || ($visible && $field->isEditableByDefault($surface));
+            $row['editable'] = $visible && $field->isEditableByDefault($surface);
 
             if ($field === ProductField::Tags) {
                 $row['fetched_editable'] = false;
@@ -118,105 +118,7 @@ final class ProductFieldLayout
      */
     private static function fieldsForSurface(string $surface): array
     {
-        return match ($surface) {
-            self::SURFACE_INDEX => [
-                ProductField::Image,
-                ProductField::Title,
-                ProductField::Score,
-                ProductField::Series,
-                ProductField::AgeCategory,
-                ProductField::Progress,
-                ProductField::Circle,
-                ProductField::Scenario,
-                ProductField::Illustration,
-                ProductField::VoiceActor,
-                ProductField::Author,
-                ProductField::Description,
-                ProductField::Tags,
-            ],
-            self::SURFACE_EDIT => [
-                ProductField::Progress,
-                ProductField::Score,
-                ProductField::Series,
-                ProductField::Title,
-                ProductField::Tags,
-                ProductField::Notes,
-                ProductField::StartDate,
-                ProductField::FinishDate,
-                ProductField::TotalTimesReListened,
-                ProductField::ReListenValue,
-                ProductField::Priority,
-                ProductField::AgeCategory,
-                ProductField::Circle,
-                ProductField::Scenario,
-                ProductField::Illustration,
-                ProductField::VoiceActor,
-                ProductField::Author,
-                ProductField::Description,
-            ],
-            self::SURFACE_FILTER => [
-                ProductField::Title,
-                ProductField::Series,
-                ProductField::Notes,
-                ProductField::AgeCategory,
-                ProductField::Progress,
-                ProductField::Score,
-                ProductField::Priority,
-                ProductField::TotalTimesReListened,
-                ProductField::ReListenValue,
-                ProductField::Tags,
-                ProductField::Circle,
-                ProductField::Scenario,
-                ProductField::Illustration,
-                ProductField::VoiceActor,
-                ProductField::Author,
-                ProductField::Description,
-            ],
-            self::SURFACE_QUICK_ADD => [
-                ProductField::RjCode,
-                ProductField::Progress,
-                ProductField::Score,
-                ProductField::Series,
-                ProductField::Title,
-                ProductField::Tags,
-                ProductField::Notes,
-                ProductField::StartDate,
-                ProductField::FinishDate,
-                ProductField::TotalTimesReListened,
-                ProductField::ReListenValue,
-                ProductField::Priority,
-                ProductField::AgeCategory,
-                ProductField::Circle,
-                ProductField::Scenario,
-                ProductField::Illustration,
-                ProductField::VoiceActor,
-                ProductField::Author,
-                ProductField::Description,
-            ],
-            self::SURFACE_CUSTOM_QUICK_ADD => [
-                ProductField::RjCode,
-                ProductField::Progress,
-                ProductField::Score,
-                ProductField::Series,
-                ProductField::Title,
-                ProductField::Tags,
-                ProductField::Notes,
-                ProductField::AgeCategory,
-                ProductField::Image,
-                ProductField::SampleImages,
-                ProductField::StartDate,
-                ProductField::FinishDate,
-                ProductField::TotalTimesReListened,
-                ProductField::ReListenValue,
-                ProductField::Priority,
-                ProductField::Circle,
-                ProductField::Scenario,
-                ProductField::Illustration,
-                ProductField::VoiceActor,
-                ProductField::Author,
-                ProductField::Description,
-            ],
-        };
+        return ProductField::forSurface($surface);
     }
 
     /**
@@ -224,12 +126,7 @@ final class ProductFieldLayout
      */
     private static function prefixMissingFields(string $surface): array
     {
-        return match ($surface) {
-            self::SURFACE_INDEX => [ProductField::Image, ProductField::Title],
-            self::SURFACE_FILTER => [ProductField::Title],
-            self::SURFACE_QUICK_ADD => [ProductField::RjCode],
-            default => [],
-        };
+        return ProductField::prefixedWhenMissing($surface);
     }
 
     private static function lockMetadata(ProductField $field, string $surface): array
