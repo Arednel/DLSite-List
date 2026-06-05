@@ -96,4 +96,76 @@
         <x-index.filter-select id="filter_re_listen_value" name="re_listen_value" label="Re-listen Value" :options="$filterOptions['re_listen_values']"
             placeholder="Any value" wire:model="draft.re_listen_value" />
     @break
+
+    @case('start_date')
+        <div class="filter-widget start-date">
+            <span class="widget-header">Start Date</span>
+            <div class="filter-field-stack filter-date-range">
+                <label class="filter-date-control" for="filter_start_date_from">
+                    <span>From</span>
+                    <input id="filter_start_date_from" type="date" name="start_date_from"
+                        wire:model="draft.start_date_from" aria-label="Start Date from">
+                </label>
+                <label class="filter-date-control" for="filter_start_date_to">
+                    <span>To</span>
+                    <input id="filter_start_date_to" type="date" name="start_date_to" wire:model="draft.start_date_to"
+                        aria-label="Start Date to">
+                </label>
+            </div>
+        </div>
+    @break
+
+    @case('end_date')
+        <div class="filter-widget end-date">
+            <span class="widget-header">Finish Date</span>
+            <div class="filter-field-stack filter-date-range">
+                <label class="filter-date-control" for="filter_end_date_from">
+                    <span>From</span>
+                    <input id="filter_end_date_from" type="date" name="end_date_from" wire:model="draft.end_date_from"
+                        aria-label="Finish Date from">
+                </label>
+                <label class="filter-date-control" for="filter_end_date_to">
+                    <span>To</span>
+                    <input id="filter_end_date_to" type="date" name="end_date_to" wire:model="draft.end_date_to"
+                        aria-label="Finish Date to">
+                </label>
+            </div>
+        </div>
+    @break
+
+    @case('created_at')
+        <div class="filter-widget created-at">
+            <span class="widget-header">Added to the site Date</span>
+            <div class="filter-field-stack filter-date-range">
+                <label class="filter-date-control" for="filter_created_at_from">
+                    <span>From</span>
+                    <input id="filter_created_at_from" type="date" name="created_at_from"
+                        wire:model="draft.created_at_from" aria-label="Added Date from">
+                </label>
+                <label class="filter-date-control" for="filter_created_at_to">
+                    <span>To</span>
+                    <input id="filter_created_at_to" type="date" name="created_at_to" wire:model="draft.created_at_to"
+                        aria-label="Added Date to">
+                </label>
+            </div>
+        </div>
+    @break
+
+    @case('updated_at')
+        <div class="filter-widget updated-at">
+            <span class="widget-header">Updated Date</span>
+            <div class="filter-field-stack filter-date-range">
+                <label class="filter-date-control" for="filter_updated_at_from">
+                    <span>From</span>
+                    <input id="filter_updated_at_from" type="date" name="updated_at_from"
+                        wire:model="draft.updated_at_from" aria-label="Updated Date from">
+                </label>
+                <label class="filter-date-control" for="filter_updated_at_to">
+                    <span>To</span>
+                    <input id="filter_updated_at_to" type="date" name="updated_at_to" wire:model="draft.updated_at_to"
+                        aria-label="Updated Date to">
+                </label>
+            </div>
+        </div>
+    @break
 @endswitch

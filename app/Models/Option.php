@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use App\Enums\AutocompleteOrder;
+use App\Enums\ProductIndexSortField;
 use App\Support\ProductFieldLayout;
 use App\Support\ProductIndexSettings;
 use Illuminate\Database\Eloquent\Model;
@@ -26,6 +27,8 @@ class Option extends Model
     public const QUICK_ADD_FIELD_LAYOUT = 'quick_add_field_layout';
 
     public const CUSTOM_QUICK_ADD_FIELD_LAYOUT = 'custom_quick_add_field_layout';
+
+    public const INDEX_SORT_FIELD_LAYOUT = 'index_sort_field_layout';
 
     public const INDEX_TABLE_WIDTH = 'index_table_width';
 
@@ -213,24 +216,45 @@ class Option extends Model
     {
         self::setValue(
             self::INDEX_FIELD_LAYOUT,
-            json_encode(ProductFieldLayout::normalize(null, ProductFieldLayout::SURFACE_INDEX), JSON_THROW_ON_ERROR),
+            json_encode(ProductFieldLayout::storageLayout(null, ProductFieldLayout::SURFACE_INDEX), JSON_THROW_ON_ERROR),
         );
         self::setValue(
             self::EDIT_FIELD_LAYOUT,
-            json_encode(ProductFieldLayout::normalize(null, ProductFieldLayout::SURFACE_EDIT), JSON_THROW_ON_ERROR),
+            json_encode(ProductFieldLayout::storageLayout(null, ProductFieldLayout::SURFACE_EDIT), JSON_THROW_ON_ERROR),
         );
         self::setValue(
             self::FILTER_FIELD_LAYOUT,
-            json_encode(ProductFieldLayout::normalize(null, ProductFieldLayout::SURFACE_FILTER), JSON_THROW_ON_ERROR),
+            json_encode(ProductFieldLayout::storageLayout(null, ProductFieldLayout::SURFACE_FILTER), JSON_THROW_ON_ERROR),
         );
         self::setValue(
             self::QUICK_ADD_FIELD_LAYOUT,
-            json_encode(ProductFieldLayout::normalize(null, ProductFieldLayout::SURFACE_QUICK_ADD), JSON_THROW_ON_ERROR),
+            json_encode(ProductFieldLayout::storageLayout(null, ProductFieldLayout::SURFACE_QUICK_ADD), JSON_THROW_ON_ERROR),
         );
         self::setValue(
             self::CUSTOM_QUICK_ADD_FIELD_LAYOUT,
-            json_encode(ProductFieldLayout::normalize(null, ProductFieldLayout::SURFACE_CUSTOM_QUICK_ADD), JSON_THROW_ON_ERROR),
+            json_encode(ProductFieldLayout::storageLayout(null, ProductFieldLayout::SURFACE_CUSTOM_QUICK_ADD), JSON_THROW_ON_ERROR),
         );
+    }
+
+    /**
+     * @return list<array{field: string, label: string, visible: bool}>
+     */
+    public static function indexSortFieldLayout(): array
+    {
+        return self::indexSortFieldLayoutFromValue(self::valueFor(self::INDEX_SORT_FIELD_LAYOUT));
+    }
+
+    public static function setIndexSortFieldLayout(array $layout): void
+    {
+        self::setValue(
+            self::INDEX_SORT_FIELD_LAYOUT,
+            json_encode(ProductIndexSortField::storageLayout($layout), JSON_THROW_ON_ERROR),
+        );
+    }
+
+    public static function resetIndexSortFieldLayoutToDefault(): void
+    {
+        self::setIndexSortFieldLayout([]);
     }
 
     /**
@@ -264,6 +288,7 @@ class Option extends Model
         self::resetIndexPerPageToDefault();
         self::resetIndexTableWidthToDefault();
         self::resetFieldLayoutsToDefault();
+        self::resetIndexSortFieldLayoutToDefault();
         self::resetAutoSeriesFromTitleNameToDefault();
         self::resetAutocompleteToDefault();
     }
@@ -280,6 +305,7 @@ class Option extends Model
                 self::INDEX_PER_PAGE,
                 self::INDEX_FIELD_LAYOUT,
                 self::FILTER_FIELD_LAYOUT,
+                self::INDEX_SORT_FIELD_LAYOUT,
                 self::INDEX_TABLE_WIDTH,
             ])
             ->pluck('value', 'key');
@@ -293,6 +319,9 @@ class Option extends Model
             $values->get(self::FILTER_FIELD_LAYOUT),
             ProductFieldLayout::SURFACE_FILTER,
         );
+        $indexSortFieldLayout = self::indexSortFieldLayoutFromValue(
+            $values->get(self::INDEX_SORT_FIELD_LAYOUT),
+        );
         $tableWidth = self::normalizeIndexTableWidth(self::jsonFromValue($values->get(self::INDEX_TABLE_WIDTH)));
 
         return new ProductIndexSettings(
@@ -302,6 +331,8 @@ class Option extends Model
             visibleIndexFields: array_column($indexColumns, 'field'),
             filterFieldLayout: $filterFieldLayout,
             filterFields: ProductFieldLayout::filterFields($filterFieldLayout),
+            indexSortFieldLayout: $indexSortFieldLayout,
+            indexSortFieldOptions: ProductIndexSortField::optionsFromLayout($indexSortFieldLayout),
             tableWidth: $tableWidth,
             tableWidthCss: self::indexTableWidthCssFrom($tableWidth),
         );
@@ -392,8 +423,13 @@ class Option extends Model
     ): void {
         self::setValue(
             $key,
-            json_encode(ProductFieldLayout::normalize($layout, $surface), JSON_THROW_ON_ERROR),
+            json_encode(ProductFieldLayout::storageLayout($layout, $surface), JSON_THROW_ON_ERROR),
         );
+    }
+
+    private static function indexSortFieldLayoutFromValue(?string $value): array
+    {
+        return ProductIndexSortField::normalizeLayout(self::jsonFromValue($value));
     }
 
     /**

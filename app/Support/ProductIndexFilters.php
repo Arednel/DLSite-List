@@ -36,6 +36,14 @@ final readonly class ProductIndexFilters
         'priority',
         'num_re_listen_times',
         're_listen_value',
+        'start_date_from',
+        'start_date_to',
+        'end_date_from',
+        'end_date_to',
+        'created_at_from',
+        'created_at_to',
+        'updated_at_from',
+        'updated_at_to',
         'sort_first_field',
         'sort_first_direction',
         'sort_second_field',
@@ -62,6 +70,10 @@ final readonly class ProductIndexFilters
         ['priority'],
         ['num_re_listen_times'],
         ['re_listen_value'],
+        ['start_date_from', 'start_date_to'],
+        ['end_date_from', 'end_date_to'],
+        ['created_at_from', 'created_at_to'],
+        ['updated_at_from', 'updated_at_to'],
     ];
 
     public function __construct(
@@ -84,6 +96,14 @@ final readonly class ProductIndexFilters
         public ?ProductPriority $priority = null,
         public ?int $numReListenTimes = null,
         public ?ProductReListenValue $reListenValue = null,
+        public string $startDateFrom = '',
+        public string $startDateTo = '',
+        public string $endDateFrom = '',
+        public string $endDateTo = '',
+        public string $createdAtFrom = '',
+        public string $createdAtTo = '',
+        public string $updatedAtFrom = '',
+        public string $updatedAtTo = '',
         public ?ProductIndexSort $primarySort = null,
         public ?ProductIndexSort $secondarySort = null,
     ) {}
@@ -130,12 +150,23 @@ final readonly class ProductIndexFilters
             priority: self::normalizeEnum($query['priority'] ?? null, ProductPriority::class),
             numReListenTimes: self::normalizeNonNegativeInteger($query['num_re_listen_times'] ?? null),
             reListenValue: self::normalizeEnum($query['re_listen_value'] ?? null, ProductReListenValue::class),
+            startDateFrom: self::normalizeDate($query['start_date_from'] ?? null),
+            startDateTo: self::normalizeDate($query['start_date_to'] ?? null),
+            endDateFrom: self::normalizeDate($query['end_date_from'] ?? null),
+            endDateTo: self::normalizeDate($query['end_date_to'] ?? null),
+            createdAtFrom: self::normalizeDate($query['created_at_from'] ?? null),
+            createdAtTo: self::normalizeDate($query['created_at_to'] ?? null),
+            updatedAtFrom: self::normalizeDate($query['updated_at_from'] ?? null),
+            updatedAtTo: self::normalizeDate($query['updated_at_to'] ?? null),
             primarySort: $primarySort,
             secondarySort: $secondarySort,
         );
     }
 
-    public static function optionSets(): array
+    /**
+     * @param  array<string, string>|null  $sortFields
+     */
+    public static function optionSets(?array $sortFields = null): array
     {
         return [
             'age_categories' => ProductAgeCategory::options(),
@@ -144,7 +175,7 @@ final readonly class ProductIndexFilters
             'priorities' => ProductPriority::options(),
             're_listen_values' => ProductReListenValue::options(),
             'tag_match' => ProductIndexTagMatch::options(),
-            'sort_fields' => ProductIndexSortField::options(),
+            'sort_fields' => $sortFields ?? ProductIndexSortField::options(),
             'sort_directions' => ProductIndexSortDirection::options(),
         ];
     }
@@ -191,6 +222,14 @@ final readonly class ProductIndexFilters
             'priority' => $this->priority?->value ?? '',
             'num_re_listen_times' => $this->numReListenTimes === null ? '' : (string) $this->numReListenTimes,
             're_listen_value' => $this->reListenValue?->value ?? '',
+            'start_date_from' => $this->startDateFrom,
+            'start_date_to' => $this->startDateTo,
+            'end_date_from' => $this->endDateFrom,
+            'end_date_to' => $this->endDateTo,
+            'created_at_from' => $this->createdAtFrom,
+            'created_at_to' => $this->createdAtTo,
+            'updated_at_from' => $this->updatedAtFrom,
+            'updated_at_to' => $this->updatedAtTo,
             'sort_first_field' => $this->primarySort?->field->value ?? '',
             'sort_first_direction' => $this->primarySort?->direction->value ?? '',
             'sort_second_field' => $this->secondarySort?->field->value ?? '',
@@ -235,6 +274,19 @@ final readonly class ProductIndexFilters
         }
 
         return (int) $value;
+    }
+
+    private static function normalizeDate(mixed $value): string
+    {
+        $value = self::normalizeText($value);
+
+        if (! preg_match('/^(\d{4})-(\d{2})-(\d{2})$/', $value, $matches)) {
+            return '';
+        }
+
+        return checkdate((int) $matches[2], (int) $matches[3], (int) $matches[1])
+            ? $value
+            : '';
     }
 
     /**

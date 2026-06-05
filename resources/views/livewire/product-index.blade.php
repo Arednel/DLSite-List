@@ -160,6 +160,34 @@
                                                 <div class="progress"><span>{{ $product->progress }}</span></div>
                                             @break
 
+                                            @case('notes')
+                                                <div class="notes">
+                                                    <div class="note-text">
+                                                        {!! nl2br(e($product->notes ?: '-')) !!}
+                                                    </div>
+                                                </div>
+                                            @break
+
+                                            @case('start_date')
+                                                {{ $productDisplayValues[$product->getKey()][$column['field']] ?? '-' }}
+                                            @break
+
+                                            @case('end_date')
+                                                {{ $productDisplayValues[$product->getKey()][$column['field']] ?? '-' }}
+                                            @break
+
+                                            @case('num_re_listen_times')
+                                                {{ $productDisplayValues[$product->getKey()][$column['field']] ?? '-' }}
+                                            @break
+
+                                            @case('re_listen_value')
+                                                {{ $productDisplayValues[$product->getKey()][$column['field']] ?? '-' }}
+                                            @break
+
+                                            @case('priority')
+                                                {{ $productDisplayValues[$product->getKey()][$column['field']] ?? '-' }}
+                                            @break
+
                                             @case('circle')
                                                 @forelse (($productContributors[$product->getKey()] ?? [])[$column['contributor_role']] ?? [] as $contributor)
                                                     <a href="{{ route('index', ['circle' => $contributor->name], false) }}">

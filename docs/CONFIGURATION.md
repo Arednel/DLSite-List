@@ -104,6 +104,7 @@ Current settings:
 - `filter_field_layout`: controls Filter modal field visibility/order
 - `quick_add_field_layout`: controls DLSite Create field visibility/order
 - `custom_quick_add_field_layout`: controls Custom Create field visibility/order
+- `index_sort_field_layout`: controls Advanced Filter sort value visibility/order
 - `index_table_width`: controls the Index list/table width and top cover image width
 
 Runtime note:
@@ -149,6 +150,12 @@ Index field layout default order:
 - `author` hidden by default
 - `description` hidden by default
 - `tags`
+- `notes` hidden by default; Notes are already shown inside Title, and this row enables a separate column
+- `start_date` hidden by default
+- `end_date` hidden by default
+- `num_re_listen_times` hidden by default
+- `re_listen_value` hidden by default
+- `priority` hidden by default
 
 Edit form field layout default order:
 - `progress`
@@ -172,15 +179,19 @@ Edit form field layout default order:
 
 Filter modal field layout default order:
 - `title`
+- `score`
 - `series`
-- `notes`
 - `age_category`
 - `progress`
-- `score`
+- `notes`
 - `priority`
 - `num_re_listen_times`
 - `re_listen_value`
 - `tags`
+- `start_date` hidden by default
+- `end_date` hidden by default
+- `created_at` hidden by default
+- `updated_at` hidden by default
 - `circle` hidden by default
 - `scenario` hidden by default
 - `illustration` hidden by default
@@ -232,7 +243,28 @@ Custom Quick Add field layout default order:
 - `author` hidden by default
 - `description` hidden by default
 
+Index sort field dropdown default order:
+- `rj`
+- `score`
+- `series`
+- `age_category`
+- `progress`
+- `priority`
+- `num_re_listen_times`
+- `re_listen_value`
+- `start_date`
+- `end_date`
+- `created_at`
+- `updated_at` hidden by default
+- `circle` hidden by default
+- `scenario` hidden by default
+- `illustration` hidden by default
+- `voice_actor` hidden by default
+- `author` hidden by default
+
 The Index table, Edit form, Filter modal, Quick Add form, and Custom Quick Add form each store their own layout JSON in `options.value`. Rows can be reordered by dragging the row handle or by using the Up/Down buttons, and changes are persisted when Save is submitted. Field settings are keyed by field id while editing, so reordering rows does not change checkbox state. Unknown or duplicate field ids are ignored and missing known fields fall back to the surface default order. Index `title` is always visible but can still be reordered. Edit Form `title` is also locked visible and represents the Japanese/English title inputs after the fixed RJ Code + Title display row. Quick Add keeps `rj_code` locked visible. Custom Quick Add keeps `rj_code`, `title`, `age_category`, and `image` locked visible. In the Edit Form layout, the `tags` row stores separate toggles for Custom Tags and Fetched EN Tags, grouped in the same edit-controls column on desktop.
+
+The Index Sort Fields setting uses the same Options row controls to reorder and show/hide values in the Advanced Filter sort dropdowns. It only changes the dropdown presentation: valid URL sort state and sortable visible table columns keep sorting through `ProductIndexSortField`. Sortable optional Index headers include circle/creator columns, start/finish dates, total times re-listened, re-listen value, and priority when those columns are visible.
 
 Create form layout note:
 - hidden Quick Add fields are not persisted from submitted form data
@@ -258,7 +290,7 @@ Options reset behavior:
 - reset confirmation modals are teleported to the document body so they stay centered in the viewport instead of inside the Options panel
 - reset confirmation modals close from Cancel, Escape, or clicking outside the modal card
 - the global reset confirmation button is disabled for 3 seconds and shows a countdown before it can be clicked
-- reset defaults are pagination `100`, table width `default`, all five default field layouts, automatic Series enabled, and autocomplete `usage`
+- reset defaults are pagination `100`, table width `default`, all five default field layouts, all default Index sort dropdown values, automatic Series enabled, and autocomplete `usage`
 - global reset does not change products, tags, refetch runs, legacy hidden fallback keys, or unrelated future option rows
 
 Autocomplete ordering default:

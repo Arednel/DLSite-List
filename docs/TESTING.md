@@ -11,9 +11,9 @@ Current automated coverage is in Laravel PHPUnit tests:
 - `tests/Feature/ReturnTargetProductTest.php`
   - covers product-aware return URLs for unlimited pagination, first-page omission, saved-page redirect fast paths, full-query visibility fast paths, unchanged-visibility fallback cleanup, and multi-filter visible-work cleanup
 - `tests/Feature/ProductIndexLivewireTest.php`
-  - covers Livewire-owned Index pagination defaults, fixed/custom/unlimited page sizes, batched Index option setting lookup count, narrowed Index result columns including non-hydrated sort-only fields and visible-field hydration, configurable field order/visibility including locked Title and hideable Image, prepared tag-link query preservation/replacement, Index table width CSS, SQL-backed scalar/search/date/Added to the site Date pagination, nullable scalar sort ordering, built-in pagination links with the progress-menu scroll target, RJ header sorting, advanced primary/secondary sorting, Livewire-bound Filter modal controls, default Filter modal order/visibility, configurable Filter modal visibility/order for fixed widgets, restored filter defaults, the external Alpine advanced-filter component, local client-side filter modal opening/closing without Livewire entanglement or native form reset, page reset behavior, and query-string initialization
+  - covers Livewire-owned Index pagination defaults, fixed/custom/unlimited page sizes, batched Index option setting lookup count, narrowed Index result columns including non-hydrated sort-only fields and visible-field hydration, configurable field order/visibility including locked Title, hideable Image, optional hidden-by-default notes/listening columns, prepared tag-link query preservation/replacement, Index table width CSS, SQL-backed scalar/search/date/Added to the site Date pagination, nullable scalar sort ordering, built-in pagination links with the progress-menu scroll target, RJ/header sorting including optional listening and contributor columns, advanced primary/secondary sorting, configurable Advanced Filter sort dropdown visibility that does not disable valid URL/header sorting, Livewire-bound Filter modal controls, default Filter modal order/visibility, configurable Filter modal visibility/order for fixed and date-range widgets, restored filter defaults, the external Alpine advanced-filter component, local client-side filter modal opening/closing without Livewire entanglement or native form reset, page reset behavior, and query-string initialization
 - `tests/Unit/Enums/ProductIndexSortFieldTest.php`
-  - covers Index sort field SQL column metadata
+  - covers Index sort field SQL column metadata, default hidden sort values, and Advanced Filter sort dropdown layout normalization
 - `tests/Unit/Enums/ProductContributorRoleTest.php`
   - covers contributor role to product field mapping used by configurable Create/Edit layouts
 - `tests/Feature/ProductSortKeysTest.php`
@@ -23,7 +23,7 @@ Current automated coverage is in Laravel PHPUnit tests:
 - `tests/Feature/AutocompleteSettingsTest.php`
   - covers the Options autocomplete ordering setting component, including default usage ordering, separate tag and series persistence, modal-confirmed reset-to-default behavior, invalid enum values, and Livewire dirty-state saved notice behavior
 - `tests/Feature/ProductMetadataSettingsTest.php`
-  - covers the Options field layout, locked visibility UI for Index/Edit/Quick Add/Custom Quick Add required rows, `wire:sort` drag reorder handlers, field-keyed checkbox state preservation during reorder, separate custom/fetched tag edit toggles, desktop grouping for the tag edit controls, automatic Series, Index table width, shared settings reset helper validation clearing, one shared body-teleported Options reset confirmation modal contract for immediate and countdown resets, global reset event dispatch/listener refresh, and global Options reset Livewire settings
+  - covers the Options field layout, Advanced Filter sort dropdown layout setting, locked visibility UI for Index/Edit/Quick Add/Custom Quick Add required rows, `wire:sort` drag reorder handlers, field-keyed checkbox state preservation during reorder, separate custom/fetched tag edit toggles, desktop grouping for the tag edit controls, automatic Series, Index table width, shared settings reset helper validation clearing, one shared body-teleported Options reset confirmation modal contract for immediate and countdown resets, global reset event dispatch/listener refresh, and global Options reset Livewire settings
 - `tests/Feature/ProductGenreMigrationTest.php`
   - covers migration of legacy product genre JSON into `genres` + `genre_product`, language row backfill into `genre_product_languages`, removal of old `genres.type` / `genres.language`, same product/tag attachments with both JP and EN language rows, and legacy migration compatibility when `genres.title_key` exists
 - `tests/Feature/ProductMetadataMigrationTest.php`
@@ -38,13 +38,13 @@ Current automated coverage is in Laravel PHPUnit tests:
   - defaults to 500 works, 500 tags, 10000 tag pivot rows, and contributor rows for every Index contributor role, then reports average response times for default/full-column paginated Index paths, filtered/search/tag Index paths, default/full-column unlimited Index paths, Options tabs, common/recalculated/filter-cleanup update redirects, and delete page clamp redirects
   - performance smoke timings emit PHPUnit warning issues above 500ms and stronger warning text above 1000ms; use `--do-not-fail-on-phpunit-warning` when you want the command to exit successfully while still showing those warnings
 - `tests/Unit/Support/ProductIndexFiltersTest.php`
-  - covers query normalization, metadata text filter round trips, defaults, explicit input keys, visibility filter group coverage, and query export helpers
+  - covers query normalization, metadata text and date range filter round trips, defaults, configurable sort option maps, explicit input keys, visibility filter group coverage, and query export helpers
 - `tests/Unit/Support/ProductFieldLayoutTest.php`
   - covers enum-owned surface field order/availability metadata, surface-specific field layout normalization, default visibility/order including Filter modal defaults, locked Index/Edit/Quick Add/Custom Quick Add required rows, hidden-by-default optional Quick Add metadata/creator/description rows, Edit Age Category hidden by default, invalid field ids, duplicate field ids, editable flag behavior, and prepared Index/Edit/Filter/Create field metadata used by Blade components
 - `tests/Unit/Support/DLSite/DLSiteWorkDataTest.php`
   - covers shared DLSite metadata extraction for descriptions, creator roles, maker/circle values, duplicate English fallback behavior, fallback product ids, and missing product id errors
 - `tests/Unit/Models/OptionMetadataSettingsTest.php`
-  - covers field layout option persistence/fallbacks for Index/Edit/Filter/Create layouts, automatic Series option normalization, Index table width normalization, and batched ProductIndex settings normalization/fallbacks
+  - covers field layout option persistence/fallbacks for Index/Edit/Filter/Create layouts, Index sort dropdown layout option persistence/fallbacks, automatic Series option normalization, Index table width normalization, and batched ProductIndex settings normalization/fallbacks
 - `tests/Unit/Support/DLSite/DLSitePythonRunnerTest.php`
   - covers the Laravel Process command arrays used for scraper and tag-fetcher Python calls, including the project venv executable and disabled timeout
 - `tests/Unit/Support/GenreSyncPayloadTest.php`
@@ -96,7 +96,7 @@ Python process tests use Laravel's `Process::fake()` and `Process::preventStrayP
 Livewire component tests use `Livewire::test()` to update component state without a browser.
 Index pagination tests set `options.index_per_page` through `App\Models\Option` so fixed, custom, and unlimited list sizes can be verified without touching application config.
 Autocomplete settings tests set `options.tag_autocomplete_order` and `options.series_autocomplete_order` through `App\Models\Option` so tag and series suggestion ranking can be verified independently.
-Product metadata settings tests set the field layouts, automatic Series, and Index table width options through `App\Models\Option` so UI behavior can be verified without changing environment config. Drag reorder tests call the Livewire `wire:sort` handlers directly because the browser drag gesture itself is provided by Livewire, and they assert checkbox state remains attached to field ids after row movement.
+Product metadata settings tests set the field layouts, Index sort dropdown layout, automatic Series, and Index table width options through `App\Models\Option` so UI behavior can be verified without changing environment config. Drag reorder tests call the Livewire `wire:sort` handlers directly because the browser drag gesture itself is provided by Livewire, and they assert checkbox state remains attached to field ids after row movement.
 
 ### Docker test setup
 Docker tests use:

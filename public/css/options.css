@@ -209,6 +209,10 @@
     padding: 0.65rem 0.75rem;
 }
 
+.field-layout-row--two-column {
+    grid-template-columns: 11.5rem minmax(11rem, 1fr);
+}
+
 .field-layout-order {
     display: flex;
     flex-wrap: wrap;
@@ -253,6 +257,14 @@
 .field-layout-lock-note {
     color: #8f6b7e;
     font-size: 0.82rem;
+}
+
+.field-layout-note {
+    display: block;
+    margin-top: 0.2rem;
+    color: var(--text-muted);
+    font-size: 0.82rem;
+    font-weight: 500;
 }
 
 .field-layout-edit-stack {

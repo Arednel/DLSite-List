@@ -33,7 +33,12 @@
                                 <input type="checkbox"
                                     wire:model.live="{{ $layoutConfig['fields'] }}.{{ $row['field'] }}.visible"
                                     @disabled($row['visibility_locked'] ?? false)>
-                                <span>{{ $row['label'] }}</span>
+                                <span>
+                                    {{ $row['label'] }}
+                                    @if ($row['note'] ?? false)
+                                        <span class="field-layout-note">{{ $row['note'] }}</span>
+                                    @endif
+                                </span>
                                 @if ($row['visibility_locked'] ?? false)
                                     <span class="field-layout-lock-note">Required</span>
                                 @endif
@@ -68,6 +73,35 @@
                 </div>
             </section>
         @endforeach
+
+        <section class="field-layout-section">
+            <h3>Index Sort Fields</h3>
+
+            <div class="field-layout-list" wire:sort="reorderLayout">
+                @foreach ($this->layoutRows('sortOrder', 'sortFields') as $rowIndex => $row)
+                    <div class="field-layout-row field-layout-row--two-column"
+                        wire:key="index-sort-{{ $row['field'] }}" wire:sort:item="sortOrder|{{ $row['field'] }}">
+                        <div class="field-layout-order">
+                            <button type="button" class="field-layout-drag-handle" wire:sort:handle
+                                aria-label="Drag {{ $row['label'] }}">
+                                <i class="fa-solid fa-arrows-up-down" aria-hidden="true"></i>
+                            </button>
+                            <div class="field-layout-buttons" wire:sort:ignore>
+                                <button type="button" wire:click.stop="move('sortOrder', {{ $rowIndex }}, -1)"
+                                    @disabled($rowIndex === 0)>Up</button>
+                                <button type="button" wire:click.stop="move('sortOrder', {{ $rowIndex }}, 1)"
+                                    @disabled($rowIndex === count($this->sortOrder) - 1)>Down</button>
+                            </div>
+                        </div>
+
+                        <label class="field-layout-check" wire:sort:ignore>
+                            <input type="checkbox" wire:model.live="sortFields.{{ $row['field'] }}.visible">
+                            <span>{{ $row['label'] }}</span>
+                        </label>
+                    </div>
+                @endforeach
+            </div>
+        </section>
 
         <div class="option-actions option-actions--inline">
             <button type="submit" class="tag tag--soft tag--lg is-clickable">Save field layouts</button>

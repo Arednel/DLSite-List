@@ -4,6 +4,7 @@ namespace Tests\Feature;
 
 use App\Enums\ProductContributorRole;
 use App\Enums\ProductField;
+use App\Enums\ProductIndexSortField;
 use App\Livewire\ProductIndex;
 use App\Models\Genre;
 use App\Models\Option;
@@ -495,6 +496,85 @@ class ProductIndexLivewireTest extends TestCase
             ->assertSee('REORDERED_IMAGE_TITLE');
     }
 
+    public function test_optional_index_columns_render_and_sort_from_visible_headers(): void
+    {
+        Option::setIndexPerPage(Option::INDEX_PER_PAGE_UNLIMITED);
+        Option::setIndexFieldLayout([
+            ['field' => ProductField::Notes->value, 'visible' => true],
+            ['field' => ProductField::StartDate->value, 'visible' => true],
+            ['field' => ProductField::FinishDate->value, 'visible' => true],
+            ['field' => ProductField::TotalTimesReListened->value, 'visible' => true],
+            ['field' => ProductField::ReListenValue->value, 'visible' => true],
+            ['field' => ProductField::Priority->value, 'visible' => true],
+        ]);
+
+        $this->createProduct(1, [
+            'work_name' => 'OPTIONAL_COLUMNS_HIGH',
+            'notes' => 'OPTIONAL_VISIBLE_NOTES',
+            'start_date' => ['year' => 2026, 'month' => '01', 'day' => '02'],
+            'end_date' => ['year' => 2026, 'month' => '02', 'day' => '03'],
+            'num_re_listen_times' => 4,
+            're_listen_value' => 5,
+            'priority' => 2,
+        ]);
+        $this->createProduct(2, [
+            'work_name' => 'OPTIONAL_COLUMNS_LOW',
+            'priority' => 0,
+        ]);
+
+        Livewire::test(ProductIndex::class)
+            ->assertSee('data-column="Notes"', false)
+            ->assertSee('data-column="Start Date"', false)
+            ->assertSee('data-column="Finish Date"', false)
+            ->assertSee('data-column="Total Times Re-listened"', false)
+            ->assertSee('data-column="Re-listen Value"', false)
+            ->assertSee('data-column="Priority"', false)
+            ->assertSee('OPTIONAL_VISIBLE_NOTES')
+            ->assertSee('Year: 2026, Month: 01, Day: 02')
+            ->assertSee('Very High')
+            ->assertSee('High')
+            ->assertSee('wire:click="sortByHeader(\'priority\')"', false)
+            ->assertSeeInOrder(['OPTIONAL_COLUMNS_LOW', 'OPTIONAL_COLUMNS_HIGH'])
+            ->call('sortByHeader', ProductIndexSortField::Priority->value)
+            ->assertSeeInOrder(['OPTIONAL_COLUMNS_HIGH', 'OPTIONAL_COLUMNS_LOW']);
+    }
+
+    public function test_contributor_and_circle_index_headers_are_sortable_when_visible(): void
+    {
+        Option::setIndexPerPage(Option::INDEX_PER_PAGE_UNLIMITED);
+        Option::setIndexFieldLayout([
+            ['field' => ProductField::Circle->value, 'visible' => true],
+            ['field' => ProductField::Scenario->value, 'visible' => true],
+        ]);
+
+        $zeta = $this->createProduct(1, [
+            'work_name' => 'CONTRIBUTOR_SORT_ZETA',
+            'circle' => 'Fallback Zeta',
+        ]);
+        $alpha = $this->createProduct(2, [
+            'work_name' => 'CONTRIBUTOR_SORT_ALPHA',
+            'circle' => 'Fallback Alpha',
+        ]);
+
+        app(ProductContributorSync::class)->sync($zeta, [
+            ProductContributorRole::Scenario->value => ['Zeta Scenario'],
+        ]);
+        app(ProductContributorSync::class)->sync($alpha, [
+            ProductContributorRole::Scenario->value => ['Alpha Scenario'],
+        ]);
+
+        Livewire::test(ProductIndex::class)
+            ->assertSee('wire:click="sortByHeader(\'circle\')"', false)
+            ->assertSee('wire:click="sortByHeader(\'scenario\')"', false)
+            ->assertSeeInOrder(['CONTRIBUTOR_SORT_ALPHA', 'CONTRIBUTOR_SORT_ZETA'])
+            ->call('sortByHeader', ProductIndexSortField::Scenario->value)
+            ->assertSeeInOrder(['CONTRIBUTOR_SORT_ZETA', 'CONTRIBUTOR_SORT_ALPHA']);
+
+        Livewire::test(ProductIndex::class)
+            ->call('sortByHeader', ProductIndexSortField::Circle->value)
+            ->assertSeeInOrder(['CONTRIBUTOR_SORT_ZETA', 'CONTRIBUTOR_SORT_ALPHA']);
+    }
+
     public function test_index_row_data_renders_contributors_and_tags(): void
     {
         $product = $this->createProduct(1, [
@@ -718,11 +798,11 @@ class ProductIndexLivewireTest extends TestCase
             ->assertSee('Desc')
             ->assertSeeInOrder([
                 'id="filter_title"',
+                'id="filter_score"',
                 'id="filter_series"',
-                'id="filter_notes"',
                 'id="filter_age_category"',
                 'id="filter_progress"',
-                'id="filter_score"',
+                'id="filter_notes"',
                 'id="filter_priority"',
                 'id="filter_num_re_listen_times"',
                 'id="filter_re_listen_value"',
@@ -733,6 +813,10 @@ class ProductIndexLivewireTest extends TestCase
             ->assertDontSee('id="filter_illustration"', false)
             ->assertDontSee('id="filter_voice_actor"', false)
             ->assertDontSee('id="filter_author"', false)
+            ->assertDontSee('id="filter_start_date_from"', false)
+            ->assertDontSee('id="filter_end_date_from"', false)
+            ->assertDontSee('id="filter_created_at_from"', false)
+            ->assertDontSee('id="filter_updated_at_from"', false)
             ->assertDontSee('id="filter_description"', false);
     }
 
@@ -790,6 +874,87 @@ class ProductIndexLivewireTest extends TestCase
                 'id="filter_num_re_listen_times"',
                 'id="filter_re_listen_value"',
             ], false);
+    }
+
+    public function test_filter_layout_can_show_date_range_widgets_and_apply_ranges(): void
+    {
+        Option::setFilterFieldLayout([
+            ['field' => ProductField::StartDate->value, 'visible' => true],
+            ['field' => ProductField::FinishDate->value, 'visible' => true],
+            ['field' => ProductField::CreatedAt->value, 'visible' => true],
+            ['field' => ProductField::UpdatedAt->value, 'visible' => true],
+        ]);
+
+        $this->createProduct(1, [
+            'work_name' => 'DATE_RANGE_VISIBLE',
+            'start_date' => ['year' => 2026, 'month' => '02', 'day' => '15'],
+            'end_date' => ['year' => 2026, 'month' => '03', 'day' => '15'],
+            'created_at' => Carbon::parse('2026-04-15 12:00:00'),
+            'updated_at' => Carbon::parse('2026-05-15 12:00:00'),
+        ]);
+        $this->createProduct(2, [
+            'work_name' => 'DATE_RANGE_HIDDEN',
+            'start_date' => ['year' => 2026, 'month' => '01', 'day' => '15'],
+            'end_date' => ['year' => 2026, 'month' => '06', 'day' => '15'],
+            'created_at' => Carbon::parse('2026-01-15 12:00:00'),
+            'updated_at' => Carbon::parse('2026-07-15 12:00:00'),
+        ]);
+
+        Livewire::test(ProductIndex::class)
+            ->assertSee('id="filter_start_date_from"', false)
+            ->assertSee('class="filter-field-stack filter-date-range"', false)
+            ->assertSee('class="filter-date-control"', false)
+            ->assertSee('>From</span>', false)
+            ->assertSee('>To</span>', false)
+            ->assertSee('id="filter_end_date_from"', false)
+            ->assertSee('id="filter_created_at_from"', false)
+            ->assertSee('id="filter_updated_at_from"', false)
+            ->set('draft.start_date_from', '2026-02-01')
+            ->set('draft.start_date_to', '2026-02-28')
+            ->set('draft.end_date_from', '2026-03-01')
+            ->set('draft.end_date_to', '2026-03-31')
+            ->set('draft.created_at_from', '2026-04-01')
+            ->set('draft.created_at_to', '2026-04-30')
+            ->set('draft.updated_at_from', '2026-05-01')
+            ->set('draft.updated_at_to', '2026-05-31')
+            ->call('applyFilters')
+            ->assertSet('start_date_from', '2026-02-01')
+            ->assertSet('updated_at_to', '2026-05-31')
+            ->assertSee('DATE_RANGE_VISIBLE')
+            ->assertDontSee('DATE_RANGE_HIDDEN');
+    }
+
+    public function test_sort_field_layout_controls_filter_dropdown_without_disabling_sorting(): void
+    {
+        Option::setIndexPerPage(Option::INDEX_PER_PAGE_UNLIMITED);
+        Option::setIndexSortFieldLayout([
+            ['field' => ProductIndexSortField::Series->value, 'visible' => true],
+            ['field' => ProductIndexSortField::Score->value, 'visible' => false],
+        ]);
+
+        $this->createProduct(1, ['work_name' => 'SORT_LOW', 'score' => 1]);
+        $this->createProduct(2, ['work_name' => 'SORT_HIGH', 'score' => 9]);
+
+        Livewire::withQueryParams([
+            'sort_first_field' => ProductIndexSortField::Score->value,
+            'sort_first_direction' => 'asc',
+        ])
+            ->test(ProductIndex::class)
+            ->assertSet('sort_first_field', ProductIndexSortField::Score->value)
+            ->assertSet('draft.sort_first_field', ProductIndexSortField::Score->value)
+            ->assertSeeInOrder(['SORT_LOW', 'SORT_HIGH'])
+            ->assertSee('value="' . ProductIndexSortField::Series->value . '"', false)
+            ->assertSee('value="' . ProductIndexSortField::RJ->value . '"', false)
+            ->assertDontSee('value="' . ProductIndexSortField::Score->value . '"', false)
+            ->assertDontSee('value="' . ProductIndexSortField::UpdatedAt->value . '"', false)
+            ->assertDontSee('value="' . ProductIndexSortField::Circle->value . '"', false);
+
+        Livewire::test(ProductIndex::class)
+            ->call('sortByHeader', ProductIndexSortField::Score->value)
+            ->assertSet('sort_first_field', ProductIndexSortField::Score->value)
+            ->assertSet('sort_first_direction', 'desc')
+            ->assertSeeInOrder(['SORT_HIGH', 'SORT_LOW'])
+            ->assertDontSee('value="' . ProductIndexSortField::Score->value . '"', false);
     }
 
     private function createProduct(int $number, array $attributes = []): Product

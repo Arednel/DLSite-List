@@ -2,6 +2,11 @@
 
 ## Development
 
+* 2026-06-05 -- 1.4.5 Configurable Filter Sort
+  * Added configurable Advanced Filter sort dropdown order/visibility
+  * Added hidden-by-default Index notes/listening columns, date range filters, and contributor/timestamp sort options
+  * Changed default test Performance Iterations from 3 to 5 for better statistics
+
 * 2026-06-05 -- 1.4.4 Field Layout Metadata Cleanup
   * Consolidated configurable field layout surface metadata in `ProductField`
 

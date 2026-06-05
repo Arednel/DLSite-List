@@ -3,11 +3,12 @@
 namespace Tests\Feature;
 
 use App\Enums\AutocompleteOrder;
+use App\Enums\ProductField;
+use App\Enums\ProductIndexSortField;
 use App\Livewire\AutoSeriesSettings;
 use App\Livewire\IndexTableWidthSettings;
 use App\Livewire\OptionsResetDefaults;
 use App\Livewire\ProductFieldLayoutSettings;
-use App\Enums\ProductField;
 use App\Models\Option;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
@@ -159,10 +160,13 @@ class ProductMetadataSettingsTest extends TestCase
             ->assertSee('Fetched EN Tags')
             ->assertSee('Quick Add')
             ->assertSee('Custom Quick Add')
+            ->assertSee('Index Sort Fields')
             ->assertSee('Required')
+            ->assertSee('Notes are already shown inside Title; enable this for a separate column.')
             ->assertSee('field-layout-edit-stack', false)
             ->call('move', 'indexOrder', 11, -1)
             ->call('move', 'quickAddOrder', 11, -1)
+            ->call('move', 'sortOrder', 2, -1)
             ->set('indexFields.score.visible', false)
             ->set('editFields.voice_actor.visible', true)
             ->set('editFields.voice_actor.editable', true)
@@ -170,6 +174,7 @@ class ProductMetadataSettingsTest extends TestCase
             ->set('editFields.tags.fetched_editable', true)
             ->set('quickAddFields.notes.visible', false)
             ->set('customQuickAddFields.sample_images.visible', false)
+            ->set('sortFields.score.visible', false)
             ->call('save')
             ->assertSet('saved', true);
 
@@ -180,6 +185,8 @@ class ProductMetadataSettingsTest extends TestCase
         $this->assertFalse(collect(Option::quickAddFieldLayout())->firstWhere('field', ProductField::Notes->value)['visible']);
         $this->assertSame(ProductField::Priority->value, Option::quickAddFieldLayout()[10]['field']);
         $this->assertFalse(collect(Option::customQuickAddFieldLayout())->firstWhere('field', ProductField::SampleImages->value)['visible']);
+        $this->assertFalse(collect(Option::indexSortFieldLayout())->firstWhere('field', ProductIndexSortField::Score->value)['visible']);
+        $this->assertSame(ProductIndexSortField::Series->value, Option::indexSortFieldLayout()[1]['field']);
     }
 
     public function test_field_layout_component_supports_drag_reordering(): void
@@ -191,6 +198,8 @@ class ProductMetadataSettingsTest extends TestCase
             ->assertSee('wire:model.live="indexFields.title.visible"', false)
             ->assertSee('wire:model.live="quickAddFields.rj_code.visible"', false)
             ->assertSee('wire:model.live="customQuickAddFields.image.visible"', false)
+            ->assertSee('wire:sort:item="sortOrder|score"', false)
+            ->assertSee('wire:model.live="sortFields.score.visible"', false)
             ->assertSee('disabled', false)
             ->assertSee('wire:sort:handle', false)
             ->assertSee('wire:sort:ignore', false)
@@ -210,6 +219,8 @@ class ProductMetadataSettingsTest extends TestCase
             ->assertSet('quickAddOrder.1', ProductField::Priority->value)
             ->call('reorderLayout', 'customQuickAddOrder|' . ProductField::SampleImages->value, 1)
             ->assertSet('customQuickAddOrder.1', ProductField::SampleImages->value)
+            ->call('reorderLayout', 'sortOrder|' . ProductIndexSortField::AddedToTheSiteDate->value, 1)
+            ->assertSet('sortOrder.1', ProductIndexSortField::AddedToTheSiteDate->value)
             ->call('save')
             ->assertSet('saved', true);
 
@@ -218,6 +229,7 @@ class ProductMetadataSettingsTest extends TestCase
         $this->assertSame(ProductField::VoiceActor->value, Option::filterFieldLayout()[0]['field']);
         $this->assertSame(ProductField::Priority->value, Option::quickAddFieldLayout()[1]['field']);
         $this->assertSame(ProductField::SampleImages->value, Option::customQuickAddFieldLayout()[1]['field']);
+        $this->assertSame(ProductIndexSortField::AddedToTheSiteDate->value, Option::indexSortFieldLayout()[1]['field']);
     }
 
     public function test_edit_title_layout_row_is_locked_visible_without_editability_toggle(): void
@@ -271,7 +283,7 @@ class ProductMetadataSettingsTest extends TestCase
 
         $component
             ->call('reorderLayout', 'indexOrder|' . ProductField::Tags->value, 999)
-            ->assertSet('indexOrder.12', ProductField::Tags->value)
+            ->assertSet('indexOrder.' . (count($originalOrder) - 1), ProductField::Tags->value)
             ->call('reorderLayout', 'indexOrder|' . ProductField::Tags->value, -5)
             ->assertSet('indexOrder.0', ProductField::Tags->value);
     }
@@ -314,6 +326,9 @@ class ProductMetadataSettingsTest extends TestCase
         Option::setCustomQuickAddFieldLayout([
             ['field' => ProductField::SampleImages->value, 'visible' => false],
         ]);
+        Option::setIndexSortFieldLayout([
+            ['field' => ProductIndexSortField::Series->value, 'visible' => false],
+        ]);
         Option::setAutoSeriesFromTitleName(false);
         Option::setTagAutocompleteOrder(AutocompleteOrder::FirstWord);
         Option::setSeriesAutocompleteOrder(AutocompleteOrder::FirstWord);
@@ -353,6 +368,8 @@ class ProductMetadataSettingsTest extends TestCase
         $this->assertTrue(Option::quickAddFieldLayout()[0]['visibility_locked']);
         $this->assertTrue(collect(Option::quickAddFieldLayout())->firstWhere('field', ProductField::Notes->value)['visible']);
         $this->assertTrue(collect(Option::customQuickAddFieldLayout())->firstWhere('field', ProductField::SampleImages->value)['visible']);
+        $this->assertSame(ProductIndexSortField::RJ->value, Option::indexSortFieldLayout()[0]['field']);
+        $this->assertTrue(collect(Option::indexSortFieldLayout())->firstWhere('field', ProductIndexSortField::Series->value)['visible']);
         $this->assertSame('keep-me', DB::table('options')->where('key', 'unrelated_option')->value('value'));
     }
 

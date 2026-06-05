@@ -29,6 +29,8 @@ enum ProductField: string
     case TotalTimesReListened = 'num_re_listen_times';
     case ReListenValue = 're_listen_value';
     case Priority = 'priority';
+    case CreatedAt = 'created_at';
+    case UpdatedAt = 'updated_at';
 
     public function label(): string
     {
@@ -54,6 +56,8 @@ enum ProductField: string
             self::TotalTimesReListened => 'Total Times Re-listened',
             self::ReListenValue => 'Re-listen Value',
             self::Priority => 'Priority',
+            self::CreatedAt => 'Added to the site Date',
+            self::UpdatedAt => 'Updated Date',
         };
     }
 
@@ -82,6 +86,11 @@ enum ProductField: string
             self::ReListenValue => ProductIndexSortField::ReListenValue,
             self::StartDate => ProductIndexSortField::StartDate,
             self::FinishDate => ProductIndexSortField::FinishDate,
+            self::Circle => ProductIndexSortField::Circle,
+            self::Scenario => ProductIndexSortField::Scenario,
+            self::Illustration => ProductIndexSortField::Illustration,
+            self::VoiceActor => ProductIndexSortField::VoiceActor,
+            self::Author => ProductIndexSortField::Author,
             default => null,
         };
     }
@@ -125,6 +134,14 @@ enum ProductField: string
     public function isVisibilityLocked(string $surface): bool
     {
         return in_array($this, self::surfaceMetadata($surface)['visibility_locked'], true);
+    }
+
+    public function layoutNote(string $surface): ?string
+    {
+        return match ([$surface, $this]) {
+            ['index', self::Notes] => 'Notes are already shown inside Title; enable this for a separate column.',
+            default => null,
+        };
     }
 
     /**
@@ -181,15 +198,19 @@ enum ProductField: string
             'filter' => [
                 'fields' => [
                     self::Title,
+                    self::Score,
                     self::Series,
-                    self::Notes,
                     self::AgeCategory,
                     self::Progress,
-                    self::Score,
+                    self::Notes,
                     self::Priority,
                     self::TotalTimesReListened,
                     self::ReListenValue,
                     self::Tags,
+                    self::StartDate,
+                    self::FinishDate,
+                    self::CreatedAt,
+                    self::UpdatedAt,
                     self::Circle,
                     self::Scenario,
                     self::Illustration,
@@ -198,7 +219,13 @@ enum ProductField: string
                     self::Description,
                 ],
                 'visibility_locked' => [],
-                'hidden_by_default' => self::metadataFields(),
+                'hidden_by_default' => [
+                    self::StartDate,
+                    self::FinishDate,
+                    self::CreatedAt,
+                    self::UpdatedAt,
+                    ...self::metadataFields(),
+                ],
                 'editable_by_default' => [],
                 'prefix_missing' => [self::Title],
             ],
@@ -278,9 +305,23 @@ enum ProductField: string
                     self::Author,
                     self::Description,
                     self::Tags,
+                    self::Notes,
+                    self::StartDate,
+                    self::FinishDate,
+                    self::TotalTimesReListened,
+                    self::ReListenValue,
+                    self::Priority,
                 ],
                 'visibility_locked' => [self::Title],
-                'hidden_by_default' => self::metadataFields(),
+                'hidden_by_default' => [
+                    ...self::metadataFields(),
+                    self::Notes,
+                    self::StartDate,
+                    self::FinishDate,
+                    self::TotalTimesReListened,
+                    self::ReListenValue,
+                    self::Priority,
+                ],
                 'editable_by_default' => [],
                 'prefix_missing' => [self::Image, self::Title],
             ],

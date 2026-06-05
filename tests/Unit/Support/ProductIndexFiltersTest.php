@@ -43,6 +43,8 @@ class ProductIndexFiltersTest extends TestCase
             'progress' => 'NOT_VALID',
             'priority' => '-1',
             'num_re_listen_times' => 'abc',
+            'start_date_from' => '2026-02-31',
+            'created_at_to' => '2026/01/01',
             'sort_first_field' => 'priority',
         ]);
 
@@ -61,6 +63,35 @@ class ProductIndexFiltersTest extends TestCase
 
         $this->assertSame(ProductIndexTagMatch::All, $filters->resolvedTagMatch());
         $this->assertSame(ProductIndexSortDirection::Desc, $filters->primarySort?->direction);
+    }
+
+    public function test_date_range_filters_round_trip_through_input_and_query_output(): void
+    {
+        $filters = ProductIndexFilters::fromQuery([
+            'start_date_from' => '2026-01-01',
+            'start_date_to' => '2026-01-31',
+            'end_date_from' => '2026-02-01',
+            'end_date_to' => '2026-02-28',
+            'created_at_from' => '2026-03-01',
+            'created_at_to' => '2026-03-31',
+            'updated_at_from' => '2026-04-01',
+            'updated_at_to' => '2026-04-30',
+        ]);
+
+        $this->assertSame('2026-01-01', $filters->startDateFrom);
+        $this->assertSame('2026-02-28', $filters->endDateTo);
+        $this->assertSame('2026-03-01', $filters->createdAtFrom);
+        $this->assertSame('2026-04-30', $filters->updatedAtTo);
+        $this->assertSame([
+            'start_date_from' => '2026-01-01',
+            'start_date_to' => '2026-01-31',
+            'end_date_from' => '2026-02-01',
+            'end_date_to' => '2026-02-28',
+            'created_at_from' => '2026-03-01',
+            'created_at_to' => '2026-03-31',
+            'updated_at_from' => '2026-04-01',
+            'updated_at_to' => '2026-04-30',
+        ], $filters->toQuery());
     }
 
     public function test_metadata_text_filters_round_trip_through_input_and_query_output(): void
@@ -134,6 +165,10 @@ class ProductIndexFiltersTest extends TestCase
             ['priority'],
             ['num_re_listen_times'],
             ['re_listen_value'],
+            ['start_date_from', 'start_date_to'],
+            ['end_date_from', 'end_date_to'],
+            ['created_at_from', 'created_at_to'],
+            ['updated_at_from', 'updated_at_to'],
         ], ProductIndexFilters::VISIBILITY_FILTER_GROUPS);
 
         $visibilityKeys = array_merge(...ProductIndexFilters::VISIBILITY_FILTER_GROUPS);
@@ -180,5 +215,19 @@ class ProductIndexFiltersTest extends TestCase
             'series' => 'SERIES_ALPHA',
             'progress' => 'Listening',
         ], $filters->toQueryWithout('search'));
+    }
+
+    public function test_option_sets_can_use_configured_visible_sort_fields(): void
+    {
+        $options = ProductIndexFilters::optionSets([
+            ProductIndexSortField::Series->value => ProductIndexSortField::Series->label(),
+            ProductIndexSortField::RJ->value => ProductIndexSortField::RJ->label(),
+        ]);
+
+        $this->assertSame([
+            ProductIndexSortField::Series->value => 'Series',
+            ProductIndexSortField::RJ->value => 'RJ / Title',
+        ], $options['sort_fields']);
+        $this->assertArrayHasKey('sort_directions', $options);
     }
 }

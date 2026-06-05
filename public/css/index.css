@@ -601,6 +601,7 @@ body.filter-modal-open {
 
 .filter-widget input[type="text"],
 .filter-widget input[type="number"],
+.filter-widget input[type="date"],
 .filter-widget select,
 .filter-widget textarea,
 .sort-widget select {
@@ -617,6 +618,7 @@ body.filter-modal-open {
 /* Fix for default select having bigger padding */
 .filter-widget input[type="text"],
 .filter-widget input[type="number"],
+.filter-widget input[type="date"],
 .filter-widget textarea {
     padding: 8px 10px 8px 14px;
 }
@@ -629,6 +631,7 @@ body.filter-modal-open {
 
 .filter-widget input[type="text"]:focus,
 .filter-widget input[type="number"]:focus,
+.filter-widget input[type="date"]:focus,
 .filter-widget select:focus,
 .filter-widget textarea:focus,
 .sort-widget select:focus {
@@ -645,6 +648,25 @@ body.filter-modal-open {
 .filter-field-stack {
     flex: 1;
     min-width: 0;
+}
+
+.filter-date-range {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 10px;
+}
+
+.filter-date-control {
+    min-width: 0;
+}
+
+.filter-date-control span {
+    display: block;
+    margin-bottom: 4px;
+    color: #7D6A6A;
+    font-size: 11px;
+    font-weight: bold;
+    line-height: 1.2;
 }
 
 .filter-widget .filter-static-value {
@@ -967,6 +989,10 @@ body.filter-modal-open {
     .sort-direction-group,
     .filter-field-stack {
         width: 100%;
+    }
+
+    .filter-date-range {
+        grid-template-columns: 1fr;
     }
 
     .tag-match-toggle {

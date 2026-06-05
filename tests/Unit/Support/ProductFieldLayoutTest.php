@@ -25,6 +25,12 @@ class ProductFieldLayoutTest extends TestCase
                 ProductField::Author,
                 ProductField::Description,
                 ProductField::Tags,
+                ProductField::Notes,
+                ProductField::StartDate,
+                ProductField::FinishDate,
+                ProductField::TotalTimesReListened,
+                ProductField::ReListenValue,
+                ProductField::Priority,
             ],
             ProductFieldLayout::SURFACE_EDIT => [
                 ProductField::Progress,
@@ -48,15 +54,19 @@ class ProductFieldLayoutTest extends TestCase
             ],
             ProductFieldLayout::SURFACE_FILTER => [
                 ProductField::Title,
+                ProductField::Score,
                 ProductField::Series,
-                ProductField::Notes,
                 ProductField::AgeCategory,
                 ProductField::Progress,
-                ProductField::Score,
+                ProductField::Notes,
                 ProductField::Priority,
                 ProductField::TotalTimesReListened,
                 ProductField::ReListenValue,
                 ProductField::Tags,
+                ProductField::StartDate,
+                ProductField::FinishDate,
+                ProductField::CreatedAt,
+                ProductField::UpdatedAt,
                 ProductField::Circle,
                 ProductField::Scenario,
                 ProductField::Illustration,
@@ -129,6 +139,8 @@ class ProductFieldLayoutTest extends TestCase
         $this->assertTrue(ProductField::AgeCategory->isHiddenByDefault(ProductFieldLayout::SURFACE_QUICK_ADD));
         $this->assertFalse(ProductField::AgeCategory->isHiddenByDefault(ProductFieldLayout::SURFACE_CUSTOM_QUICK_ADD));
         $this->assertTrue(ProductField::Description->isHiddenByDefault(ProductFieldLayout::SURFACE_FILTER));
+        $this->assertTrue(ProductField::StartDate->isHiddenByDefault(ProductFieldLayout::SURFACE_FILTER));
+        $this->assertTrue(ProductField::Notes->isHiddenByDefault(ProductFieldLayout::SURFACE_INDEX));
     }
 
     public function test_default_layout_matches_field_order_and_visibility(): void
@@ -149,6 +161,12 @@ class ProductFieldLayoutTest extends TestCase
             ProductField::Author->value,
             ProductField::Description->value,
             ProductField::Tags->value,
+            ProductField::Notes->value,
+            ProductField::StartDate->value,
+            ProductField::FinishDate->value,
+            ProductField::TotalTimesReListened->value,
+            ProductField::ReListenValue->value,
+            ProductField::Priority->value,
         ], collect($layout)->pluck('field')->all());
 
         $this->assertSame([
@@ -162,6 +180,10 @@ class ProductFieldLayoutTest extends TestCase
         ], ProductFieldLayout::visibleFields($layout));
 
         $this->assertTrue($layout[1]['visibility_locked']);
+        $this->assertSame(
+            'Notes are already shown inside Title; enable this for a separate column.',
+            collect($layout)->firstWhere('field', ProductField::Notes->value)['note'],
+        );
     }
 
     public function test_surface_defaults_include_requested_edit_and_filter_rows(): void
@@ -214,15 +236,19 @@ class ProductFieldLayoutTest extends TestCase
 
         $this->assertSame([
             ProductField::Title->value,
+            ProductField::Score->value,
             ProductField::Series->value,
-            ProductField::Notes->value,
             ProductField::AgeCategory->value,
             ProductField::Progress->value,
-            ProductField::Score->value,
+            ProductField::Notes->value,
             ProductField::Priority->value,
             ProductField::TotalTimesReListened->value,
             ProductField::ReListenValue->value,
             ProductField::Tags->value,
+            ProductField::StartDate->value,
+            ProductField::FinishDate->value,
+            ProductField::CreatedAt->value,
+            ProductField::UpdatedAt->value,
             ProductField::Circle->value,
             ProductField::Scenario->value,
             ProductField::Illustration->value,
@@ -233,11 +259,11 @@ class ProductFieldLayoutTest extends TestCase
 
         $this->assertSame([
             ProductField::Title->value,
+            ProductField::Score->value,
             ProductField::Series->value,
-            ProductField::Notes->value,
             ProductField::AgeCategory->value,
             ProductField::Progress->value,
-            ProductField::Score->value,
+            ProductField::Notes->value,
             ProductField::Priority->value,
             ProductField::TotalTimesReListened->value,
             ProductField::ReListenValue->value,
@@ -411,6 +437,7 @@ class ProductFieldLayoutTest extends TestCase
             ['field' => ProductField::Description->value, 'label' => 'Description', 'visible' => false],
             ['field' => ProductField::Circle->value, 'label' => 'Circle', 'visible' => true],
             ['field' => ProductField::Score->value, 'label' => 'Score', 'visible' => true],
+            ['field' => ProductField::StartDate->value, 'label' => 'Start Date', 'visible' => true],
             ['field' => 'not_real', 'label' => 'Broken', 'visible' => true],
         ]);
 
@@ -419,7 +446,7 @@ class ProductFieldLayoutTest extends TestCase
                 'field' => ProductField::Circle->value,
                 'label' => 'Circle',
                 'class' => 'circle',
-                'sort_field' => null,
+                'sort_field' => 'circle',
                 'contributor_role' => 'circle',
             ],
             [
@@ -427,6 +454,13 @@ class ProductFieldLayoutTest extends TestCase
                 'label' => 'Score',
                 'class' => 'score',
                 'sort_field' => 'score',
+                'contributor_role' => null,
+            ],
+            [
+                'field' => ProductField::StartDate->value,
+                'label' => 'Start Date',
+                'class' => 'start-date',
+                'sort_field' => 'start_date',
                 'contributor_role' => null,
             ],
         ], $columns);

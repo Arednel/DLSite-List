@@ -19,6 +19,12 @@ enum ProductIndexSortField: string
     case StartDate = 'start_date';
     case FinishDate = 'end_date';
     case AddedToTheSiteDate = 'created_at';
+    case UpdatedAt = 'updated_at';
+    case Circle = 'circle';
+    case Scenario = 'scenario';
+    case Illustration = 'illustration';
+    case VoiceActor = 'voice_actor';
+    case Author = 'author';
 
     public function label(): string
     {
@@ -34,6 +40,12 @@ enum ProductIndexSortField: string
             self::StartDate => 'Start Date',
             self::FinishDate => 'Finish Date',
             self::AddedToTheSiteDate => 'Added to the site Date',
+            self::UpdatedAt => 'Updated Date',
+            self::Circle => 'Circle',
+            self::Scenario => 'Scenario Author',
+            self::Illustration => 'Illustration Author',
+            self::VoiceActor => 'Voice Actor',
+            self::Author => 'Author',
         };
     }
 
@@ -45,5 +57,98 @@ enum ProductIndexSortField: string
             self::FinishDate => 'end_date_sort',
             default => $this->value,
         };
+    }
+
+    public function isHiddenByDefault(): bool
+    {
+        return in_array($this, [
+            self::UpdatedAt,
+            self::Circle,
+            self::Scenario,
+            self::Illustration,
+            self::VoiceActor,
+            self::Author,
+        ], true);
+    }
+
+    /**
+     * @return list<array{field: string, label: string, visible: bool}>
+     */
+    public static function normalizeLayout(mixed $layout): array
+    {
+        $submittedRows = is_array($layout) ? $layout : [];
+        $rowsByField = [];
+        $submittedOrder = [];
+
+        foreach ($submittedRows as $row) {
+            if (! is_array($row)) {
+                continue;
+            }
+
+            $field = self::tryFrom((string) ($row['field'] ?? ''));
+
+            if (! $field || isset($rowsByField[$field->value])) {
+                continue;
+            }
+
+            $rowsByField[$field->value] = self::layoutRow(
+                $field,
+                filter_var($row['visible'] ?? false, FILTER_VALIDATE_BOOL),
+            );
+            $submittedOrder[] = $field->value;
+        }
+
+        $orderedRows = [];
+
+        foreach ($submittedOrder as $field) {
+            $orderedRows[$field] = $rowsByField[$field];
+        }
+
+        foreach (self::cases() as $field) {
+            if (! isset($orderedRows[$field->value])) {
+                $orderedRows[$field->value] = self::layoutRow($field, ! $field->isHiddenByDefault());
+            }
+        }
+
+        return array_values($orderedRows);
+    }
+
+    /**
+     * @return list<array{field: string, visible: bool}>
+     */
+    public static function storageLayout(mixed $layout): array
+    {
+        return collect(self::normalizeLayout($layout))
+            ->map(fn(array $row): array => [
+                'field' => $row['field'],
+                'visible' => $row['visible'],
+            ])
+            ->values()
+            ->all();
+    }
+
+    /**
+     * @param  list<array{field: string, label: string, visible: bool}>  $layout
+     * @return array<string, string>
+     */
+    public static function optionsFromLayout(array $layout): array
+    {
+        return collect(self::normalizeLayout($layout))
+            ->filter(fn(array $row): bool => $row['visible'])
+            ->mapWithKeys(function (array $row): array {
+                $field = self::tryFrom($row['field']);
+
+                return $field ? [$field->value => $field->label()] : [];
+            })
+            ->all();
+    }
+
+    private static function layoutRow(self $field, bool $visible): array
+    {
+        return [
+            'field' => $field->value,
+            'label' => $field->label(),
+            'visible' => $visible,
+        ];
     }
 }

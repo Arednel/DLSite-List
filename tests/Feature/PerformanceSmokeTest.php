@@ -7,6 +7,7 @@ use App\Enums\ProductField;
 use App\Models\Contributor;
 use App\Models\Genre;
 use App\Models\Option;
+use DateTimeInterface;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
 use Tests\TestCase;
@@ -22,7 +23,7 @@ class PerformanceSmokeTest extends TestCase
 
     private const PIVOT_COUNT = 10000;
 
-    private const PERFORMANCE_ITERATIONS = 3;
+    private const PERFORMANCE_ITERATIONS = 5;
 
     private const WARNING_THRESHOLD_MS = 500;
 
@@ -266,7 +267,7 @@ class PerformanceSmokeTest extends TestCase
             });
     }
 
-    private function seedContributors(\DateTimeInterface $now): void
+    private function seedContributors(DateTimeInterface $now): void
     {
         foreach ($this->contributorRoles() as $role) {
             collect(range(1, self::WORK_COUNT))

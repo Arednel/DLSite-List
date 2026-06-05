@@ -2,10 +2,10 @@
 
 namespace App\Livewire;
 
+use App\Enums\ProductField;
 use App\Enums\ProductIndexSortDirection;
 use App\Enums\ProductIndexSortField;
 use App\Enums\ProductIndexTagMatch;
-use App\Enums\ProductField;
 use App\Models\Option;
 use App\Support\ProductIndexFilters;
 use App\Support\ProductIndexResults;
@@ -39,6 +39,14 @@ class ProductIndex extends Component
     public string $priority = '';
     public string $num_re_listen_times = '';
     public string $re_listen_value = '';
+    public string $start_date_from = '';
+    public string $start_date_to = '';
+    public string $end_date_from = '';
+    public string $end_date_to = '';
+    public string $created_at_from = '';
+    public string $created_at_to = '';
+    public string $updated_at_from = '';
+    public string $updated_at_to = '';
     public string $sort_first_field = '';
     public string $sort_first_direction = '';
     public string $sort_second_field = '';
@@ -101,6 +109,7 @@ class ProductIndex extends Component
         $productContributors = $hasContributorColumns
             ? $productIndexResults->loadContributors($visibleProductIds, $settings->visibleIndexFields)
             : collect();
+        $productDisplayValues = $productIndexResults->displayValues($visibleProducts, $settings->visibleIndexFields);
 
         $currentQuery = $this->queryWithCurrentPage($filterQuery, $isUnlimited);
         $tagLinkQuery = $filters->toQueryWithout('genre');
@@ -110,7 +119,8 @@ class ProductIndex extends Component
             'visibleProducts' => $visibleProducts,
             'productGenres' => $productGenres,
             'productContributors' => $productContributors,
-            'filterOptions' => $this->filterOptions,
+            'productDisplayValues' => $productDisplayValues,
+            'filterOptions' => ProductIndexFilters::optionSets($settings->indexSortFieldOptions),
             'indexColumns' => $settings->indexColumns,
             'filterFields' => $settings->filterFields,
             'filterActive' => $filterQuery !== [],
@@ -192,15 +202,6 @@ class ProductIndex extends Component
     public function filterQuery(): array
     {
         return $this->filters->toQuery();
-    }
-
-    /**
-     * @return array<string, array<string, string>>
-     */
-    #[Computed]
-    public function filterOptions(): array
-    {
-        return ProductIndexFilters::optionSets();
     }
 
     /**

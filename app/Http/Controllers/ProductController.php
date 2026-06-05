@@ -19,6 +19,7 @@ use App\Support\DLSite\DLSiteWorkData;
 use App\Support\ProductContributorSync;
 use App\Support\ProductFieldLayout;
 use App\Support\ProductGenreSync;
+use App\Support\PartialDateFormatter;
 use App\Support\ReturnTarget;
 use App\Support\TagInput;
 use App\Support\VisibleGenreAttachment;
@@ -428,14 +429,7 @@ class ProductController extends Controller
 
     private function readonlyDate(?array $date): ?string
     {
-        return collect([
-            'Year' => data_get($date, 'year'),
-            'Month' => data_get($date, 'month'),
-            'Day' => data_get($date, 'day'),
-        ])
-            ->filter(fn(mixed $value): bool => filled($value))
-            ->map(fn(mixed $value, string $label): string => "{$label}: {$value}")
-            ->join(', ') ?: null;
+        return PartialDateFormatter::format($date);
     }
 
     /**

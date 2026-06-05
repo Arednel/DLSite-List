@@ -51,6 +51,7 @@ final class ProductFieldLayout
                 'visible' => $visible,
             ];
             $normalized += self::lockMetadata($field, $surface);
+            $normalized += self::noteMetadata($field, $surface);
 
             if ($surface === self::SURFACE_EDIT) {
                 $normalized['editable'] = (
@@ -91,6 +92,14 @@ final class ProductFieldLayout
         return array_values($orderedRows);
     }
 
+    public static function storageLayout(mixed $layout, string $surface): array
+    {
+        return collect(self::normalize($layout, $surface))
+            ->map(fn(array $row): array => Arr::except($row, ['note']))
+            ->values()
+            ->all();
+    }
+
     private static function defaultRow(ProductField $field, string $surface): array
     {
         $visible = $field->isVisibilityLocked($surface) || ! $field->isHiddenByDefault($surface);
@@ -101,6 +110,7 @@ final class ProductFieldLayout
             'visible' => $visible,
         ];
         $row += self::lockMetadata($field, $surface);
+        $row += self::noteMetadata($field, $surface);
 
         if ($surface === self::SURFACE_EDIT) {
             $row['editable'] = $visible && $field->isEditableByDefault($surface);
@@ -134,6 +144,13 @@ final class ProductFieldLayout
         return $field->isVisibilityLocked($surface)
             ? ['visibility_locked' => true]
             : [];
+    }
+
+    private static function noteMetadata(ProductField $field, string $surface): array
+    {
+        $note = $field->layoutNote($surface);
+
+        return $note === null ? [] : ['note' => $note];
     }
 
     /**

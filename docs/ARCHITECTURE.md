@@ -94,7 +94,11 @@ Shared UI note:
 - `app/Enums/*.php` holds enum-backed filter options for progress, priority, tag match, sort fields including `Added to the site Date`, sort backend metadata, and the numeric rating scales
 - `app/Models/Product.php` owns the Laravel 12 local scopes used by index filtering/search and keeps derived index keys in sync for RJ sorting and partial date sorting
 - `app/Support/ProductIndexResults.php` builds the filtered product query, hydrates only Index title/status base columns plus attributes needed by visible Index fields, and keeps filter/sort-only columns in SQL for default/RJ/scalar/date sorts
+- `ProductIndexResults` also prepares simple display strings for optional scalar Index cells such as partial listening dates, re-listen value, and priority so the Blade table does not call formatter or enum classes directly
 - `ProductIndex` reads page size, Index layout, Filter layout, and table width through one batched `ProductIndexSettings` option lookup per render, uses Livewire computed properties for derived filter/query/options/sort-icon state, and derives return/progress/tag query arrays from that normalized state
+- `ProductIndexSortField` owns valid sort keys, labels, SQL columns, and Advanced Filter sort dropdown layout normalization; the `index_sort_field_layout` option only changes which sort values the dropdown shows and does not disable enum-valid URL or table-header sorting
+- Advanced Filter date ranges use explicit `*_from` and `*_to` URL/query keys. Start/finish date ranges compare against the derived `start_date_sort` / `end_date_sort` `YYYYMMDD` integers, while `created_at` and `updated_at` ranges use Laravel date-only timestamp filtering.
+- Contributor sort fields order by each role's alphabetically first contributor name with nulls last. Circle sorting uses the first circle contributor name when present and falls back to `products.circle`.
 - the advanced filter modal defaults to `All tags` matching and `Desc` sort direction until the user chooses something else
 - `ProductIndexSettings` carries prepared Index columns, visible field ids, Filter fields, and table width CSS; `ProductIndex` only loads row-level tag/contributor data when those columns are visible and passes the grouped relation data directly to Blade before configurable columns render in the saved order
 - Index tag links use one prepared base URL per render and append the numeric genre id in Blade, avoiding route generation for every rendered tag link
@@ -177,6 +181,7 @@ Queue tables:
 - `series_autocomplete_order` controls series suggestion ordering, defaults to `usage`, and can be set to `first_word`
 - `auto_series_from_title_name` controls whether DLSite create fills an empty Series field from `japanese.title_name`, and defaults to enabled
 - `index_field_layout`, `edit_field_layout`, `filter_field_layout`, `quick_add_field_layout`, and `custom_quick_add_field_layout` store surface-specific configurable field order/visibility/editability layouts
+- `index_sort_field_layout` stores Advanced Filter sort dropdown order/visibility while leaving valid sort execution enum-backed
 - `index_table_width` controls the Index list/table width
 - `App\Models\Option` normalizes stored scalar strings into the runtime values the app uses
 
@@ -207,6 +212,7 @@ Runtime note:
 - opening and closing the advanced filter modal is local Alpine state registered in `public/scripts/index-advanced-filters.js`, not Livewire state, so showing the modal does not rerun the Index query or reset draft filter values
 - changing advanced sort draft fields is client-side/deferred through that Alpine component until Apply, so the modal does not send requests while choosing primary/secondary sort columns
 - desktop table headers and the advanced sort modal both update the same Livewire-backed server-side sort state
+- the Index Sort Fields Options setting affects only the Advanced Filter sort dropdown option map; table headers and restored query-string sorts still validate and sort through `ProductIndexSortField`
 - Index pagination uses Livewire/Laravel paginator links with the project pagination view and Livewire's scroll target data to return to `#progress-menu`, keeping progress tabs, search, and Filter visible after page changes
 - switching progress tabs keeps the rest of the index request state, but intentionally drops the current `genre` filter
 - clicking a series link opens the index with only the exact `series` filter applied
@@ -241,7 +247,7 @@ Runtime note:
 - the Options tab includes an Index Pagination setting powered by Livewire and persisted in `options.index_per_page`; changing the mode can reveal the custom-value input immediately, but the setting is only persisted when Save is submitted
 - the Options tab includes Custom Tags and Fetched EN Tags edit toggles inside the Edit Form field layout settings, grouped in one edit-control column on desktop
 - the Options tab includes Livewire autocomplete ordering settings persisted in `options.tag_autocomplete_order` and `options.series_autocomplete_order`
-- the Options tab includes Livewire settings for Index/Edit/Filter/Quick Add/Custom Quick Add field layouts, automatic Series from DLSite `title_name`, and Index table width; field layout rows use Livewire `wire:sort` drag handles plus Up/Down buttons, keep checkbox state in field-keyed maps while editing, and are persisted only when Save is submitted
+- the Options tab includes Livewire settings for Index/Edit/Filter/Quick Add/Custom Quick Add field layouts, Advanced Filter sort dropdown layout, automatic Series from DLSite `title_name`, and Index table width; field layout rows use Livewire `wire:sort` drag handles plus Up/Down buttons, keep checkbox state in field-keyed maps while editing, and are persisted only when Save is submitted
 - Options Livewire settings components share saved notice, validation-reset, and reset-confirmation state through `ConfirmsOptionReset`
 - the Options tab includes right-aligned, body-teleported, modal-confirmed reset actions for each visible setting group plus a global `Reset All Options` action; modal confirm buttons use a destructive red style, modals close from Cancel/Escape/backdrop clicks, global reset adds a 3-second client-side countdown before its confirm button unlocks, and global reset only restores visible Options settings while leaving product/refetch data and unrelated option rows alone
 - the selected-work search on the Refetch tab is rendered by Livewire and uses Laravel query helpers for the ID/title match

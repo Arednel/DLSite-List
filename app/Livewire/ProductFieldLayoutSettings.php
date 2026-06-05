@@ -3,6 +3,7 @@
 namespace App\Livewire;
 
 use App\Enums\ProductField;
+use App\Enums\ProductIndexSortField;
 use App\Livewire\Concerns\ConfirmsOptionReset;
 use App\Models\Option;
 use Illuminate\View\View;
@@ -19,6 +20,7 @@ class ProductFieldLayoutSettings extends Component
         'filterOrder',
         'quickAddOrder',
         'customQuickAddOrder',
+        'sortOrder',
     ];
 
     private const FIELDS_PROPERTIES = [
@@ -27,6 +29,7 @@ class ProductFieldLayoutSettings extends Component
         'filterFields',
         'quickAddFields',
         'customQuickAddFields',
+        'sortFields',
     ];
 
     public array $indexOrder = [];
@@ -39,6 +42,8 @@ class ProductFieldLayoutSettings extends Component
 
     public array $customQuickAddOrder = [];
 
+    public array $sortOrder = [];
+
     public array $indexFields = [];
 
     public array $editFields = [];
@@ -48,6 +53,8 @@ class ProductFieldLayoutSettings extends Component
     public array $quickAddFields = [];
 
     public array $customQuickAddFields = [];
+
+    public array $sortFields = [];
 
     public function mount(): void
     {
@@ -68,6 +75,7 @@ class ProductFieldLayoutSettings extends Component
         Option::setCustomQuickAddFieldLayout(
             $this->layoutFromState($this->customQuickAddOrder, $this->customQuickAddFields),
         );
+        Option::setIndexSortFieldLayout($this->sortLayoutFromState($this->sortOrder, $this->sortFields));
         $this->fillFromSettings();
         $this->markSaved('Field layouts saved.');
     }
@@ -75,6 +83,7 @@ class ProductFieldLayoutSettings extends Component
     public function resetToDefault(): void
     {
         Option::resetFieldLayoutsToDefault();
+        Option::resetIndexSortFieldLayoutToDefault();
         $this->fillFromSettings();
         $this->completeResetWithNotice('Field layouts reset to default.');
     }
@@ -133,6 +142,7 @@ class ProductFieldLayoutSettings extends Component
         [$this->customQuickAddOrder, $this->customQuickAddFields] = $this->stateFromLayout(
             Option::customQuickAddFieldLayout(),
         );
+        [$this->sortOrder, $this->sortFields] = $this->stateFromSortLayout(Option::indexSortFieldLayout());
     }
 
     public function reorderLayout(string $item, int $position): void
@@ -204,6 +214,53 @@ class ProductFieldLayoutSettings extends Component
                 ...$fields[$field->value],
                 'field' => $field->value,
                 'label' => $field->label(),
+            ];
+        }
+
+        return $layout;
+    }
+
+    private function stateFromSortLayout(array $layout): array
+    {
+        $order = [];
+        $fields = [];
+
+        foreach ($layout as $row) {
+            if (! is_array($row)) {
+                continue;
+            }
+
+            $field = ProductIndexSortField::tryFrom((string) ($row['field'] ?? ''));
+
+            if (! $field) {
+                continue;
+            }
+
+            $order[] = $field->value;
+            $fields[$field->value] = [
+                'field' => $field->value,
+                'label' => $field->label(),
+                'visible' => (bool) ($row['visible'] ?? false),
+            ];
+        }
+
+        return [$order, $fields];
+    }
+
+    private function sortLayoutFromState(array $order, array $fields): array
+    {
+        $layout = [];
+
+        foreach ($order as $field) {
+            $field = ProductIndexSortField::tryFrom((string) $field);
+
+            if (! $field || ! isset($fields[$field->value]) || ! is_array($fields[$field->value])) {
+                continue;
+            }
+
+            $layout[] = [
+                'field' => $field->value,
+                'visible' => (bool) ($fields[$field->value]['visible'] ?? false),
             ];
         }
 
