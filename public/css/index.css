@@ -1135,6 +1135,13 @@ body.filter-modal-open {
 
     .list-table .list-table-data .data.configurable {
         grid-area: auto;
+    }
+
+    .list-table .list-table-data .data.description,
+    .list-table .list-table-data .data.notes,
+    .list-table .list-table-data .data.start-date,
+    .list-table .list-table-data .data.end-date,
+    .list-table .list-table-data .data.tags {
         grid-column: 1 / -1;
     }
 

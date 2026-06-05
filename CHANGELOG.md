@@ -2,6 +2,9 @@
 
 ## Development
 
+* 2026-06-05 -- 1.4.6 Index Mobile Polish
+  * Cleaned up mobile Index card field widths so short optional fields share rows and long fields stay full-width
+
 * 2026-06-05 -- 1.4.5 Configurable Filter Sort
   * Added configurable Advanced Filter sort dropdown order/visibility
   * Added hidden-by-default Index notes/listening columns, date range filters, and contributor/timestamp sort options
