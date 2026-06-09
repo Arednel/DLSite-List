@@ -2,6 +2,9 @@
 
 ## Development
 
+* 2026-06-09 -- 1.4.7 Tests Cleanup
+  * Tests Cleanup
+
 * 2026-06-05 -- 1.4.6 Index Mobile Polish
   * Cleaned up mobile Index card field widths so short optional fields share rows and long fields stay full-width
 

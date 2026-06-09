@@ -19,11 +19,11 @@ Current automated coverage is in Laravel PHPUnit tests:
 - `tests/Feature/ProductSortKeysTest.php`
   - covers derived product index keys for numeric RJ sorting, partial start/finish date sorting, and exact series filtering behavior
 - `tests/Feature/IndexPaginationSettingsTest.php`
-  - covers the Options page-size setting component, including default, fixed, custom positive integer, unlimited, modal-confirmed reset-to-default behavior, deferred save behavior, scalar option persistence, Livewire-only mode state, Livewire dirty-state saved notice behavior, and invalid custom values
+  - covers the Options page-size setting component behavior: default hydration, fixed/custom/unlimited persistence, deferred save behavior, validation, saved-notice clearing, modal-confirmed reset-to-default behavior, reset cancellation, global settings refresh, and supported view option data
 - `tests/Feature/AutocompleteSettingsTest.php`
   - covers the Options autocomplete ordering setting component, including default usage ordering, separate tag and series persistence, modal-confirmed reset-to-default behavior, invalid enum values, and Livewire dirty-state saved notice behavior
 - `tests/Feature/ProductMetadataSettingsTest.php`
-  - covers the Options field layout, Advanced Filter sort dropdown layout setting, locked visibility UI for Index/Edit/Quick Add/Custom Quick Add required rows, `wire:sort` drag reorder handlers, field-keyed checkbox state preservation during reorder, separate custom/fetched tag edit toggles, desktop grouping for the tag edit controls, automatic Series, Index table width, shared settings reset helper validation clearing, one shared body-teleported Options reset confirmation modal contract for immediate and countdown resets, global reset event dispatch/listener refresh, and global Options reset Livewire settings
+  - covers metadata-related Options components, including automatic Series persistence/reset/refresh behavior, Index table width fixed/custom/unlimited validation and reset behavior, Product field layout visibility/editability/order persistence across Index/Edit/Filter/Quick Add/Custom Quick Add surfaces, field-row movement with field-keyed state preservation, invalid layout movement handling, reset-to-default confirmation behavior, Reset All Options behavior, mounted Options settings components, and light rendered smoke coverage for core user-visible controls
 - `tests/Feature/ProductGenreMigrationTest.php`
   - covers migration of legacy product genre JSON into `genres` + `genre_product`, language row backfill into `genre_product_languages`, removal of old `genres.type` / `genres.language`, same product/tag attachments with both JP and EN language rows, and legacy migration compatibility when `genres.title_key` exists
 - `tests/Feature/ProductMetadataMigrationTest.php`
@@ -65,8 +65,6 @@ Current automated coverage is in Laravel PHPUnit tests:
   - covers enum-backed field component defaults and option maps
 - `tests/Unit/Models/TagRefetchStateTest.php`
   - covers refetch run/result state helper methods used by Blade and controller code, including active/cancelling/cancelled run state, run summaries, and result change-bucket helpers
-- `tests/Unit/ExampleTest.php`
-  - contains the default baseline unit test
 
 There are no project-owned Python tests.
 
@@ -96,7 +94,7 @@ Python process tests use Laravel's `Process::fake()` and `Process::preventStrayP
 Livewire component tests use `Livewire::test()` to update component state without a browser.
 Index pagination tests set `options.index_per_page` through `App\Models\Option` so fixed, custom, and unlimited list sizes can be verified without touching application config.
 Autocomplete settings tests set `options.tag_autocomplete_order` and `options.series_autocomplete_order` through `App\Models\Option` so tag and series suggestion ranking can be verified independently.
-Product metadata settings tests set the field layouts, Index sort dropdown layout, automatic Series, and Index table width options through `App\Models\Option` so UI behavior can be verified without changing environment config. Drag reorder tests call the Livewire `wire:sort` handlers directly because the browser drag gesture itself is provided by Livewire, and they assert checkbox state remains attached to field ids after row movement.
+Product metadata settings tests set the field layouts, automatic Series, and Index table width options through `App\Models\Option` so UI behavior can be verified without changing environment config. Field layout tests update Livewire component state and movement actions directly, then assert persisted layout order and checkbox/editability state remains attached to field ids after row movement.
 
 ### Docker test setup
 Docker tests use:
