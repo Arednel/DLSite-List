@@ -2,6 +2,10 @@
 
 ## Development
 
+* 2026-06-09 -- 1.4.8 Code Simplifications
+  * Cast product sample images as arrays and simplified product create/factory/test handling
+  * Consolidated field-layout option default resets through a shared surface map
+
 * 2026-06-09 -- 1.4.7 Tests Cleanup
   * Tests Cleanup
 

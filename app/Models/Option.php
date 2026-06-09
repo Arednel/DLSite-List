@@ -61,6 +61,14 @@ class Option extends Model
         self::INDEX_TABLE_WIDTH_CUSTOM => 'Custom',
     ];
 
+    private const FIELD_LAYOUT_OPTIONS = [
+        self::INDEX_FIELD_LAYOUT => ProductFieldLayout::SURFACE_INDEX,
+        self::EDIT_FIELD_LAYOUT => ProductFieldLayout::SURFACE_EDIT,
+        self::FILTER_FIELD_LAYOUT => ProductFieldLayout::SURFACE_FILTER,
+        self::QUICK_ADD_FIELD_LAYOUT => ProductFieldLayout::SURFACE_QUICK_ADD,
+        self::CUSTOM_QUICK_ADD_FIELD_LAYOUT => ProductFieldLayout::SURFACE_CUSTOM_QUICK_ADD,
+    ];
+
     protected $fillable = [
         'key',
         'value',
@@ -214,26 +222,9 @@ class Option extends Model
 
     public static function resetFieldLayoutsToDefault(): void
     {
-        self::setValue(
-            self::INDEX_FIELD_LAYOUT,
-            json_encode(ProductFieldLayout::storageLayout(null, ProductFieldLayout::SURFACE_INDEX), JSON_THROW_ON_ERROR),
-        );
-        self::setValue(
-            self::EDIT_FIELD_LAYOUT,
-            json_encode(ProductFieldLayout::storageLayout(null, ProductFieldLayout::SURFACE_EDIT), JSON_THROW_ON_ERROR),
-        );
-        self::setValue(
-            self::FILTER_FIELD_LAYOUT,
-            json_encode(ProductFieldLayout::storageLayout(null, ProductFieldLayout::SURFACE_FILTER), JSON_THROW_ON_ERROR),
-        );
-        self::setValue(
-            self::QUICK_ADD_FIELD_LAYOUT,
-            json_encode(ProductFieldLayout::storageLayout(null, ProductFieldLayout::SURFACE_QUICK_ADD), JSON_THROW_ON_ERROR),
-        );
-        self::setValue(
-            self::CUSTOM_QUICK_ADD_FIELD_LAYOUT,
-            json_encode(ProductFieldLayout::storageLayout(null, ProductFieldLayout::SURFACE_CUSTOM_QUICK_ADD), JSON_THROW_ON_ERROR),
-        );
+        foreach (self::FIELD_LAYOUT_OPTIONS as $key => $surface) {
+            self::setFieldLayout($key, $surface, []);
+        }
     }
 
     /**

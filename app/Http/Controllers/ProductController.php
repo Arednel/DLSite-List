@@ -157,7 +157,7 @@ class ProductController extends Controller
             'description_english' => $description_english,
             'notes' => $notes,
             'series' => $series,
-            'sample_images' => json_encode($sample_images),
+            'sample_images' => $sample_images,
             'score' => $this->createFieldSubmitted($request, $visibleCreateFields, ProductField::Score, 'score')
                 ? ($validated['score'] ?? null)
                 : null,
@@ -224,7 +224,7 @@ class ProductController extends Controller
             'series' => $this->createFieldSubmitted($request, $visibleCreateFields, ProductField::Series, 'series')
                 ? ($validated['series'] ?? null)
                 : null,
-            'sample_images' => json_encode($sampleImages),
+            'sample_images' => $sampleImages,
             'score' => $this->createFieldSubmitted($request, $visibleCreateFields, ProductField::Score, 'score')
                 ? ($validated['score'] ?? null)
                 : null,

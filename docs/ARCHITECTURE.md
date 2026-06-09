@@ -107,6 +107,7 @@ Shared UI note:
 - Index creator/circle filters query normalized contributor rows, circle filters also match `products.maker_id`, and description filters search both Japanese and English description text
 - `ProductContributorRole` owns the role-to-`ProductField` mapping used when Create/Edit field layouts decide whether contributor inputs are visible or editable
 - `ProductField` owns the field layout metadata for Index, Edit, Filter, Quick Add, and Custom Quick Add surfaces so layout normalization and field enum behavior stay aligned
+- Options field-layout default reset logic uses a shared option/surface map so adding another layout surface stays localized
 
 ## Data Model
 `products` table stores:
@@ -114,7 +115,7 @@ Shared UI note:
 - fetched maker/circle metadata
 - Japanese and English descriptions
 - progress/listening metadata (`progress`, dates, re-listen fields, priority)
-- local image paths
+- local image paths; `sample_images` is a JSON column cast to an array by `Product`, so Eloquent create/update calls use PHP arrays and Laravel serializes them
 
 `genres` table stores one row per visible genre title:
 - `title` as the display text

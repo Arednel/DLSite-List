@@ -30,7 +30,7 @@ class ProductFactory extends Factory
             'description' => 'Description',
             'description_english' => 'Description English',
             'notes' => null,
-            'sample_images' => json_encode([]),
+            'sample_images' => [],
             'score' => null,
             'series' => null,
             'progress' => 'Plan to Listen',

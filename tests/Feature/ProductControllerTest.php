@@ -1652,7 +1652,7 @@ class ProductControllerTest extends TestCase
                 "storage/Works/{$workId}/sample_1.jpg",
                 "storage/Works/{$workId}/sample_2.png",
             ],
-            json_decode($product->sample_images, true)
+            $product->sample_images
         );
         $this->assertEqualsCanonicalizing(
             ['Custom One', 'Custom Two'],
@@ -1700,7 +1700,7 @@ class ProductControllerTest extends TestCase
         $this->assertSame('RG_CUSTOM_VISIBLE', $product->maker_id);
         $this->assertSame('CUSTOM_VISIBLE_DESCRIPTION_TOKEN', $product->description);
         $this->assertSame('CUSTOM_VISIBLE_EN_DESCRIPTION_TOKEN', $product->description_english);
-        $this->assertSame([], json_decode($product->sample_images, true));
+        $this->assertSame([], $product->sample_images);
         $this->assertDatabaseHas('contributors', ['name' => 'CUSTOM_VISIBLE_AUTHOR_TOKEN']);
         $this->assertDatabaseMissing('contributors', ['name' => 'MALICIOUS_CUSTOM_VOICE_TOKEN']);
         Storage::disk('public')->assertMissing("Works/{$workId}/sample_1.jpg");

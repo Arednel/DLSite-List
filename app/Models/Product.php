@@ -42,6 +42,7 @@ class Product extends Model
     protected $casts = [
         'start_date' => 'array',
         'end_date' => 'array',
+        'sample_images' => 'array',
         'rj_number' => 'integer',
         'start_date_sort' => 'integer',
         'end_date_sort' => 'integer',
