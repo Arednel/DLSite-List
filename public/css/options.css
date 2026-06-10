@@ -603,7 +603,8 @@
         justify-self: start;
     }
 
-    #options-tab-panel,
+    #general-tab-panel,
+    #field-layouts-tab-panel,
     #refetch-tab-panel {
         box-sizing: border-box;
         width: 100%;

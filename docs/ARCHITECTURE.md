@@ -11,7 +11,7 @@
 1. User opens list page (`GET /`).
 2. `ProductController@index` renders `resources/views/Index.blade.php`, then `app/Livewire/ProductIndex.php` owns list filters, sorting, pagination, and URL query state.
 3. `GET /tags` renders the tag library, shows the work count for each English/custom genre, and links each tag back to the same index filter used on the list page.
-4. `GET /options` renders the Options tab by default, and `GET /options?tab=refetch` renders the Refetch Tags tab.
+4. `GET /options` renders the General tab by default, `GET /options?tab=field-layouts` renders the Field Layouts tab, and `GET /options?tab=refetch` renders the Refetch Tags tab.
 5. User can create/edit/delete entries through forms.
 6. Store flow (`POST /store`) validates input, runs scraper, reads scraped JSON, and creates a `products` row.
 7. Custom store flow (`POST /store/custom`) validates manual input, skips scraper/network checks, stores the required local cover plus optional sample images, and creates a `products` row.
@@ -243,14 +243,15 @@ Runtime note:
 - running refetch runs can be cancelled from the progress page; cancellation changes the run from `running` to `cancelling`, cancels that run's Laravel batch, lets any already-started Python fetch finish, and moves the run to `review` after pending results become fetched or skipped
 - cancelled-before-fetch work results are stored as skipped results, while fetched results completed before or during cancellation remain reviewable and can be applied
 - the refetch progress panel is rendered by Livewire and polls every second while the run is active (`running` or `cancelling`)
-- the Options page has separate `Options` and `Refetch` tabs; validation errors from refetch forms reopen the Refetch tab
+- the Options page has separate `General`, `Field Layouts`, and `Refetch` tabs; validation errors from refetch forms reopen the Refetch tab
 - the Refetch tab links to the latest refetch run when at least one run exists
-- the Options tab includes an Index Pagination setting powered by Livewire and persisted in `options.index_per_page`; changing the mode can reveal the custom-value input immediately, but the setting is only persisted when Save is submitted
-- the Options tab includes Custom Tags and Fetched EN Tags edit toggles inside the Edit Form field layout settings, grouped in one edit-control column on desktop
-- the Options tab includes Livewire autocomplete ordering settings persisted in `options.tag_autocomplete_order` and `options.series_autocomplete_order`
-- the Options tab includes Livewire settings for Index/Edit/Filter/Quick Add/Custom Quick Add field layouts, Advanced Filter sort dropdown layout, automatic Series from DLSite `title_name`, and Index table width; field layout rows use Livewire `wire:sort` drag handles plus Up/Down buttons, keep checkbox state in field-keyed maps while editing, and are persisted only when Save is submitted
+- the General tab includes an Index Pagination setting powered by Livewire and persisted in `options.index_per_page`; changing the mode can reveal the custom-value input immediately, but the setting is only persisted when Save is submitted
+- the General tab includes Livewire autocomplete ordering settings persisted in `options.tag_autocomplete_order` and `options.series_autocomplete_order`
+- the General tab includes Livewire settings for automatic Series from DLSite `title_name` and Index table width
+- the Field Layouts tab includes Custom Tags and Fetched EN Tags edit toggles inside the Edit Form field layout settings, grouped in one edit-control column on desktop
+- the Field Layouts tab includes Livewire settings for Index/Edit/Filter/Quick Add/Custom Quick Add field layouts and Advanced Filter sort dropdown layout; field layout rows use Livewire `wire:sort` drag handles plus Up/Down buttons, keep checkbox state in field-keyed maps while editing, and are persisted only when Save is submitted
 - Options Livewire settings components share saved notice, validation-reset, and reset-confirmation state through `ConfirmsOptionReset`
-- the Options tab includes right-aligned, body-teleported, modal-confirmed reset actions for each visible setting group plus a global `Reset All Options` action; modal confirm buttons use a destructive red style, modals close from Cancel/Escape/backdrop clicks, global reset adds a 3-second client-side countdown before its confirm button unlocks, and global reset only restores visible Options settings while leaving product/refetch data and unrelated option rows alone
+- the General and Field Layouts tabs include right-aligned, body-teleported, modal-confirmed reset actions for each visible setting group plus a global `Reset All Options` action; modal confirm buttons use a destructive red style, modals close from Cancel/Escape/backdrop clicks, global reset adds a 3-second client-side countdown before its confirm button unlocks, and global reset restores visible General and Field Layouts settings while leaving product/refetch data and unrelated option rows alone
 - the selected-work search on the Refetch tab is rendered by Livewire and uses Laravel query helpers for the ID/title match
 - the Refetch tab work list and queued all/selected refetch ids use numeric RJ descending order, matching the Index default order
 - custom-only works are skipped during refetch because they do not have DLSite metadata to fetch from

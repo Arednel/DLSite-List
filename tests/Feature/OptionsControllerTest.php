@@ -23,7 +23,7 @@ class OptionsControllerTest extends TestCase
 {
     use RefreshDatabase;
 
-    public function test_options_page_renders_options_tab_by_default(): void
+    public function test_options_page_renders_general_tab_by_default(): void
     {
         $product = Product::factory()->create([
             'work_name' => 'OPTIONS_WORK_TOKEN',
@@ -34,15 +34,58 @@ class OptionsControllerTest extends TestCase
             ->assertOk()
             ->assertSee('Options')
             ->assertSee('font-awesome/7.0.1/css/all.min.css', false)
-            ->assertSee('href="/options?tab=options"', false)
+            ->assertSee('href="/options?tab=general"', false)
+            ->assertSee('href="/options?tab=field-layouts"', false)
             ->assertSee('href="/options?tab=refetch"', false)
+            ->assertDontSee('href="/options?tab=options"', false)
             ->assertSee('Index Pagination')
             ->assertSee('Index page size')
+            ->assertSee('Reset All Options')
+            ->assertDontSee('Index Sort Fields')
+            ->assertDontSee('Editable Fetched EN Tags')
             ->assertDontSee('Refetch Tags')
             ->assertDontSee('Refetch all works')
             ->assertDontSee('Refetch selected works')
             ->assertDontSee('OPTIONS_WORK_TOKEN')
             ->assertDontSee('OPTIONS_EN_TOKEN');
+    }
+
+    public function test_field_layouts_tab_renders_field_layout_settings(): void
+    {
+        $product = Product::factory()->create([
+            'work_name' => 'OPTIONS_WORK_TOKEN',
+            'work_name_english' => 'OPTIONS_EN_TOKEN',
+        ]);
+
+        $this->get('/options?tab=field-layouts')
+            ->assertOk()
+            ->assertSee('Options')
+            ->assertSee('href="/options?tab=general"', false)
+            ->assertSee('href="/options?tab=field-layouts"', false)
+            ->assertSee('href="/options?tab=refetch"', false)
+            ->assertDontSee('href="/options?tab=options"', false)
+            ->assertSee('Field Layouts')
+            ->assertSee('Index Table')
+            ->assertSee('Index Sort Fields')
+            ->assertSee('Editable Fetched EN Tags')
+            ->assertSee('Reset All Options')
+            ->assertDontSee('Index page size')
+            ->assertDontSee('Refetch Tags')
+            ->assertDontSee('Refetch all works')
+            ->assertDontSee('Refetch selected works')
+            ->assertDontSee('OPTIONS_WORK_TOKEN')
+            ->assertDontSee('OPTIONS_EN_TOKEN')
+            ->assertDontSee($product->id);
+    }
+
+    public function test_invalid_options_tab_falls_back_to_general(): void
+    {
+        $this->get('/options?tab=options')
+            ->assertOk()
+            ->assertSee('Index Pagination')
+            ->assertSee('Index page size')
+            ->assertDontSee('Index Sort Fields')
+            ->assertDontSee('Refetch Tags');
     }
 
     public function test_refetch_tab_renders_refetch_actions_and_checklist(): void
@@ -55,10 +98,13 @@ class OptionsControllerTest extends TestCase
         $this->get('/options?tab=refetch')
             ->assertOk()
             ->assertSee('Options')
-            ->assertSee('href="/options?tab=options"', false)
+            ->assertSee('href="/options?tab=general"', false)
+            ->assertSee('href="/options?tab=field-layouts"', false)
             ->assertSee('href="/options?tab=refetch"', false)
+            ->assertDontSee('href="/options?tab=options"', false)
             ->assertSee('class="options-tab is-active"', false)
             ->assertDontSee('Index Pagination')
+            ->assertDontSee('Index Sort Fields')
             ->assertSee('Refetch Tags')
             ->assertSee('Refetch all works')
             ->assertSee('Refetch selected works')

@@ -123,7 +123,7 @@ Pagination built-in choices:
 - `1000`
 - `unlimited`
 
-The Options tab also accepts a custom positive integer. `unlimited` disables Index pagination and renders every matching work.
+The General tab also accepts a custom positive integer. `unlimited` disables Index pagination and renders every matching work.
 
 Tag editing defaults:
 - Custom Tags editable: enabled when Tags is visible/editable in the Edit Form layout
@@ -283,9 +283,14 @@ Index table width choices:
 
 This width is applied to the Index list/table panel and the top cover image. The top cover image keeps a capped desktop height, and product row thumbnails keep their fixed list size.
 
+Options page tabs:
+- `General` is the default tab and contains Index Pagination, Index Table Width, Series Metadata, Autocomplete, and Reset All Options
+- `Field Layouts` is the second tab and contains product field layout settings, Index Sort Fields, and Reset All Options
+- `Refetch` contains the tag refetch workflow
+
 Options reset behavior:
 - each visible Options setting has a modal-confirmed `Reset to default` action
-- `Reset All Options` opens the same Options confirmation modal and resets the visible Options tab settings together
+- `Reset All Options` is shown on the General and Field Layouts tabs, opens the same Options confirmation modal, and resets settings from both tabs together
 - reset buttons are right-aligned in full-width Options action rows
 - reset confirmation modals are teleported to the document body so they stay centered in the viewport instead of inside the Options panel
 - reset confirmation modals close from Cancel, Escape, or clicking outside the modal card

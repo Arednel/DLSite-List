@@ -2,6 +2,9 @@
 
 ## Development
 
+* 2026-06-10 -- 1.4.9 Options Page Tabs
+  * Split Options into General and Field Layouts tabs
+
 * 2026-06-09 -- 1.4.8 Code Simplifications
   * Cast product sample images as arrays and simplified product create/factory/test handling
   * Consolidated field-layout option default resets through a shared surface map

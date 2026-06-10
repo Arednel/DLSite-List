@@ -13,7 +13,7 @@
     @include('livewire.partials.options-reset-confirmation-modal', [
         'open' => $confirmingResetToDefault,
         'modalId' => 'all-options-reset-modal',
-        'message' => 'Reset all Options settings to their defaults?',
+        'message' => 'Reset all General and Field Layouts options to their defaults?',
         'confirmLabel' => 'Reset All Options',
         'confirmAction' => 'resetAll',
         'cancelAction' => 'cancelResetToDefault',

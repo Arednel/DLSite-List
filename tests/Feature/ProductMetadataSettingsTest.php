@@ -455,15 +455,27 @@ class ProductMetadataSettingsTest extends TestCase
         $this->assertSame('keep-me', DB::table('options')->where('key', 'unrelated_option')->value('value'));
     }
 
-    public function test_options_page_mounts_visible_settings_components(): void
+    public function test_general_options_page_mounts_non_layout_settings_components(): void
     {
         $this->get('/options')
             ->assertOk()
             ->assertSeeLivewire(IndexPaginationSettings::class)
             ->assertSeeLivewire(IndexTableWidthSettings::class)
-            ->assertSeeLivewire(ProductFieldLayoutSettings::class)
+            ->assertDontSeeLivewire(ProductFieldLayoutSettings::class)
             ->assertSeeLivewire(AutoSeriesSettings::class)
             ->assertSeeLivewire(AutocompleteSettings::class)
+            ->assertSeeLivewire(OptionsResetDefaults::class);
+    }
+
+    public function test_field_layouts_options_page_mounts_layout_settings_components(): void
+    {
+        $this->get('/options?tab=field-layouts')
+            ->assertOk()
+            ->assertDontSeeLivewire(IndexPaginationSettings::class)
+            ->assertDontSeeLivewire(IndexTableWidthSettings::class)
+            ->assertSeeLivewire(ProductFieldLayoutSettings::class)
+            ->assertDontSeeLivewire(AutoSeriesSettings::class)
+            ->assertDontSeeLivewire(AutocompleteSettings::class)
             ->assertSeeLivewire(OptionsResetDefaults::class);
     }
 
@@ -498,12 +510,19 @@ class ProductMetadataSettingsTest extends TestCase
             ->assertSet('indexOrder', $originalOrder);
     }
 
-    public function test_options_page_still_exposes_metadata_settings_sections(): void
+    public function test_field_layouts_tab_exposes_metadata_settings_sections(): void
     {
-        $this->get('/options')
+        $this->get('/options?tab=field-layouts')
             ->assertOk()
             ->assertSee('Field Layouts')
             ->assertSee('Fetched EN Tags');
+    }
+
+    public function test_global_reset_modal_mentions_general_and_field_layout_tabs(): void
+    {
+        Livewire::test(OptionsResetDefaults::class)
+            ->call('askResetToDefault')
+            ->assertSee('Reset all General and Field Layouts options to their defaults?');
     }
 
     public function test_reset_all_options_uses_countdown_delay(): void

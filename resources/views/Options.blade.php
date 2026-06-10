@@ -26,15 +26,23 @@
             </header>
 
             @php
-                $activeTab = old('tab', request('tab', 'options'));
-                $activeTab = in_array($activeTab, ['options', 'refetch'], true) ? $activeTab : 'options';
+                $activeTab = old('tab', request('tab', 'general'));
+                $activeTab = in_array($activeTab, ['general', 'field-layouts', 'refetch'], true)
+                    ? $activeTab
+                    : 'general';
             @endphp
 
             <nav class="options-tabs" aria-label="Options sections" role="tablist">
-                <a class="options-tab {{ $activeTab === 'options' ? 'is-active' : '' }}"
-                    href="{{ route('options.index', ['tab' => 'options'], false) }}" role="tab"
-                    aria-controls="options-tab-panel" aria-selected="{{ $activeTab === 'options' ? 'true' : 'false' }}">
-                    Options
+                <a class="options-tab {{ $activeTab === 'general' ? 'is-active' : '' }}"
+                    href="{{ route('options.index', ['tab' => 'general'], false) }}" role="tab"
+                    aria-controls="general-tab-panel" aria-selected="{{ $activeTab === 'general' ? 'true' : 'false' }}">
+                    General
+                </a>
+                <a class="options-tab {{ $activeTab === 'field-layouts' ? 'is-active' : '' }}"
+                    href="{{ route('options.index', ['tab' => 'field-layouts'], false) }}" role="tab"
+                    aria-controls="field-layouts-tab-panel"
+                    aria-selected="{{ $activeTab === 'field-layouts' ? 'true' : 'false' }}">
+                    Field Layouts
                 </a>
                 <a class="options-tab {{ $activeTab === 'refetch' ? 'is-active' : '' }}"
                     href="{{ route('options.index', ['tab' => 'refetch'], false) }}" role="tab"
@@ -44,8 +52,8 @@
                 </a>
             </nav>
 
-            @if ($activeTab === 'options')
-                <section id="options-tab-panel" class="panel" role="tabpanel">
+            @if ($activeTab === 'general')
+                <section id="general-tab-panel" class="panel" role="tabpanel">
                     <h2>Index Pagination</h2>
                     <p class="option-description">
                         Choose how many works are shown on each Index page.
@@ -60,13 +68,6 @@
 
                     <livewire:index-table-width-settings />
 
-                    <h2>Field Layouts</h2>
-                    <p class="option-description">
-                        Choose which product fields are visible, editable, and how configurable columns are ordered.
-                    </p>
-
-                    <livewire:product-field-layout-settings />
-
                     <h2>Series Metadata</h2>
                     <p class="option-description">
                         Choose whether DLSite Create fills Series from the fetched title name when Series is empty.
@@ -80,6 +81,19 @@
                     </p>
 
                     <livewire:autocomplete-settings />
+
+                    <livewire:options-reset-defaults />
+                </section>
+            @endif
+
+            @if ($activeTab === 'field-layouts')
+                <section id="field-layouts-tab-panel" class="panel" role="tabpanel">
+                    <h2>Field Layouts</h2>
+                    <p class="option-description">
+                        Choose which product fields are visible, editable, and how configurable columns are ordered.
+                    </p>
+
+                    <livewire:product-field-layout-settings />
 
                     <livewire:options-reset-defaults />
                 </section>
