@@ -77,17 +77,7 @@ class ProductController extends Controller
 
     public function tagLibrary()
     {
-        $genres = Genre::query()
-            ->whereHas('products', VisibleGenreAttachment::query())
-            ->withCount([
-                'products' => VisibleGenreAttachment::query(),
-            ])
-            ->orderBy('title')
-            ->get(['id', 'title']);
-
-        return view('TagLibrary', [
-            'genres' => $genres,
-        ]);
+        return view('TagLibrary');
     }
 
     /**

@@ -8,6 +8,7 @@ use App\Enums\ProductReListenValue;
 use App\Enums\ProductScore;
 use App\Enums\ProductContributorRole;
 use App\Enums\ProductField;
+use App\Livewire\TagLibraryManager;
 use App\Models\Genre;
 use App\Models\Option;
 use App\Models\Product;
@@ -553,7 +554,7 @@ class ProductControllerTest extends TestCase
             ->assertDontSee('EMPTY_STATE_EXISTING_TOKEN');
     }
 
-    public function test_tag_library_lists_clickable_english_and_custom_genres(): void
+    public function test_tag_library_renders_manager_for_english_and_custom_genres(): void
     {
         $englishGenre = $this->createGenre('Library English Tag', Genre::TYPE_AUTO_GENERATED_ENGLISH);
         $customGenre = $this->createGenre('Library Custom Tag', Genre::TYPE_CUSTOM);
@@ -582,19 +583,10 @@ class ProductControllerTest extends TestCase
             ->assertSee('Quick Add')
             ->assertSee('css/content-page.css', false)
             ->assertDontSee('css/index.css', false)
-            ->assertSeeInOrder([
-                '<span class="tag-library-tag-title">Library Custom Tag</span>',
-                '<span class="tag-library-tag-count">1</span>',
-                '<span class="tag-library-tag-title">Library English Tag</span>',
-                '<span class="tag-library-tag-count">2</span>',
-                '<span class="tag-library-tag-title">Library Shared Language Tag</span>',
-                '<span class="tag-library-tag-count">1</span>',
-            ], false)
+            ->assertSeeLivewire(TagLibraryManager::class)
             ->assertDontSee('Library Japanese Tag')
             ->assertSee('data-list-menu-toggle', false)
             ->assertSee('data-list-menu-overlay', false)
-            ->assertSee('genre=' . $englishGenre->getKey(), false)
-            ->assertSee('genre=' . $customGenre->getKey(), false)
             ->assertSee('href="/create"', false)
             ->assertDontSee('hero__back', false);
 

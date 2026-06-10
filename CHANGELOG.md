@@ -2,6 +2,10 @@
 
 ## Development
 
+* 2026-06-10 -- 1.5.1 Tag Library Management
+  * Added Livewire tag search, manual empty tag creation, collapsed all-tags display, and empty-tag deletion with confirmation
+  * Added an Options setting to open Tag Library with all tags collapsed or shown by default
+
 * 2026-06-10 -- 1.5.0 Tag Library UI Style
   * Refreshed Tag Library with a self-contained Index-aligned chip directory layout and style
 

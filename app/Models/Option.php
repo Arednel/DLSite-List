@@ -18,6 +18,8 @@ class Option extends Model
 
     public const AUTO_SERIES_FROM_TITLE_NAME = 'auto_series_from_title_name';
 
+    public const TAG_LIBRARY_TAGS_EXPANDED_BY_DEFAULT = 'tag_library_tags_expanded_by_default';
+
     public const INDEX_FIELD_LAYOUT = 'index_field_layout';
 
     public const EDIT_FIELD_LAYOUT = 'edit_field_layout';
@@ -124,21 +126,32 @@ class Option extends Model
 
     public static function autoSeriesFromTitleName(): bool
     {
-        $value = self::query()
-            ->where('key', self::AUTO_SERIES_FROM_TITLE_NAME)
-            ->value('value');
-
-        return $value === null ? true : $value === '1';
+        return self::booleanValueFor(self::AUTO_SERIES_FROM_TITLE_NAME, true);
     }
 
     public static function setAutoSeriesFromTitleName(bool $enabled): void
     {
-        self::setValue(self::AUTO_SERIES_FROM_TITLE_NAME, $enabled ? '1' : '0');
+        self::setBooleanValue(self::AUTO_SERIES_FROM_TITLE_NAME, $enabled);
     }
 
     public static function resetAutoSeriesFromTitleNameToDefault(): void
     {
         self::setAutoSeriesFromTitleName(true);
+    }
+
+    public static function tagLibraryTagsExpandedByDefault(): bool
+    {
+        return self::booleanValueFor(self::TAG_LIBRARY_TAGS_EXPANDED_BY_DEFAULT, false);
+    }
+
+    public static function setTagLibraryTagsExpandedByDefault(bool $expanded): void
+    {
+        self::setBooleanValue(self::TAG_LIBRARY_TAGS_EXPANDED_BY_DEFAULT, $expanded);
+    }
+
+    public static function resetTagLibraryTagsExpandedByDefaultToDefault(): void
+    {
+        self::setTagLibraryTagsExpandedByDefault(false);
     }
 
     /**
@@ -281,6 +294,7 @@ class Option extends Model
         self::resetFieldLayoutsToDefault();
         self::resetIndexSortFieldLayoutToDefault();
         self::resetAutoSeriesFromTitleNameToDefault();
+        self::resetTagLibraryTagsExpandedByDefaultToDefault();
         self::resetAutocompleteToDefault();
     }
 
@@ -362,6 +376,20 @@ class Option extends Model
     private static function setAutocompleteOrder(string $key, AutocompleteOrder|string $order): void
     {
         self::setValue($key, self::normalizeAutocompleteOrder($order)->value);
+    }
+
+    private static function booleanValueFor(string $key, bool $default): bool
+    {
+        $value = self::valueFor($key);
+
+        return $value === null
+            ? $default
+            : filter_var($value, FILTER_VALIDATE_BOOLEAN);
+    }
+
+    private static function setBooleanValue(string $key, bool $enabled): void
+    {
+        self::setValue($key, $enabled ? '1' : '0');
     }
 
     private static function normalizeAutocompleteOrder(AutocompleteOrder|string|null $order): AutocompleteOrder

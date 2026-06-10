@@ -10,6 +10,7 @@ use App\Livewire\IndexTableWidthSettings;
 use App\Livewire\IndexPaginationSettings;
 use App\Livewire\OptionsResetDefaults;
 use App\Livewire\ProductFieldLayoutSettings;
+use App\Livewire\TagLibraryDisplaySettings;
 use App\Models\Option;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
@@ -416,6 +417,7 @@ class ProductMetadataSettingsTest extends TestCase
             ['field' => ProductField::SampleImages->value, 'visible' => false],
         ]);
         Option::setAutoSeriesFromTitleName(false);
+        Option::setTagLibraryTagsExpandedByDefault(true);
         Option::setTagAutocompleteOrder(AutocompleteOrder::FirstWord);
         Option::setSeriesAutocompleteOrder(AutocompleteOrder::FirstWord);
         Option::query()->create([
@@ -443,6 +445,7 @@ class ProductMetadataSettingsTest extends TestCase
         $this->assertSame(Option::DEFAULT_INDEX_PER_PAGE, Option::indexPerPage());
         $this->assertSame('1024px', Option::indexTableWidthCss());
         $this->assertTrue(Option::autoSeriesFromTitleName());
+        $this->assertFalse(Option::tagLibraryTagsExpandedByDefault());
         $this->assertSame(AutocompleteOrder::Usage, Option::tagAutocompleteOrder());
         $this->assertSame(AutocompleteOrder::Usage, Option::seriesAutocompleteOrder());
         $this->assertSame(ProductField::Image->value, Option::indexFieldLayout()[0]['field']);
@@ -464,6 +467,7 @@ class ProductMetadataSettingsTest extends TestCase
             ->assertDontSeeLivewire(ProductFieldLayoutSettings::class)
             ->assertSeeLivewire(AutoSeriesSettings::class)
             ->assertSeeLivewire(AutocompleteSettings::class)
+            ->assertSeeLivewire(TagLibraryDisplaySettings::class)
             ->assertSeeLivewire(OptionsResetDefaults::class);
     }
 
@@ -476,6 +480,7 @@ class ProductMetadataSettingsTest extends TestCase
             ->assertSeeLivewire(ProductFieldLayoutSettings::class)
             ->assertDontSeeLivewire(AutoSeriesSettings::class)
             ->assertDontSeeLivewire(AutocompleteSettings::class)
+            ->assertDontSeeLivewire(TagLibraryDisplaySettings::class)
             ->assertSeeLivewire(OptionsResetDefaults::class);
     }
 

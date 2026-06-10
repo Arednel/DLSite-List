@@ -66,6 +66,13 @@ Tag identity uses `genres.title_key` instead of the display `genres.title` colum
 - `genres.title_key` uses binary collation so kana variants stay distinct
 - `genres.title` keeps the user/DLSite display casing and is not the uniqueness column
 
+The Tag Library can create manual empty tags:
+- submitting a new tag title creates a `genres` row with zero `genre_product` pivots
+- duplicate input is detected through `genres.title_key`, so case-only duplicates are not created
+- empty tags are searchable and can be opened as Index tag filters before any work uses them
+- empty tags can be deleted from the Tag Library only while they still have zero product pivots
+- attached JP-only fetched tags remain stored but hidden from Tag Library Stage 1
+
 Docker database services:
 - `database` stores normal app data in the `dbdata` Docker volume
 - `database_test` stores test data in the `dbdata_test` Docker volume and is used only by the `tests` service
@@ -99,6 +106,7 @@ Current settings:
 - `tag_autocomplete_order`: controls how tag autocomplete suggestions are ordered
 - `series_autocomplete_order`: controls how series autocomplete suggestions are ordered
 - `auto_series_from_title_name`: controls whether DLSite create fills an empty Series from `japanese.title_name`
+- `tag_library_tags_expanded_by_default`: controls whether Tag Library opens with the full tag list shown
 - `index_field_layout`: controls Index table field visibility/order
 - `edit_field_layout`: controls Edit Work field visibility/order/editability
 - `filter_field_layout`: controls Filter modal field visibility/order
@@ -284,7 +292,7 @@ Index table width choices:
 This width is applied to the Index list/table panel and the top cover image. The top cover image keeps a capped desktop height, and product row thumbnails keep their fixed list size.
 
 Options page tabs:
-- `General` is the default tab and contains Index Pagination, Index Table Width, Series Metadata, Autocomplete, and Reset All Options
+- `General` is the default tab and contains Index Pagination, Index Table Width, Series Metadata, Autocomplete, Tag Library display, and Reset All Options
 - `Field Layouts` is the second tab and contains product field layout settings, Index Sort Fields, and Reset All Options
 - `Refetch` contains the tag refetch workflow
 
@@ -295,8 +303,13 @@ Options reset behavior:
 - reset confirmation modals are teleported to the document body so they stay centered in the viewport instead of inside the Options panel
 - reset confirmation modals close from Cancel, Escape, or clicking outside the modal card
 - the global reset confirmation button is disabled for 3 seconds and shows a countdown before it can be clicked
-- reset defaults are pagination `100`, table width `default`, all five default field layouts, all default Index sort dropdown values, automatic Series enabled, and autocomplete `usage`
+- reset defaults are pagination `100`, table width `default`, all five default field layouts, all default Index sort dropdown values, automatic Series enabled, Tag Library collapsed, and autocomplete `usage`
 - global reset does not change products, tags, refetch runs, legacy hidden fallback keys, or unrelated future option rows
+
+Tag Library display default:
+- collapsed by default
+- when enabled, `/tags` opens with the full tag list shown
+- typing in Tag Library search still opens matching results regardless of this default
 
 Autocomplete ordering default:
 - `usage`

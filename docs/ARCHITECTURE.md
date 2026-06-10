@@ -10,7 +10,7 @@
 ## Main Application Flow
 1. User opens list page (`GET /`).
 2. `ProductController@index` renders `resources/views/Index.blade.php`, then `app/Livewire/ProductIndex.php` owns list filters, sorting, pagination, and URL query state.
-3. `GET /tags` renders the self-contained Index-aligned tag library shell, shows the work count for each English/custom genre, and links each tag back to the same index filter used on the list page.
+3. `GET /tags` renders the self-contained Index-aligned tag library shell, then `app/Livewire/TagLibraryManager.php` owns tag search, empty tag creation/deletion, saved collapsed/expanded default state, and tag links back to the same index filter used on the list page.
 4. `GET /options` renders the General tab by default, `GET /options?tab=field-layouts` renders the Field Layouts tab, and `GET /options?tab=refetch` renders the Refetch Tags tab.
 5. User can create/edit/delete entries through forms.
 6. Store flow (`POST /store`) validates input, runs scraper, reads scraped JSON, and creates a `products` row.
@@ -117,7 +117,7 @@ Shared UI note:
 - progress/listening metadata (`progress`, dates, re-listen fields, priority)
 - local image paths; `sample_images` is a JSON column cast to an array by `Product`, so Eloquent create/update calls use PHP arrays and Laravel serializes them
 
-`genres` table stores one row per visible genre title:
+`genres` table stores one row per tag title:
 - `title` as the display text
 - `title_key` as the unique identity key
 - optional `group_id`
@@ -155,6 +155,8 @@ Current English/custom UI surfaces show:
 - fetched pivot rows with an `en` language row
 
 JP-only fetched tags stay attached and stored, but are hidden from the current Index/Edit/Tag Library UI until a Japanese tag UI exists.
+
+Tag Library Stage 1 extends that visibility rule by also showing empty `genres` rows with zero `genre_product` pivots. These empty tags can be created manually from `/tags`, searched immediately, linked to Index filters, and deleted only while they still have no product pivots. Attached JP-only fetched tags remain hidden. The General Options tab controls whether the full tag list starts collapsed or expanded when `/tags` opens.
 
 `tag_refetch_runs` stores each Options -> Refetch Tags batch:
 - batch id and status

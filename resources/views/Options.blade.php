@@ -82,6 +82,13 @@
 
                     <livewire:autocomplete-settings />
 
+                    <h2>Tag Library</h2>
+                    <p class="option-description">
+                        Choose whether the full tag list is collapsed or shown when Tag Library opens.
+                    </p>
+
+                    <livewire:tag-library-display-settings />
+
                     <livewire:options-reset-defaults />
                 </section>
             @endif
