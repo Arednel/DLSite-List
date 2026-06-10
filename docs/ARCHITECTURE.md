@@ -10,7 +10,7 @@
 ## Main Application Flow
 1. User opens list page (`GET /`).
 2. `ProductController@index` renders `resources/views/Index.blade.php`, then `app/Livewire/ProductIndex.php` owns list filters, sorting, pagination, and URL query state.
-3. `GET /tags` renders the tag library, shows the work count for each English/custom genre, and links each tag back to the same index filter used on the list page.
+3. `GET /tags` renders the self-contained Index-aligned tag library shell, shows the work count for each English/custom genre, and links each tag back to the same index filter used on the list page.
 4. `GET /options` renders the General tab by default, `GET /options?tab=field-layouts` renders the Field Layouts tab, and `GET /options?tab=refetch` renders the Refetch Tags tab.
 5. User can create/edit/delete entries through forms.
 6. Store flow (`POST /store`) validates input, runs scraper, reads scraped JSON, and creates a `products` row.

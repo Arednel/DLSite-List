@@ -2,6 +2,9 @@
 
 ## Development
 
+* 2026-06-10 -- 1.5.0 Tag Library UI Style
+  * Refreshed Tag Library with a self-contained Index-aligned chip directory layout and style
+
 * 2026-06-10 -- 1.4.9 Options Page Tabs
   * Split Options into General and Field Layouts tabs
 

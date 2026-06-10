@@ -14,99 +14,36 @@
         href="{{ asset('css/list-menu-float.css') }}?v={{ filemtime(public_path('css/list-menu-float.css')) }}">
 </head>
 
-<body>
-    <x-list-menu-float :quick-add-url="route('products.create', [], false)" />
+<body class="tag-library-page">
+    <div class="tag-library-shell">
+        <x-list-menu-float :quick-add-url="route('products.create', [], false)" />
 
-    <main class="page">
-        <div class="container">
-            <header class="hero">
-                <h1>Tag Library</h1>
-            </header>
+        <main id="list-container" class="list-container tag-library-container">
+            <div class="list-block tag-library-block">
+                <div class="list-unit tag-library-unit">
+                    <div class="list-status-title">
+                        <span class="progress-heading">Tag Library</span>
+                    </div>
 
-            <section class="panel">
-                <h2>Tags</h2>
-                <div class="stack">
-                    <div>
-                        <div class="tag-row">
+                    <section class="tag-library-panel" aria-labelledby="tag-library-heading">
+                        <h1 id="tag-library-heading" class="tag-library-section-title">Tags</h1>
+
+                        <div class="tag-library-tags">
                             @forelse ($genres as $genre)
-                                <a class="tag tag--soft tag--md is-clickable"
+                                <a class="tag-library-tag"
                                     href="{{ route('index', ['age_category' => '', 'progress' => '', 'genre' => $genre->id]) }}">
-                                    {{ $genre->title }} ({{ $genre->products_count }})
+                                    <span class="tag-library-tag-title">{{ $genre->title }}</span>
+                                    <span class="tag-library-tag-count">{{ $genre->products_count }}</span>
                                 </a>
                             @empty
-                                <p class="empty-state">No English or custom tags yet.</p>
+                                <p class="tag-library-empty">No English or custom tags yet.</p>
                             @endforelse
                         </div>
-                    </div>
+                    </section>
                 </div>
-            </section>
-
-            {{-- <section class="panel">
-                <h2>Tag Groups</h2>
-                <div class="stack">
-                    <div>
-                        <h3>Group 1</h3>
-                        <div class="tag-row">
-                            <span class="tag tag--soft tag--md is-clickable">tag 1</span>
-                        </div>
-                    </div>
-                <p class="helper-text">Placeholder for future tag group management.</p>
-            </section>
-
-                    <div>
-                        <h3>Group 2</h3>
-                        <div class="tag-row">
-                            <button class="tag tag--soft tag--md tag--removable is-clickable" type="button">
-                                tag 2
-                                <span class="tag__remove">x</span>
-                            </button>
-                            <button class="tag tag--soft tag--md tag--removable is-clickable" type="button">
-                                tag 3
-                                <span class="tag__remove">x</span>
-                            </button>
-                        </div>
-                    </div>
-                </div>
-            </section> --}}
-
-            {{-- <section class="panel">
-            <section class="panel">
-                <h2>Tag Input</h2>
-                <div class="stack">
-                    <div>
-                        <label class="field-label" for="tag-input-a">Create new tag (Press Enter to add)</label>
-                        <div class="tag-input">
-                            <span class="tag tag--soft tag--sm tag--removable">
-                                tag 1
-                                <span class="tag__remove">x</span>
-                            </span>
-                            <span class="tag tag--soft tag--sm tag--removable">
-                                tag 2
-                                <span class="tag__remove">x</span>
-                            </span>
-                            <input id="tag-input-a" type="text" placeholder="Type a tag and press Enter...">
-                        </div>
-                    </div>
-
-                    <div>
-                        <label class="field-label" for="tag-input-b">There should be dropdown menu to add tag to tag
-                            group and create tag group etc</label>
-                        <div class="tag-input">
-                            <span class="tag tag--soft tag--sm tag--removable">
-                                tag 1
-                                <span class="tag__remove">x</span>
-                            </span>
-                            <span class="tag tag--soft tag--sm tag--removable">
-                                tag 2
-                                <span class="tag__remove">x</span>
-                            </span>
-                            <input id="tag-input-b" type="text" placeholder="Maximum 5 tags...">
-                        </div>
-                    </div>
-                </div>
-            </section> --}}
-        </div>
-    </main>
+            </div>
+        </main>
+    </div>
 </body>
 
 </html>

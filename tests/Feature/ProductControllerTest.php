@@ -580,9 +580,16 @@ class ProductControllerTest extends TestCase
         $response->assertOk()
             ->assertSee('Tag Library')
             ->assertSee('Quick Add')
-            ->assertSee('Library English Tag (2)')
-            ->assertSee('Library Custom Tag (1)')
-            ->assertSee('Library Shared Language Tag (1)')
+            ->assertSee('css/content-page.css', false)
+            ->assertDontSee('css/index.css', false)
+            ->assertSeeInOrder([
+                '<span class="tag-library-tag-title">Library Custom Tag</span>',
+                '<span class="tag-library-tag-count">1</span>',
+                '<span class="tag-library-tag-title">Library English Tag</span>',
+                '<span class="tag-library-tag-count">2</span>',
+                '<span class="tag-library-tag-title">Library Shared Language Tag</span>',
+                '<span class="tag-library-tag-count">1</span>',
+            ], false)
             ->assertDontSee('Library Japanese Tag')
             ->assertSee('data-list-menu-toggle', false)
             ->assertSee('data-list-menu-overlay', false)

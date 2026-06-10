@@ -1,75 +1,228 @@
-.tag-input {
-    min-height: 3.2rem;
-    border: 2px solid var(--pink-300);
-    border-radius: 0.9rem;
-    background: #ffffff;
-    padding: 0.5rem;
+body.tag-library-page {
+    min-height: 100vh;
+    margin: 0;
+    background: #F9E0DC !important;
+    color: #7D6A6A !important;
+    font-family: Verdana, Arial, sans-serif;
+    font-size: 11px;
+    text-align: center;
+}
+
+.tag-library-shell {
+    --tag-library-width: 1024px;
+}
+
+.tag-library-container {
+    position: relative;
+    width: min(var(--tag-library-width), calc(100vw - 16px));
+    margin-top: 24px;
+    margin-bottom: 32px;
+    margin-right: auto;
+    margin-left: auto;
+    border: 1px solid #EE9898;
+    background-color: #FFFDF8;
+}
+
+.tag-library-block {
+    margin-top: 0;
+    min-height: 600px;
+    padding: 0;
+}
+
+.tag-library-unit {
+    display: block;
+    width: 100%;
+    margin: 0 auto;
+    overflow-x: auto;
+}
+
+.tag-library-unit .list-status-title {
+    position: relative;
+    display: table;
+    width: 100%;
+    min-width: 0;
+    height: 38px;
+    background-color: #F9E0DC;
+    color: #7D6A6A;
+}
+
+.tag-library-unit .list-status-title .progress-heading {
+    display: table-cell;
+    width: 100%;
+    height: 38px;
+    padding: 0 24px;
+    color: #7D6A6A;
+    font-family: Verdana, "lucida grande", tahoma, arial, sans-serif;
+    font-size: 24px;
+    font-weight: 400;
+    line-height: 38px;
+    text-align: center;
+    vertical-align: middle;
+}
+
+.tag-library-panel {
+    box-sizing: border-box;
+    width: 100%;
+    padding: 22px 24px 26px;
+    border-top: 0;
+    background:
+        linear-gradient(180deg, rgba(255, 253, 248, 0.98), rgba(255, 248, 243, 0.98));
+    box-shadow:
+        0 14px 30px rgba(125, 106, 106, 0.10),
+        0 2px 8px rgba(238, 152, 152, 0.16);
+    text-align: left;
+}
+
+.tag-library-section-title {
+    margin: 0 0 16px;
+    padding-bottom: 10px;
+    border-bottom: 1px solid rgba(238, 152, 152, 0.75);
+    color: #7D6A6A;
+    font-family: Verdana, "lucida grande", tahoma, arial, sans-serif;
+    font-size: 1.45em;
+    font-weight: bold;
+    line-height: 1.4;
+}
+
+.tag-library-tags {
     display: flex;
-    align-items: center;
     flex-wrap: wrap;
-    gap: 0.45rem;
-    transition: border-color 0.16s ease, box-shadow 0.16s ease;
-}
-
-.tag-input:focus-within {
-    border-color: var(--pink-500);
-    box-shadow: 0 0 0 3px rgba(236, 72, 153, 0.17);
-}
-
-.tag-input input {
-    flex: 1 1 8rem;
-    min-width: 6.6rem;
-    border: 0;
-    background: transparent;
-    color: #633b4f;
-    font: inherit;
-    font-size: 0.88rem;
-    padding: 0.2rem;
-}
-
-.tag-input input::placeholder {
-    color: #cf88ae;
-}
-
-.tag-input input:focus {
-    outline: none;
-}
-
-.use-case {
-    border: 1px solid var(--pink-200);
-    border-radius: 0.88rem;
-    background: linear-gradient(180deg, #ffffff 0%, #fff8fc 100%);
-    padding: 0.95rem;
-    display: grid;
-    gap: 0.45rem;
-}
-
-.use-case__head {
-    display: flex;
+    gap: 9px;
     align-items: center;
-    gap: 0.45rem;
 }
 
-.use-case__head h3 {
+.tag-library-tag {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    max-width: 100%;
+    padding: 7px 11px 7px 13px;
+    border: 1px solid rgba(238, 152, 152, 0.9);
+    border-radius: 999px;
+    background-color: rgba(255, 253, 248, 0.95);
+    color: #C86E6E !important;
+    font-size: 12px;
+    font-weight: bold;
+    line-height: 1.2;
+    text-decoration: none;
+    box-shadow:
+        0 1px 2px rgba(125, 106, 106, 0.06),
+        inset 0 1px 0 rgba(255, 255, 255, 0.8);
+    transition:
+        background-color 0.18s ease,
+        border-color 0.18s ease,
+        color 0.18s ease,
+        box-shadow 0.18s ease,
+        transform 0.18s ease;
+}
+
+.tag-library-tag:hover,
+.tag-library-tag:focus {
+    border-color: #DD7D7D;
+    background-color: #FFF3F0;
+    color: #9F5F5F !important;
+    box-shadow:
+        0 7px 16px rgba(125, 106, 106, 0.12),
+        0 2px 5px rgba(238, 152, 152, 0.18);
+    transform: translateY(-1px);
+}
+
+.tag-library-tag:active {
+    box-shadow:
+        0 2px 6px rgba(125, 106, 106, 0.10),
+        inset 0 1px 2px rgba(125, 106, 106, 0.08);
+    transform: translateY(0);
+}
+
+.tag-library-tag:focus-visible {
+    outline: 2px solid #DD7D7D;
+    outline-offset: 3px;
+}
+
+.tag-library-tag-title {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.tag-library-tag-count {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 18px;
+    padding: 2px 6px;
+    border-radius: 999px;
+    background-color: #F4BFB7;
+    color: #7D6A6A;
+    font-size: 11px;
+    font-weight: bold;
+    line-height: 1.1;
+}
+
+.tag-library-tag:hover .tag-library-tag-count,
+.tag-library-tag:focus .tag-library-tag-count {
+    background-color: #EE9898;
+    color: #FFFDF8;
+}
+
+.tag-library-empty {
+    box-sizing: border-box;
+    width: 100%;
     margin: 0;
-    font-size: 0.98rem;
-    color: #3f2f37;
+    padding: 30px 14px;
+    border: 1px dashed rgba(238, 152, 152, 0.9);
+    border-radius: 8px;
+    background-color: rgba(255, 253, 248, 0.75);
+    color: #7D6A6A;
+    text-align: center;
+    font-size: 13px;
 }
 
-.use-case__icon {
-    width: 1.2rem;
-    height: 1.2rem;
-    border-radius: 50%;
-    display: inline-grid;
-    place-items: center;
-    font-size: 0.65rem;
-    font-weight: 700;
-    color: #ffffff;
-    background: linear-gradient(135deg, var(--pink-500), var(--pink-700));
-}
+@media (max-width: 768px) {
+    .tag-library-container {
+        width: 100%;
+        margin-top: 0;
+        margin-bottom: 80px;
+        border-right: 0;
+        border-left: 0;
+    }
 
-.use-case__caption {
-    margin: 0;
-    font-size: 0.82rem;
-    color: #6f5965;
+    .tag-library-block {
+        min-height: auto;
+        padding: 0 8px;
+        box-sizing: border-box;
+    }
+
+    .tag-library-unit {
+        width: 100%;
+        padding-bottom: 0;
+        overflow-x: visible;
+    }
+
+    .tag-library-unit .list-status-title .progress-heading {
+        padding: 6px;
+        text-align: center;
+    }
+
+    .tag-library-panel {
+        padding: 16px 12px 18px;
+    }
+
+    .tag-library-section-title {
+        font-size: 1.25em;
+    }
+
+    .tag-library-tags {
+        gap: 8px;
+    }
+
+    .tag-library-tag {
+        max-width: 100%;
+        font-size: 11px;
+        padding: 7px 10px 7px 12px;
+    }
+
+    .tag-library-tag-title {
+        max-width: calc(100vw - 120px);
+    }
 }
