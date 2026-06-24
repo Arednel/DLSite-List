@@ -117,114 +117,114 @@ final class ProductIndexResults
             ->select($columns ?? ['id'])
             ->when(
                 $filters->ageCategory !== null,
-                fn($query) => $query->where('age_category', $filters->ageCategory->value)
+                fn ($query) => $query->where('age_category', $filters->ageCategory->value)
             )
             ->when(
                 $filters->progress !== null,
-                fn($query) => $query->where('progress', $filters->progress->value)
+                fn ($query) => $query->where('progress', $filters->progress->value)
             )
             ->when(
                 $filters->genre !== '',
-                fn($query) => $query->filterGenre($filters->genre)
+                fn ($query) => $query->filterGenre($filters->genre)
             )
             ->when(
                 $filters->series !== '',
-                fn($query) => $query->filterSeries($filters->series)
+                fn ($query) => $query->filterSeries($filters->series)
             )
             ->when(
                 $filters->circle !== '',
-                fn($query) => $query->filterCircle($filters->circle)
+                fn ($query) => $query->filterCircle($filters->circle)
             )
             ->when(
                 $filters->scenario !== '',
-                fn($query) => $query->filterContributor('scenario', $filters->scenario)
+                fn ($query) => $query->filterContributor('scenario', $filters->scenario)
             )
             ->when(
                 $filters->voiceActor !== '',
-                fn($query) => $query->filterContributor('voice_actor', $filters->voiceActor)
+                fn ($query) => $query->filterContributor('voice_actor', $filters->voiceActor)
             )
             ->when(
                 $filters->illustration !== '',
-                fn($query) => $query->filterContributor('illustration', $filters->illustration)
+                fn ($query) => $query->filterContributor('illustration', $filters->illustration)
             )
             ->when(
                 $filters->author !== '',
-                fn($query) => $query->filterContributor('author', $filters->author)
+                fn ($query) => $query->filterContributor('author', $filters->author)
             )
             ->when(
                 $filters->description !== '',
-                fn($query) => $query->filterDescription($filters->description)
+                fn ($query) => $query->filterDescription($filters->description)
             )
             ->when(
                 $filters->title !== '',
-                fn($query) => $query->filterTitle($filters->title)
+                fn ($query) => $query->filterTitle($filters->title)
             )
             ->when(
                 $filters->notes !== '',
-                fn($query) => $query->filterNotes($filters->notes)
+                fn ($query) => $query->filterNotes($filters->notes)
             )
             ->when(
                 $filters->score !== null,
-                fn($query) => $query->where('score', (int) $filters->score->value)
+                fn ($query) => $query->where('score', (int) $filters->score->value)
             )
             ->when(
                 $filters->priority !== null,
-                fn($query) => $query->where('priority', (int) $filters->priority->value)
+                fn ($query) => $query->where('priority', (int) $filters->priority->value)
             )
             ->when(
                 $filters->numReListenTimes !== null,
-                fn($query) => $query->where('num_re_listen_times', $filters->numReListenTimes)
+                fn ($query) => $query->where('num_re_listen_times', $filters->numReListenTimes)
             )
             ->when(
                 $filters->reListenValue !== null,
-                fn($query) => $query->where('re_listen_value', (int) $filters->reListenValue->value)
+                fn ($query) => $query->where('re_listen_value', (int) $filters->reListenValue->value)
             )
             ->when(
                 $filters->startDateFrom !== '',
-                fn($query) => $query->where('start_date_sort', '>=', $this->dateSortValueFromInput($filters->startDateFrom))
+                fn ($query) => $query->where('start_date_sort', '>=', $this->dateSortValueFromInput($filters->startDateFrom))
             )
             ->when(
                 $filters->startDateTo !== '',
-                fn($query) => $query->where('start_date_sort', '<=', $this->dateSortValueFromInput($filters->startDateTo))
+                fn ($query) => $query->where('start_date_sort', '<=', $this->dateSortValueFromInput($filters->startDateTo))
             )
             ->when(
                 $filters->endDateFrom !== '',
-                fn($query) => $query->where('end_date_sort', '>=', $this->dateSortValueFromInput($filters->endDateFrom))
+                fn ($query) => $query->where('end_date_sort', '>=', $this->dateSortValueFromInput($filters->endDateFrom))
             )
             ->when(
                 $filters->endDateTo !== '',
-                fn($query) => $query->where('end_date_sort', '<=', $this->dateSortValueFromInput($filters->endDateTo))
+                fn ($query) => $query->where('end_date_sort', '<=', $this->dateSortValueFromInput($filters->endDateTo))
             )
             ->when(
                 $filters->createdAtFrom !== '',
-                fn($query) => $query->whereDate('created_at', '>=', $filters->createdAtFrom)
+                fn ($query) => $query->whereDate('created_at', '>=', $filters->createdAtFrom)
             )
             ->when(
                 $filters->createdAtTo !== '',
-                fn($query) => $query->whereDate('created_at', '<=', $filters->createdAtTo)
+                fn ($query) => $query->whereDate('created_at', '<=', $filters->createdAtTo)
             )
             ->when(
                 $filters->updatedAtFrom !== '',
-                fn($query) => $query->whereDate('updated_at', '>=', $filters->updatedAtFrom)
+                fn ($query) => $query->whereDate('updated_at', '>=', $filters->updatedAtFrom)
             )
             ->when(
                 $filters->updatedAtTo !== '',
-                fn($query) => $query->whereDate('updated_at', '<=', $filters->updatedAtTo)
+                fn ($query) => $query->whereDate('updated_at', '<=', $filters->updatedAtTo)
             )
             ->when(
                 $filters->tags !== '',
-                fn($query) => $query->filterTags(
+                fn ($query) => $query->filterTags(
                     $filters->parsedTags(),
                     $filters->resolvedTagMatch(),
                 )
             )
             ->when(
                 $filters->search !== '',
-                fn($query) => $query->searchIndex($filters->search)
+                fn ($query) => $query->searchIndex($filters->search)
             );
     }
 
-    public function loadVisibleGenres(array $productIds): Collection
+    public function loadVisibleGenres(array $productIds, bool $useGroupOrdering): Collection
     {
         if ($productIds === []) {
             return collect();
@@ -232,23 +232,87 @@ final class ProductIndexResults
 
         // Index only needs visible EN/custom tags, so use one lightweight query
         // instead of hydrating genre relationships for every listed product.
-        return DB::table('genre_product')
+        if (! $useGroupOrdering) {
+            return DB::table('genre_product')
+                ->join('genres', 'genres.id', '=', 'genre_product.genre_id')
+                ->whereIn('genre_product.product_id', $productIds)
+                ->where(VisibleGenreAttachment::query())
+                ->where('genres.hidden_on_index', false)
+                ->whereNotExists(function ($query): void {
+                    $query
+                        ->select('hidden_genre_group_genre.genre_id')
+                        ->from('genre_group_genre as hidden_genre_group_genre')
+                        ->join('genre_groups as hidden_genre_groups', 'hidden_genre_groups.id', '=', 'hidden_genre_group_genre.genre_group_id')
+                        ->whereColumn('hidden_genre_group_genre.genre_id', 'genres.id')
+                        ->where('hidden_genre_groups.hidden_on_index', true);
+                })
+                ->orderBy('genres.order')
+                ->orderBy('genres.title')
+                ->orderBy('genres.id')
+                ->get([
+                    'genre_product.product_id',
+                    'genres.id',
+                    'genres.title',
+                ])
+                ->groupBy('product_id');
+        }
+
+        $groupedGenres = DB::table('genre_product')
             ->join('genres', 'genres.id', '=', 'genre_product.genre_id')
+            ->join('genre_group_genre', 'genre_group_genre.genre_id', '=', 'genres.id')
+            ->join('genre_groups', 'genre_groups.id', '=', 'genre_group_genre.genre_group_id')
             ->whereIn('genre_product.product_id', $productIds)
             ->where(VisibleGenreAttachment::query())
+            ->where('genres.hidden_on_index', false)
+            ->where('genre_groups.hidden_on_index', false)
+            ->whereNotExists(function ($query): void {
+                $query
+                    ->select('hidden_genre_group_genre.genre_id')
+                    ->from('genre_group_genre as hidden_genre_group_genre')
+                    ->join('genre_groups as hidden_genre_groups', 'hidden_genre_groups.id', '=', 'hidden_genre_group_genre.genre_group_id')
+                    ->whereColumn('hidden_genre_group_genre.genre_id', 'genres.id')
+                    ->where('hidden_genre_groups.hidden_on_index', true);
+            })
+            ->orderBy('genre_groups.order')
+            ->orderBy('genre_group_genre.order')
+            ->orderBy('genre_groups.title')
             ->orderBy('genres.title')
             ->get([
                 'genre_product.product_id',
                 'genres.id',
                 'genres.title',
             ])
+            ->unique(fn ($genre): string => $genre->product_id.'|'.$genre->id)
+            ->values();
+
+        $ungroupedGenres = DB::table('genre_product')
+            ->join('genres', 'genres.id', '=', 'genre_product.genre_id')
+            ->whereIn('genre_product.product_id', $productIds)
+            ->where(VisibleGenreAttachment::query())
+            ->where('genres.hidden_on_index', false)
+            ->whereNotExists(function ($query): void {
+                $query
+                    ->select('genre_group_genre.genre_id')
+                    ->from('genre_group_genre')
+                    ->whereColumn('genre_group_genre.genre_id', 'genres.id');
+            })
+            ->orderBy('genres.order')
+            ->orderBy('genres.title')
+            ->get([
+                'genre_product.product_id',
+                'genres.id',
+                'genres.title',
+            ]);
+
+        return $groupedGenres
+            ->concat($ungroupedGenres)
             ->groupBy('product_id');
     }
 
     public function loadContributors(array $productIds, array $visibleFields): Collection
     {
         $roles = collect($visibleFields)
-            ->map(fn(string $field): ?string => ProductField::tryFrom($field)?->contributorRole()?->value)
+            ->map(fn (string $field): ?string => ProductField::tryFrom($field)?->contributorRole()?->value)
             ->filter()
             ->values()
             ->all();
@@ -270,7 +334,7 @@ final class ProductIndexResults
                 'contributors.maker_id',
             ])
             ->groupBy('product_id')
-            ->map(fn($rows) => $rows->groupBy('role'));
+            ->map(fn ($rows) => $rows->groupBy('role'));
     }
 
     public function displayValues(EloquentCollection $products, array $visibleFields): Collection
@@ -321,7 +385,7 @@ final class ProductIndexResults
     private function orderByNullableColumn(Builder $query, string $column, string $direction): void
     {
         $query
-            ->orderByRaw($query->getQuery()->getGrammar()->wrap($column) . ' IS NULL')
+            ->orderByRaw($query->getQuery()->getGrammar()->wrap($column).' IS NULL')
             ->orderBy($column, $direction);
     }
 
@@ -353,7 +417,7 @@ final class ProductIndexResults
         [$contributorExpression, $bindings] = $this->contributorSortExpression(ProductContributorRole::Circle);
 
         return [
-            'COALESCE(' . $contributorExpression . ', ' . $query->getQuery()->getGrammar()->wrap('circle') . ')',
+            'COALESCE('.$contributorExpression.', '.$query->getQuery()->getGrammar()->wrap('circle').')',
             $bindings,
         ];
     }
@@ -370,7 +434,7 @@ final class ProductIndexResults
             ->selectRaw('min(contributors.name)');
 
         return [
-            '(' . $subquery->toSql() . ')',
+            '('.$subquery->toSql().')',
             $subquery->getBindings(),
         ];
     }

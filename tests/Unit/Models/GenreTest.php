@@ -65,9 +65,8 @@ class GenreTest extends TestCase
         $this->assertDatabaseHas('genres', [
             'title' => 'New Genre',
             'title_key' => 'new genre',
-            'group_id' => null,
             'description' => null,
-            'order' => null,
+            'order' => 1,
         ]);
     }
 }

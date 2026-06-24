@@ -234,7 +234,6 @@ return new class extends Migration
         $now = now();
 
         $payload = [
-            'group_id' => null,
             'title' => $title,
             'description' => null,
             'order' => null,
@@ -244,6 +243,10 @@ return new class extends Migration
             'created_at' => $now,
             'updated_at' => $now,
         ];
+
+        if (Schema::hasColumn(self::GENRES_TABLE, 'group_id')) {
+            $payload['group_id'] = null;
+        }
 
         if (Schema::hasColumn(self::GENRES_TABLE, 'title_key')) {
             $payload['title_key'] = $this->titleKey($title);

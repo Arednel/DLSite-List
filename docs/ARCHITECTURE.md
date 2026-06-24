@@ -120,11 +120,26 @@ Shared UI note:
 `genres` table stores one row per tag title:
 - `title` as the display text
 - `title_key` as the unique identity key
-- optional `group_id`
+- normalized integer `order` for the ungrouped tag list
+- `hidden_on_index`, which hides only that tag from Index tag chips
 
 `title_key` is built from the trimmed title with Unicode case folding, then stored with a binary collation. This keeps tag matching case-insensitive while still treating Hiragana/Katakana variants as separate tags.
 
-`genre_groups` stores optional genre group definitions.
+`genre_groups` stores optional genre group definitions:
+- `title` as the display text
+- normalized integer `order`, used before tag order when Index tag chips render
+- `hidden_on_index`, which hides every assigned tag from Index without changing each tag's own hidden setting
+
+`genre_group_genre` is the many-to-many pivot table between `genre_groups` and `genres`:
+- `genre_group_id`
+- `genre_id`
+- normalized integer `order` for that tag inside that group
+
+The index visibility/tag group migration backfills legacy `genres.group_id` assignments into `genre_group_genre` before dropping the old single-group column, using the normalized genre order as the initial per-group pivot order.
+
+A tag can belong to multiple groups. Index tag chips sort by tag order/title by default. When the persisted `Enable group ordering on Index` option is enabled, grouped tags sort by group order, pivot order, group title, and tag title, and each multi-group tag renders once through its first visible group membership. In both modes, a tag is hidden from Index when it is directly hidden or belongs to any hidden group, even if it also belongs to visible groups.
+
+`Genre::groups()` and `GenreGroup::genres()` centralize the Laravel many-to-many ordering for tag groups. They expose the pivot `id` and `order` fields, include pivot timestamps, and apply the default group/tag order used by Tag Library. `Genre::visibleOnIndex()`, `Genre::hiddenOnIndex()`, `GenreGroup::visibleOnIndex()`, and `GenreGroup::hiddenOnIndex()` keep reusable index visibility rules in the models while `ProductIndexResults` keeps its raw SQL tag-chip query for page-level performance.
 
 `genre_product` is the many-to-many pivot table between `products` and `genres`.
 It also stores a `source` value:
@@ -156,7 +171,21 @@ Current English/custom UI surfaces show:
 
 JP-only fetched tags stay attached and stored, but are hidden from the current Index/Edit/Tag Library UI until a Japanese tag UI exists.
 
-Tag Library Stage 1 extends that visibility rule by also showing empty `genres` rows with zero `genre_product` pivots. These empty tags can be created manually from `/tags`, searched immediately, linked to Index filters, and deleted only while they still have no product pivots. Attached JP-only fetched tags remain hidden. The General Options tab controls whether the full tag list starts collapsed or expanded when `/tags` opens.
+Tag Library extends that visibility rule by also showing empty `genres` rows with zero `genre_product` pivots. These empty tags can be created manually from `/tags`, searched immediately, linked to Index filters, and deleted only while they still have no product pivots. Attached JP-only fetched tags remain hidden. The General Options tab controls whether the full tag list starts collapsed or expanded when `/tags` opens and whether Index tag chips use saved group order.
+
+The `/tags` Livewire manager also owns tag groups, group/tag order, and Index visibility:
+- the Tag Groups section contains the group creation form so group creation stays with group management
+- group deletion removes only that group's membership rows and the group row
+- adding a title to a group resolves an existing tag by `title_key` or creates a new empty tag before attaching the membership
+- removing a tag from a group detaches only that membership, so other group memberships remain
+- group hidden state hides every assigned tag from Index without changing each tag's own hidden setting
+- the persisted `Enable group ordering on Index` option is off by default; when enabled, Index tag chips use saved group and membership order instead of plain tag order/title ordering
+- the All Tags list can be filtered by Index visibility, group status, specific group, and empty/used state without hiding group management rows
+- the All Tags list has a session-only Edit Tags mode; normal mode keeps tag chips as Index filter links, while edit mode changes tag clicks into Livewire actions that open a teleported tag settings modal
+- the tag settings modal updates tag-level Index visibility and group memberships in one save, preserving existing pivot orders and appending newly selected memberships to the end of their groups
+- Edit Tags, Hide Tag on Index, and Hide Group on Index use shared `tag-library-switch-*` CSS/markup classes around native Livewire-bound checkboxes
+- tags hidden directly or assigned to any hidden group render a compact accessible red status indicator inside the All Tags chip, while group names and group-hidden state remain in filters, group management, and the tag settings modal
+- tag and group order values are normalized before rendering, so Tag Library and Index use normal ordered queries; Tag Library counts and visibility filters use Eloquent relationship helpers and counts for total pivots and English/custom-visible products
 
 `tag_refetch_runs` stores each Options -> Refetch Tags batch:
 - batch id and status
@@ -183,6 +212,7 @@ Queue tables:
 - `tag_autocomplete_order` controls tag suggestion ordering, defaults to `usage`, and can be set to `first_word`
 - `series_autocomplete_order` controls series suggestion ordering, defaults to `usage`, and can be set to `first_word`
 - `auto_series_from_title_name` controls whether DLSite create fills an empty Series field from `japanese.title_name`, and defaults to enabled
+- `tag_library_index_group_ordering_enabled` controls whether Index tag chips use group order, and defaults to disabled
 - `index_field_layout`, `edit_field_layout`, `filter_field_layout`, `quick_add_field_layout`, and `custom_quick_add_field_layout` store surface-specific configurable field order/visibility/editability layouts
 - `index_sort_field_layout` stores Advanced Filter sort dropdown order/visibility while leaving valid sort execution enum-backed
 - `index_table_width` controls the Index list/table width
@@ -205,13 +235,14 @@ Migration note:
 - `2026_05_30_000002_backfill_product_metadata_from_storage.php` reads matching `storage/app/Works/{RJ}.json` files to backfill maker/circle, descriptions, and contributor pivots; missing or invalid JSON is skipped and `series` is not backfilled
 
 Runtime note:
-- `ProductIndex` shows English + custom genres through one lightweight grouped query from `genre_product` + `genres` for the current page only when the Tags column is visible, loads contributor pivots only when visible contributor columns need them, and passes those grouped results directly to Blade keyed by product id
+- `ProductIndex` shows English + custom genres through one lightweight grouped query from `genre_product` + `genres` + `genre_groups` for the current page only when the Tags column is visible, loads contributor pivots only when visible contributor columns need them, and passes those grouped results directly to Blade keyed by product id
 - `ProductContributorSync` syncs contributor pivots through `Product::contributorsForRole()` and Laravel's role-scoped many-to-many `syncWithPivotValues()` so replacing one creator role does not detach the same contributor from another role
 - index cover images are rendered directly from `products.work_image` only when the Image column is visible
 - `products.start_date` and `products.end_date` JSON remain the editable/display source of truth; their `*_sort` columns store `YYYYMMDD` integers with missing month/day as `00`
 - `ProductIndex` keeps its filter/sort state in the URL through Livewire's `queryString()` config, then normalizes that state into `app/Support/ProductIndexFilters.php`
 - `app/Support/ProductIndexFilters.php` provides the normalized filter query used by progress tabs, preserved search state, tag links, explicit Livewire query-string keys, and the visibility-affecting filter groups used by return redirects
 - Index genre links, tag filters, genre-backed search, edit tag loading, and Tag Library use `VisibleGenreAttachment` for the same visible-tag rule as rendered tags: custom source or fetched `en` language row
+- Index tag chips exclude tags hidden by their own `genres.hidden_on_index` flag or assigned to any hidden group. By default they sort by tag order/title; when group ordering is enabled they render each remaining grouped tag once through its first visible group membership, then render ungrouped tags after grouped tags.
 - opening and closing the advanced filter modal is local Alpine state registered in `public/scripts/index-advanced-filters.js`, not Livewire state, so showing the modal does not rerun the Index query or reset draft filter values
 - changing advanced sort draft fields is client-side/deferred through that Alpine component until Apply, so the modal does not send requests while choosing primary/secondary sort columns
 - desktop table headers and the advanced sort modal both update the same Livewire-backed server-side sort state

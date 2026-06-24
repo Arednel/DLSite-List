@@ -192,7 +192,6 @@ class PerformanceSmokeTest extends TestCase
                 DB::table('genres')->insert(
                     $chunk
                         ->map(fn(int $number): array => [
-                            'group_id' => null,
                             'title' => $this->tagTitle($number),
                             'title_key' => Genre::titleKey($this->tagTitle($number)),
                             'description' => null,

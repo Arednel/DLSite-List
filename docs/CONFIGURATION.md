@@ -71,7 +71,38 @@ The Tag Library can create manual empty tags:
 - duplicate input is detected through `genres.title_key`, so case-only duplicates are not created
 - empty tags are searchable and can be opened as Index tag filters before any work uses them
 - empty tags can be deleted from the Tag Library only while they still have zero product pivots
-- attached JP-only fetched tags remain stored but hidden from Tag Library Stage 1
+- attached JP-only fetched tags remain stored but hidden from Tag Library
+
+The Tag Library can organize tags into groups:
+- group titles are stored in `genre_groups.title`
+- group order is stored in `genre_groups.order`
+- ungrouped tag order is stored in `genres.order`
+- group membership and per-group tag order are stored in `genre_group_genre`
+- adding a tag to a group resolves an existing `genres.title_key` match or creates a new empty tag, then attaches that group/tag membership
+- the same tag can belong to multiple groups
+- adding the same tag to the same group again does not create a duplicate membership
+- removing a tag from a group deletes only that membership and keeps the tag row plus any other group memberships
+- deleting a group deletes only that group row and its membership rows; tag rows and other memberships remain
+- `genres.hidden_on_index` hides a specific tag from Index tag chips
+- `genre_groups.hidden_on_index` hides every tag assigned to that group from Index without changing each tag's own hidden setting
+- Index tag chips sort by tag order and title by default; enabling `Enable group ordering on Index` switches visible grouped tags to group order, membership order, group title, and tag title. In both modes, a tag is excluded from Index when it is directly hidden or belongs to any hidden group.
+
+Tag Library filters apply only to the All Tags list. They can filter by Index visibility, grouped/ungrouped state, a specific group, and empty/used state while group management sections keep showing their current members.
+
+The All Tags list has a session-only `Edit tags` mode:
+- when off, clicking a tag opens Index filtered by that tag
+- when on, clicking a tag opens a tag settings modal instead of navigating
+- the mode uses a switch-style toggle bound to the Livewire `tagEditMode` checkbox state
+- the `Add group` field is inside the Tag Groups section header, next to group management
+- `Enable group ordering on Index` is a persisted switch in the Tag Groups section and in Options; it is off by default, so saved group order affects Index tag-chip ordering only after enabling it
+- the group rows and modal use switch-style toggles for tag and group Index visibility
+- Tag Library switch controls share the same `tag-library-switch-*` markup/CSS classes while keeping each native checkbox and Livewire binding intact
+- the modal can search existing tag groups through a dropdown-style search field, add them as assignment plaques, and remove selected plaques before saving
+- group search results are hidden until search text is entered; selected plaques and the empty selected-groups message stay below the search field
+- existing memberships keep their current per-group order
+- newly added memberships are appended to the end of each selected group
+- Cancel, backdrop click, and Escape close the modal without persisting unsaved group plaque changes
+- tags hidden directly or assigned to any hidden group show a compact red accessible status indicator inside the All Tags chip after the tag title and before the product count; group names and group-hidden state stay available through the Group filter and tag settings modal
 
 Docker database services:
 - `database` stores normal app data in the `dbdata` Docker volume
@@ -107,6 +138,7 @@ Current settings:
 - `series_autocomplete_order`: controls how series autocomplete suggestions are ordered
 - `auto_series_from_title_name`: controls whether DLSite create fills an empty Series from `japanese.title_name`
 - `tag_library_tags_expanded_by_default`: controls whether Tag Library opens with the full tag list shown
+- `tag_library_index_group_ordering_enabled`: controls whether Index tag chips use tag group order instead of plain tag order/title ordering
 - `index_field_layout`: controls Index table field visibility/order
 - `edit_field_layout`: controls Edit Work field visibility/order/editability
 - `filter_field_layout`: controls Filter modal field visibility/order
@@ -292,7 +324,7 @@ Index table width choices:
 This width is applied to the Index list/table panel and the top cover image. The top cover image keeps a capped desktop height, and product row thumbnails keep their fixed list size.
 
 Options page tabs:
-- `General` is the default tab and contains Index Pagination, Index Table Width, Series Metadata, Autocomplete, Tag Library display, and Reset All Options
+- `General` is the default tab and contains Index Pagination, Index Table Width, Series Metadata, Autocomplete, Tag Library settings, and Reset All Options
 - `Field Layouts` is the second tab and contains product field layout settings, Index Sort Fields, and Reset All Options
 - `Refetch` contains the tag refetch workflow
 
@@ -303,13 +335,16 @@ Options reset behavior:
 - reset confirmation modals are teleported to the document body so they stay centered in the viewport instead of inside the Options panel
 - reset confirmation modals close from Cancel, Escape, or clicking outside the modal card
 - the global reset confirmation button is disabled for 3 seconds and shows a countdown before it can be clicked
-- reset defaults are pagination `100`, table width `default`, all five default field layouts, all default Index sort dropdown values, automatic Series enabled, Tag Library collapsed, and autocomplete `usage`
+- reset defaults are pagination `100`, table width `default`, all five default field layouts, all default Index sort dropdown values, automatic Series enabled, Tag Library collapsed, Index group ordering disabled, and autocomplete `usage`
 - global reset does not change products, tags, refetch runs, legacy hidden fallback keys, or unrelated future option rows
 
-Tag Library display default:
+Tag Library defaults:
 - collapsed by default
 - when enabled, `/tags` opens with the full tag list shown
 - typing in Tag Library search still opens matching results regardless of this default
+- Index group ordering is disabled by default
+- when enabled, Index tag chips use saved group/membership ordering instead of plain tag order/title ordering
+- the Options page shows inline helper tooltips for the expanded-list and Index group-ordering switches
 
 Autocomplete ordering default:
 - `usage`

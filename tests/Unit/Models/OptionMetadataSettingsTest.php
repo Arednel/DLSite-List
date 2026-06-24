@@ -22,6 +22,19 @@ class OptionMetadataSettingsTest extends TestCase
         $this->assertFalse(Option::autoSeriesFromTitleName());
     }
 
+    public function test_tag_library_index_group_ordering_defaults_to_disabled_and_can_be_saved(): void
+    {
+        $this->assertFalse(Option::tagLibraryIndexGroupOrderingEnabled());
+
+        Option::setTagLibraryIndexGroupOrderingEnabled(true);
+
+        $this->assertTrue(Option::tagLibraryIndexGroupOrderingEnabled());
+
+        Option::setTagLibraryIndexGroupOrderingEnabled(false);
+
+        $this->assertFalse(Option::tagLibraryIndexGroupOrderingEnabled());
+    }
+
     public function test_field_layouts_are_normalized_when_saved(): void
     {
         Option::setIndexFieldLayout([
@@ -102,6 +115,7 @@ class OptionMetadataSettingsTest extends TestCase
         $this->assertSame(ProductField::Image->value, $defaults->indexColumns[0]['field']);
         $this->assertContains(ProductField::Title->value, $defaults->visibleIndexFields);
         $this->assertSame(ProductField::Title->value, $defaults->filterFields[0]['field']);
+        $this->assertFalse($defaults->indexGroupOrderingEnabled);
         $this->assertSame([
             ProductField::Title->value,
             ProductField::Score->value,
@@ -133,6 +147,7 @@ class OptionMetadataSettingsTest extends TestCase
             'mode' => Option::INDEX_TABLE_WIDTH_CUSTOM,
             'custom' => '75%',
         ]);
+        Option::setTagLibraryIndexGroupOrderingEnabled(true);
 
         $settings = Option::productIndexSettings();
 
@@ -148,6 +163,7 @@ class OptionMetadataSettingsTest extends TestCase
         $this->assertArrayHasKey(ProductIndexSortField::Series->value, $settings->indexSortFieldOptions);
         $this->assertArrayNotHasKey(ProductIndexSortField::Score->value, $settings->indexSortFieldOptions);
         $this->assertSame('75%', $settings->tableWidthCss);
+        $this->assertTrue($settings->indexGroupOrderingEnabled);
     }
 
     public function test_product_index_settings_fall_back_from_invalid_saved_values(): void
@@ -172,6 +188,16 @@ class OptionMetadataSettingsTest extends TestCase
         $this->assertSame(ProductField::Title->value, $settings->filterFields[0]['field']);
         $this->assertSame($this->visibleDefaultSortOptions(), $settings->indexSortFieldOptions);
         $this->assertSame('1024px', $settings->tableWidthCss);
+        $this->assertFalse($settings->indexGroupOrderingEnabled);
+    }
+
+    public function test_reset_visible_settings_restores_tag_library_index_group_ordering_default(): void
+    {
+        Option::setTagLibraryIndexGroupOrderingEnabled(true);
+
+        Option::resetVisibleSettingsToDefault();
+
+        $this->assertFalse(Option::tagLibraryIndexGroupOrderingEnabled());
     }
 
     public function test_index_sort_field_layout_is_normalized_when_saved_and_reset(): void

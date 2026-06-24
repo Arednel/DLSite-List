@@ -582,6 +582,7 @@ class ProductControllerTest extends TestCase
             ->assertSee('Tag Library')
             ->assertSee('Quick Add')
             ->assertSee('css/content-page.css', false)
+            ->assertSee('css/autocomplete.css', false)
             ->assertDontSee('css/index.css', false)
             ->assertSeeLivewire(TagLibraryManager::class)
             ->assertDontSee('Library Japanese Tag')
@@ -2949,7 +2950,6 @@ class ProductControllerTest extends TestCase
     private function createGenre(string $title, string $type): Genre
     {
         $genre = Genre::query()->create([
-            'group_id' => null,
             'title' => $title,
             'description' => null,
             'order' => null,

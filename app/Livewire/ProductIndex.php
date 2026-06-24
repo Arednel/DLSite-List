@@ -21,35 +21,65 @@ class ProductIndex extends Component
     use WithPagination;
 
     public string $search = '';
+
     public string $title = '';
+
     public string $notes = '';
+
     public string $genre = '';
+
     public string $series = '';
+
     public string $circle = '';
+
     public string $scenario = '';
+
     public string $voice_actor = '';
+
     public string $illustration = '';
+
     public string $author = '';
+
     public string $description = '';
+
     public string $tags = '';
+
     public string $tag_match = '';
+
     public string $age_category = '';
+
     public string $progress = '';
+
     public string $score = '';
+
     public string $priority = '';
+
     public string $num_re_listen_times = '';
+
     public string $re_listen_value = '';
+
     public string $start_date_from = '';
+
     public string $start_date_to = '';
+
     public string $end_date_from = '';
+
     public string $end_date_to = '';
+
     public string $created_at_from = '';
+
     public string $created_at_to = '';
+
     public string $updated_at_from = '';
+
     public string $updated_at_to = '';
+
     public string $sort_first_field = '';
+
     public string $sort_first_direction = '';
+
     public string $sort_second_field = '';
+
     public string $sort_second_direction = '';
 
     public string $searchInput = '';
@@ -57,7 +87,7 @@ class ProductIndex extends Component
     protected function queryString(): array
     {
         return collect(ProductIndexFilters::INPUT_KEYS)
-            ->mapWithKeys(fn(string $key): array => [$key => []])
+            ->mapWithKeys(fn (string $key): array => [$key => []])
             ->all();
     }
 
@@ -99,7 +129,7 @@ class ProductIndex extends Component
 
         // Load optional table data only when the current column layout can actually show it.
         $productGenres = in_array(ProductField::Tags->value, $settings->visibleIndexFields, true)
-            ? $productIndexResults->loadVisibleGenres($visibleProductIds)
+            ? $productIndexResults->loadVisibleGenres($visibleProductIds, $settings->indexGroupOrderingEnabled)
             : collect();
 
         $hasContributorColumns = collect($settings->indexColumns)
@@ -227,7 +257,7 @@ class ProductIndex extends Component
     private function currentInput(): array
     {
         return collect(ProductIndexFilters::INPUT_KEYS)
-            ->mapWithKeys(fn(string $key): array => [$key => (string) $this->{$key}])
+            ->mapWithKeys(fn (string $key): array => [$key => (string) $this->{$key}])
             ->all();
     }
 

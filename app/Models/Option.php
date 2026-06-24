@@ -20,6 +20,8 @@ class Option extends Model
 
     public const TAG_LIBRARY_TAGS_EXPANDED_BY_DEFAULT = 'tag_library_tags_expanded_by_default';
 
+    public const TAG_LIBRARY_INDEX_GROUP_ORDERING_ENABLED = 'tag_library_index_group_ordering_enabled';
+
     public const INDEX_FIELD_LAYOUT = 'index_field_layout';
 
     public const EDIT_FIELD_LAYOUT = 'edit_field_layout';
@@ -152,6 +154,21 @@ class Option extends Model
     public static function resetTagLibraryTagsExpandedByDefaultToDefault(): void
     {
         self::setTagLibraryTagsExpandedByDefault(false);
+    }
+
+    public static function tagLibraryIndexGroupOrderingEnabled(): bool
+    {
+        return self::booleanValueFor(self::TAG_LIBRARY_INDEX_GROUP_ORDERING_ENABLED, false);
+    }
+
+    public static function setTagLibraryIndexGroupOrderingEnabled(bool $enabled): void
+    {
+        self::setBooleanValue(self::TAG_LIBRARY_INDEX_GROUP_ORDERING_ENABLED, $enabled);
+    }
+
+    public static function resetTagLibraryIndexGroupOrderingEnabledToDefault(): void
+    {
+        self::setTagLibraryIndexGroupOrderingEnabled(false);
     }
 
     /**
@@ -295,6 +312,7 @@ class Option extends Model
         self::resetIndexSortFieldLayoutToDefault();
         self::resetAutoSeriesFromTitleNameToDefault();
         self::resetTagLibraryTagsExpandedByDefaultToDefault();
+        self::resetTagLibraryIndexGroupOrderingEnabledToDefault();
         self::resetAutocompleteToDefault();
     }
 
@@ -312,6 +330,7 @@ class Option extends Model
                 self::FILTER_FIELD_LAYOUT,
                 self::INDEX_SORT_FIELD_LAYOUT,
                 self::INDEX_TABLE_WIDTH,
+                self::TAG_LIBRARY_INDEX_GROUP_ORDERING_ENABLED,
             ])
             ->pluck('value', 'key');
 
@@ -340,6 +359,10 @@ class Option extends Model
             indexSortFieldOptions: ProductIndexSortField::optionsFromLayout($indexSortFieldLayout),
             tableWidth: $tableWidth,
             tableWidthCss: self::indexTableWidthCssFrom($tableWidth),
+            indexGroupOrderingEnabled: self::normalizeBoolean(
+                $values->get(self::TAG_LIBRARY_INDEX_GROUP_ORDERING_ENABLED),
+                false,
+            ),
         );
     }
 
@@ -362,7 +385,7 @@ class Option extends Model
     public static function fixedIndexPerPageOptions(): array
     {
         return collect(self::FIXED_INDEX_PER_PAGE_OPTIONS)
-            ->mapWithKeys(fn(int $value): array => [$value => (string) $value])
+            ->mapWithKeys(fn (int $value): array => [$value => (string) $value])
             ->all();
     }
 
@@ -380,16 +403,19 @@ class Option extends Model
 
     private static function booleanValueFor(string $key, bool $default): bool
     {
-        $value = self::valueFor($key);
-
-        return $value === null
-            ? $default
-            : filter_var($value, FILTER_VALIDATE_BOOLEAN);
+        return self::normalizeBoolean(self::valueFor($key), $default);
     }
 
     private static function setBooleanValue(string $key, bool $enabled): void
     {
         self::setValue($key, $enabled ? '1' : '0');
+    }
+
+    private static function normalizeBoolean(mixed $value, bool $default): bool
+    {
+        return $value === null
+            ? $default
+            : filter_var($value, FILTER_VALIDATE_BOOLEAN);
     }
 
     private static function normalizeAutocompleteOrder(AutocompleteOrder|string|null $order): AutocompleteOrder

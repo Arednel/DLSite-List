@@ -2,6 +2,11 @@
 
 ## Development
 
+* 2026-06-24 -- 1.5.2 Tag Groups
+  * Added Tag Groups any-hidden-group Index hiding and ordering
+  * Added Edit Tags mode with a tag settings modal for Index visibility and group assignments
+  * Aligned Index and Tag Library tag ordering with tag-group relationship ordering
+
 * 2026-06-10 -- 1.5.1 Tag Library Management
   * Added Livewire tag search, manual empty tag creation, collapsed all-tags display, and empty-tag deletion with confirmation
   * Added an Options setting to open Tag Library with all tags collapsed or shown by default

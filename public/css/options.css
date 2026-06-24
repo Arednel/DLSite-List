@@ -573,12 +573,18 @@
 
     .options-tabs {
         box-sizing: border-box;
+        display: grid;
+        grid-template-columns: 1fr;
         width: 100%;
+        border-radius: 1rem;
+        padding: 0.4rem;
     }
 
     .options-tab {
         box-sizing: border-box;
-        flex: 1 1 8rem;
+        width: 100%;
+        min-width: 0;
+        padding: 0.75rem 0.85rem;
     }
 
     .progress-summary,

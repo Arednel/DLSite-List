@@ -177,7 +177,6 @@ class AutocompleteControllerTest extends TestCase
     private function createGenre(string $title, string $type): Genre
     {
         $genre = Genre::query()->create([
-            'group_id' => null,
             'title' => $title,
             'description' => null,
             'order' => null,

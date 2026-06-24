@@ -7,6 +7,7 @@ use App\Enums\ProductField;
 use App\Enums\ProductIndexSortField;
 use App\Livewire\ProductIndex;
 use App\Models\Genre;
+use App\Models\GenreGroup;
 use App\Models\Option;
 use App\Models\Product;
 use App\Support\ProductContributorSync;
@@ -581,7 +582,6 @@ class ProductIndexLivewireTest extends TestCase
             'work_name' => 'ROW_DATA_WORK',
         ]);
         $genre = Genre::query()->create([
-            'group_id' => null,
             'title' => 'ROW_DATA_TAG',
             'description' => null,
             'order' => null,
@@ -613,7 +613,6 @@ class ProductIndexLivewireTest extends TestCase
             'work_name' => 'TAG_LINK_EMPTY_QUERY_WORK',
         ]);
         $emptyQueryGenre = Genre::query()->create([
-            'group_id' => null,
             'title' => 'TAG_LINK_EMPTY_QUERY_GENRE',
             'description' => null,
             'order' => null,
@@ -622,16 +621,14 @@ class ProductIndexLivewireTest extends TestCase
         app(ProductGenreSync::class)->syncCustom($emptyQueryProduct, [$emptyQueryGenre->getKey()]);
 
         Livewire::test(ProductIndex::class)
-            ->assertSee('href="/?genre=' . $emptyQueryGenre->getKey() . '"', false);
+            ->assertSee('href="/?genre='.$emptyQueryGenre->getKey().'"', false);
 
         $currentGenre = Genre::query()->create([
-            'group_id' => null,
             'title' => 'TAG_LINK_CURRENT_GENRE',
             'description' => null,
             'order' => null,
         ]);
         $linkedGenre = Genre::query()->create([
-            'group_id' => null,
             'title' => 'TAG_LINK_LINKED_GENRE',
             'description' => null,
             'order' => null,
@@ -658,11 +655,317 @@ class ProductIndexLivewireTest extends TestCase
             ->test(ProductIndex::class)
             ->assertSee(
                 'href="/?search=rain&amp;series=SERIES_ALPHA&amp;progress=Listening&amp;sort_first_field=score&amp;sort_first_direction=asc&amp;genre='
-                    . $linkedGenre->getKey()
-                    . '"',
+                    .$linkedGenre->getKey()
+                    .'"',
                 false,
             )
-            ->assertDontSee('genre=' . $currentGenre->getKey() . '&amp;genre=', false);
+            ->assertDontSee('genre='.$currentGenre->getKey().'&amp;genre=', false);
+    }
+
+    public function test_index_tag_chips_default_to_plain_tag_order_without_group_ordering(): void
+    {
+        Option::setIndexFieldLayout([
+            ['field' => ProductField::Tags->value, 'visible' => true],
+        ]);
+
+        $product = $this->createProduct(1, ['work_name' => 'TAG_PLAIN_ORDER_WORK']);
+        $firstGroup = GenreGroup::query()->create([
+            'title' => 'Plain First Group',
+            'description' => null,
+            'order' => 1,
+        ]);
+        $secondGroup = GenreGroup::query()->create([
+            'title' => 'Plain Second Group',
+            'description' => null,
+            'order' => 2,
+        ]);
+        $earlyTagInSecondGroup = Genre::query()->create([
+            'title' => 'TAG_PLAIN_ORDER_FIRST',
+            'description' => null,
+            'order' => 1,
+        ]);
+        $middleUngroupedTag = Genre::query()->create([
+            'title' => 'TAG_PLAIN_ORDER_UNGROUPED',
+            'description' => null,
+            'order' => 2,
+        ]);
+        $lateTagInFirstGroup = Genre::query()->create([
+            'title' => 'TAG_PLAIN_ORDER_LAST',
+            'description' => null,
+            'order' => 3,
+        ]);
+        $this->attachTagToGroup($secondGroup, $earlyTagInSecondGroup, 10);
+        $this->attachTagToGroup($firstGroup, $lateTagInFirstGroup, 1);
+
+        app(ProductGenreSync::class)->syncCustom($product, [
+            $lateTagInFirstGroup->getKey(),
+            $middleUngroupedTag->getKey(),
+            $earlyTagInSecondGroup->getKey(),
+        ]);
+
+        Livewire::test(ProductIndex::class)
+            ->assertSeeInOrder([
+                'TAG_PLAIN_ORDER_WORK',
+                'TAG_PLAIN_ORDER_FIRST',
+                'TAG_PLAIN_ORDER_UNGROUPED',
+                'TAG_PLAIN_ORDER_LAST',
+            ]);
+    }
+
+    public function test_index_tag_chips_follow_group_and_tag_order_with_ungrouped_last_when_enabled(): void
+    {
+        Option::setIndexFieldLayout([
+            ['field' => ProductField::Tags->value, 'visible' => true],
+        ]);
+        Option::setTagLibraryIndexGroupOrderingEnabled(true);
+
+        $product = $this->createProduct(1, ['work_name' => 'TAG_ORDER_WORK']);
+        $secondGroup = GenreGroup::query()->create([
+            'title' => 'Second Group',
+            'description' => null,
+            'order' => 2,
+        ]);
+        $firstGroup = GenreGroup::query()->create([
+            'title' => 'First Group',
+            'description' => null,
+            'order' => 1,
+        ]);
+        $ungrouped = Genre::query()->create([
+            'title' => 'TAG_ORDER_UNGROUPED',
+            'description' => null,
+            'order' => 1,
+        ]);
+        $firstGroupSecondTag = Genre::query()->create([
+            'title' => 'TAG_ORDER_FIRST_GROUP_SECOND',
+            'description' => null,
+            'order' => 1,
+        ]);
+        $firstGroupFirstTag = Genre::query()->create([
+            'title' => 'TAG_ORDER_FIRST_GROUP_FIRST',
+            'description' => null,
+            'order' => 1,
+        ]);
+        $secondGroupTag = Genre::query()->create([
+            'title' => 'TAG_ORDER_SECOND_GROUP',
+            'description' => null,
+            'order' => 1,
+        ]);
+        $multiGroupTag = Genre::query()->create([
+            'title' => 'TAG_ORDER_MULTI_GROUP',
+            'description' => null,
+            'order' => 1,
+        ]);
+        $this->attachTagToGroup($firstGroup, $firstGroupSecondTag, 2);
+        $this->attachTagToGroup($firstGroup, $firstGroupFirstTag, 1);
+        $this->attachTagToGroup($firstGroup, $multiGroupTag, 3);
+        $this->attachTagToGroup($secondGroup, $secondGroupTag, 1);
+        $this->attachTagToGroup($secondGroup, $multiGroupTag, 0);
+
+        app(ProductGenreSync::class)->syncCustom($product, [
+            $ungrouped->getKey(),
+            $firstGroupSecondTag->getKey(),
+            $firstGroupFirstTag->getKey(),
+            $secondGroupTag->getKey(),
+            $multiGroupTag->getKey(),
+        ]);
+
+        $component = Livewire::test(ProductIndex::class)
+            ->assertSeeInOrder([
+                'TAG_ORDER_WORK',
+                'TAG_ORDER_FIRST_GROUP_FIRST',
+                'TAG_ORDER_FIRST_GROUP_SECOND',
+                'TAG_ORDER_MULTI_GROUP',
+                'TAG_ORDER_SECOND_GROUP',
+                'TAG_ORDER_UNGROUPED',
+            ]);
+
+        $this->assertSame(1, substr_count($component->html(), 'TAG_ORDER_MULTI_GROUP'));
+    }
+
+    public function test_index_tag_chips_use_group_title_to_break_equal_group_and_pivot_order_ties(): void
+    {
+        Option::setIndexFieldLayout([
+            ['field' => ProductField::Tags->value, 'visible' => true],
+        ]);
+        Option::setTagLibraryIndexGroupOrderingEnabled(true);
+
+        $product = $this->createProduct(1, ['work_name' => 'TAG_TIE_WORK']);
+        $alphaGroup = GenreGroup::query()->create([
+            'title' => 'Alpha Tie Group',
+            'description' => null,
+            'order' => 1,
+        ]);
+        $zuluGroup = GenreGroup::query()->create([
+            'title' => 'Zulu Tie Group',
+            'description' => null,
+            'order' => 1,
+        ]);
+        $alphaTag = Genre::query()->create([
+            'title' => 'TAG_TIE_ALPHA_OTHER',
+            'description' => null,
+            'order' => 1,
+        ]);
+        $zuluTag = Genre::query()->create([
+            'title' => 'TAG_TIE_AAA_ZULU_OTHER',
+            'description' => null,
+            'order' => 1,
+        ]);
+        $multiGroupTag = Genre::query()->create([
+            'title' => 'TAG_TIE_ZZZ_SHARED',
+            'description' => null,
+            'order' => 1,
+        ]);
+
+        $this->attachTagToGroup($zuluGroup, $zuluTag, 1);
+        $this->attachTagToGroup($zuluGroup, $multiGroupTag, 1);
+        $this->attachTagToGroup($alphaGroup, $alphaTag, 1);
+        $this->attachTagToGroup($alphaGroup, $multiGroupTag, 1);
+
+        app(ProductGenreSync::class)->syncCustom($product, [
+            $zuluTag->getKey(),
+            $alphaTag->getKey(),
+            $multiGroupTag->getKey(),
+        ]);
+
+        $component = Livewire::test(ProductIndex::class)
+            ->assertSeeInOrder([
+                'TAG_TIE_WORK',
+                'TAG_TIE_ALPHA_OTHER',
+                'TAG_TIE_ZZZ_SHARED',
+                'TAG_TIE_AAA_ZULU_OTHER',
+            ]);
+
+        $this->assertSame(1, substr_count($component->html(), 'TAG_TIE_ZZZ_SHARED'));
+    }
+
+    public function test_index_tag_chips_normalize_null_orders_before_plain_ordering(): void
+    {
+        Option::setIndexFieldLayout([
+            ['field' => ProductField::Tags->value, 'visible' => true],
+        ]);
+
+        $product = $this->createProduct(1, ['work_name' => 'TAG_NULL_ORDER_WORK']);
+        $group = GenreGroup::query()->create([
+            'title' => 'Null Order Index Group',
+            'description' => null,
+            'order' => null,
+        ]);
+        $grouped = Genre::query()->create([
+            'title' => 'TAG_NULL_ORDER_GROUPED',
+            'description' => null,
+            'order' => null,
+        ]);
+        $ungrouped = Genre::query()->create([
+            'title' => 'TAG_NULL_ORDER_UNGROUPED',
+            'description' => null,
+            'order' => null,
+        ]);
+        $this->attachTagToGroup($group, $grouped, 1);
+
+        app(ProductGenreSync::class)->syncCustom($product, [
+            $ungrouped->getKey(),
+            $grouped->getKey(),
+        ]);
+
+        Livewire::test(ProductIndex::class)
+            ->assertSeeInOrder([
+                'TAG_NULL_ORDER_WORK',
+                'TAG_NULL_ORDER_GROUPED',
+                'TAG_NULL_ORDER_UNGROUPED',
+            ]);
+
+        $this->assertNotNull($group->refresh()->order);
+        $this->assertNotNull($grouped->refresh()->order);
+        $this->assertNotNull($ungrouped->refresh()->order);
+    }
+
+    public function test_index_tag_chips_respect_tag_and_group_hidden_settings(): void
+    {
+        Option::setIndexFieldLayout([
+            ['field' => ProductField::Tags->value, 'visible' => true],
+        ]);
+
+        $product = $this->createProduct(1, ['work_name' => 'TAG_HIDE_WORK']);
+        $hiddenGroup = GenreGroup::query()->create([
+            'title' => 'Hidden Group',
+            'description' => null,
+            'order' => 1,
+            'hidden_on_index' => true,
+        ]);
+        $visibleGroup = GenreGroup::query()->create([
+            'title' => 'Visible Group',
+            'description' => null,
+            'order' => 2,
+            'hidden_on_index' => false,
+        ]);
+        $secondVisibleGroup = GenreGroup::query()->create([
+            'title' => 'Second Visible Group',
+            'description' => null,
+            'order' => 3,
+            'hidden_on_index' => false,
+        ]);
+        $visibleTag = Genre::query()->create([
+            'title' => 'TAG_HIDE_VISIBLE',
+            'description' => null,
+            'order' => 1,
+            'hidden_on_index' => false,
+        ]);
+        $hiddenTag = Genre::query()->create([
+            'title' => 'TAG_HIDE_BY_TAG',
+            'description' => null,
+            'order' => 2,
+            'hidden_on_index' => true,
+        ]);
+        $hiddenByGroup = Genre::query()->create([
+            'title' => 'TAG_HIDE_BY_GROUP',
+            'description' => null,
+            'order' => 3,
+            'hidden_on_index' => false,
+        ]);
+        $visibleThroughSecondGroup = Genre::query()->create([
+            'title' => 'TAG_HIDE_VISIBLE_THROUGH_SECOND_GROUP',
+            'description' => null,
+            'order' => 4,
+            'hidden_on_index' => false,
+        ]);
+        $duplicateGroupTag = Genre::query()->create([
+            'title' => 'TAG_HIDE_DUPLICATE_GROUPS',
+            'description' => null,
+            'order' => 5,
+            'hidden_on_index' => false,
+        ]);
+        $duplicateVisibleGroupTag = Genre::query()->create([
+            'title' => 'TAG_HIDE_DUPLICATE_VISIBLE_GROUPS',
+            'description' => null,
+            'order' => 6,
+            'hidden_on_index' => false,
+        ]);
+        $this->attachTagToGroup($hiddenGroup, $hiddenByGroup, 1);
+        $this->attachTagToGroup($hiddenGroup, $visibleThroughSecondGroup, 2);
+        $this->attachTagToGroup($visibleGroup, $visibleThroughSecondGroup, 1);
+        $this->attachTagToGroup($visibleGroup, $duplicateGroupTag, 2);
+        $this->attachTagToGroup($hiddenGroup, $duplicateGroupTag, 3);
+        $this->attachTagToGroup($visibleGroup, $duplicateVisibleGroupTag, 4);
+        $this->attachTagToGroup($secondVisibleGroup, $duplicateVisibleGroupTag, 1);
+
+        app(ProductGenreSync::class)->syncCustom($product, [
+            $visibleTag->getKey(),
+            $hiddenTag->getKey(),
+            $hiddenByGroup->getKey(),
+            $visibleThroughSecondGroup->getKey(),
+            $duplicateGroupTag->getKey(),
+            $duplicateVisibleGroupTag->getKey(),
+        ]);
+
+        $component = Livewire::test(ProductIndex::class)
+            ->assertSee('TAG_HIDE_VISIBLE')
+            ->assertSee('TAG_HIDE_DUPLICATE_VISIBLE_GROUPS')
+            ->assertDontSee('TAG_HIDE_BY_TAG')
+            ->assertDontSee('TAG_HIDE_BY_GROUP')
+            ->assertDontSee('TAG_HIDE_VISIBLE_THROUGH_SECOND_GROUP')
+            ->assertDontSee('TAG_HIDE_DUPLICATE_GROUPS');
+
+        $this->assertSame(1, substr_count($component->html(), 'TAG_HIDE_DUPLICATE_VISIBLE_GROUPS'));
     }
 
     public function test_index_table_width_option_is_applied_to_table_container(): void
@@ -943,28 +1246,39 @@ class ProductIndexLivewireTest extends TestCase
             ->assertSet('sort_first_field', ProductIndexSortField::Score->value)
             ->assertSet('draft.sort_first_field', ProductIndexSortField::Score->value)
             ->assertSeeInOrder(['SORT_LOW', 'SORT_HIGH'])
-            ->assertSee('value="' . ProductIndexSortField::Series->value . '"', false)
-            ->assertSee('value="' . ProductIndexSortField::RJ->value . '"', false)
-            ->assertDontSee('value="' . ProductIndexSortField::Score->value . '"', false)
-            ->assertDontSee('value="' . ProductIndexSortField::UpdatedAt->value . '"', false)
-            ->assertDontSee('value="' . ProductIndexSortField::Circle->value . '"', false);
+            ->assertSee('value="'.ProductIndexSortField::Series->value.'"', false)
+            ->assertSee('value="'.ProductIndexSortField::RJ->value.'"', false)
+            ->assertDontSee('value="'.ProductIndexSortField::Score->value.'"', false)
+            ->assertDontSee('value="'.ProductIndexSortField::UpdatedAt->value.'"', false)
+            ->assertDontSee('value="'.ProductIndexSortField::Circle->value.'"', false);
 
         Livewire::test(ProductIndex::class)
             ->call('sortByHeader', ProductIndexSortField::Score->value)
             ->assertSet('sort_first_field', ProductIndexSortField::Score->value)
             ->assertSet('sort_first_direction', 'desc')
             ->assertSeeInOrder(['SORT_HIGH', 'SORT_LOW'])
-            ->assertDontSee('value="' . ProductIndexSortField::Score->value . '"', false);
+            ->assertDontSee('value="'.ProductIndexSortField::Score->value.'"', false);
     }
 
     private function createProduct(int $number, array $attributes = []): Product
     {
-        $id = 'RJ' . str_pad((string) $number, 9, '0', STR_PAD_LEFT);
+        $id = 'RJ'.str_pad((string) $number, 9, '0', STR_PAD_LEFT);
 
         return Product::factory()->create(array_merge([
             'id' => $id,
-            'maker_id' => 'RG' . substr($id, 2),
-            'work_name' => 'WORK_' . str_pad((string) $number, 3, '0', STR_PAD_LEFT),
+            'maker_id' => 'RG'.substr($id, 2),
+            'work_name' => 'WORK_'.str_pad((string) $number, 3, '0', STR_PAD_LEFT),
         ], $attributes));
+    }
+
+    private function attachTagToGroup(GenreGroup $group, Genre $genre, int $order): void
+    {
+        DB::table('genre_group_genre')->insert([
+            'genre_group_id' => $group->getKey(),
+            'genre_id' => $genre->getKey(),
+            'order' => $order,
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
     }
 }

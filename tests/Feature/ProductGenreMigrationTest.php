@@ -23,7 +23,6 @@ class ProductGenreMigrationTest extends TestCase
         $this->restoreGenreMetadataColumns();
 
         $sharedGenreId = DB::table('genres')->insertGetId([
-            'group_id' => null,
             'title' => 'Shared Genre',
             'title_key' => Genre::titleKey('Shared Genre'),
             'description' => null,
@@ -85,7 +84,6 @@ class ProductGenreMigrationTest extends TestCase
         $this->restoreGenreMetadataColumns();
 
         $sharedGenreId = DB::table('genres')->insertGetId([
-            'group_id' => null,
             'title' => 'Shared Genre',
             'title_key' => Genre::titleKey('Shared Genre'),
             'description' => null,
@@ -128,21 +126,18 @@ class ProductGenreMigrationTest extends TestCase
         $product = Product::factory()->create();
 
         $japaneseGenre = Genre::query()->create([
-            'group_id' => null,
             'title' => 'Japanese Only',
             'description' => null,
             'order' => null,
         ]);
 
         $englishGenre = Genre::query()->create([
-            'group_id' => null,
             'title' => 'English Only',
             'description' => null,
             'order' => null,
         ]);
 
         $customGenre = Genre::query()->create([
-            'group_id' => null,
             'title' => 'Custom Only',
             'description' => null,
             'order' => null,
@@ -171,6 +166,72 @@ class ProductGenreMigrationTest extends TestCase
         $this->assertSame(Genre::LANGUAGE_ENGLISH, $customGenre->language);
     }
 
+    public function test_index_visibility_migration_backfills_legacy_genre_group_ids_into_pivot_memberships(): void
+    {
+        $this->restoreLegacyGroupSchemaForIndexVisibilityMigration();
+
+        $now = now();
+        $groupId = DB::table('genre_groups')->insertGetId([
+            'title' => 'Legacy Migration Group',
+            'description' => null,
+            'order' => 1,
+            'created_at' => $now,
+            'updated_at' => $now,
+        ]);
+        $otherGroupId = DB::table('genre_groups')->insertGetId([
+            'title' => 'Other Legacy Migration Group',
+            'description' => null,
+            'order' => 2,
+            'created_at' => $now,
+            'updated_at' => $now,
+        ]);
+        $groupedGenreId = DB::table('genres')->insertGetId([
+            'group_id' => $groupId,
+            'title' => 'Legacy Grouped Tag',
+            'title_key' => Genre::titleKey('Legacy Grouped Tag'),
+            'description' => null,
+            'order' => 1,
+            'created_at' => $now,
+            'updated_at' => $now,
+        ]);
+        $nullOrderGroupedGenreId = DB::table('genres')->insertGetId([
+            'group_id' => $otherGroupId,
+            'title' => 'Legacy Null Order Grouped Tag',
+            'title_key' => Genre::titleKey('Legacy Null Order Grouped Tag'),
+            'description' => null,
+            'order' => null,
+            'created_at' => $now,
+            'updated_at' => $now,
+        ]);
+        $ungroupedGenreId = DB::table('genres')->insertGetId([
+            'group_id' => null,
+            'title' => 'Legacy Ungrouped Tag',
+            'title_key' => Genre::titleKey('Legacy Ungrouped Tag'),
+            'description' => null,
+            'order' => 2,
+            'created_at' => $now,
+            'updated_at' => $now,
+        ]);
+
+        $this->runIndexVisibilityMigration();
+
+        $this->assertFalse(Schema::hasColumn('genres', 'group_id'));
+        $this->assertTrue(Schema::hasTable('genre_group_genre'));
+        $this->assertDatabaseHas('genre_group_genre', [
+            'genre_group_id' => $groupId,
+            'genre_id' => $groupedGenreId,
+            'order' => DB::table('genres')->where('id', $groupedGenreId)->value('order'),
+        ]);
+        $this->assertDatabaseHas('genre_group_genre', [
+            'genre_group_id' => $otherGroupId,
+            'genre_id' => $nullOrderGroupedGenreId,
+            'order' => DB::table('genres')->where('id', $nullOrderGroupedGenreId)->value('order'),
+        ]);
+        $this->assertDatabaseMissing('genre_group_genre', [
+            'genre_id' => $ungroupedGenreId,
+        ]);
+    }
+
     private function runGenreIdMigration(): void
     {
         $migration = require database_path('migrations/2026_03_16_160000_convert_product_genre_titles_to_ids.php');
@@ -190,6 +251,13 @@ class ProductGenreMigrationTest extends TestCase
         $migration = require database_path('migrations/2026_05_24_000000_create_genre_product_languages_table.php');
 
         $migration->down();
+    }
+
+    private function runIndexVisibilityMigration(): void
+    {
+        $migration = require database_path('migrations/2026_06_11_000000_add_index_visibility_to_genres_and_genre_groups.php');
+
+        $migration->up();
     }
 
     private function restoreLegacyGenreColumns(): void
@@ -218,6 +286,27 @@ class ProductGenreMigrationTest extends TestCase
 
             if (! Schema::hasColumn('genres', 'language')) {
                 $table->string('language', 255)->nullable()->after('type');
+            }
+        });
+    }
+
+    private function restoreLegacyGroupSchemaForIndexVisibilityMigration(): void
+    {
+        Schema::dropIfExists('genre_group_genre');
+
+        Schema::table('genres', function (Blueprint $table): void {
+            if (Schema::hasColumn('genres', 'hidden_on_index')) {
+                $table->dropColumn('hidden_on_index');
+            }
+
+            if (! Schema::hasColumn('genres', 'group_id')) {
+                $table->integer('group_id')->nullable()->default(null)->after('id');
+            }
+        });
+
+        Schema::table('genre_groups', function (Blueprint $table): void {
+            if (Schema::hasColumn('genre_groups', 'hidden_on_index')) {
+                $table->dropColumn('hidden_on_index');
             }
         });
     }

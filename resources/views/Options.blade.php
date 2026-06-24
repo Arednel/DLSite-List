@@ -84,7 +84,8 @@
 
                     <h2>Tag Library</h2>
                     <p class="option-description">
-                        Choose whether the full tag list is collapsed or shown when Tag Library opens.
+                        Configure Tag Library startup behavior and whether saved tag-group order affects Index tag
+                        chips.
                     </p>
 
                     <livewire:tag-library-display-settings />

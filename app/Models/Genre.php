@@ -2,9 +2,11 @@
 
 namespace App\Models;
 
+use App\Support\VisibleGenreAttachment;
+use Illuminate\Database\Eloquent\Attributes\Scope;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
-use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 
 class Genre extends Model
@@ -26,10 +28,14 @@ class Genre extends Model
     public const PIVOT_SOURCE_CUSTOM = 'custom';
 
     protected $fillable = [
-        'group_id',
         'title',
         'description',
         'order',
+        'hidden_on_index',
+    ];
+
+    protected $casts = [
+        'hidden_on_index' => 'boolean',
     ];
 
     protected static function booted(): void
@@ -38,12 +44,21 @@ class Genre extends Model
             if ($genre->isDirty('title') || blank($genre->title_key)) {
                 $genre->title_key = self::titleKey($genre->title);
             }
+
+            if ($genre->order === null) {
+                $genre->order = self::nextOrder();
+            }
         });
     }
 
-    public function group(): BelongsTo
+    public function groups(): BelongsToMany
     {
-        return $this->belongsTo(GenreGroup::class, 'group_id');
+        return $this->belongsToMany(GenreGroup::class, 'genre_group_genre')
+            ->withPivot(['id', 'order'])
+            ->withTimestamps()
+            ->orderBy('genre_groups.order')
+            ->orderByPivot('order')
+            ->orderBy('genre_groups.title');
     }
 
     public function products(): BelongsToMany
@@ -51,13 +66,40 @@ class Genre extends Model
         return $this->belongsToMany(Product::class)->withTimestamps();
     }
 
+    public function visibleProducts(): BelongsToMany
+    {
+        return $this->products()->where(VisibleGenreAttachment::query());
+    }
+
+    #[Scope]
+    protected function visibleOnIndex(Builder $query): void
+    {
+        $query
+            ->where('genres.hidden_on_index', false)
+            ->whereDoesntHave('groups', function (Builder $group): void {
+                $group->hiddenOnIndex();
+            });
+    }
+
+    #[Scope]
+    protected function hiddenOnIndex(Builder $query): void
+    {
+        $query->where(function (Builder $hiddenQuery): void {
+            $hiddenQuery
+                ->where('genres.hidden_on_index', true)
+                ->orWhereHas('groups', function (Builder $group): void {
+                    $group->hiddenOnIndex();
+                });
+        });
+    }
+
     public static function resolveIdsFromTitles(array $titles): array
     {
         return collect($titles)
-            ->map(fn(mixed $title) => self::normalizeTitle($title))
+            ->map(fn (mixed $title) => self::normalizeTitle($title))
             ->filter()
-            ->unique(fn(string $title): string => self::titleKey($title))
-            ->map(fn(string $title) => self::resolveByTitle($title)->getKey())
+            ->unique(fn (string $title): string => self::titleKey($title))
+            ->map(fn (string $title) => self::resolveByTitle($title)->getKey())
             ->values()
             ->all();
     }
@@ -74,9 +116,7 @@ class Genre extends Model
             ['title_key' => self::titleKey($normalizedTitle)],
             [
                 'title' => $normalizedTitle,
-                'group_id' => null,
                 'description' => null,
-                'order' => null,
             ],
         );
     }
@@ -95,5 +135,10 @@ class Genre extends Model
         $normalizedTitle = trim((string) $title);
 
         return $normalizedTitle === '' ? null : $normalizedTitle;
+    }
+
+    private static function nextOrder(): int
+    {
+        return (int) self::query()->max('order') + 1;
     }
 }
