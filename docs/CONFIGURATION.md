@@ -134,6 +134,7 @@ The `options` table stores app settings as scalar string values keyed by `option
 
 Current settings:
 - `index_per_page`: controls how many works the Index list renders per page
+- `index_search_hidden_descriptions_enabled`: controls whether general Index search can match descriptions when the Description column is hidden
 - `tag_autocomplete_order`: controls how tag autocomplete suggestions are ordered
 - `series_autocomplete_order`: controls how series autocomplete suggestions are ordered
 - `auto_series_from_title_name`: controls whether DLSite create fills an empty Series from `japanese.title_name`
@@ -302,9 +303,9 @@ Index sort field dropdown default order:
 - `voice_actor` hidden by default
 - `author` hidden by default
 
-The Index table, Edit form, Filter modal, Quick Add form, and Custom Quick Add form each store their own layout JSON in `options.value`. Rows can be reordered by dragging the row handle or by using the Up/Down buttons, and changes are persisted when Save is submitted. Field settings are keyed by field id while editing, so reordering rows does not change checkbox state. Unknown or duplicate field ids are ignored and missing known fields fall back to the surface default order. Index `title` is always visible but can still be reordered. Edit Form `title` is also locked visible and represents the Japanese/English title inputs after the fixed RJ Code + Title display row. Quick Add keeps `rj_code` locked visible. Custom Quick Add keeps `rj_code`, `title`, `age_category`, and `image` locked visible. In the Edit Form layout, the `tags` row stores separate toggles for Custom Tags and Fetched EN Tags, grouped in the same edit-controls column on desktop.
+The Index Table Fields, Index Filter Fields, Edit Form Fields, Quick Add Form Fields, and Custom Quick Add Form Fields sections each store their own layout JSON in `options.value`. Rows can be reordered by dragging the row handle or by using the Up/Down buttons, and changes are persisted when Save is submitted. Field settings are keyed by field id while editing, so reordering rows does not change checkbox state. Unknown or duplicate field ids are ignored and missing known fields fall back to the surface default order. Index `title` is always visible but can still be reordered. Edit Form `title` is also locked visible and represents the Japanese/English title inputs after the fixed RJ Code + Title display row. Quick Add keeps `rj_code` locked visible. Custom Quick Add keeps `rj_code`, `title`, `age_category`, and `image` locked visible. In the Edit Form Fields section, the `tags` row stores separate toggles for Custom Tags and Fetched EN Tags, grouped in the same edit-controls column on desktop.
 
-The Index Sort Fields setting uses the same Options row controls to reorder and show/hide values in the Advanced Filter sort dropdowns. It only changes the dropdown presentation: valid URL sort state and sortable visible table columns keep sorting through `ProductIndexSortField`. Sortable optional Index headers include circle/creator columns, start/finish dates, total times re-listened, re-listen value, and priority when those columns are visible.
+The Index Sort Menu section appears after Index Filter Fields and uses the same Options row controls to reorder and show/hide values in the Advanced Filter sort dropdowns. It only changes the dropdown presentation: valid URL sort state and sortable visible table columns keep sorting through `ProductIndexSortField`. Sortable optional Index headers include circle/creator columns, start/finish dates, total times re-listened, re-listen value, and priority when those columns are visible.
 
 Create form layout note:
 - hidden Quick Add fields are not persisted from submitted form data
@@ -324,8 +325,8 @@ Index table width choices:
 This width is applied to the Index list/table panel and the top cover image. The top cover image keeps a capped desktop height, and product row thumbnails keep their fixed list size.
 
 Options page tabs:
-- `General` is the default tab and contains Index Pagination, Index Table Width, Series Metadata, Autocomplete, Tag Library settings, and Reset All Options
-- `Field Layouts` is the second tab and contains product field layout settings, Index Sort Fields, and Reset All Options
+- `General` is the default tab and contains Index Pagination, Index Search, Index Table Width, Series Metadata, Autocomplete, Tag Library settings, and Reset All Options
+- `Field Layouts` is the second tab and contains Index Table Fields, Index Filter Fields, Index Sort Menu, Edit Form Fields, Quick Add Form Fields, Custom Quick Add Form Fields, and Reset All Options
 - `Refetch` contains the tag refetch workflow
 
 Options reset behavior:
@@ -335,8 +336,14 @@ Options reset behavior:
 - reset confirmation modals are teleported to the document body so they stay centered in the viewport instead of inside the Options panel
 - reset confirmation modals close from Cancel, Escape, or clicking outside the modal card
 - the global reset confirmation button is disabled for 3 seconds and shows a countdown before it can be clicked
-- reset defaults are pagination `100`, table width `default`, all five default field layouts, all default Index sort dropdown values, automatic Series enabled, Tag Library collapsed, Index group ordering disabled, and autocomplete `usage`
+- reset defaults are pagination `100`, hidden-description search disabled, table width `default`, all five default field layouts, all default Index sort dropdown values, automatic Series enabled, Tag Library collapsed, Index group ordering disabled, and autocomplete `usage`
 - global reset does not change products, tags, refetch runs, legacy hidden fallback keys, or unrelated future option rows
+
+Index search defaults:
+- general Index search ignores descriptions while the Index Description column is hidden
+- showing the Index Description column makes general search include Japanese and English descriptions
+- enabling `Search hidden descriptions` makes general search include descriptions even while the column is hidden
+- the explicit Description filter always searches descriptions, regardless of Index column visibility
 
 Tag Library defaults:
 - collapsed by default

@@ -182,21 +182,24 @@ class Product extends Model
     }
 
     #[Scope]
-    protected function searchIndex(Builder $query, string $search): void
+    protected function searchIndex(Builder $query, string $search, bool $includeDescriptions): void
     {
         $search = '%' . trim($search) . '%';
+        $columns = [
+            'id',
+            'work_name',
+            'work_name_english',
+            'series',
+            'notes',
+            'circle',
+        ];
 
-        $query->where(function (Builder $searchQuery) use ($search): void {
-            $searchQuery->whereAny([
-                'id',
-                'work_name',
-                'work_name_english',
-                'series',
-                'notes',
-                'circle',
-                'description',
-                'description_english',
-            ], 'like', $search)
+        if ($includeDescriptions) {
+            array_push($columns, 'description', 'description_english');
+        }
+
+        $query->where(function (Builder $searchQuery) use ($columns, $search): void {
+            $searchQuery->whereAny($columns, 'like', $search)
                 ->orWhereHas('contributors', function (Builder $contributorQuery) use ($search): void {
                     $contributorQuery->whereLike('contributors.name', $search);
                 })

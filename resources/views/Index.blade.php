@@ -16,7 +16,9 @@
 </head>
 
 <body class="product-index-page">
-    <livewire:product-index />
+    <main class="product-index-main">
+        <livewire:product-index />
+    </main>
 
     <footer>
         <div id="footer-block">

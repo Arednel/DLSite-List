@@ -80,7 +80,7 @@ Shared UI note:
 - `resources/views/components/list-menu-float.blade.php` is reused by index/tag library
 - desktop keeps the floating hover menu
 - mobile uses a toggle button that opens the same menu as a left-side drawer
-- `resources/views/Index.blade.php` hosts `ProductIndex`; the Livewire view keeps the desktop table on larger screens and switches to stacked cards on mobile so search/actions still fit
+- `resources/views/Index.blade.php` hosts `ProductIndex` inside a sticky-footer page shell; the Livewire view keeps the desktop table on larger screens and switches to stacked cards on mobile so search/actions still fit
 - `resources/views/Create.blade.php` switches between DLSite create and custom create modes, renders the saved Quick Add or Custom Quick Add field layout through a configurable row component, includes the same optional metadata/creator/description rows as Edit Work hidden by default, and keeps required create fields locked visible; `resources/views/Create.blade.php` and `resources/views/Edit.blade.php` use `public/css/edit.css` for both desktop and mobile form layouts and render reusable field components from `resources/views/components/fields/*.blade.php`
 - `app/View/Components/Fields/*.php` provides the class-based field components used by those Blade views
 - `AppServiceProvider` registers the enum-backed field component aliases used by `<x-fields.* />`
@@ -104,7 +104,7 @@ Shared UI note:
 - Index tag links use one prepared base URL per render and append the numeric genre id in Blade, avoiding route generation for every rendered tag link
 - Index Title and Image are part of the Index field layout; Title is locked visible but reorderable, while Image can be hidden or reordered like the optional metadata columns
 - Edit Work keeps the RJ Code + Title display row fixed first, then renders the Edit field layout; the `title` layout row is locked visible and expands to the Japanese/English title inputs, while Age Category is hidden by default
-- Index creator/circle filters query normalized contributor rows, circle filters also match `products.maker_id`, and description filters search both Japanese and English description text
+- Index creator/circle filters query normalized contributor rows, circle filters also match `products.maker_id`, and description filters search both Japanese and English description text. General Index search only searches descriptions when the Description column is visible or the `Search hidden descriptions` option is enabled.
 - `ProductContributorRole` owns the role-to-`ProductField` mapping used when Create/Edit field layouts decide whether contributor inputs are visible or editable
 - `ProductField` owns the field layout metadata for Index, Edit, Filter, Quick Add, and Custom Quick Add surfaces so layout normalization and field enum behavior stay aligned
 - Options field-layout default reset logic uses a shared option/surface map so adding another layout surface stays localized
@@ -209,6 +209,7 @@ Queue tables:
 
 `options` stores app-level settings as scalar string values:
 - `index_per_page` controls Index pagination, defaults to `100`, accepts fixed choices (`10`, `25`, `50`, `100`, `250`, `500`, `1000`) or any positive integer, and can be set to `unlimited`
+- `index_search_hidden_descriptions_enabled` controls whether general Index search can match descriptions when the Description column is hidden, and defaults to disabled
 - `tag_autocomplete_order` controls tag suggestion ordering, defaults to `usage`, and can be set to `first_word`
 - `series_autocomplete_order` controls series suggestion ordering, defaults to `usage`, and can be set to `first_word`
 - `auto_series_from_title_name` controls whether DLSite create fills an empty Series field from `japanese.title_name`, and defaults to enabled
@@ -246,7 +247,7 @@ Runtime note:
 - opening and closing the advanced filter modal is local Alpine state registered in `public/scripts/index-advanced-filters.js`, not Livewire state, so showing the modal does not rerun the Index query or reset draft filter values
 - changing advanced sort draft fields is client-side/deferred through that Alpine component until Apply, so the modal does not send requests while choosing primary/secondary sort columns
 - desktop table headers and the advanced sort modal both update the same Livewire-backed server-side sort state
-- the Index Sort Fields Options setting affects only the Advanced Filter sort dropdown option map; table headers and restored query-string sorts still validate and sort through `ProductIndexSortField`
+- the Index Sort Menu setting affects only the Advanced Filter sort dropdown option map; table headers and restored query-string sorts still validate and sort through `ProductIndexSortField`
 - Index pagination uses Livewire/Laravel paginator links with the project pagination view and Livewire's scroll target data to return to `#progress-menu`, keeping progress tabs, search, and Filter visible after page changes
 - switching progress tabs keeps the rest of the index request state, but intentionally drops the current `genre` filter
 - clicking a series link opens the index with only the exact `series` filter applied
@@ -282,7 +283,7 @@ Runtime note:
 - the General tab includes Livewire autocomplete ordering settings persisted in `options.tag_autocomplete_order` and `options.series_autocomplete_order`
 - the General tab includes Livewire settings for automatic Series from DLSite `title_name` and Index table width
 - the Field Layouts tab includes Custom Tags and Fetched EN Tags edit toggles inside the Edit Form field layout settings, grouped in one edit-control column on desktop
-- the Field Layouts tab includes Livewire settings for Index/Edit/Filter/Quick Add/Custom Quick Add field layouts and Advanced Filter sort dropdown layout; field layout rows use Livewire `wire:sort` drag handles plus Up/Down buttons, keep checkbox state in field-keyed maps while editing, and are persisted only when Save is submitted
+- the Field Layouts tab orders its Livewire settings as Index Table Fields, Index Filter Fields, Index Sort Menu, Edit Form Fields, Quick Add Form Fields, and Custom Quick Add Form Fields; field layout rows use Livewire `wire:sort` drag handles plus Up/Down buttons, keep checkbox state in field-keyed maps while editing, and are persisted only when Save is submitted
 - Options Livewire settings components share saved notice, validation-reset, and reset-confirmation state through `ConfirmsOptionReset`
 - the General and Field Layouts tabs include right-aligned, body-teleported, modal-confirmed reset actions for each visible setting group plus a global `Reset All Options` action; modal confirm buttons use a destructive red style, modals close from Cancel/Escape/backdrop clicks, global reset adds a 3-second client-side countdown before its confirm button unlocks, and global reset restores visible General and Field Layouts settings while leaving product/refetch data and unrelated option rows alone
 - the selected-work search on the Refetch tab is rendered by Livewire and uses Laravel query helpers for the ID/title match

@@ -25,6 +25,7 @@ final readonly class ProductIndexSettings
         public array $indexSortFieldOptions,
         public array $tableWidth,
         public string $tableWidthCss,
+        public bool $searchHiddenDescriptionsEnabled,
         public bool $indexGroupOrderingEnabled,
     ) {}
 }

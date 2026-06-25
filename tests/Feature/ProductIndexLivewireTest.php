@@ -621,7 +621,7 @@ class ProductIndexLivewireTest extends TestCase
         app(ProductGenreSync::class)->syncCustom($emptyQueryProduct, [$emptyQueryGenre->getKey()]);
 
         Livewire::test(ProductIndex::class)
-            ->assertSee('href="/?genre='.$emptyQueryGenre->getKey().'"', false);
+            ->assertSee('href="/?genre=' . $emptyQueryGenre->getKey() . '"', false);
 
         $currentGenre = Genre::query()->create([
             'title' => 'TAG_LINK_CURRENT_GENRE',
@@ -655,11 +655,11 @@ class ProductIndexLivewireTest extends TestCase
             ->test(ProductIndex::class)
             ->assertSee(
                 'href="/?search=rain&amp;series=SERIES_ALPHA&amp;progress=Listening&amp;sort_first_field=score&amp;sort_first_direction=asc&amp;genre='
-                    .$linkedGenre->getKey()
-                    .'"',
+                    . $linkedGenre->getKey()
+                    . '"',
                 false,
             )
-            ->assertDontSee('genre='.$currentGenre->getKey().'&amp;genre=', false);
+            ->assertDontSee('genre=' . $currentGenre->getKey() . '&amp;genre=', false);
     }
 
     public function test_index_tag_chips_default_to_plain_tag_order_without_group_ordering(): void
@@ -1036,6 +1036,78 @@ class ProductIndexLivewireTest extends TestCase
             ->assertDontSee('SEARCH_PAGE_OTHER');
     }
 
+    public function test_general_search_ignores_hidden_descriptions_by_default(): void
+    {
+        Option::setIndexFieldLayout([
+            ['field' => ProductField::Description->value, 'visible' => false],
+        ]);
+
+        $hiddenDescription = $this->createProduct(1, [
+            'work_name' => 'HIDDEN_DESCRIPTION_SEARCH_WORK',
+            'description' => 'HIDDEN_DESCRIPTION_GENERAL_SEARCH_TOKEN',
+        ]);
+        $visibleTitle = $this->createProduct(2, [
+            'work_name' => 'HIDDEN_DESCRIPTION_GENERAL_SEARCH_TOKEN_TITLE',
+            'description' => 'Unrelated description',
+        ]);
+
+        Livewire::test(ProductIndex::class)
+            ->set('searchInput', 'HIDDEN_DESCRIPTION_GENERAL_SEARCH_TOKEN')
+            ->call('applySearch')
+            ->assertSee($visibleTitle->work_name)
+            ->assertDontSee($hiddenDescription->work_name);
+    }
+
+    public function test_general_search_matches_descriptions_when_description_column_is_visible(): void
+    {
+        Option::setIndexFieldLayout([
+            ['field' => ProductField::Description->value, 'visible' => true],
+        ]);
+
+        $product = $this->createProduct(1, [
+            'work_name' => 'VISIBLE_DESCRIPTION_SEARCH_WORK',
+            'description' => 'VISIBLE_DESCRIPTION_GENERAL_SEARCH_TOKEN',
+        ]);
+
+        Livewire::test(ProductIndex::class)
+            ->set('searchInput', 'VISIBLE_DESCRIPTION_GENERAL_SEARCH_TOKEN')
+            ->call('applySearch')
+            ->assertSee($product->work_name);
+    }
+
+    public function test_general_search_matches_hidden_descriptions_when_override_is_enabled(): void
+    {
+        Option::setIndexFieldLayout([
+            ['field' => ProductField::Description->value, 'visible' => false],
+        ]);
+        Option::setIndexSearchHiddenDescriptionsEnabled(true);
+
+        $product = $this->createProduct(1, [
+            'work_name' => 'OVERRIDE_DESCRIPTION_SEARCH_WORK',
+            'description' => 'OVERRIDE_DESCRIPTION_GENERAL_SEARCH_TOKEN',
+        ]);
+
+        Livewire::test(ProductIndex::class)
+            ->set('searchInput', 'OVERRIDE_DESCRIPTION_GENERAL_SEARCH_TOKEN')
+            ->call('applySearch')
+            ->assertSee($product->work_name);
+    }
+
+    public function test_description_filter_matches_descriptions_when_index_description_column_is_hidden(): void
+    {
+        Option::setIndexFieldLayout([
+            ['field' => ProductField::Description->value, 'visible' => false],
+        ]);
+
+        $product = $this->createProduct(1, [
+            'work_name' => 'DESCRIPTION_FILTER_HIDDEN_COLUMN_WORK',
+            'description' => 'DESCRIPTION_FILTER_HIDDEN_COLUMN_TOKEN',
+        ]);
+
+        Livewire::test(ProductIndex::class, ['description' => 'DESCRIPTION_FILTER_HIDDEN_COLUMN_TOKEN'])
+            ->assertSee($product->work_name);
+    }
+
     public function test_filter_changes_reset_pagination_to_first_page(): void
     {
         Option::setIndexPerPage(1);
@@ -1246,28 +1318,28 @@ class ProductIndexLivewireTest extends TestCase
             ->assertSet('sort_first_field', ProductIndexSortField::Score->value)
             ->assertSet('draft.sort_first_field', ProductIndexSortField::Score->value)
             ->assertSeeInOrder(['SORT_LOW', 'SORT_HIGH'])
-            ->assertSee('value="'.ProductIndexSortField::Series->value.'"', false)
-            ->assertSee('value="'.ProductIndexSortField::RJ->value.'"', false)
-            ->assertDontSee('value="'.ProductIndexSortField::Score->value.'"', false)
-            ->assertDontSee('value="'.ProductIndexSortField::UpdatedAt->value.'"', false)
-            ->assertDontSee('value="'.ProductIndexSortField::Circle->value.'"', false);
+            ->assertSee('value="' . ProductIndexSortField::Series->value . '"', false)
+            ->assertSee('value="' . ProductIndexSortField::RJ->value . '"', false)
+            ->assertDontSee('value="' . ProductIndexSortField::Score->value . '"', false)
+            ->assertDontSee('value="' . ProductIndexSortField::UpdatedAt->value . '"', false)
+            ->assertDontSee('value="' . ProductIndexSortField::Circle->value . '"', false);
 
         Livewire::test(ProductIndex::class)
             ->call('sortByHeader', ProductIndexSortField::Score->value)
             ->assertSet('sort_first_field', ProductIndexSortField::Score->value)
             ->assertSet('sort_first_direction', 'desc')
             ->assertSeeInOrder(['SORT_HIGH', 'SORT_LOW'])
-            ->assertDontSee('value="'.ProductIndexSortField::Score->value.'"', false);
+            ->assertDontSee('value="' . ProductIndexSortField::Score->value . '"', false);
     }
 
     private function createProduct(int $number, array $attributes = []): Product
     {
-        $id = 'RJ'.str_pad((string) $number, 9, '0', STR_PAD_LEFT);
+        $id = 'RJ' . str_pad((string) $number, 9, '0', STR_PAD_LEFT);
 
         return Product::factory()->create(array_merge([
             'id' => $id,
-            'maker_id' => 'RG'.substr($id, 2),
-            'work_name' => 'WORK_'.str_pad((string) $number, 3, '0', STR_PAD_LEFT),
+            'maker_id' => 'RG' . substr($id, 2),
+            'work_name' => 'WORK_' . str_pad((string) $number, 3, '0', STR_PAD_LEFT),
         ], $attributes));
     }
 

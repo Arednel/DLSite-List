@@ -2,12 +2,12 @@
 
 namespace Tests\Feature;
 
+use App\Enums\ProductContributorRole;
+use App\Enums\ProductField;
 use App\Enums\ProductPriority;
 use App\Enums\ProductProgress;
 use App\Enums\ProductReListenValue;
 use App\Enums\ProductScore;
-use App\Enums\ProductContributorRole;
-use App\Enums\ProductField;
 use App\Livewire\TagLibraryManager;
 use App\Models\Genre;
 use App\Models\Option;
@@ -2513,6 +2513,82 @@ class ProductControllerTest extends TestCase
         }
     }
 
+    public function test_update_return_target_drops_search_that_only_matches_hidden_description(): void
+    {
+        Option::setIndexFieldLayout([
+            ['field' => ProductField::Description->value, 'visible' => false],
+        ]);
+
+        $product = Product::factory()->create([
+            'work_name' => 'VISIBLE_DESCRIPTION_RETURN_TARGET_WORK',
+            'progress' => 'Listening',
+            'description' => 'HIDDEN_DESCRIPTION_RETURN_TARGET_TOKEN',
+        ]);
+
+        $response = $this->post("/update/{$product->id}", [
+            'work_name' => $product->work_name,
+            'progress' => 'Listening',
+            'return_query' => [
+                'search' => 'HIDDEN_DESCRIPTION_RETURN_TARGET_TOKEN',
+            ],
+            'return_fragment' => $product->id,
+        ]);
+
+        $response->assertSessionHasNoErrors();
+        $response->assertRedirect("/#{$product->id}");
+    }
+
+    public function test_update_return_target_keeps_search_that_matches_visible_description(): void
+    {
+        Option::setIndexFieldLayout([
+            ['field' => ProductField::Description->value, 'visible' => true],
+        ]);
+
+        $product = Product::factory()->create([
+            'work_name' => 'VISIBLE_DESCRIPTION_COLUMN_RETURN_TARGET_WORK',
+            'progress' => 'Listening',
+            'description' => 'VISIBLE_DESCRIPTION_COLUMN_RETURN_TARGET_TOKEN',
+        ]);
+
+        $response = $this->post("/update/{$product->id}", [
+            'work_name' => $product->work_name,
+            'progress' => 'Listening',
+            'return_query' => [
+                'search' => 'VISIBLE_DESCRIPTION_COLUMN_RETURN_TARGET_TOKEN',
+            ],
+            'return_fragment' => $product->id,
+        ]);
+
+        $response->assertSessionHasNoErrors();
+        $response->assertRedirect("/?search=VISIBLE_DESCRIPTION_COLUMN_RETURN_TARGET_TOKEN#{$product->id}");
+    }
+
+    public function test_update_return_target_keeps_search_that_matches_hidden_description_when_override_is_enabled(): void
+    {
+        Option::setIndexFieldLayout([
+            ['field' => ProductField::Description->value, 'visible' => false],
+        ]);
+        Option::setIndexSearchHiddenDescriptionsEnabled(true);
+
+        $product = Product::factory()->create([
+            'work_name' => 'OVERRIDE_DESCRIPTION_RETURN_TARGET_WORK',
+            'progress' => 'Listening',
+            'description' => 'OVERRIDE_DESCRIPTION_RETURN_TARGET_TOKEN',
+        ]);
+
+        $response = $this->post("/update/{$product->id}", [
+            'work_name' => $product->work_name,
+            'progress' => 'Listening',
+            'return_query' => [
+                'search' => 'OVERRIDE_DESCRIPTION_RETURN_TARGET_TOKEN',
+            ],
+            'return_fragment' => $product->id,
+        ]);
+
+        $response->assertSessionHasNoErrors();
+        $response->assertRedirect("/?search=OVERRIDE_DESCRIPTION_RETURN_TARGET_TOKEN#{$product->id}");
+    }
+
     public function test_update_returns_to_target_work_on_calculated_custom_sort_page(): void
     {
         Option::setIndexPerPage(2);
@@ -2826,6 +2902,39 @@ class ProductControllerTest extends TestCase
                 'page' => '2',
             ],
         ])->assertRedirect('/?progress=Listening');
+    }
+
+    public function test_destroy_page_clamp_uses_hidden_description_search_override(): void
+    {
+        Option::setIndexPerPage(2);
+        Option::setIndexFieldLayout([
+            ['field' => ProductField::Description->value, 'visible' => false],
+        ]);
+        Option::setIndexSearchHiddenDescriptionsEnabled(true);
+
+        Product::factory()->create([
+            'id' => 'RJ000000004',
+            'description' => 'DESTROY_HIDDEN_DESCRIPTION_SEARCH_TOKEN',
+        ]);
+        Product::factory()->create([
+            'id' => 'RJ000000003',
+            'description' => 'DESTROY_HIDDEN_DESCRIPTION_SEARCH_TOKEN',
+        ]);
+        Product::factory()->create([
+            'id' => 'RJ000000002',
+            'description' => 'DESTROY_HIDDEN_DESCRIPTION_SEARCH_TOKEN',
+        ]);
+        $product = Product::factory()->create([
+            'id' => 'RJ000000001',
+            'description' => 'DESTROY_HIDDEN_DESCRIPTION_SEARCH_TOKEN',
+        ]);
+
+        $this->post("/destroy/{$product->id}", [
+            'return_query' => [
+                'search' => 'DESTROY_HIDDEN_DESCRIPTION_SEARCH_TOKEN',
+                'page' => '2',
+            ],
+        ])->assertRedirect('/?search=DESTROY_HIDDEN_DESCRIPTION_SEARCH_TOKEN&page=2');
     }
 
     public function test_destroy_ignores_return_route_and_keeps_index_query(): void

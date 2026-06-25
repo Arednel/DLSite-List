@@ -52,8 +52,13 @@ final class ProductIndexResults
         ProductIndexFilters $filters,
         int|string $perPage,
         array $visibleFields = [],
+        bool $searchHiddenDescriptionsEnabled = false,
     ): EloquentCollection|LengthAwarePaginator {
-        $query = $this->filteredQuery($filters, $this->indexColumns($visibleFields));
+        $query = $this->filteredQuery(
+            $filters,
+            $this->indexColumns($visibleFields),
+            $this->includeDescriptionsInSearch($visibleFields, $searchHiddenDescriptionsEnabled),
+        );
         $query = $this->applySqlSorting($query, $filters->sorts());
 
         return $perPage === Option::INDEX_PER_PAGE_UNLIMITED
@@ -61,9 +66,12 @@ final class ProductIndexResults
             : $query->paginate((int) $perPage);
     }
 
-    public function containsProduct(ProductIndexFilters $filters, Product $product): bool
-    {
-        return $this->filteredQuery($filters)
+    public function containsProduct(
+        ProductIndexFilters $filters,
+        Product $product,
+        bool $includeDescriptionsInSearch,
+    ): bool {
+        return $this->filteredQuery($filters, null, $includeDescriptionsInSearch)
             ->whereKey($product->getKey())
             ->exists();
     }
@@ -73,24 +81,29 @@ final class ProductIndexResults
         Product $product,
         int|string $perPage,
         int $page,
+        bool $includeDescriptionsInSearch,
     ): bool {
         if ($perPage === Option::INDEX_PER_PAGE_UNLIMITED) {
-            return $this->containsProduct($filters, $product);
+            return $this->containsProduct($filters, $product, $includeDescriptionsInSearch);
         }
 
-        return $this->applySqlSorting($this->filteredQuery($filters), $filters->sorts())
+        return $this->applySqlSorting($this->filteredQuery($filters, null, $includeDescriptionsInSearch), $filters->sorts())
             ->forPage(max(1, $page), max(1, (int) $perPage))
             ->pluck('id')
             ->containsStrict((string) $product->getKey());
     }
 
-    public function pageForProduct(ProductIndexFilters $filters, Product $product, int|string $perPage): ?int
-    {
+    public function pageForProduct(
+        ProductIndexFilters $filters,
+        Product $product,
+        int|string $perPage,
+        bool $includeDescriptionsInSearch,
+    ): ?int {
         if ($perPage === Option::INDEX_PER_PAGE_UNLIMITED) {
             return null;
         }
 
-        $position = $this->applySqlSorting($this->filteredQuery($filters), $filters->sorts())
+        $position = $this->applySqlSorting($this->filteredQuery($filters, null, $includeDescriptionsInSearch), $filters->sorts())
             ->pluck('id')
             ->search((string) $product->getKey(), true);
 
@@ -99,128 +112,140 @@ final class ProductIndexResults
             : intdiv($position, max(1, (int) $perPage)) + 1;
     }
 
-    public function lastPage(ProductIndexFilters $filters, int|string $perPage): ?int
-    {
+    public function lastPage(
+        ProductIndexFilters $filters,
+        int|string $perPage,
+        bool $includeDescriptionsInSearch,
+    ): ?int {
         if ($perPage === Option::INDEX_PER_PAGE_UNLIMITED) {
             return null;
         }
 
         $perPage = max(1, (int) $perPage);
-        $total = $this->filteredQuery($filters)->count();
+        $total = $this->filteredQuery($filters, null, $includeDescriptionsInSearch)->count();
 
         return max(1, (int) ceil($total / $perPage));
     }
 
-    private function filteredQuery(ProductIndexFilters $filters, ?array $columns = null): Builder
+    public function includeDescriptionsInSearch(array $visibleFields, bool $searchHiddenDescriptionsEnabled): bool
     {
+        return $searchHiddenDescriptionsEnabled
+            || in_array(ProductField::Description->value, $visibleFields, true);
+    }
+
+    private function filteredQuery(
+        ProductIndexFilters $filters,
+        ?array $columns = null,
+        bool $includeDescriptionsInSearch = false,
+    ): Builder {
         return Product::query()
             ->select($columns ?? ['id'])
             ->when(
                 $filters->ageCategory !== null,
-                fn ($query) => $query->where('age_category', $filters->ageCategory->value)
+                fn($query) => $query->where('age_category', $filters->ageCategory->value)
             )
             ->when(
                 $filters->progress !== null,
-                fn ($query) => $query->where('progress', $filters->progress->value)
+                fn($query) => $query->where('progress', $filters->progress->value)
             )
             ->when(
                 $filters->genre !== '',
-                fn ($query) => $query->filterGenre($filters->genre)
+                fn($query) => $query->filterGenre($filters->genre)
             )
             ->when(
                 $filters->series !== '',
-                fn ($query) => $query->filterSeries($filters->series)
+                fn($query) => $query->filterSeries($filters->series)
             )
             ->when(
                 $filters->circle !== '',
-                fn ($query) => $query->filterCircle($filters->circle)
+                fn($query) => $query->filterCircle($filters->circle)
             )
             ->when(
                 $filters->scenario !== '',
-                fn ($query) => $query->filterContributor('scenario', $filters->scenario)
+                fn($query) => $query->filterContributor('scenario', $filters->scenario)
             )
             ->when(
                 $filters->voiceActor !== '',
-                fn ($query) => $query->filterContributor('voice_actor', $filters->voiceActor)
+                fn($query) => $query->filterContributor('voice_actor', $filters->voiceActor)
             )
             ->when(
                 $filters->illustration !== '',
-                fn ($query) => $query->filterContributor('illustration', $filters->illustration)
+                fn($query) => $query->filterContributor('illustration', $filters->illustration)
             )
             ->when(
                 $filters->author !== '',
-                fn ($query) => $query->filterContributor('author', $filters->author)
+                fn($query) => $query->filterContributor('author', $filters->author)
             )
             ->when(
                 $filters->description !== '',
-                fn ($query) => $query->filterDescription($filters->description)
+                fn($query) => $query->filterDescription($filters->description)
             )
             ->when(
                 $filters->title !== '',
-                fn ($query) => $query->filterTitle($filters->title)
+                fn($query) => $query->filterTitle($filters->title)
             )
             ->when(
                 $filters->notes !== '',
-                fn ($query) => $query->filterNotes($filters->notes)
+                fn($query) => $query->filterNotes($filters->notes)
             )
             ->when(
                 $filters->score !== null,
-                fn ($query) => $query->where('score', (int) $filters->score->value)
+                fn($query) => $query->where('score', (int) $filters->score->value)
             )
             ->when(
                 $filters->priority !== null,
-                fn ($query) => $query->where('priority', (int) $filters->priority->value)
+                fn($query) => $query->where('priority', (int) $filters->priority->value)
             )
             ->when(
                 $filters->numReListenTimes !== null,
-                fn ($query) => $query->where('num_re_listen_times', $filters->numReListenTimes)
+                fn($query) => $query->where('num_re_listen_times', $filters->numReListenTimes)
             )
             ->when(
                 $filters->reListenValue !== null,
-                fn ($query) => $query->where('re_listen_value', (int) $filters->reListenValue->value)
+                fn($query) => $query->where('re_listen_value', (int) $filters->reListenValue->value)
             )
             ->when(
                 $filters->startDateFrom !== '',
-                fn ($query) => $query->where('start_date_sort', '>=', $this->dateSortValueFromInput($filters->startDateFrom))
+                fn($query) => $query->where('start_date_sort', '>=', $this->dateSortValueFromInput($filters->startDateFrom))
             )
             ->when(
                 $filters->startDateTo !== '',
-                fn ($query) => $query->where('start_date_sort', '<=', $this->dateSortValueFromInput($filters->startDateTo))
+                fn($query) => $query->where('start_date_sort', '<=', $this->dateSortValueFromInput($filters->startDateTo))
             )
             ->when(
                 $filters->endDateFrom !== '',
-                fn ($query) => $query->where('end_date_sort', '>=', $this->dateSortValueFromInput($filters->endDateFrom))
+                fn($query) => $query->where('end_date_sort', '>=', $this->dateSortValueFromInput($filters->endDateFrom))
             )
             ->when(
                 $filters->endDateTo !== '',
-                fn ($query) => $query->where('end_date_sort', '<=', $this->dateSortValueFromInput($filters->endDateTo))
+                fn($query) => $query->where('end_date_sort', '<=', $this->dateSortValueFromInput($filters->endDateTo))
             )
             ->when(
                 $filters->createdAtFrom !== '',
-                fn ($query) => $query->whereDate('created_at', '>=', $filters->createdAtFrom)
+                fn($query) => $query->whereDate('created_at', '>=', $filters->createdAtFrom)
             )
             ->when(
                 $filters->createdAtTo !== '',
-                fn ($query) => $query->whereDate('created_at', '<=', $filters->createdAtTo)
+                fn($query) => $query->whereDate('created_at', '<=', $filters->createdAtTo)
             )
             ->when(
                 $filters->updatedAtFrom !== '',
-                fn ($query) => $query->whereDate('updated_at', '>=', $filters->updatedAtFrom)
+                fn($query) => $query->whereDate('updated_at', '>=', $filters->updatedAtFrom)
             )
             ->when(
                 $filters->updatedAtTo !== '',
-                fn ($query) => $query->whereDate('updated_at', '<=', $filters->updatedAtTo)
+                fn($query) => $query->whereDate('updated_at', '<=', $filters->updatedAtTo)
             )
             ->when(
                 $filters->tags !== '',
-                fn ($query) => $query->filterTags(
+                fn($query) => $query->filterTags(
                     $filters->parsedTags(),
                     $filters->resolvedTagMatch(),
                 )
             )
             ->when(
                 $filters->search !== '',
-                fn ($query) => $query->searchIndex($filters->search)
+                fn($query) => $query->searchIndex($filters->search, $includeDescriptionsInSearch)
             );
     }
 
@@ -282,7 +307,7 @@ final class ProductIndexResults
                 'genres.id',
                 'genres.title',
             ])
-            ->unique(fn ($genre): string => $genre->product_id.'|'.$genre->id)
+            ->unique(fn($genre): string => $genre->product_id . '|' . $genre->id)
             ->values();
 
         $ungroupedGenres = DB::table('genre_product')
@@ -312,7 +337,7 @@ final class ProductIndexResults
     public function loadContributors(array $productIds, array $visibleFields): Collection
     {
         $roles = collect($visibleFields)
-            ->map(fn (string $field): ?string => ProductField::tryFrom($field)?->contributorRole()?->value)
+            ->map(fn(string $field): ?string => ProductField::tryFrom($field)?->contributorRole()?->value)
             ->filter()
             ->values()
             ->all();
@@ -334,7 +359,7 @@ final class ProductIndexResults
                 'contributors.maker_id',
             ])
             ->groupBy('product_id')
-            ->map(fn ($rows) => $rows->groupBy('role'));
+            ->map(fn($rows) => $rows->groupBy('role'));
     }
 
     public function displayValues(EloquentCollection $products, array $visibleFields): Collection
@@ -385,7 +410,7 @@ final class ProductIndexResults
     private function orderByNullableColumn(Builder $query, string $column, string $direction): void
     {
         $query
-            ->orderByRaw($query->getQuery()->getGrammar()->wrap($column).' IS NULL')
+            ->orderByRaw($query->getQuery()->getGrammar()->wrap($column) . ' IS NULL')
             ->orderBy($column, $direction);
     }
 
@@ -417,7 +442,7 @@ final class ProductIndexResults
         [$contributorExpression, $bindings] = $this->contributorSortExpression(ProductContributorRole::Circle);
 
         return [
-            'COALESCE('.$contributorExpression.', '.$query->getQuery()->getGrammar()->wrap('circle').')',
+            'COALESCE(' . $contributorExpression . ', ' . $query->getQuery()->getGrammar()->wrap('circle') . ')',
             $bindings,
         ];
     }
@@ -431,10 +456,12 @@ final class ProductIndexResults
             ->join('contributors', 'contributors.id', '=', 'contributor_product.contributor_id')
             ->whereColumn('contributor_product.product_id', 'products.id')
             ->where('contributor_product.role', $role->value)
-            ->selectRaw('min(contributors.name)');
+            ->select('contributors.name')
+            ->orderBy('contributors.name')
+            ->limit(1);
 
         return [
-            '('.$subquery->toSql().')',
+            '(' . $subquery->toSql() . ')',
             $subquery->getBindings(),
         ];
     }

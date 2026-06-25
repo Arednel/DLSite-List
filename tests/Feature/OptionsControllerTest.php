@@ -40,10 +40,12 @@ class OptionsControllerTest extends TestCase
             ->assertDontSee('href="/options?tab=options"', false)
             ->assertSee('Index Pagination')
             ->assertSee('Index page size')
+            ->assertSee('Index Search')
+            ->assertSee('Search hidden descriptions')
             ->assertSee('Configure Tag Library startup behavior')
             ->assertSee('whether saved tag-group order affects Index tag')
             ->assertSee('Reset All Options')
-            ->assertDontSee('Index Sort Fields')
+            ->assertDontSee('Index Sort Menu')
             ->assertDontSee('Editable Fetched EN Tags')
             ->assertDontSee('Refetch Tags')
             ->assertDontSee('Refetch all works')
@@ -67,8 +69,8 @@ class OptionsControllerTest extends TestCase
             ->assertSee('href="/options?tab=refetch"', false)
             ->assertDontSee('href="/options?tab=options"', false)
             ->assertSee('Field Layouts')
-            ->assertSee('Index Table')
-            ->assertSee('Index Sort Fields')
+            ->assertSee('Index Table Fields')
+            ->assertSee('Index Sort Menu')
             ->assertSee('Editable Fetched EN Tags')
             ->assertSee('Reset All Options')
             ->assertDontSee('Index page size')
@@ -86,7 +88,7 @@ class OptionsControllerTest extends TestCase
             ->assertOk()
             ->assertSee('Index Pagination')
             ->assertSee('Index page size')
-            ->assertDontSee('Index Sort Fields')
+            ->assertDontSee('Index Sort Menu')
             ->assertDontSee('Refetch Tags');
     }
 
@@ -106,7 +108,7 @@ class OptionsControllerTest extends TestCase
             ->assertDontSee('href="/options?tab=options"', false)
             ->assertSee('class="options-tab is-active"', false)
             ->assertDontSee('Index Pagination')
-            ->assertDontSee('Index Sort Fields')
+            ->assertDontSee('Index Sort Menu')
             ->assertSee('Refetch Tags')
             ->assertSee('Refetch all works')
             ->assertSee('Refetch selected works')
@@ -137,8 +139,8 @@ class OptionsControllerTest extends TestCase
         $this->get('/options?tab=refetch')
             ->assertOk()
             ->assertSee('Go to latest refetch')
-            ->assertSee('href="'.route('options.refetch-tags.show', $latestRun).'"', false)
-            ->assertDontSee('href="'.route('options.refetch-tags.show', $olderRun).'"', false);
+            ->assertSee('href="' . route('options.refetch-tags.show', $latestRun) . '"', false)
+            ->assertDontSee('href="' . route('options.refetch-tags.show', $olderRun) . '"', false);
     }
 
     public function test_starting_all_works_creates_run_and_dispatches_one_batch_job_per_product(): void
@@ -169,7 +171,7 @@ class OptionsControllerTest extends TestCase
 
         Bus::assertBatched(function (PendingBatch $batch) use ($run, $first, $second): bool {
             $jobProductIds = $batch->jobs
-                ->map(fn (FetchProductTagsJob $job): string => $job->productId)
+                ->map(fn(FetchProductTagsJob $job): string => $job->productId)
                 ->all();
 
             return $batch->name === "Refetch tags #{$run->id}"
@@ -218,7 +220,7 @@ class OptionsControllerTest extends TestCase
 
         Bus::assertBatched(function (PendingBatch $batch) use ($selectedHigh, $selectedLow): bool {
             $jobProductIds = $batch->jobs
-                ->map(fn (FetchProductTagsJob $job): string => $job->productId)
+                ->map(fn(FetchProductTagsJob $job): string => $job->productId)
                 ->all();
 
             return $batch->jobs->count() === 2
@@ -582,7 +584,7 @@ class OptionsControllerTest extends TestCase
         $this->get(route('options.refetch-tags.show', $run))
             ->assertOk()
             ->assertSee('Cancel Refetch')
-            ->assertSee('action="'.route('options.refetch-tags.cancel', $run).'"', false);
+            ->assertSee('action="' . route('options.refetch-tags.cancel', $run) . '"', false);
 
         $run->forceFill([
             'status' => TagRefetchRun::STATUS_CANCELLING,
@@ -707,10 +709,10 @@ class OptionsControllerTest extends TestCase
             ->assertSee('<details', false)
             ->assertSee('name="global_added_japanese_action"', false)
             ->assertSee('name="global_added_english_action"', false)
-            ->assertSee('name="work_actions['.$product->id.'][added_japanese]"', false)
-            ->assertSee('name="work_actions['.$product->id.'][added_english]"', false)
+            ->assertSee('name="work_actions[' . $product->id . '][added_japanese]"', false)
+            ->assertSee('name="work_actions[' . $product->id . '][added_english]"', false)
             ->assertSee('name="global_custom_to_fetched_action"', false)
-            ->assertSee('name="work_actions['.$product->id.'][custom_to_fetched]"', false)
+            ->assertSee('name="work_actions[' . $product->id . '][custom_to_fetched]"', false)
             ->assertSee('Apply Changes');
     }
 

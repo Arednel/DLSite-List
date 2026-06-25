@@ -12,6 +12,8 @@ class Option extends Model
 {
     public const INDEX_PER_PAGE = 'index_per_page';
 
+    public const INDEX_SEARCH_HIDDEN_DESCRIPTIONS_ENABLED = 'index_search_hidden_descriptions_enabled';
+
     public const TAG_AUTOCOMPLETE_ORDER = 'tag_autocomplete_order';
 
     public const SERIES_AUTOCOMPLETE_ORDER = 'series_autocomplete_order';
@@ -98,6 +100,21 @@ class Option extends Model
     public static function resetIndexPerPageToDefault(): void
     {
         self::setIndexPerPage(self::DEFAULT_INDEX_PER_PAGE);
+    }
+
+    public static function indexSearchHiddenDescriptionsEnabled(): bool
+    {
+        return self::booleanValueFor(self::INDEX_SEARCH_HIDDEN_DESCRIPTIONS_ENABLED, false);
+    }
+
+    public static function setIndexSearchHiddenDescriptionsEnabled(bool $enabled): void
+    {
+        self::setBooleanValue(self::INDEX_SEARCH_HIDDEN_DESCRIPTIONS_ENABLED, $enabled);
+    }
+
+    public static function resetIndexSearchHiddenDescriptionsEnabledToDefault(): void
+    {
+        self::setIndexSearchHiddenDescriptionsEnabled(false);
     }
 
     public static function tagAutocompleteOrder(): AutocompleteOrder
@@ -307,6 +324,7 @@ class Option extends Model
     public static function resetVisibleSettingsToDefault(): void
     {
         self::resetIndexPerPageToDefault();
+        self::resetIndexSearchHiddenDescriptionsEnabledToDefault();
         self::resetIndexTableWidthToDefault();
         self::resetFieldLayoutsToDefault();
         self::resetIndexSortFieldLayoutToDefault();
@@ -326,6 +344,7 @@ class Option extends Model
         $values = self::query()
             ->whereIn('key', [
                 self::INDEX_PER_PAGE,
+                self::INDEX_SEARCH_HIDDEN_DESCRIPTIONS_ENABLED,
                 self::INDEX_FIELD_LAYOUT,
                 self::FILTER_FIELD_LAYOUT,
                 self::INDEX_SORT_FIELD_LAYOUT,
@@ -359,6 +378,10 @@ class Option extends Model
             indexSortFieldOptions: ProductIndexSortField::optionsFromLayout($indexSortFieldLayout),
             tableWidth: $tableWidth,
             tableWidthCss: self::indexTableWidthCssFrom($tableWidth),
+            searchHiddenDescriptionsEnabled: self::normalizeBoolean(
+                $values->get(self::INDEX_SEARCH_HIDDEN_DESCRIPTIONS_ENABLED),
+                false,
+            ),
             indexGroupOrderingEnabled: self::normalizeBoolean(
                 $values->get(self::TAG_LIBRARY_INDEX_GROUP_ORDERING_ENABLED),
                 false,
@@ -385,7 +408,7 @@ class Option extends Model
     public static function fixedIndexPerPageOptions(): array
     {
         return collect(self::FIXED_INDEX_PER_PAGE_OPTIONS)
-            ->mapWithKeys(fn (int $value): array => [$value => (string) $value])
+            ->mapWithKeys(fn(int $value): array => [$value => (string) $value])
             ->all();
     }
 

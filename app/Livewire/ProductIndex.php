@@ -87,7 +87,7 @@ class ProductIndex extends Component
     protected function queryString(): array
     {
         return collect(ProductIndexFilters::INPUT_KEYS)
-            ->mapWithKeys(fn (string $key): array => [$key => []])
+            ->mapWithKeys(fn(string $key): array => [$key => []])
             ->all();
     }
 
@@ -115,6 +115,7 @@ class ProductIndex extends Component
             $filters,
             $settings->perPage,
             $settings->visibleIndexFields,
+            $settings->searchHiddenDescriptionsEnabled,
         );
 
         $isUnlimited = $settings->perPage === Option::INDEX_PER_PAGE_UNLIMITED;
@@ -257,7 +258,7 @@ class ProductIndex extends Component
     private function currentInput(): array
     {
         return collect(ProductIndexFilters::INPUT_KEYS)
-            ->mapWithKeys(fn (string $key): array => [$key => (string) $this->{$key}])
+            ->mapWithKeys(fn(string $key): array => [$key => (string) $this->{$key}])
             ->all();
     }
 

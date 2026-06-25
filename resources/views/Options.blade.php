@@ -61,6 +61,13 @@
 
                     <livewire:index-pagination-settings />
 
+                    <h2>Index Search</h2>
+                    <p class="option-description">
+                        Choose whether general Index search can match hidden description text.
+                    </p>
+
+                    <livewire:index-search-settings />
+
                     <h2>Index Table Width</h2>
                     <p class="option-description">
                         Choose how wide the Index table can be before horizontal scrolling is used.

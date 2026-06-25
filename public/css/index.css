@@ -2,6 +2,17 @@ body.product-index-page {
     background-attachment: fixed;
     background-position: center top;
     background-repeat: repeat-x;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+}
+
+.product-index-main {
+    flex: 1 0 auto;
+}
+
+.product-index-page footer {
+    flex-shrink: 0;
 }
 
 /**

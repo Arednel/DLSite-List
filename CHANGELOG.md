@@ -2,6 +2,13 @@
 
 ## Development
 
+* 2026-06-25 -- 1.5.3 Index Search & Layout Polish
+  * Renamed and reordered Field Layouts sections for clearer Index/Form grouping
+  * Changed general Index search to ignore descriptions while the Description column is hidden
+  * Added Index Search option to allow general search through hidden descriptions
+  * Replaced contributor sort aggregate raw SQL with query-builder ordering
+  * Fixed Index footer not being pinned to the bottom in mobile view
+
 * 2026-06-24 -- 1.5.2 Tag Groups
   * Added Tag Groups any-hidden-group Index hiding and ordering
   * Added Edit Tags mode with a tag settings modal for Index visibility and group assignments

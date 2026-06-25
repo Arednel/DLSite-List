@@ -4,10 +4,10 @@ namespace Tests\Feature;
 
 use App\Enums\AutocompleteOrder;
 use App\Enums\ProductField;
-use App\Livewire\AutoSeriesSettings;
 use App\Livewire\AutocompleteSettings;
-use App\Livewire\IndexTableWidthSettings;
+use App\Livewire\AutoSeriesSettings;
 use App\Livewire\IndexPaginationSettings;
+use App\Livewire\IndexTableWidthSettings;
 use App\Livewire\OptionsResetDefaults;
 use App\Livewire\ProductFieldLayoutSettings;
 use App\Livewire\TagLibraryDisplaySettings;
@@ -487,11 +487,14 @@ class ProductMetadataSettingsTest extends TestCase
     public function test_field_layout_component_renders_core_user_controls(): void
     {
         Livewire::test(ProductFieldLayoutSettings::class)
-            ->assertSee('Index Table')
-            ->assertSee('Edit Form')
-            ->assertSee('Filter Modal')
-            ->assertSee('Quick Add')
-            ->assertSee('Custom Quick Add')
+            ->assertSeeInOrder([
+                'Index Table Fields',
+                'Index Filter Fields',
+                'Index Sort Menu',
+                'Edit Form Fields',
+                'Quick Add Form Fields',
+                'Custom Quick Add Form Fields',
+            ])
             ->assertSee('Required')
             ->assertSee('Editable Custom Tags')
             ->assertSee('Editable Fetched EN Tags')
@@ -564,8 +567,7 @@ class ProductMetadataSettingsTest extends TestCase
     }
 
     /**
-     * @param list<string> $order
-     *
+     * @param  list<string>  $order
      * @return list<string>
      */
     private function moveFieldToPosition(array $order, ProductField $field, int $position): array
@@ -583,8 +585,7 @@ class ProductMetadataSettingsTest extends TestCase
     }
 
     /**
-     * @param list<array<string, mixed>> $layout
-     *
+     * @param  list<array<string, mixed>>  $layout
      * @return array<string, mixed>
      */
     private function layoutRow(array $layout, ProductField $field): array

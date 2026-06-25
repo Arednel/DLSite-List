@@ -116,6 +116,7 @@ class OptionMetadataSettingsTest extends TestCase
         $this->assertContains(ProductField::Title->value, $defaults->visibleIndexFields);
         $this->assertSame(ProductField::Title->value, $defaults->filterFields[0]['field']);
         $this->assertFalse($defaults->indexGroupOrderingEnabled);
+        $this->assertFalse($defaults->searchHiddenDescriptionsEnabled);
         $this->assertSame([
             ProductField::Title->value,
             ProductField::Score->value,
@@ -148,6 +149,7 @@ class OptionMetadataSettingsTest extends TestCase
             'custom' => '75%',
         ]);
         Option::setTagLibraryIndexGroupOrderingEnabled(true);
+        Option::setIndexSearchHiddenDescriptionsEnabled(true);
 
         $settings = Option::productIndexSettings();
 
@@ -164,6 +166,7 @@ class OptionMetadataSettingsTest extends TestCase
         $this->assertArrayNotHasKey(ProductIndexSortField::Score->value, $settings->indexSortFieldOptions);
         $this->assertSame('75%', $settings->tableWidthCss);
         $this->assertTrue($settings->indexGroupOrderingEnabled);
+        $this->assertTrue($settings->searchHiddenDescriptionsEnabled);
     }
 
     public function test_product_index_settings_fall_back_from_invalid_saved_values(): void
@@ -189,15 +192,18 @@ class OptionMetadataSettingsTest extends TestCase
         $this->assertSame($this->visibleDefaultSortOptions(), $settings->indexSortFieldOptions);
         $this->assertSame('1024px', $settings->tableWidthCss);
         $this->assertFalse($settings->indexGroupOrderingEnabled);
+        $this->assertFalse($settings->searchHiddenDescriptionsEnabled);
     }
 
-    public function test_reset_visible_settings_restores_tag_library_index_group_ordering_default(): void
+    public function test_reset_visible_settings_restores_index_search_and_tag_library_ordering_defaults(): void
     {
         Option::setTagLibraryIndexGroupOrderingEnabled(true);
+        Option::setIndexSearchHiddenDescriptionsEnabled(true);
 
         Option::resetVisibleSettingsToDefault();
 
         $this->assertFalse(Option::tagLibraryIndexGroupOrderingEnabled());
+        $this->assertFalse(Option::indexSearchHiddenDescriptionsEnabled());
     }
 
     public function test_index_sort_field_layout_is_normalized_when_saved_and_reset(): void
