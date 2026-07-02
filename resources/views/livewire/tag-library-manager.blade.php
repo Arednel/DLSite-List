@@ -33,8 +33,7 @@
     <div class="tag-library-panel-heading tag-library-panel-heading--all-tags">
         <h2 class="tag-library-section-title">All Tags</h2>
         <label class="tag-library-switch tag-library-switch--toolbar">
-            <input type="checkbox" class="tag-library-switch-input" wire:model.live="tagEditMode"
-                role="switch">
+            <input type="checkbox" class="tag-library-switch-input" wire:model.live="tagEditMode" role="switch">
             <span class="tag-library-switch-track" aria-hidden="true">
                 <span class="tag-library-switch-thumb"></span>
             </span>
@@ -91,17 +90,22 @@
     @if ($showAllTags)
         <div class="tag-library-tags">
             @forelse ($genres as $genre)
-                @php($tagIsHiddenOnIndex = $genre->hidden_on_index || $genre->group_hidden_on_index)
                 <span @class([
                     'tag-library-tag-shell',
                     'tag-library-tag-shell--deletable' => $genre->pivot_count === 0,
                 ]) wire:key="tag-library-tag-{{ $genre->id }}">
                     @if ($tagEditMode)
-                        <button type="button" class="tag-library-tag tag-library-tag--editable"
+                        <button type="button" @class([
+                            'tag-library-tag',
+                            'tag-library-tag--editable',
+                            'tag-library-tag--background-colored' => $genre->has_background_color,
+                            'tag-library-tag--text-colored' => $genre->has_font_color,
+                        ])
+                            @if (filled($genre->color_style)) style="{{ $genre->color_style }}" @endif
                             wire:click="openTagSettings({{ $genre->id }})"
                             aria-label="Edit tag settings for {{ $genre->title }}">
                             <span class="tag-library-tag-title">{{ $genre->title }}</span>
-                            @if ($tagIsHiddenOnIndex)
+                            @if ($genre->hidden_on_index_effective)
                                 <span class="tag-library-tag-status" aria-label="Hidden tag" title="Hidden tag">
                                     <span class="tag-library-status-dot tag-library-status-dot--hidden-tag"
                                         aria-hidden="true"></span>
@@ -114,10 +118,15 @@
                             ])>{{ $genre->products_count }}</span>
                         </button>
                     @else
-                        <a class="tag-library-tag"
+                        <a @class([
+                            'tag-library-tag',
+                            'tag-library-tag--background-colored' => $genre->has_background_color,
+                            'tag-library-tag--text-colored' => $genre->has_font_color,
+                        ])
+                            @if (filled($genre->color_style)) style="{{ $genre->color_style }}" @endif
                             href="{{ route('index', ['age_category' => '', 'progress' => '', 'genre' => $genre->id]) }}">
                             <span class="tag-library-tag-title">{{ $genre->title }}</span>
-                            @if ($tagIsHiddenOnIndex)
+                            @if ($genre->hidden_on_index_effective)
                                 <span class="tag-library-tag-status" aria-label="Hidden tag" title="Hidden tag">
                                     <span class="tag-library-status-dot tag-library-status-dot--hidden-tag"
                                         aria-hidden="true"></span>
@@ -152,8 +161,8 @@
         <div class="tag-library-subheading">
             <h2 id="tag-library-groups-heading">Tag Groups</h2>
             <label class="tag-library-switch">
-                <input type="checkbox" class="tag-library-switch-input"
-                    wire:model.live="indexGroupOrderingEnabled" role="switch">
+                <input type="checkbox" class="tag-library-switch-input" wire:model.live="indexGroupOrderingEnabled"
+                    role="switch">
                 <span class="tag-library-switch-track" aria-hidden="true">
                     <span class="tag-library-switch-thumb"></span>
                 </span>
@@ -162,7 +171,8 @@
             <form wire:submit.prevent="createGroup" class="tag-library-create-form tag-library-group-create-form">
                 <label for="new-group-title">Add group</label>
                 <div class="tag-library-create-row">
-                    <input id="new-group-title" type="text" wire:model="newGroupTitle" placeholder="New group title">
+                    <input id="new-group-title" type="text" wire:model="newGroupTitle"
+                        placeholder="New group title">
                     <button type="submit" class="tag-library-action">Add</button>
                 </div>
                 @error('newGroupTitle')
@@ -187,15 +197,14 @@
                                 @disabled($groupIndex === $groups->count() - 1)>Down</button>
                         </div>
 
-                        <form wire:submit.prevent="renameGroup({{ $group->id }})" class="tag-library-group-title-form"
-                            wire:sort:ignore>
+                        <form wire:submit.prevent="renameGroup({{ $group->id }})"
+                            class="tag-library-group-title-form" wire:sort:ignore>
                             <input type="text" wire:model="groupTitles.{{ $group->id }}"
                                 aria-label="Group title {{ $group->title }}">
                             <button type="submit" class="tag-library-action">Rename</button>
                         </form>
 
-                        <label class="tag-library-check tag-library-switch"
-                            wire:sort:ignore>
+                        <label class="tag-library-check tag-library-switch" wire:sort:ignore>
                             <input type="checkbox" class="tag-library-switch-input"
                                 wire:model.live="groupHidden.{{ $group->id }}"
                                 wire:change="saveGroupHidden({{ $group->id }})" role="switch">
@@ -216,6 +225,53 @@
                         </div>
                     @enderror
 
+                    <div class="tag-library-color-control-set" wire:sort:ignore>
+                        <div class="tag-library-color-controls">
+                            <label class="tag-library-color-picker">
+                                <span>Group background color</span>
+                                <input type="color" wire:model.live="groupColors.{{ $group->id }}"
+                                    wire:change="saveGroupColor({{ $group->id }})"
+                                    aria-label="Color picker for group {{ $group->title }}">
+                            </label>
+                            <label class="tag-library-color-hex">
+                                <span>Hex</span>
+                                <input type="text" wire:model.blur="groupColors.{{ $group->id }}"
+                                    wire:change="saveGroupColor({{ $group->id }})" placeholder="#000000"
+                                    maxlength="7" aria-label="Hex color for group {{ $group->title }}">
+                            </label>
+                            <button type="button" class="tag-library-action tag-library-color-clear"
+                                wire:click="clearGroupColor({{ $group->id }})">
+                                Clear color
+                            </button>
+                        </div>
+                        <div class="tag-library-color-controls">
+                            <label class="tag-library-color-picker">
+                                <span>Group font color</span>
+                                <input type="color" wire:model.live="groupTextColors.{{ $group->id }}"
+                                    wire:change="saveGroupColor({{ $group->id }})"
+                                    aria-label="Font color picker for group {{ $group->title }}">
+                            </label>
+                            <label class="tag-library-color-hex">
+                                <span>Hex</span>
+                                <input type="text" wire:model.blur="groupTextColors.{{ $group->id }}"
+                                    wire:change="saveGroupColor({{ $group->id }})" placeholder="#000000"
+                                    maxlength="7" aria-label="Hex font color for group {{ $group->title }}">
+                            </label>
+                            <button type="button" class="tag-library-action tag-library-color-clear"
+                                wire:click="clearGroupTextColor({{ $group->id }})">
+                                Clear font color
+                            </button>
+                        </div>
+                    </div>
+                    @error("groupColors.{$group->id}")
+                        <div class="tag-library-message tag-library-message--error" wire:sort:ignore>{{ $message }}
+                        </div>
+                    @enderror
+                    @error("groupTextColors.{$group->id}")
+                        <div class="tag-library-message tag-library-message--error" wire:sort:ignore>{{ $message }}
+                        </div>
+                    @enderror
+
                     <form wire:submit.prevent="addTagToGroup({{ $group->id }})" class="tag-library-group-add"
                         wire:sort:ignore>
                         <input type="text" wire:model="groupTagInputs.{{ $group->id }}"
@@ -231,23 +287,31 @@
 
                     <div class="tag-library-group-tags" wire:sort="reorderGroupTags">
                         @forelse ($group->genres as $tagIndex => $genre)
-                            <div class="tag-library-group-tag-row" wire:key="tag-group-{{ $group->id }}-tag-{{ $genre->id }}"
+                            <div class="tag-library-group-tag-row"
+                                wire:key="tag-group-{{ $group->id }}-tag-{{ $genre->id }}"
                                 wire:sort:item="{{ $group->id }}|{{ $genre->id }}">
                                 <button type="button" class="tag-library-drag-handle" wire:sort:handle
                                     aria-label="Drag tag {{ $genre->title }}">
                                     <i class="fa-solid fa-arrows-up-down" aria-hidden="true"></i>
                                 </button>
                                 <div class="tag-library-order-buttons" wire:sort:ignore>
-                                    <button type="button" wire:click.stop="moveGroupTag({{ $group->id }}, {{ $genre->id }}, -1)"
+                                    <button type="button"
+                                        wire:click.stop="moveGroupTag({{ $group->id }}, {{ $genre->id }}, -1)"
                                         @disabled($tagIndex === 0)>Up</button>
-                                    <button type="button" wire:click.stop="moveGroupTag({{ $group->id }}, {{ $genre->id }}, 1)"
+                                    <button type="button"
+                                        wire:click.stop="moveGroupTag({{ $group->id }}, {{ $genre->id }}, 1)"
                                         @disabled($tagIndex === $group->genres->count() - 1)>Down</button>
                                 </div>
 
-                                <span class="tag-library-group-tag-title">{{ $genre->title }}</span>
+                                <span @class([
+                                    'tag-library-group-tag-title',
+                                    'tag-library-group-tag-title--background-colored' =>
+                                        $genre->has_background_color,
+                                    'tag-library-group-tag-title--text-colored' => $genre->has_font_color,
+                                ])
+                                    @if (filled($genre->color_style)) style="{{ $genre->color_style }}" @endif>{{ $genre->title }}</span>
 
-                                <label class="tag-library-check tag-library-switch"
-                                    wire:sort:ignore>
+                                <label class="tag-library-check tag-library-switch" wire:sort:ignore>
                                     <input type="checkbox" class="tag-library-switch-input"
                                         wire:model.live="tagHidden.{{ $genre->id }}"
                                         wire:change="saveTagHidden({{ $genre->id }})" role="switch">
@@ -308,14 +372,58 @@
 
                     <div class="tag-library-modal-section">
                         <label class="tag-library-check tag-library-switch">
-                            <input type="checkbox" class="tag-library-switch-input"
-                                wire:model="editingTagHidden" role="switch">
+                            <input type="checkbox" class="tag-library-switch-input" wire:model="editingTagHidden"
+                                role="switch">
                             <span class="tag-library-switch-track" aria-hidden="true">
                                 <span class="tag-library-switch-thumb"></span>
                             </span>
                             <span class="tag-library-switch-text">Hide tag on Index</span>
                         </label>
                     </div>
+
+                    <fieldset class="tag-library-modal-fieldset">
+                        <legend>Tag color</legend>
+                        <div class="tag-library-color-control-set">
+                            <div class="tag-library-color-controls tag-library-color-controls--modal">
+                                <label class="tag-library-color-picker">
+                                    <span>Background color</span>
+                                    <input type="color" wire:model.live="editingTagColor"
+                                        aria-label="Color picker for {{ $editingTag->title }}">
+                                </label>
+                                <label class="tag-library-color-hex">
+                                    <span>Hex</span>
+                                    <input type="text" wire:model.blur="editingTagColor" placeholder="#000000"
+                                        maxlength="7" aria-label="Hex color for {{ $editingTag->title }}">
+                                </label>
+                                <button type="button" class="tag-library-action tag-library-color-clear"
+                                    wire:click="clearEditingTagColor">
+                                    Clear color
+                                </button>
+                            </div>
+                            <div class="tag-library-color-controls tag-library-color-controls--modal">
+                                <label class="tag-library-color-picker">
+                                    <span>Font color</span>
+                                    <input type="color" wire:model.live="editingTagTextColor"
+                                        aria-label="Font color picker for {{ $editingTag->title }}">
+                                </label>
+                                <label class="tag-library-color-hex">
+                                    <span>Hex</span>
+                                    <input type="text" wire:model.blur="editingTagTextColor" placeholder="#000000"
+                                        maxlength="7" aria-label="Hex font color for {{ $editingTag->title }}">
+                                </label>
+                                <button type="button" class="tag-library-action tag-library-color-clear"
+                                    wire:click="clearEditingTagTextColor">
+                                    Clear font color
+                                </button>
+                            </div>
+                        </div>
+                        @error('editingTagColor')
+                            <div class="tag-library-message tag-library-message--error">{{ $message }}</div>
+                        @enderror
+                        @error('editingTagTextColor')
+                            <div class="tag-library-message tag-library-message--error">{{ $message }}</div>
+                        @enderror
+                    </fieldset>
 
                     <fieldset class="tag-library-modal-fieldset">
                         <legend>Groups</legend>

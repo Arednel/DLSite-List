@@ -375,6 +375,34 @@ a {
     word-wrap: break-word
 }
 
+.index-tag-chip--background-colored {
+    display: inline-flex;
+    align-items: center;
+    margin: 1px 0;
+    padding: 1px 6px;
+    border: 1px solid color-mix(in srgb, var(--tag-color) 70%, #FFFFFF);
+    border-radius: 999px;
+    background-color: color-mix(in srgb, var(--tag-color) 14%, #FFFDF8);
+    font-weight: bold;
+    text-decoration: none;
+}
+
+.list-table .list-table-data a.index-tag-chip--background-colored:hover {
+    border-color: var(--tag-color);
+    background-color: color-mix(in srgb, var(--tag-color) 22%, #FFFDF8);
+}
+
+.list-table .list-table-data a.index-tag-chip--text-colored,
+.list-table .list-table-data a.index-tag-chip--text-colored:visited {
+    color: var(--tag-text-color) !important;
+}
+
+.list-table .list-table-data a.index-tag-chip--text-colored:hover,
+.list-table .list-table-data a.index-tag-chip--text-colored:focus,
+.list-table .list-table-data a.index-tag-chip--text-colored:active {
+    color: color-mix(in srgb, var(--tag-text-color) 75%, #FFFFFF) !important;
+}
+
 .list-table .list-table-data .data.configurable {
     padding-inline: 6px;
     word-wrap: break-word;

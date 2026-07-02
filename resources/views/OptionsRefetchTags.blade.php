@@ -90,7 +90,7 @@
 
                             <x-options.refetch-results :run="$run" :move-action="$moveAction" :remove-action="$removeAction"
                                 :add-action="$addAction" :ignore-action="$ignoreAction" :promote-custom-action="$promoteCustomAction" :keep-custom-action="$keepCustomAction"
-                                :show-controls="true" />
+                                :show-controls="true" :tag-rows="$tagRows" />
                         </form>
                     @else
                         <div class="notice">
@@ -102,7 +102,7 @@
                         </div>
                         <x-options.refetch-results :run="$run" :move-action="$moveAction" :remove-action="$removeAction"
                             :add-action="$addAction" :ignore-action="$ignoreAction" :promote-custom-action="$promoteCustomAction" :keep-custom-action="$keepCustomAction"
-                            :show-controls="false" />
+                            :show-controls="false" :tag-rows="$tagRows" />
                     @endif
                 </section>
             @endif

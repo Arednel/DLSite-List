@@ -166,6 +166,16 @@
             option.dataset.index = String(index);
             option.setAttribute('aria-selected', index === state.activeIndex ? 'true' : 'false');
 
+            if (typeof result.color === 'string' && /^#[0-9A-Fa-f]{6}$/.test(result.color)) {
+                option.classList.add('autocomplete-option--background-colored');
+                option.style.setProperty('--tag-color', result.color);
+            }
+
+            if (typeof result.text_color === 'string' && /^#[0-9A-Fa-f]{6}$/.test(result.text_color)) {
+                option.classList.add('autocomplete-option--text-colored');
+                option.style.setProperty('--tag-text-color', result.text_color);
+            }
+
             const label = document.createElement('span');
             label.className = 'autocomplete-option__label';
             label.textContent = result.label || result.value || '';

@@ -40,9 +40,9 @@ class TagLibraryManagerTest extends TestCase
             ->assertSee('tag-library-tag-count">2</span>', false)
             ->assertSee('tag-library-tag-count tag-library-tag-count--empty">0</span>', false)
             ->assertDontSee('Library Japanese Tag')
-            ->assertSee('genre='.$englishGenre->getKey(), false)
-            ->assertSee('genre='.$customGenre->getKey(), false)
-            ->assertSee('genre='.$emptyGenre->getKey(), false);
+            ->assertSee('genre=' . $englishGenre->getKey(), false)
+            ->assertSee('genre=' . $customGenre->getKey(), false)
+            ->assertSee('genre=' . $emptyGenre->getKey(), false);
     }
 
     public function test_all_tags_starts_collapsed_and_search_opens_matching_results(): void
@@ -280,13 +280,17 @@ class TagLibraryManagerTest extends TestCase
         $this->attachTagToGroup($otherGroup, $hiddenTag, 1);
         $this->attachTagToGroup($group, $visibleTag, 2);
 
-        Livewire::test(TagLibraryManager::class)
+        $component = Livewire::test(TagLibraryManager::class)
+            ->set("groupColors.{$group->getKey()}", '#112233')
+            ->set("groupTextColors.{$group->getKey()}", '#445566')
             ->call('askDeleteGroup', $group->getKey())
             ->assertSet('confirmingDeleteGroupId', $group->getKey())
             ->assertSee('Delete group "Delete Group"?', false)
             ->call('deleteGroup')
             ->assertSee('Tag group deleted.');
 
+        $this->assertArrayNotHasKey($group->getKey(), $component->get('groupColors'));
+        $this->assertArrayNotHasKey($group->getKey(), $component->get('groupTextColors'));
         $this->assertDatabaseMissing('genre_groups', ['id' => $group->getKey()]);
         $this->assertDatabaseHas('genres', [
             'id' => $hiddenTag->getKey(),
@@ -410,9 +414,9 @@ class TagLibraryManagerTest extends TestCase
         $html = Livewire::test(TagLibraryManager::class)->html();
 
         $this->assertStringContainsString('class="tag-library-check tag-library-switch"', $html);
-        $this->assertStringContainsString('wire:model.live="groupHidden.'.$group->getKey().'"', $html);
+        $this->assertStringContainsString('wire:model.live="groupHidden.' . $group->getKey() . '"', $html);
         $this->assertStringContainsString(
-            'wire:change="saveGroupHidden('.$group->getKey().')" role="switch"',
+            'wire:change="saveGroupHidden(' . $group->getKey() . ')" role="switch"',
             $html,
         );
         $this->assertStringContainsString('class="tag-library-switch-track"', $html);
@@ -428,11 +432,11 @@ class TagLibraryManagerTest extends TestCase
         Livewire::test(TagLibraryManager::class)
             ->call('toggleAllTags')
             ->assertSet('tagEditMode', false)
-            ->assertSee('genre='.$genre->getKey(), false)
-            ->assertDontSee('wire:click="openTagSettings('.$genre->getKey().')"', false)
+            ->assertSee('genre=' . $genre->getKey(), false)
+            ->assertDontSee('wire:click="openTagSettings(' . $genre->getKey() . ')"', false)
             ->set('tagEditMode', true)
-            ->assertSee('wire:click="openTagSettings('.$genre->getKey().')"', false)
-            ->assertDontSee('href="'.route('index', ['age_category' => '', 'progress' => '', 'genre' => $genre->getKey()]).'"', false);
+            ->assertSee('wire:click="openTagSettings(' . $genre->getKey() . ')"', false)
+            ->assertDontSee('href="' . route('index', ['age_category' => '', 'progress' => '', 'genre' => $genre->getKey()]) . '"', false);
     }
 
     public function test_tag_edit_mode_toggle_renders_as_accessible_switch(): void
@@ -493,16 +497,17 @@ class TagLibraryManagerTest extends TestCase
             'class="tag-library-switch-input"',
             $html,
         );
-        $this->assertStringContainsString('wire:model.live="tagHidden.'.$genre->getKey().'"', $html);
+        $this->assertStringContainsString('wire:model.live="tagHidden.' . $genre->getKey() . '"', $html);
         $this->assertStringContainsString(
-            'wire:change="saveTagHidden('.$genre->getKey().')" role="switch"',
+            'wire:change="saveTagHidden(' . $genre->getKey() . ')" role="switch"',
             $html,
         );
         $this->assertStringContainsString(
             '<label class="tag-library-check tag-library-switch">',
             $html,
         );
-        $this->assertStringContainsString('wire:model="editingTagHidden" role="switch"', $html);
+        $this->assertStringContainsString('wire:model="editingTagHidden"', $html);
+        $this->assertStringContainsString('role="switch"', $html);
         $this->assertStringContainsString('class="tag-library-switch-track"', $html);
         $this->assertStringContainsString('class="tag-library-switch-thumb"', $html);
         $this->assertSame(2, substr_count($html, 'class="tag-library-switch-text">Hide tag on Index</span>'));
@@ -536,23 +541,23 @@ class TagLibraryManagerTest extends TestCase
             ->assertSee('Search tag groups')
             ->assertSee('class="tag-library-modal-group-plaque"', false)
             ->assertSee('Selected Plaque Group')
-            ->assertSee('wire:click="removeEditingTagGroup('.$selectedGroup->getKey().')"', false)
-            ->assertDontSee('wire:click="addEditingTagGroup('.$matchingGroup->getKey().')"', false)
-            ->assertDontSee('wire:click="addEditingTagGroup('.$otherGroup->getKey().')"', false)
+            ->assertSee('wire:click="removeEditingTagGroup(' . $selectedGroup->getKey() . ')"', false)
+            ->assertDontSee('wire:click="addEditingTagGroup(' . $matchingGroup->getKey() . ')"', false)
+            ->assertDontSee('wire:click="addEditingTagGroup(' . $otherGroup->getKey() . ')"', false)
             ->set('editingTagGroupSearch', 'searchable')
             ->assertSee('class="tag-library-modal-group-dropdown"', false)
-            ->assertSee('wire:click="addEditingTagGroup('.$matchingGroup->getKey().')"', false)
-            ->assertDontSee('wire:click="addEditingTagGroup('.$otherGroup->getKey().')"', false)
+            ->assertSee('wire:click="addEditingTagGroup(' . $matchingGroup->getKey() . ')"', false)
+            ->assertDontSee('wire:click="addEditingTagGroup(' . $otherGroup->getKey() . ')"', false)
             ->call('addEditingTagGroup', $matchingGroup->getKey())
             ->assertSet('editingTagGroupIds', [$selectedGroup->getKey(), $matchingGroup->getKey()])
             ->assertSet('editingTagGroupSearch', '')
             ->assertSee('Searchable Plaque Group')
-            ->assertSee('wire:click="removeEditingTagGroup('.$matchingGroup->getKey().')"', false)
+            ->assertSee('wire:click="removeEditingTagGroup(' . $matchingGroup->getKey() . ')"', false)
             ->call('addEditingTagGroup', $matchingGroup->getKey())
             ->assertSet('editingTagGroupIds', [$selectedGroup->getKey(), $matchingGroup->getKey()])
             ->call('removeEditingTagGroup', $selectedGroup->getKey())
             ->assertSet('editingTagGroupIds', [$matchingGroup->getKey()])
-            ->assertDontSee('wire:click="removeEditingTagGroup('.$selectedGroup->getKey().')"', false);
+            ->assertDontSee('wire:click="removeEditingTagGroup(' . $selectedGroup->getKey() . ')"', false);
     }
 
     public function test_tag_settings_group_search_empty_states_render_below_search(): void
@@ -570,7 +575,7 @@ class TagLibraryManagerTest extends TestCase
 
         $this->assertStringContainsString('Search tag groups', $blankHtml);
         $this->assertStringContainsString('No groups assigned.', $blankHtml);
-        $this->assertStringNotContainsString('wire:click="addEditingTagGroup('.$matchingGroup->getKey().')"', $blankHtml);
+        $this->assertStringNotContainsString('wire:click="addEditingTagGroup(' . $matchingGroup->getKey() . ')"', $blankHtml);
         $this->assertLessThan(
             strpos($blankHtml, 'No groups assigned.'),
             strpos($blankHtml, 'Search tag groups'),
@@ -659,6 +664,188 @@ class TagLibraryManagerTest extends TestCase
             'genre_id' => $genre->getKey(),
         ]);
         $this->assertSame(8, $this->groupTagOrder($addedGroup, $genre));
+    }
+
+    public function test_tag_settings_saves_clears_and_validates_tag_color(): void
+    {
+        $genre = Genre::resolveByTitle('Colored Modal Tag');
+
+        Livewire::test(TagLibraryManager::class)
+            ->call('openTagSettings', $genre->getKey())
+            ->assertSet('editingTagColor', '')
+            ->assertSet('editingTagTextColor', '')
+            ->assertSee('placeholder="#000000"', false)
+            ->set('editingTagColor', '#AABBCC')
+            ->set('editingTagTextColor', '#000000')
+            ->call('saveTagSettings')
+            ->assertHasNoErrors()
+            ->assertSee('Tag settings saved.');
+
+        $this->assertSame('#aabbcc', $genre->refresh()->color);
+        $this->assertSame('#000000', $genre->refresh()->text_color);
+
+        Livewire::test(TagLibraryManager::class)
+            ->call('openTagSettings', $genre->getKey())
+            ->assertSet('editingTagColor', '#aabbcc')
+            ->assertSet('editingTagTextColor', '#000000')
+            ->call('clearEditingTagColor')
+            ->call('clearEditingTagTextColor')
+            ->call('saveTagSettings')
+            ->assertHasNoErrors();
+
+        $this->assertNull($genre->refresh()->color);
+        $this->assertNull($genre->refresh()->text_color);
+
+        Livewire::test(TagLibraryManager::class)
+            ->call('openTagSettings', $genre->getKey())
+            ->set('editingTagColor', 'red')
+            ->call('saveTagSettings')
+            ->assertHasErrors(['editingTagColor']);
+
+        Livewire::test(TagLibraryManager::class)
+            ->call('openTagSettings', $genre->getKey())
+            ->set('editingTagColor', '#112233')
+            ->set('editingTagTextColor', 'blue')
+            ->call('saveTagSettings')
+            ->assertHasErrors(['editingTagTextColor']);
+    }
+
+    public function test_group_color_saves_clears_and_validates(): void
+    {
+        $group = GenreGroup::query()->create([
+            'title' => 'Colored Settings Group',
+            'description' => null,
+            'order' => 1,
+        ]);
+
+        Livewire::test(TagLibraryManager::class)
+            ->set("groupColors.{$group->getKey()}", '#CC3366')
+            ->set("groupTextColors.{$group->getKey()}", '#000000')
+            ->call('saveGroupColor', $group->getKey())
+            ->assertHasNoErrors()
+            ->assertSee('Tag group color saved.');
+
+        $this->assertSame('#cc3366', $group->refresh()->color);
+        $this->assertSame('#000000', $group->refresh()->text_color);
+
+        Livewire::test(TagLibraryManager::class)
+            ->call('clearGroupColor', $group->getKey())
+            ->call('clearGroupTextColor', $group->getKey())
+            ->assertHasNoErrors();
+
+        $this->assertNull($group->refresh()->color);
+        $this->assertNull($group->refresh()->text_color);
+
+        Livewire::test(TagLibraryManager::class)
+            ->set("groupColors.{$group->getKey()}", '#bad')
+            ->call('saveGroupColor', $group->getKey())
+            ->assertHasErrors(["groupColors.{$group->getKey()}"]);
+
+        Livewire::test(TagLibraryManager::class)
+            ->set("groupColors.{$group->getKey()}", '#112233')
+            ->set("groupTextColors.{$group->getKey()}", 'black')
+            ->call('saveGroupColor', $group->getKey())
+            ->assertHasErrors(["groupTextColors.{$group->getKey()}"]);
+    }
+
+    public function test_tag_library_chips_use_group_color_over_tag_color_when_surface_is_enabled(): void
+    {
+        $plainFirstGroup = GenreGroup::query()->create([
+            'title' => 'Plain First Color Group',
+            'description' => null,
+            'order' => 1,
+            'text_color' => '#eeeeee',
+        ]);
+        $group = GenreGroup::query()->create([
+            'title' => 'Color Override Group',
+            'description' => null,
+            'order' => 2,
+            'color' => '#112233',
+        ]);
+        $genre = Genre::resolveByTitle('Color Override Tag');
+        $genre->forceFill(['color' => '#445566', 'text_color' => '#111111'])->save();
+        $this->attachTagToGroup($plainFirstGroup, $genre, 1);
+        $this->attachTagToGroup($group, $genre, 1);
+
+        Livewire::test(TagLibraryManager::class)
+            ->call('toggleAllTags')
+            ->assertSee('tag-library-tag--background-colored', false)
+            ->assertSee('tag-library-tag--text-colored', false)
+            ->assertSee('--tag-color: #112233;', false)
+            ->assertSee('--tag-text-color: #eeeeee;', false);
+
+        Option::setTagColorSurfaces([Option::TAG_COLOR_SURFACE_TAG_LIBRARY => false]);
+
+        Livewire::test(TagLibraryManager::class)
+            ->call('toggleAllTags')
+            ->assertDontSee('tag-library-tag--background-colored', false)
+            ->assertDontSee('tag-library-tag--text-colored', false)
+            ->assertDontSee('--tag-color: #112233;', false)
+            ->assertDontSee('--tag-text-color: #eeeeee;', false);
+    }
+
+    public function test_tag_library_background_and_font_colors_render_independently(): void
+    {
+        $backgroundOnly = Genre::resolveByTitle('Background Only Tag');
+        $backgroundOnly->forceFill(['color' => '#112233', 'text_color' => null])->save();
+        $fontOnly = Genre::resolveByTitle('Font Only Tag');
+        $fontOnly->forceFill(['color' => null, 'text_color' => '#eeeeee'])->save();
+
+        $component = Livewire::test(TagLibraryManager::class)
+            ->call('toggleAllTags');
+
+        $component
+            ->assertSee('Background Only Tag')
+            ->assertSee('Font Only Tag')
+            ->assertSee('tag-library-tag--background-colored', false)
+            ->assertSee('tag-library-tag--text-colored', false);
+
+        $html = $component->html();
+
+        $this->assertStringContainsString('--tag-color: #112233;', $html);
+        $this->assertStringContainsString('--tag-text-color: #eeeeee;', $html);
+    }
+
+    public function test_tag_library_color_controls_use_background_color_label(): void
+    {
+        $genre = Genre::resolveByTitle('Label Color Tag');
+        $group = GenreGroup::query()->create([
+            'title' => 'Label Color Group',
+            'description' => null,
+            'order' => 1,
+        ]);
+        $this->attachTagToGroup($group, $genre, 1);
+
+        Livewire::test(TagLibraryManager::class)
+            ->call('openTagSettings', $genre->getKey())
+            ->assertSee('Background color')
+            ->assertSee('Group background color')
+            ->assertDontSee('Chip color')
+            ->assertDontSee('Group color');
+    }
+
+    public function test_tag_library_background_color_hover_does_not_override_font_color(): void
+    {
+        $css = file_get_contents(public_path('css/tag-library.css'));
+
+        preg_match(
+            '/\.tag-library-tag--background-colored:hover,\s*\.tag-library-tag--background-colored:focus\s*\{[^}]*}/',
+            $css,
+            $matches,
+        );
+
+        $this->assertNotEmpty($matches);
+        $this->assertStringContainsString('background-color:', $matches[0]);
+        $this->assertDoesNotMatchRegularExpression('/(^|\n)\s*color\s*:/', $matches[0]);
+    }
+
+    public function test_tag_library_blade_does_not_embed_php_color_logic(): void
+    {
+        $blade = file_get_contents(resource_path('views/livewire/tag-library-manager.blade.php'));
+
+        $this->assertStringNotContainsString('@php', $blade);
+        $this->assertStringNotContainsString('App\\Support\\TagColor', $blade);
+        $this->assertStringNotContainsString('App\\Models\\Option', $blade);
     }
 
     public function test_all_tags_status_indicators_only_render_for_hidden_tags(): void
@@ -772,7 +959,7 @@ class TagLibraryManagerTest extends TestCase
             ->assertSee('class="tag-library-tag-shell tag-library-tag-shell--deletable"', false)
             ->assertSee('class="tag-library-delete-button"', false)
             ->assertDontSee('tag-library-delete-button--attached', false)
-            ->assertSee('wire:click="askDeleteTag('.$empty->getKey().')"', false);
+            ->assertSee('wire:click="askDeleteTag(' . $empty->getKey() . ')"', false);
     }
 
     public function test_all_tags_filters_visibility_group_status_specific_group_and_usage(): void
@@ -811,7 +998,7 @@ class TagLibraryManagerTest extends TestCase
         $this->attachTagToGroup($visibleGroup, $used, 3);
         app(ProductGenreSync::class)->syncCustom($product, [$used->getKey()]);
 
-        $component = fn () => Livewire::test(TagLibraryManager::class)->call('toggleAllTags');
+        $component = fn() => Livewire::test(TagLibraryManager::class)->call('toggleAllTags');
 
         $component()
             ->set('visibilityFilter', 'visible')

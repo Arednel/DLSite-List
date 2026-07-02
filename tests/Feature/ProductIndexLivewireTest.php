@@ -968,6 +968,253 @@ class ProductIndexLivewireTest extends TestCase
         $this->assertSame(1, substr_count($component->html(), 'TAG_HIDE_DUPLICATE_VISIBLE_GROUPS'));
     }
 
+    public function test_index_tag_chips_render_tag_colors_when_surface_is_enabled(): void
+    {
+        Option::setIndexFieldLayout([
+            ['field' => ProductField::Tags->value, 'visible' => true],
+        ]);
+
+        $product = $this->createProduct(1, ['work_name' => 'INDEX_COLOR_WORK']);
+        $genre = Genre::query()->create([
+            'title' => 'INDEX_COLOR_TAG',
+            'description' => null,
+            'order' => 1,
+            'color' => '#aa3366',
+            'text_color' => '#111111',
+        ]);
+
+        app(ProductGenreSync::class)->syncCustom($product, [$genre->getKey()]);
+
+        Livewire::test(ProductIndex::class)
+            ->assertSee('INDEX_COLOR_TAG')
+            ->assertSee('index-tag-chip--background-colored', false)
+            ->assertSee('index-tag-chip--text-colored', false)
+            ->assertSee('--tag-color: #aa3366;', false)
+            ->assertSee('--tag-text-color: #111111;', false);
+    }
+
+    public function test_index_tag_background_color_does_not_apply_font_color_class(): void
+    {
+        Option::setIndexFieldLayout([
+            ['field' => ProductField::Tags->value, 'visible' => true],
+        ]);
+
+        $product = $this->createProduct(1, ['work_name' => 'INDEX_BACKGROUND_ONLY_WORK']);
+        $genre = Genre::query()->create([
+            'title' => 'INDEX_BACKGROUND_ONLY_TAG',
+            'description' => null,
+            'order' => 1,
+            'color' => '#aa3366',
+            'text_color' => null,
+        ]);
+
+        app(ProductGenreSync::class)->syncCustom($product, [$genre->getKey()]);
+
+        Livewire::test(ProductIndex::class)
+            ->assertSee('INDEX_BACKGROUND_ONLY_TAG')
+            ->assertSee('index-tag-chip--background-colored', false)
+            ->assertDontSee('index-tag-chip--text-colored', false)
+            ->assertSee('--tag-color: #aa3366;', false)
+            ->assertDontSee('--tag-text-color:', false);
+    }
+
+    public function test_index_tag_font_color_does_not_apply_background_color_class(): void
+    {
+        Option::setIndexFieldLayout([
+            ['field' => ProductField::Tags->value, 'visible' => true],
+        ]);
+
+        $product = $this->createProduct(1, ['work_name' => 'INDEX_FONT_ONLY_WORK']);
+        $genre = Genre::query()->create([
+            'title' => 'INDEX_FONT_ONLY_TAG',
+            'description' => null,
+            'order' => 1,
+            'color' => null,
+            'text_color' => '#111111',
+        ]);
+
+        app(ProductGenreSync::class)->syncCustom($product, [$genre->getKey()]);
+
+        Livewire::test(ProductIndex::class)
+            ->assertSee('INDEX_FONT_ONLY_TAG')
+            ->assertDontSee('index-tag-chip--background-colored', false)
+            ->assertSee('index-tag-chip--text-colored', false)
+            ->assertDontSee('--tag-color:', false)
+            ->assertSee('--tag-text-color: #111111;', false);
+    }
+
+    public function test_index_tag_colors_can_be_disabled(): void
+    {
+        Option::setIndexFieldLayout([
+            ['field' => ProductField::Tags->value, 'visible' => true],
+        ]);
+        Option::setTagColorSurfaces([Option::TAG_COLOR_SURFACE_INDEX => false]);
+
+        $product = $this->createProduct(1, ['work_name' => 'INDEX_COLOR_DISABLED_WORK']);
+        $genre = Genre::query()->create([
+            'title' => 'INDEX_COLOR_DISABLED_TAG',
+            'description' => null,
+            'order' => 1,
+            'color' => '#aa3366',
+            'text_color' => '#111111',
+        ]);
+
+        app(ProductGenreSync::class)->syncCustom($product, [$genre->getKey()]);
+
+        Livewire::test(ProductIndex::class)
+            ->assertSee('INDEX_COLOR_DISABLED_TAG')
+            ->assertDontSee('index-tag-chip--background-colored', false)
+            ->assertDontSee('index-tag-chip--text-colored', false)
+            ->assertDontSee('--tag-color: #aa3366;', false)
+            ->assertDontSee('--tag-text-color: #111111;', false);
+    }
+
+    public function test_index_tag_color_loading_is_skipped_when_no_colors_are_configured(): void
+    {
+        Option::setIndexFieldLayout([
+            ['field' => ProductField::Tags->value, 'visible' => true],
+        ]);
+
+        $product = $this->createProduct(1, ['work_name' => 'INDEX_NO_COLOR_FAST_PATH_WORK']);
+        $genre = Genre::query()->create([
+            'title' => 'INDEX_NO_COLOR_FAST_PATH_TAG',
+            'description' => null,
+            'order' => 1,
+            'color' => null,
+            'text_color' => null,
+        ]);
+
+        app(ProductGenreSync::class)->syncCustom($product, [$genre->getKey()]);
+
+        DB::enableQueryLog();
+
+        Livewire::test(ProductIndex::class)
+            ->assertSee('INDEX_NO_COLOR_FAST_PATH_TAG')
+            ->assertDontSee('index-tag-chip--background-colored', false)
+            ->assertDontSee('index-tag-chip--text-colored', false)
+            ->assertDontSee('--tag-color:', false)
+            ->assertDontSee('--tag-text-color:', false);
+
+        $queries = collect(DB::getQueryLog())->pluck('query')->implode("\n");
+        DB::disableQueryLog();
+
+        $this->assertStringNotContainsString('tag_color', $queries);
+        $this->assertStringNotContainsString('tag_text_color', $queries);
+        $this->assertStringNotContainsString('genre_group_genre`.`genre_id` in', $queries);
+    }
+
+    public function test_index_tag_chips_use_first_ordered_group_color_over_tag_color(): void
+    {
+        Option::setIndexFieldLayout([
+            ['field' => ProductField::Tags->value, 'visible' => true],
+        ]);
+
+        $product = $this->createProduct(1, ['work_name' => 'INDEX_GROUP_COLOR_WORK']);
+        $plainFirstGroup = GenreGroup::query()->create([
+            'title' => 'Plain First Index Color Group',
+            'description' => null,
+            'order' => 1,
+            'color' => null,
+        ]);
+        $laterGroup = GenreGroup::query()->create([
+            'title' => 'Later Color Group',
+            'description' => null,
+            'order' => 3,
+            'color' => '#445566',
+        ]);
+        $firstGroup = GenreGroup::query()->create([
+            'title' => 'First Color Group',
+            'description' => null,
+            'order' => 2,
+            'color' => '#112233',
+            'text_color' => '#eeeeee',
+        ]);
+        $genre = Genre::query()->create([
+            'title' => 'INDEX_GROUP_COLOR_TAG',
+            'description' => null,
+            'order' => 1,
+            'color' => '#aa3366',
+            'text_color' => '#111111',
+        ]);
+
+        $this->attachTagToGroup($plainFirstGroup, $genre, 1);
+        $this->attachTagToGroup($laterGroup, $genre, 1);
+        $this->attachTagToGroup($firstGroup, $genre, 1);
+        app(ProductGenreSync::class)->syncCustom($product, [$genre->getKey()]);
+
+        Livewire::test(ProductIndex::class)
+            ->assertSee('INDEX_GROUP_COLOR_TAG')
+            ->assertSee('--tag-color: #112233;', false)
+            ->assertSee('--tag-text-color: #eeeeee;', false)
+            ->assertDontSee('--tag-color: #aa3366;', false)
+            ->assertDontSee('--tag-text-color: #111111;', false);
+    }
+
+    public function test_index_tag_color_loading_does_not_use_correlated_group_color_subqueries(): void
+    {
+        Option::setIndexFieldLayout([
+            ['field' => ProductField::Tags->value, 'visible' => true],
+        ]);
+
+        $product = $this->createProduct(1, ['work_name' => 'INDEX_COLOR_QUERY_WORK']);
+        $group = GenreGroup::query()->create([
+            'title' => 'Index Color Query Group',
+            'description' => null,
+            'order' => 1,
+            'color' => '#112233',
+            'text_color' => '#eeeeee',
+        ]);
+        $genre = Genre::query()->create([
+            'title' => 'INDEX_COLOR_QUERY_TAG',
+            'description' => null,
+            'order' => 1,
+            'color' => '#aa3366',
+            'text_color' => '#111111',
+        ]);
+
+        $this->attachTagToGroup($group, $genre, 1);
+        app(ProductGenreSync::class)->syncCustom($product, [$genre->getKey()]);
+
+        DB::enableQueryLog();
+
+        Livewire::test(ProductIndex::class)
+            ->assertSee('--tag-color: #112233;', false)
+            ->assertSee('--tag-text-color: #eeeeee;', false);
+
+        $queries = collect(DB::getQueryLog())->pluck('query')->implode("\n");
+        DB::disableQueryLog();
+
+        $this->assertStringNotContainsString('color_genre_groups', $queries);
+        $this->assertStringNotContainsString('color_genre_group_genre', $queries);
+    }
+
+    public function test_index_tag_loading_skips_hidden_group_exclusion_when_no_hidden_groups_exist(): void
+    {
+        Option::setIndexFieldLayout([
+            ['field' => ProductField::Tags->value, 'visible' => true],
+        ]);
+
+        $product = $this->createProduct(1, ['work_name' => 'INDEX_NO_HIDDEN_GROUP_WORK']);
+        $genre = Genre::query()->create([
+            'title' => 'INDEX_NO_HIDDEN_GROUP_TAG',
+            'description' => null,
+            'order' => 1,
+        ]);
+
+        app(ProductGenreSync::class)->syncCustom($product, [$genre->getKey()]);
+
+        DB::enableQueryLog();
+
+        Livewire::test(ProductIndex::class)
+            ->assertSee('INDEX_NO_HIDDEN_GROUP_TAG');
+
+        $queries = collect(DB::getQueryLog())->pluck('query')->implode("\n");
+        DB::disableQueryLog();
+
+        $this->assertStringNotContainsString('hidden_genre_groups', $queries);
+        $this->assertStringNotContainsString('hidden_genre_group_genre', $queries);
+    }
+
     public function test_index_table_width_option_is_applied_to_table_container(): void
     {
         $this->createProduct(1, ['work_name' => 'WIDTH_VISIBLE_WORK']);

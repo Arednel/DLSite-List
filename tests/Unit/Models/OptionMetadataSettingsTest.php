@@ -35,6 +35,47 @@ class OptionMetadataSettingsTest extends TestCase
         $this->assertFalse(Option::tagLibraryIndexGroupOrderingEnabled());
     }
 
+    public function test_tag_color_surfaces_default_to_index_and_tag_library_only_and_can_be_saved(): void
+    {
+        $this->assertSame([
+            'index' => true,
+            'tag_library' => true,
+            'autocomplete' => false,
+            'edit_readonly' => false,
+            'refetch' => false,
+        ], Option::tagColorSurfaces());
+
+        Option::setTagColorSurfaces([
+            'index' => false,
+            'tag_library' => false,
+            'autocomplete' => true,
+            'edit_readonly' => true,
+            'refetch' => true,
+            'unknown' => true,
+        ]);
+
+        $this->assertSame([
+            'index' => false,
+            'tag_library' => false,
+            'autocomplete' => true,
+            'edit_readonly' => true,
+            'refetch' => true,
+        ], Option::tagColorSurfaces());
+
+        DB::table('options')->updateOrInsert(
+            ['key' => Option::TAG_COLOR_SURFACES],
+            ['value' => '{"index":true,"tag_library":true'],
+        );
+
+        $this->assertSame([
+            'index' => true,
+            'tag_library' => true,
+            'autocomplete' => false,
+            'edit_readonly' => false,
+            'refetch' => false,
+        ], Option::tagColorSurfaces());
+    }
+
     public function test_field_layouts_are_normalized_when_saved(): void
     {
         Option::setIndexFieldLayout([
@@ -117,6 +158,7 @@ class OptionMetadataSettingsTest extends TestCase
         $this->assertSame(ProductField::Title->value, $defaults->filterFields[0]['field']);
         $this->assertFalse($defaults->indexGroupOrderingEnabled);
         $this->assertFalse($defaults->searchHiddenDescriptionsEnabled);
+        $this->assertSame(Option::DEFAULT_TAG_COLOR_SURFACES, $defaults->tagColorSurfaces);
         $this->assertSame([
             ProductField::Title->value,
             ProductField::Score->value,
@@ -150,6 +192,10 @@ class OptionMetadataSettingsTest extends TestCase
         ]);
         Option::setTagLibraryIndexGroupOrderingEnabled(true);
         Option::setIndexSearchHiddenDescriptionsEnabled(true);
+        Option::setTagColorSurfaces([
+            Option::TAG_COLOR_SURFACE_INDEX => false,
+            Option::TAG_COLOR_SURFACE_REFETCH => true,
+        ]);
 
         $settings = Option::productIndexSettings();
 
@@ -167,6 +213,8 @@ class OptionMetadataSettingsTest extends TestCase
         $this->assertSame('75%', $settings->tableWidthCss);
         $this->assertTrue($settings->indexGroupOrderingEnabled);
         $this->assertTrue($settings->searchHiddenDescriptionsEnabled);
+        $this->assertFalse($settings->tagColorSurfaces[Option::TAG_COLOR_SURFACE_INDEX]);
+        $this->assertTrue($settings->tagColorSurfaces[Option::TAG_COLOR_SURFACE_REFETCH]);
     }
 
     public function test_product_index_settings_fall_back_from_invalid_saved_values(): void
@@ -199,11 +247,25 @@ class OptionMetadataSettingsTest extends TestCase
     {
         Option::setTagLibraryIndexGroupOrderingEnabled(true);
         Option::setIndexSearchHiddenDescriptionsEnabled(true);
+        Option::setTagColorSurfaces([
+            'index' => false,
+            'tag_library' => false,
+            'autocomplete' => true,
+            'edit_readonly' => true,
+            'refetch' => true,
+        ]);
 
         Option::resetVisibleSettingsToDefault();
 
         $this->assertFalse(Option::tagLibraryIndexGroupOrderingEnabled());
         $this->assertFalse(Option::indexSearchHiddenDescriptionsEnabled());
+        $this->assertSame([
+            'index' => true,
+            'tag_library' => true,
+            'autocomplete' => false,
+            'edit_readonly' => false,
+            'refetch' => false,
+        ], Option::tagColorSurfaces());
     }
 
     public function test_index_sort_field_layout_is_normalized_when_saved_and_reset(): void

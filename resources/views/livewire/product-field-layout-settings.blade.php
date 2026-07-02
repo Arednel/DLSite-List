@@ -62,7 +62,7 @@
                                         <span>Editable Fetched EN Tags</span>
                                     </label>
                                 </div>
-                            @elseif (!$layoutConfig['sort'] && $layoutProperty === 'edit' && $row['field'] !== 'title')
+                            @elseif (!$layoutConfig['sort'] && $layoutProperty === 'edit')
                                 <label class="field-layout-check field-layout-check--edit" wire:sort:ignore>
                                     <input type="checkbox"
                                         wire:model.live="{{ $layoutConfig['fields'] }}.{{ $row['field'] }}.editable"

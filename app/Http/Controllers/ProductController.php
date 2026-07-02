@@ -16,11 +16,12 @@ use App\Models\Option;
 use App\Models\Product;
 use App\Support\DLSite\DLSitePythonRunner;
 use App\Support\DLSite\DLSiteWorkData;
+use App\Support\PartialDateFormatter;
 use App\Support\ProductContributorSync;
 use App\Support\ProductFieldLayout;
 use App\Support\ProductGenreSync;
-use App\Support\PartialDateFormatter;
 use App\Support\ReturnTarget;
+use App\Support\TagColor;
 use App\Support\TagInput;
 use App\Support\VisibleGenreAttachment;
 use Illuminate\Http\Request;
@@ -271,17 +272,27 @@ class ProductController extends Controller
     {
         $product = Product::findOrFail($id);
         $editGenres = $this->loadEditGenresForProduct($product->getKey());
-        $englishGenres = $editGenres->get(Genre::LANGUAGE_ENGLISH, collect());
+        $showReadonlyGenreColors = Option::tagColorSurfaceEnabled(Option::TAG_COLOR_SURFACE_EDIT_READONLY);
+        $genreColorPairs = $showReadonlyGenreColors
+            ? TagColor::effectiveColorPairsForGenreIds($editGenres->flatMap(fn(Collection $genres): Collection => $genres)->pluck('id'))
+            : collect();
+        $englishGenres = $this->editGenreDisplayRows(
+            $editGenres->get(Genre::LANGUAGE_ENGLISH, collect()),
+            $genreColorPairs,
+        );
+        $customGenres = $this->editGenreDisplayRows(
+            $editGenres->get(Genre::PIVOT_SOURCE_CUSTOM, collect()),
+            $genreColorPairs,
+        );
         $returnTarget = ReturnTarget::fromRequest($request, $product->getKey());
 
         return view('Edit', [
             'product' => $product,
             'englishGenres' => $englishGenres,
-            'customGenres' => $editGenres->get(Genre::PIVOT_SOURCE_CUSTOM, collect()),
+            'customGenres' => $customGenres,
             'genreFetchedEnglishInput' => $this->formatGenreInput($englishGenres->pluck('title')->all()),
-            'genreCustomInput' => $this->formatGenreInput(
-                $editGenres->get(Genre::PIVOT_SOURCE_CUSTOM, collect())->pluck('title')->all()
-            ),
+            'genreCustomInput' => $this->formatGenreInput($customGenres->pluck('title')->all()),
+            'showReadonlyGenreColors' => $showReadonlyGenreColors,
             'editFields' => ProductFieldLayout::editFields(Option::editFieldLayout()),
             'contributorInputs' => $this->formatContributorInputs($product),
             'readonlyFieldValues' => $this->readonlyFieldValues($product),
@@ -705,10 +716,17 @@ class ProductController extends Controller
 
     private function updatePayload(UpdateProductRequest $request, array $data, array $editableFields): array
     {
-        $payload = [
-            'work_name' => $data['work_name'],
-            'work_name_english' => $data['work_name_english'] ?? null,
-        ];
+        $payload = [];
+
+        if (
+            in_array(ProductField::Title->value, $editableFields, true)
+            && $request->wasSubmitted('work_name')
+        ) {
+            $payload = [
+                'work_name' => $data['work_name'],
+                'work_name_english' => $data['work_name_english'] ?? null,
+            ];
+        }
 
         foreach ($this->updatePayloadFieldMap() as $field => $submittedColumns) {
             if (
@@ -855,12 +873,27 @@ class ProductController extends Controller
             ->where(VisibleGenreAttachment::query())
             ->orderBy('genres.title')
             ->get([
+                'genres.id',
                 'genres.title',
                 'genre_product.source',
             ])
             ->groupBy(fn(object $genre): string => $genre->source === Genre::PIVOT_SOURCE_CUSTOM
                 ? Genre::PIVOT_SOURCE_CUSTOM
                 : Genre::LANGUAGE_ENGLISH);
+    }
+
+    private function editGenreDisplayRows(Collection $genres, Collection $colorPairs): Collection
+    {
+        return $genres
+            ->map(function (object $genre) use ($colorPairs): object {
+                $colors = $colorPairs->get((int) $genre->id, TagColor::pair(null, null));
+
+                foreach (TagColor::viewData($colors['color'], $colors['text_color']) as $key => $value) {
+                    $genre->{$key} = $value;
+                }
+
+                return $genre;
+            });
     }
 
     private function syncProductGenres(Product $product, array $japaneseTitles, array $englishTitles, array $customTitles): void

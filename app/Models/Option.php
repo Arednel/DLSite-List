@@ -24,6 +24,18 @@ class Option extends Model
 
     public const TAG_LIBRARY_INDEX_GROUP_ORDERING_ENABLED = 'tag_library_index_group_ordering_enabled';
 
+    public const TAG_COLOR_SURFACES = 'tag_color_surfaces';
+
+    public const TAG_COLOR_SURFACE_INDEX = 'index';
+
+    public const TAG_COLOR_SURFACE_TAG_LIBRARY = 'tag_library';
+
+    public const TAG_COLOR_SURFACE_AUTOCOMPLETE = 'autocomplete';
+
+    public const TAG_COLOR_SURFACE_EDIT_READONLY = 'edit_readonly';
+
+    public const TAG_COLOR_SURFACE_REFETCH = 'refetch';
+
     public const INDEX_FIELD_LAYOUT = 'index_field_layout';
 
     public const EDIT_FIELD_LAYOUT = 'edit_field_layout';
@@ -65,6 +77,14 @@ class Option extends Model
         self::INDEX_TABLE_WIDTH_WIDE => 'Wide',
         self::INDEX_TABLE_WIDTH_FULL => 'Full',
         self::INDEX_TABLE_WIDTH_CUSTOM => 'Custom',
+    ];
+
+    public const DEFAULT_TAG_COLOR_SURFACES = [
+        self::TAG_COLOR_SURFACE_INDEX => true,
+        self::TAG_COLOR_SURFACE_TAG_LIBRARY => true,
+        self::TAG_COLOR_SURFACE_AUTOCOMPLETE => false,
+        self::TAG_COLOR_SURFACE_EDIT_READONLY => false,
+        self::TAG_COLOR_SURFACE_REFETCH => false,
     ];
 
     private const FIELD_LAYOUT_OPTIONS = [
@@ -186,6 +206,32 @@ class Option extends Model
     public static function resetTagLibraryIndexGroupOrderingEnabledToDefault(): void
     {
         self::setTagLibraryIndexGroupOrderingEnabled(false);
+    }
+
+    /**
+     * @return array{index: bool, tag_library: bool, autocomplete: bool, edit_readonly: bool, refetch: bool}
+     */
+    public static function tagColorSurfaces(): array
+    {
+        return self::normalizeTagColorSurfaces(self::jsonFromValue(self::valueFor(self::TAG_COLOR_SURFACES)));
+    }
+
+    public static function setTagColorSurfaces(array $surfaces): void
+    {
+        self::setValue(
+            self::TAG_COLOR_SURFACES,
+            json_encode(self::normalizeTagColorSurfaces($surfaces), JSON_THROW_ON_ERROR),
+        );
+    }
+
+    public static function resetTagColorSurfacesToDefault(): void
+    {
+        self::setTagColorSurfaces(self::DEFAULT_TAG_COLOR_SURFACES);
+    }
+
+    public static function tagColorSurfaceEnabled(string $surface): bool
+    {
+        return self::tagColorSurfaces()[$surface] ?? false;
     }
 
     /**
@@ -331,6 +377,7 @@ class Option extends Model
         self::resetAutoSeriesFromTitleNameToDefault();
         self::resetTagLibraryTagsExpandedByDefaultToDefault();
         self::resetTagLibraryIndexGroupOrderingEnabledToDefault();
+        self::resetTagColorSurfacesToDefault();
         self::resetAutocompleteToDefault();
     }
 
@@ -350,6 +397,7 @@ class Option extends Model
                 self::INDEX_SORT_FIELD_LAYOUT,
                 self::INDEX_TABLE_WIDTH,
                 self::TAG_LIBRARY_INDEX_GROUP_ORDERING_ENABLED,
+                self::TAG_COLOR_SURFACES,
             ])
             ->pluck('value', 'key');
 
@@ -385,6 +433,9 @@ class Option extends Model
             indexGroupOrderingEnabled: self::normalizeBoolean(
                 $values->get(self::TAG_LIBRARY_INDEX_GROUP_ORDERING_ENABLED),
                 false,
+            ),
+            tagColorSurfaces: self::normalizeTagColorSurfaces(
+                self::jsonFromValue($values->get(self::TAG_COLOR_SURFACES)),
             ),
         );
     }
@@ -439,6 +490,22 @@ class Option extends Model
         return $value === null
             ? $default
             : filter_var($value, FILTER_VALIDATE_BOOLEAN);
+    }
+
+    /**
+     * @return array{index: bool, tag_library: bool, autocomplete: bool, edit_readonly: bool, refetch: bool}
+     */
+    private static function normalizeTagColorSurfaces(mixed $surfaces): array
+    {
+        if (! is_array($surfaces)) {
+            return self::DEFAULT_TAG_COLOR_SURFACES;
+        }
+
+        return collect(self::DEFAULT_TAG_COLOR_SURFACES)
+            ->mapWithKeys(fn(bool $default, string $surface): array => [
+                $surface => self::normalizeBoolean($surfaces[$surface] ?? null, $default),
+            ])
+            ->all();
     }
 
     private static function normalizeAutocompleteOrder(AutocompleteOrder|string|null $order): AutocompleteOrder

@@ -5,6 +5,7 @@ namespace App\Livewire;
 use App\Models\Genre;
 use App\Models\GenreGroup;
 use App\Models\Option;
+use App\Support\TagColor;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
@@ -55,6 +56,10 @@ class TagLibraryManager extends Component
 
     public array $groupHidden = [];
 
+    public array $groupColors = [];
+
+    public array $groupTextColors = [];
+
     public array $tagHidden = [];
 
     public array $groupTagInputs = [];
@@ -75,6 +80,10 @@ class TagLibraryManager extends Component
 
     public bool $editingTagHidden = false;
 
+    public string $editingTagColor = '';
+
+    public string $editingTagTextColor = '';
+
     public array $editingTagGroupIds = [];
 
     public string $editingTagGroupSearch = '';
@@ -89,10 +98,11 @@ class TagLibraryManager extends Component
     {
         $groups = $this->groups();
         $this->syncGroupState($groups);
+        $tagLibraryColorsEnabled = Option::tagColorSurfaceEnabled(Option::TAG_COLOR_SURFACE_TAG_LIBRARY);
 
         return view('livewire.tag-library-manager', [
-            'genres' => $this->visibleGenres(),
-            'groups' => $groups,
+            'genres' => $this->visibleGenres($tagLibraryColorsEnabled),
+            'groups' => $this->groupViewData($groups, $tagLibraryColorsEnabled),
             'groupOptions' => $this->groupOptions($groups),
             'confirmingDeleteTag' => $this->confirmingDeleteTag(),
             'confirmingDeleteGroup' => $this->confirmingDeleteGroup(),
@@ -259,6 +269,8 @@ class TagLibraryManager extends Component
             'description' => null,
             'order' => $this->nextGroupOrder(),
             'hidden_on_index' => false,
+            'color' => null,
+            'text_color' => null,
         ]);
 
         $this->newGroupTitle = '';
@@ -329,6 +341,8 @@ class TagLibraryManager extends Component
         unset(
             $this->groupTitles[$groupId],
             $this->groupHidden[$groupId],
+            $this->groupColors[$groupId],
+            $this->groupTextColors[$groupId],
             $this->groupTagInputs[$groupId],
         );
 
@@ -399,6 +413,39 @@ class TagLibraryManager extends Component
         $this->setNotice('Tag group visibility saved.');
     }
 
+    public function saveGroupColor(int $groupId): void
+    {
+        $group = GenreGroup::query()->find($groupId);
+
+        if (! $group) {
+            return;
+        }
+
+        $color = $this->validatedColor($this->groupColors[$groupId] ?? '', "groupColors.{$groupId}");
+        $textColor = $this->validatedColor($this->groupTextColors[$groupId] ?? '', "groupTextColors.{$groupId}");
+
+        $group->forceFill([
+            'color' => $color,
+            'text_color' => $textColor,
+        ])->save();
+
+        $this->groupColors[$groupId] = $color ?? '';
+        $this->groupTextColors[$groupId] = $textColor ?? '';
+        $this->setNotice('Tag group color saved.');
+    }
+
+    public function clearGroupColor(int $groupId): void
+    {
+        $this->groupColors[$groupId] = '';
+        $this->saveGroupColor($groupId);
+    }
+
+    public function clearGroupTextColor(int $groupId): void
+    {
+        $this->groupTextColors[$groupId] = '';
+        $this->saveGroupColor($groupId);
+    }
+
     public function saveTagHidden(int $genreId): void
     {
         $genre = Genre::query()->find($genreId);
@@ -429,9 +476,11 @@ class TagLibraryManager extends Component
         $this->tagEditMode = true;
         $this->editingTagId = $genre->getKey();
         $this->editingTagHidden = (bool) $genre->hidden_on_index;
+        $this->editingTagColor = $genre->color ?? '';
+        $this->editingTagTextColor = $genre->text_color ?? '';
         $this->editingTagGroupIds = $genre->groups
             ->pluck('id')
-            ->map(fn ($groupId): int => (int) $groupId)
+            ->map(fn($groupId): int => (int) $groupId)
             ->values()
             ->all();
         $this->editingTagGroupSearch = '';
@@ -442,6 +491,8 @@ class TagLibraryManager extends Component
     {
         $this->editingTagId = null;
         $this->editingTagHidden = false;
+        $this->editingTagColor = '';
+        $this->editingTagTextColor = '';
         $this->editingTagGroupIds = [];
         $this->editingTagGroupSearch = '';
     }
@@ -465,7 +516,7 @@ class TagLibraryManager extends Component
     public function removeEditingTagGroup(int $groupId): void
     {
         $this->editingTagGroupIds = $this->normalizedEditingGroupIds()
-            ->reject(fn (int $currentGroupId): bool => $currentGroupId === $groupId)
+            ->reject(fn(int $currentGroupId): bool => $currentGroupId === $groupId)
             ->values()
             ->all();
     }
@@ -478,10 +529,12 @@ class TagLibraryManager extends Component
 
         $genreId = $this->editingTagId;
         $hiddenOnIndex = $this->editingTagHidden;
+        $color = $this->validatedColor($this->editingTagColor, 'editingTagColor');
+        $textColor = $this->validatedColor($this->editingTagTextColor, 'editingTagTextColor');
         $targetGroupIds = $this->validEditingGroupIds();
         $saved = false;
 
-        DB::transaction(function () use ($genreId, $hiddenOnIndex, $targetGroupIds, &$saved): void {
+        DB::transaction(function () use ($genreId, $hiddenOnIndex, $color, $textColor, $targetGroupIds, &$saved): void {
             $genre = Genre::query()
                 ->lockForUpdate()
                 ->find($genreId);
@@ -492,11 +545,13 @@ class TagLibraryManager extends Component
 
             $genre->forceFill([
                 'hidden_on_index' => $hiddenOnIndex,
+                'color' => $color,
+                'text_color' => $textColor,
             ])->save();
 
             $currentGroupIds = $genre->groups()
                 ->pluck('genre_groups.id')
-                ->map(fn ($groupId): int => (int) $groupId);
+                ->map(fn($groupId): int => (int) $groupId);
             $targetGroupIds = collect($targetGroupIds);
 
             $removeGroupIds = $currentGroupIds->diff($targetGroupIds)->values()->all();
@@ -527,6 +582,16 @@ class TagLibraryManager extends Component
         $this->tagHidden[$genreId] = $hiddenOnIndex;
         $this->closeTagSettings();
         $this->setNotice('Tag settings saved.');
+    }
+
+    public function clearEditingTagColor(): void
+    {
+        $this->editingTagColor = '';
+    }
+
+    public function clearEditingTagTextColor(): void
+    {
+        $this->editingTagTextColor = '';
     }
 
     public function moveGroup(int $groupId, int $direction): void
@@ -572,9 +637,9 @@ class TagLibraryManager extends Component
     }
 
     /**
-     * @return Collection<int, object{id: int, title: string, products_count: int, pivot_count: int, group_title: string, hidden_on_index: bool, group_hidden_on_index: bool}>
+     * @return Collection<int, object{id: int, title: string, products_count: int, pivot_count: int, group_title: string, hidden_on_index: bool, group_hidden_on_index: bool, hidden_on_index_effective: bool, color: ?string, text_color: ?string, color_style: string, has_background_color: bool, has_font_color: bool}>
      */
-    private function visibleGenres(): Collection
+    private function visibleGenres(bool $colorsEnabled): Collection
     {
         $this->normalizeFilters();
         $specificGroupId = $this->specificGroupFilterId();
@@ -582,27 +647,27 @@ class TagLibraryManager extends Component
 
         if ($this->groupStatusFilter === 'ungrouped') {
             return $genres
-                ->sort(fn (Genre $left, Genre $right): int => $this->compareUngroupedGenres($left, $right))
+                ->sort(fn(Genre $left, Genre $right): int => $this->compareUngroupedGenres($left, $right))
                 ->values()
-                ->map(fn (Genre $genre): object => $this->genreViewData($genre, $specificGroupId));
+                ->map(fn(Genre $genre): object => $this->genreViewData($genre, $specificGroupId, $colorsEnabled));
         }
 
         if ($specificGroupId !== null || $this->groupStatusFilter === 'grouped' || $this->visibilityFilter === 'hidden_group') {
             return $genres
-                ->sort(fn (Genre $left, Genre $right): int => $this->compareGroupedGenres($left, $right, $specificGroupId))
+                ->sort(fn(Genre $left, Genre $right): int => $this->compareGroupedGenres($left, $right, $specificGroupId))
                 ->values()
-                ->map(fn (Genre $genre): object => $this->genreViewData($genre, $specificGroupId));
+                ->map(fn(Genre $genre): object => $this->genreViewData($genre, $specificGroupId, $colorsEnabled));
         }
 
         [$grouped, $ungrouped] = $genres->partition(
-            fn (Genre $genre): bool => $genre->groups->isNotEmpty()
+            fn(Genre $genre): bool => $genre->groups->isNotEmpty()
         );
 
         return $grouped
-            ->sort(fn (Genre $left, Genre $right): int => $this->compareGroupedGenres($left, $right, null))
-            ->concat($ungrouped->sort(fn (Genre $left, Genre $right): int => $this->compareUngroupedGenres($left, $right)))
+            ->sort(fn(Genre $left, Genre $right): int => $this->compareGroupedGenres($left, $right, null))
+            ->concat($ungrouped->sort(fn(Genre $left, Genre $right): int => $this->compareUngroupedGenres($left, $right)))
             ->values()
-            ->map(fn (Genre $genre): object => $this->genreViewData($genre, null));
+            ->map(fn(Genre $genre): object => $this->genreViewData($genre, null, $colorsEnabled));
     }
 
     private function visibleGenreQuery(): Builder
@@ -617,7 +682,7 @@ class TagLibraryManager extends Component
                 'visibleProducts as products_count',
             ])
             ->when($search !== '', function ($query) use ($search): void {
-                $query->where('genres.title', 'like', '%'.$search.'%');
+                $query->where('genres.title', 'like', '%' . $search . '%');
             })
             ->when($this->visibilityFilter === 'visible', function ($query): void {
                 $query->visibleOnIndex();
@@ -663,14 +728,17 @@ class TagLibraryManager extends Component
             : null;
     }
 
-    private function genreViewData(Genre $genre, ?int $specificGroupId): object
+    private function genreViewData(Genre $genre, ?int $specificGroupId, bool $colorsEnabled): object
     {
         $groups = $specificGroupId === null
             ? $genre->groups
             : $genre->groups->where('id', $specificGroupId)->values();
 
         $hasHiddenGroup = $genre->groups
-            ->contains(fn (GenreGroup $group): bool => (bool) $group->hidden_on_index);
+            ->contains(fn(GenreGroup $group): bool => (bool) $group->hidden_on_index);
+        $colors = $colorsEnabled
+            ? $this->effectiveGenreColors($genre, $groups)
+            : TagColor::viewData(null, null);
 
         return (object) [
             'id' => $genre->getKey(),
@@ -680,7 +748,57 @@ class TagLibraryManager extends Component
             'group_title' => $groups->pluck('title')->implode(', '),
             'hidden_on_index' => (bool) $genre->hidden_on_index,
             'group_hidden_on_index' => $hasHiddenGroup,
+            'hidden_on_index_effective' => (bool) $genre->hidden_on_index || $hasHiddenGroup,
+            ...$colors,
         ];
+    }
+
+    private function groupViewData(Collection $groups, bool $colorsEnabled): Collection
+    {
+        return $groups
+            ->map(function (GenreGroup $group) use ($colorsEnabled): object {
+                $groupColors = $colorsEnabled
+                    ? TagColor::viewData($group->color, $group->text_color)
+                    : TagColor::viewData(null, null);
+
+                return (object) [
+                    'id' => $group->getKey(),
+                    'title' => $group->title,
+                    'hidden_on_index' => (bool) $group->hidden_on_index,
+                    ...$groupColors,
+                    'genres' => $group->genres
+                        ->map(fn(Genre $genre): object => $this->groupGenreViewData($group, $genre, $colorsEnabled))
+                        ->values(),
+                ];
+            })
+            ->values();
+    }
+
+    private function groupGenreViewData(GenreGroup $group, Genre $genre, bool $colorsEnabled): object
+    {
+        $colors = $colorsEnabled
+            ? TagColor::viewData(
+                TagColor::normalize($group->color) ?? TagColor::normalize($genre->color),
+                TagColor::normalize($group->text_color) ?? TagColor::normalize($genre->text_color),
+            )
+            : TagColor::viewData(null, null);
+
+        return (object) [
+            'id' => $genre->getKey(),
+            'title' => $genre->title,
+            'products_count' => (int) ($genre->products_count ?? 0),
+            ...$colors,
+        ];
+    }
+
+    private function effectiveGenreColors(Genre $genre, Collection $groups): array
+    {
+        $groupColors = TagColor::firstGroupColorPair($groups);
+
+        return TagColor::viewData(
+            $groupColors['color'] ?? TagColor::normalize($genre->color),
+            $groupColors['text_color'] ?? TagColor::normalize($genre->text_color),
+        );
     }
 
     private function compareGroupedGenres(Genre $left, Genre $right, ?int $specificGroupId): int
@@ -706,7 +824,7 @@ class TagLibraryManager extends Component
 
     private function firstIndexGroup(Genre $genre): ?GenreGroup
     {
-        return $genre->groups->first(fn (GenreGroup $group): bool => ! (bool) $group->hidden_on_index)
+        return $genre->groups->first(fn(GenreGroup $group): bool => ! (bool) $group->hidden_on_index)
             ?? $genre->groups->first();
     }
 
@@ -772,7 +890,7 @@ class TagLibraryManager extends Component
     private function groupOptions(Collection $groups): Collection
     {
         return $groups
-            ->map(fn (GenreGroup $group): array => [
+            ->map(fn(GenreGroup $group): array => [
                 'id' => $group->getKey(),
                 'title' => $group->title,
             ]);
@@ -780,12 +898,12 @@ class TagLibraryManager extends Component
 
     private function editingSelectedGroupOptions(Collection $groups): Collection
     {
-        $orderedGroups = $groups->keyBy(fn (GenreGroup $group): int => $group->getKey());
+        $orderedGroups = $groups->keyBy(fn(GenreGroup $group): int => $group->getKey());
 
         return $this->normalizedEditingGroupIds()
-            ->map(fn (int $groupId): ?GenreGroup => $orderedGroups->get($groupId))
+            ->map(fn(int $groupId): ?GenreGroup => $orderedGroups->get($groupId))
             ->filter()
-            ->map(fn (GenreGroup $group): array => [
+            ->map(fn(GenreGroup $group): array => [
                 'id' => $group->getKey(),
                 'title' => $group->title,
             ])
@@ -802,9 +920,9 @@ class TagLibraryManager extends Component
         }
 
         return $groups
-            ->reject(fn (GenreGroup $group): bool => $selectedGroupIds->contains($group->getKey()))
-            ->filter(fn (GenreGroup $group): bool => str_contains(mb_strtolower($group->title), $search))
-            ->map(fn (GenreGroup $group): array => [
+            ->reject(fn(GenreGroup $group): bool => $selectedGroupIds->contains($group->getKey()))
+            ->filter(fn(GenreGroup $group): bool => str_contains(mb_strtolower($group->title), $search))
+            ->map(fn(GenreGroup $group): array => [
                 'id' => $group->getKey(),
                 'title' => $group->title,
             ])
@@ -822,6 +940,14 @@ class TagLibraryManager extends Component
 
             if (! array_key_exists($groupId, $this->groupHidden)) {
                 $this->groupHidden[$groupId] = (bool) $group->hidden_on_index;
+            }
+
+            if (! array_key_exists($groupId, $this->groupColors)) {
+                $this->groupColors[$groupId] = $group->color ?? '';
+            }
+
+            if (! array_key_exists($groupId, $this->groupTextColors)) {
+                $this->groupTextColors[$groupId] = $group->text_color ?? '';
             }
 
             if (! array_key_exists($groupId, $this->groupTagInputs)) {
@@ -862,8 +988,8 @@ class TagLibraryManager extends Component
         $title = trim($value);
         $validator = Validator::make(
             ['title' => $title],
-            ['title' => ['required', 'string', 'max:'.$max]],
-            ['title.required' => 'Enter a '.$label.'.'],
+            ['title' => ['required', 'string', 'max:' . $max]],
+            ['title.required' => 'Enter a ' . $label . '.'],
             ['title' => $label],
         );
 
@@ -876,11 +1002,28 @@ class TagLibraryManager extends Component
         return $title;
     }
 
+    private function validatedColor(mixed $value, string $field): ?string
+    {
+        $color = trim((string) $value);
+
+        if ($color === '') {
+            return null;
+        }
+
+        if (! TagColor::isValid($color)) {
+            throw ValidationException::withMessages([
+                $field => 'Use a hex color like #ff6699.',
+            ]);
+        }
+
+        return TagColor::normalize($color);
+    }
+
     private function groupTitleExists(string $title, ?int $exceptGroupId = null): bool
     {
         return GenreGroup::query()
             ->where('title', $title)
-            ->when($exceptGroupId !== null, fn ($query) => $query->whereKeyNot($exceptGroupId))
+            ->when($exceptGroupId !== null, fn($query) => $query->whereKeyNot($exceptGroupId))
             ->exists();
     }
 
@@ -908,7 +1051,7 @@ class TagLibraryManager extends Component
             ->ordered()
             ->whereIn('id', $groupIds)
             ->pluck('id')
-            ->map(fn ($groupId): int => (int) $groupId)
+            ->map(fn($groupId): int => (int) $groupId)
             ->all();
     }
 
@@ -918,9 +1061,9 @@ class TagLibraryManager extends Component
     private function normalizedEditingGroupIds(): Collection
     {
         return collect($this->editingTagGroupIds)
-            ->map(fn ($groupId): string => (string) $groupId)
-            ->filter(fn (string $groupId): bool => ctype_digit($groupId))
-            ->map(fn (string $groupId): int => (int) $groupId)
+            ->map(fn($groupId): string => (string) $groupId)
+            ->filter(fn(string $groupId): bool => ctype_digit($groupId))
+            ->map(fn(string $groupId): int => (int) $groupId)
             ->unique()
             ->values();
     }
@@ -945,7 +1088,7 @@ class TagLibraryManager extends Component
 
     private function moveOrderedIds(Collection $ids, int $modelId, int $direction): ?array
     {
-        $ids = array_values($ids->map(fn ($id): int => (int) $id)->all());
+        $ids = array_values($ids->map(fn($id): int => (int) $id)->all());
         $index = array_search($modelId, $ids, true);
 
         if ($index === false) {
@@ -965,7 +1108,7 @@ class TagLibraryManager extends Component
 
     private function reorderIds(Collection $ids, int $modelId, int $position): ?array
     {
-        $ids = array_values($ids->map(fn ($id): int => (int) $id)->all());
+        $ids = array_values($ids->map(fn($id): int => (int) $id)->all());
         $index = array_search($modelId, $ids, true);
 
         if ($index === false) {

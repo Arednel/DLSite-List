@@ -27,5 +27,6 @@
         <env name="QUEUE_CONNECTION" value="sync"/>
         <env name="SESSION_DRIVER" value="array"/>
         <env name="TELESCOPE_ENABLED" value="false"/>
+        <ini name="memory_limit" value="512M"/>
     </php>
 </phpunit>

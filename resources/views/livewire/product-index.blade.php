@@ -239,9 +239,21 @@
                                                 @case('tags')
                                                     <div class="tags">
                                                         @foreach ($productGenres[$product->getKey()] ?? [] as $genre)
-                                                            <a
-                                                                href="{{ $tagHrefBase }}{{ $tagHrefSeparator }}genre={{ $genre->id }}">
-                                                                {{ $genre->title }}</a>{{ !$loop->last ? ',' : '' }}
+                                                            @if (($genre->has_background_color ?? false) || ($genre->has_font_color ?? false))
+                                                                <a @class([
+                                                                    'index-tag-chip',
+                                                                    'index-tag-chip--background-colored' =>
+                                                                        ($genre->has_background_color ?? false) === true,
+                                                                    'index-tag-chip--text-colored' =>
+                                                                        ($genre->has_font_color ?? false) === true,
+                                                                ])
+                                                                    @if (filled($genre->color_style ?? null)) style="{{ $genre->color_style }}" @endif
+                                                                    href="{{ $tagHrefBase }}{{ $tagHrefSeparator }}genre={{ $genre->id }}">
+                                                                    {{ $genre->title }}</a>{{ !$loop->last ? ',' : '' }}
+                                                            @else
+                                                                <a
+                                                                    href="{{ $tagHrefBase }}{{ $tagHrefSeparator }}genre={{ $genre->id }}">{{ $genre->title }}</a>{{ !$loop->last ? ',' : '' }}
+                                                            @endif
                                                         @endforeach
                                                     </div>
                                                 @break

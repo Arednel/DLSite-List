@@ -5,10 +5,12 @@ namespace Tests\Feature;
 use App\Enums\AutocompleteOrder;
 use App\Enums\ProductField;
 use App\Models\Genre;
+use App\Models\GenreGroup;
 use App\Models\Option;
 use App\Models\Product;
 use App\Support\ProductGenreSync;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\DB;
 use Tests\TestCase;
 
 class AutocompleteControllerTest extends TestCase
@@ -89,6 +91,67 @@ class AutocompleteControllerTest extends TestCase
         $this->getJson('/autocomplete/tags?q=limit')
             ->assertOk()
             ->assertJsonCount(20);
+    }
+
+    public function test_tag_suggestions_include_colors_only_when_autocomplete_surface_is_enabled(): void
+    {
+        $genre = $this->createGenre('Colored Suggestion', Genre::TYPE_CUSTOM);
+        Genre::query()->whereKey($genre->getKey())->update([
+            'color' => '#aa3366',
+            'text_color' => '#111111',
+        ]);
+
+        $defaultResponse = $this->getJson('/autocomplete/tags?q=colored')
+            ->assertOk()
+            ->assertJsonPath('0.value', 'Colored Suggestion');
+
+        $this->assertArrayNotHasKey('color', $defaultResponse->json('0'));
+        $this->assertArrayNotHasKey('text_color', $defaultResponse->json('0'));
+
+        Option::setTagColorSurfaces([Option::TAG_COLOR_SURFACE_AUTOCOMPLETE => true]);
+
+        $this->getJson('/autocomplete/tags?q=colored')
+            ->assertOk()
+            ->assertJsonPath('0.color', '#aa3366')
+            ->assertJsonPath('0.text_color', '#111111');
+    }
+
+    public function test_autocomplete_script_uses_independent_color_classes_without_marker_circle(): void
+    {
+        $script = file_get_contents(public_path('scripts/autocomplete-text.js'));
+
+        $this->assertStringContainsString('autocomplete-option--background-colored', $script);
+        $this->assertStringContainsString('autocomplete-option--text-colored', $script);
+        $this->assertStringNotContainsString('autocomplete-option__color', $script);
+    }
+
+    public function test_tag_suggestion_color_uses_group_color_over_tag_color(): void
+    {
+        $group = GenreGroup::query()->create([
+            'title' => 'Suggestion Color Group',
+            'description' => null,
+            'order' => 1,
+            'color' => '#112233',
+            'text_color' => '#eeeeee',
+        ]);
+        $genre = $this->createGenre('Grouped Colored Suggestion', Genre::TYPE_CUSTOM);
+        Genre::query()->whereKey($genre->getKey())->update([
+            'color' => '#aa3366',
+            'text_color' => '#111111',
+        ]);
+        DB::table('genre_group_genre')->insert([
+            'genre_group_id' => $group->getKey(),
+            'genre_id' => $genre->getKey(),
+            'order' => 1,
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+        Option::setTagColorSurfaces([Option::TAG_COLOR_SURFACE_AUTOCOMPLETE => true]);
+
+        $this->getJson('/autocomplete/tags?q=grouped')
+            ->assertOk()
+            ->assertJsonPath('0.color', '#112233')
+            ->assertJsonPath('0.text_color', '#eeeeee');
     }
 
     public function test_series_suggestions_return_distinct_non_empty_series_ordered_by_usage_count(): void

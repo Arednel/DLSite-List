@@ -13,6 +13,7 @@ final readonly class ProductIndexSettings
      * @param  list<array{field: string, label: string, visible: bool}>  $indexSortFieldLayout
      * @param  array<string, string>  $indexSortFieldOptions
      * @param  array{mode: string, custom: string}  $tableWidth
+     * @param  array{index: bool, tag_library: bool, autocomplete: bool, edit_readonly: bool, refetch: bool}  $tagColorSurfaces
      */
     public function __construct(
         public int|string $perPage,
@@ -27,5 +28,6 @@ final readonly class ProductIndexSettings
         public string $tableWidthCss,
         public bool $searchHiddenDescriptionsEnabled,
         public bool $indexGroupOrderingEnabled,
+        public array $tagColorSurfaces,
     ) {}
 }

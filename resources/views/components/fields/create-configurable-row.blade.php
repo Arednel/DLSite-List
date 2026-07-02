@@ -45,7 +45,7 @@
         <tr>
             <td width="130" class="form-table-cell">Circle</td>
             <td class="form-table-cell">
-                <input id="circle" name="circle" class="form-control" value="{{ old('circle') }}">
+                <input id="circle" name="circle" class="form-control" value="{{ old('circle') }}" placeholder="Circle name">
                 <input id="maker_id" name="maker_id" class="form-control margin-top-8" value="{{ old('maker_id') }}"
                     placeholder="Maker ID">
             </td>
@@ -71,9 +71,10 @@
         <tr>
             <td width="130" class="form-table-cell">Description</td>
             <td class="form-table-cell">
-                <textarea id="description" name="description" class="form-control" rows="4" cols="65">{{ old('description') }}</textarea>
+                <textarea id="description" name="description" class="form-control" rows="4" cols="65"
+                    placeholder="Japanese description">{{ old('description') }}</textarea>
                 <textarea id="description_english" name="description_english" class="form-control margin-top-8" rows="4"
-                    cols="65">{{ old('description_english') }}</textarea>
+                    cols="65" placeholder="English description">{{ old('description_english') }}</textarea>
             </td>
         </tr>
     @break

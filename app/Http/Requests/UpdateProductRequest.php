@@ -2,6 +2,11 @@
 
 namespace App\Http\Requests;
 
+use App\Enums\ProductField;
+use App\Models\Option;
+use App\Support\ProductFieldLayout;
+use Illuminate\Validation\Rule;
+
 class UpdateProductRequest extends BaseProductRequest
 {
     /**
@@ -20,7 +25,14 @@ class UpdateProductRequest extends BaseProductRequest
     public function rules(): array
     {
         return array_merge([
-            'work_name' => ['required', 'string'],
+            'work_name' => [
+                Rule::requiredIf(fn(): bool => ProductFieldLayout::editable(
+                    Option::editFieldLayout(),
+                    ProductField::Title,
+                )),
+                'nullable',
+                'string',
+            ],
             'genre_fetched_english' => ['nullable', 'array'],
         ], $this->commonRules());
     }

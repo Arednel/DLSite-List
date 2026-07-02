@@ -5,8 +5,11 @@ namespace App\Http\Controllers;
 use App\Http\Requests\ApplyTagRefetchRequest;
 use App\Http\Requests\StartTagRefetchRequest;
 use App\Jobs\FetchProductTagsJob;
+use App\Models\Genre;
+use App\Models\Option;
 use App\Models\TagRefetchRun;
 use App\Models\TagRefetchWorkResult;
+use App\Support\TagColor;
 use App\Support\TagRefetch\TagRefetchService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
@@ -15,6 +18,17 @@ use Illuminate\View\View;
 
 class OptionsController extends Controller
 {
+    private const REFETCH_TAG_FIELDS = [
+        'fetched_japanese_tags',
+        'fetched_english_tags',
+        'added_japanese_tags',
+        'added_english_tags',
+        'stale_japanese_tags',
+        'stale_english_tags',
+        'custom_to_fetched_japanese_tags',
+        'custom_to_fetched_english_tags',
+    ];
+
     public function index(): View
     {
         return view('Options', [
@@ -45,11 +59,13 @@ class OptionsController extends Controller
     public function showRefetchTags(TagRefetchRun $run): View
     {
         $run->load(['results.product']);
+        $tagColors = $this->refetchTagColors($run);
 
         return view('OptionsRefetchTags', [
             'run' => $run,
             'summary' => $run->summary(),
             'canApply' => $run->canBeApplied(),
+            'tagRows' => $this->refetchTagRows($run, $tagColors),
             'moveAction' => TagRefetchWorkResult::STALE_ACTION_MOVE_TO_CUSTOM,
             'removeAction' => TagRefetchWorkResult::STALE_ACTION_REMOVE,
             'addAction' => TagRefetchWorkResult::ADDED_ACTION_ADD,
@@ -113,5 +129,53 @@ class OptionsController extends Controller
         }
 
         return Bus::findBatch($run->batch_id)?->failedJobs ?? 0;
+    }
+
+    private function refetchTagColors(TagRefetchRun $run): array
+    {
+        if (! Option::tagColorSurfaceEnabled(Option::TAG_COLOR_SURFACE_REFETCH)) {
+            return [];
+        }
+
+        $titleKeys = $run->results
+            ->flatMap(fn(TagRefetchWorkResult $result): array => [
+                ...($result->fetched_japanese_tags ?? []),
+                ...($result->fetched_english_tags ?? []),
+                ...($result->added_japanese_tags ?? []),
+                ...($result->added_english_tags ?? []),
+                ...($result->stale_japanese_tags ?? []),
+                ...($result->stale_english_tags ?? []),
+                ...($result->custom_to_fetched_japanese_tags ?? []),
+                ...($result->custom_to_fetched_english_tags ?? []),
+            ])
+            ->map(fn(string $title): string => Genre::titleKey($title))
+            ->unique()
+            ->values();
+
+        return TagColor::effectiveColorPairsForTitleKeys($titleKeys)->all();
+    }
+
+    private function refetchTagRows(TagRefetchRun $run, array $tagColors): array
+    {
+        return $run->results
+            ->mapWithKeys(function (TagRefetchWorkResult $result) use ($tagColors): array {
+                $fields = collect(self::REFETCH_TAG_FIELDS)
+                    ->mapWithKeys(fn(string $field): array => [
+                        $field => collect($result->{$field} ?? [])
+                            ->map(function (string $tag) use ($tagColors): array {
+                                $colors = $tagColors[Genre::titleKey($tag)] ?? TagColor::pair(null, null);
+
+                                return [
+                                    'title' => $tag,
+                                    ...TagColor::viewData($colors['color'], $colors['text_color']),
+                                ];
+                            })
+                            ->all(),
+                    ])
+                    ->all();
+
+                return [$result->getKey() => $fields];
+            })
+            ->all();
     }
 }

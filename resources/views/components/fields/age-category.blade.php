@@ -19,4 +19,5 @@
             <div class="text-error">{{ $errors->first('age_category') }}</div>
         @endif
     </td>
+    <td class="form-table-cell form-table-cell--long-spacer" aria-hidden="true"></td>
 </tr>

@@ -86,6 +86,7 @@ The Tag Library can organize tags into groups:
 - `genres.hidden_on_index` hides a specific tag from Index tag chips
 - `genre_groups.hidden_on_index` hides every tag assigned to that group from Index without changing each tag's own hidden setting
 - Index tag chips sort by tag order and title by default; enabling `Enable group ordering on Index` switches visible grouped tags to group order, membership order, group title, and tag title. In both modes, a tag is excluded from Index when it is directly hidden or belongs to any hidden group.
+- `genres.color` and `genre_groups.color` store optional `#RRGGBB` background/accent colors. `genres.text_color` and `genre_groups.text_color` store optional independent font colors. Group background/font colors override tag background/font colors independently by the same ordered membership rules used for display; inside a specific group card, that group color value wins for whichever color value it defines.
 
 Tag Library filters apply only to the All Tags list. They can filter by Index visibility, grouped/ungrouped state, a specific group, and empty/used state while group management sections keep showing their current members.
 
@@ -95,6 +96,8 @@ The All Tags list has a session-only `Edit tags` mode:
 - the mode uses a switch-style toggle bound to the Livewire `tagEditMode` checkbox state
 - the `Add group` field is inside the Tag Groups section header, next to group management
 - `Enable group ordering on Index` is a persisted switch in the Tag Groups section and in Options; it is off by default, so saved group order affects Index tag-chip ordering only after enabling it
+- tag edit modals and Tag Group cards include separate background color and font color controls, each with a color picker, manual hex input, and Clear action; empty colors use the normal default tag style
+- manual color inputs use a muted `#000000` placeholder while an explicitly saved `#000000` value is shown as normal input text
 - the group rows and modal use switch-style toggles for tag and group Index visibility
 - Tag Library switch controls share the same `tag-library-switch-*` markup/CSS classes while keeping each native checkbox and Livewire binding intact
 - the modal can search existing tag groups through a dropdown-style search field, add them as assignment plaques, and remove selected plaques before saving
@@ -140,6 +143,8 @@ Current settings:
 - `auto_series_from_title_name`: controls whether DLSite create fills an empty Series from `japanese.title_name`
 - `tag_library_tags_expanded_by_default`: controls whether Tag Library opens with the full tag list shown
 - `tag_library_index_group_ordering_enabled`: controls whether Index tag chips use tag group order instead of plain tag order/title ordering
+- `tag_color_surfaces`: JSON map controlling where stored tag/group background and font colors render. Defaults are `index=true`, `tag_library=true`, `autocomplete=false`, `edit_readonly=false`, and `refetch=false`.
+  The Index surface keeps its color fast path inactive until at least one tag or tag group has a saved background/font color.
 - `index_field_layout`: controls Index table field visibility/order
 - `edit_field_layout`: controls Edit Work field visibility/order/editability
 - `filter_field_layout`: controls Filter modal field visibility/order
@@ -352,6 +357,7 @@ Tag Library defaults:
 - Index group ordering is disabled by default
 - when enabled, Index tag chips use saved group/membership ordering instead of plain tag order/title ordering
 - the Options page shows inline helper tooltips for the expanded-list and Index group-ordering switches
+- tag background/font colors render on Index and Tag Library by default, while Autocomplete suggestions, Edit readonly tags, and Refetch review tags stay uncolored until enabled in Options. Edit readonly tag colors render inline inside the normal readonly text field.
 
 Autocomplete ordering default:
 - `usage`

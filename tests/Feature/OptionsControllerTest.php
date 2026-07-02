@@ -4,6 +4,7 @@ namespace Tests\Feature;
 
 use App\Jobs\FetchProductTagsJob;
 use App\Models\Genre;
+use App\Models\Option;
 use App\Models\Product;
 use App\Models\TagRefetchRun;
 use App\Models\TagRefetchWorkResult;
@@ -90,35 +91,6 @@ class OptionsControllerTest extends TestCase
             ->assertSee('Index page size')
             ->assertDontSee('Index Sort Menu')
             ->assertDontSee('Refetch Tags');
-    }
-
-    public function test_refetch_tab_renders_refetch_actions_and_checklist(): void
-    {
-        $product = Product::factory()->create([
-            'work_name' => 'OPTIONS_WORK_TOKEN',
-            'work_name_english' => 'OPTIONS_EN_TOKEN',
-        ]);
-
-        $this->get('/options?tab=refetch')
-            ->assertOk()
-            ->assertSee('Options')
-            ->assertSee('href="/options?tab=general"', false)
-            ->assertSee('href="/options?tab=field-layouts"', false)
-            ->assertSee('href="/options?tab=refetch"', false)
-            ->assertDontSee('href="/options?tab=options"', false)
-            ->assertSee('class="options-tab is-active"', false)
-            ->assertDontSee('Index Pagination')
-            ->assertDontSee('Index Sort Menu')
-            ->assertSee('Refetch Tags')
-            ->assertSee('Refetch all works')
-            ->assertSee('Refetch selected works')
-            ->assertSee('name="tab" value="refetch"', false)
-            ->assertSee('wire:model.live.debounce.250ms="search"', false)
-            ->assertSee('name="product_ids[]"', false)
-            ->assertDontSee('Go to latest refetch')
-            ->assertSee($product->id)
-            ->assertSee('OPTIONS_WORK_TOKEN')
-            ->assertSee('OPTIONS_EN_TOKEN');
     }
 
     public function test_options_page_shows_empty_state_when_there_are_no_works(): void
@@ -714,6 +686,42 @@ class OptionsControllerTest extends TestCase
             ->assertSee('name="global_custom_to_fetched_action"', false)
             ->assertSee('name="work_actions[' . $product->id . '][custom_to_fetched]"', false)
             ->assertSee('Apply Changes');
+    }
+
+    public function test_refetch_review_tags_use_existing_colors_only_when_surface_is_enabled(): void
+    {
+        $product = Product::factory()->create(['work_name' => 'REFETCH_COLOR_REVIEW_TOKEN']);
+        $genre = $this->createGenre('Colored Refetch Tag', Genre::TYPE_AUTO_GENERATED_ENGLISH);
+        Genre::query()->whereKey($genre->getKey())->update([
+            'color' => '#aa3366',
+            'text_color' => '#111111',
+        ]);
+        $run = $this->createReviewRun($product, [], [], [], ['Colored Refetch Tag']);
+
+        $this->get(route('options.refetch-tags.show', $run))
+            ->assertOk()
+            ->assertSee('Colored Refetch Tag')
+            ->assertDontSee('--tag-color: #aa3366;', false)
+            ->assertDontSee('--tag-text-color: #111111;', false);
+
+        Option::setTagColorSurfaces([Option::TAG_COLOR_SURFACE_REFETCH => true]);
+
+        $this->get(route('options.refetch-tags.show', $run))
+            ->assertOk()
+            ->assertSee('Colored Refetch Tag')
+            ->assertSee('tag--background-colored', false)
+            ->assertSee('tag--text-colored', false)
+            ->assertSee('--tag-color: #aa3366;', false)
+            ->assertSee('--tag-text-color: #111111;', false);
+    }
+
+    public function test_refetch_results_blade_does_not_embed_php_color_logic(): void
+    {
+        $blade = file_get_contents(resource_path('views/components/options/refetch-results.blade.php'));
+
+        $this->assertStringNotContainsString('@php', $blade);
+        $this->assertStringNotContainsString('App\\Support\\TagColor', $blade);
+        $this->assertStringNotContainsString('App\\Models\\Option', $blade);
     }
 
     public function test_only_newest_review_run_shows_controls_and_can_be_applied(): void

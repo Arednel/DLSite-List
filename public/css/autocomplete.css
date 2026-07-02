@@ -37,7 +37,28 @@
     background: #e8f1ff;
 }
 
+.autocomplete-option--background-colored {
+    border-left: 4px solid var(--tag-color);
+    background-color: color-mix(in srgb, var(--tag-color) 8%, #FFFFFF);
+}
+
+.autocomplete-option--background-colored:hover,
+.autocomplete-option--background-colored.is-active,
+.autocomplete-option--background-colored[aria-selected="true"] {
+    background-color: color-mix(in srgb, var(--tag-color) 15%, #e8f1ff);
+}
+
+.autocomplete-option--text-colored,
+.autocomplete-option--text-colored:hover,
+.autocomplete-option--text-colored.is-active,
+.autocomplete-option--text-colored[aria-selected="true"] {
+    color: var(--tag-text-color);
+}
+
 .autocomplete-option__label {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
     min-width: 0;
     overflow: hidden;
     text-overflow: ellipsis;

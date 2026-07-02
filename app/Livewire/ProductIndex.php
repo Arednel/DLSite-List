@@ -6,9 +6,11 @@ use App\Enums\ProductField;
 use App\Enums\ProductIndexSortDirection;
 use App\Enums\ProductIndexSortField;
 use App\Enums\ProductIndexTagMatch;
+use App\Models\GenreGroup;
 use App\Models\Option;
 use App\Support\ProductIndexFilters;
 use App\Support\ProductIndexResults;
+use App\Support\TagColor;
 use Illuminate\Database\Eloquent\Collection as EloquentCollection;
 use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\View\View;
@@ -128,9 +130,20 @@ class ProductIndex extends Component
 
         $visibleProductIds = $visibleProducts->modelKeys();
 
+        $tagsColumnVisible = in_array(ProductField::Tags->value, $settings->visibleIndexFields, true);
+        $indexTagColorsEnabled = $tagsColumnVisible
+            && $visibleProductIds !== []
+            && ($settings->tagColorSurfaces[Option::TAG_COLOR_SURFACE_INDEX] ?? false)
+            && TagColor::hasAnyConfiguredColors();
+
         // Load optional table data only when the current column layout can actually show it.
-        $productGenres = in_array(ProductField::Tags->value, $settings->visibleIndexFields, true)
-            ? $productIndexResults->loadVisibleGenres($visibleProductIds, $settings->indexGroupOrderingEnabled)
+        $productGenres = $tagsColumnVisible
+            ? $productIndexResults->loadVisibleGenres(
+                $visibleProductIds,
+                $settings->indexGroupOrderingEnabled,
+                $indexTagColorsEnabled,
+                $visibleProductIds !== [] && GenreGroup::hiddenOnIndex()->exists(),
+            )
             : collect();
 
         $hasContributorColumns = collect($settings->indexColumns)

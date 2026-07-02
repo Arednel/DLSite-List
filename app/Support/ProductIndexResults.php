@@ -249,8 +249,12 @@ final class ProductIndexResults
             );
     }
 
-    public function loadVisibleGenres(array $productIds, bool $useGroupOrdering): Collection
-    {
+    public function loadVisibleGenres(
+        array $productIds,
+        bool $useGroupOrdering,
+        bool $includeColors = false,
+        bool $hasHiddenGroups = false,
+    ): Collection {
         if ($productIds === []) {
             return collect();
         }
@@ -258,22 +262,32 @@ final class ProductIndexResults
         // Index only needs visible EN/custom tags, so use one lightweight query
         // instead of hydrating genre relationships for every listed product.
         if (! $useGroupOrdering) {
-            return DB::table('genre_product')
+            $query = DB::table('genre_product')
                 ->join('genres', 'genres.id', '=', 'genre_product.genre_id')
                 ->whereIn('genre_product.product_id', $productIds)
                 ->where(VisibleGenreAttachment::query())
                 ->where('genres.hidden_on_index', false)
-                ->whereNotExists(function ($query): void {
-                    $query
-                        ->select('hidden_genre_group_genre.genre_id')
-                        ->from('genre_group_genre as hidden_genre_group_genre')
-                        ->join('genre_groups as hidden_genre_groups', 'hidden_genre_groups.id', '=', 'hidden_genre_group_genre.genre_group_id')
-                        ->whereColumn('hidden_genre_group_genre.genre_id', 'genres.id')
-                        ->where('hidden_genre_groups.hidden_on_index', true);
-                })
                 ->orderBy('genres.order')
                 ->orderBy('genres.title')
-                ->orderBy('genres.id')
+                ->orderBy('genres.id');
+
+            if ($hasHiddenGroups) {
+                $this->excludeGenresInHiddenGroups($query);
+            }
+
+            if ($includeColors) {
+                return $this->applyEffectiveGenreColors(
+                    $query->get([
+                        'genre_product.product_id',
+                        'genres.id',
+                        'genres.title',
+                        'genres.color as tag_color',
+                        'genres.text_color as tag_text_color',
+                    ])
+                )->groupBy('product_id');
+            }
+
+            return $query
                 ->get([
                     'genre_product.product_id',
                     'genres.id',
@@ -282,7 +296,7 @@ final class ProductIndexResults
                 ->groupBy('product_id');
         }
 
-        $groupedGenres = DB::table('genre_product')
+        $groupedQuery = DB::table('genre_product')
             ->join('genres', 'genres.id', '=', 'genre_product.genre_id')
             ->join('genre_group_genre', 'genre_group_genre.genre_id', '=', 'genres.id')
             ->join('genre_groups', 'genre_groups.id', '=', 'genre_group_genre.genre_group_id')
@@ -290,25 +304,42 @@ final class ProductIndexResults
             ->where(VisibleGenreAttachment::query())
             ->where('genres.hidden_on_index', false)
             ->where('genre_groups.hidden_on_index', false)
-            ->whereNotExists(function ($query): void {
-                $query
-                    ->select('hidden_genre_group_genre.genre_id')
-                    ->from('genre_group_genre as hidden_genre_group_genre')
-                    ->join('genre_groups as hidden_genre_groups', 'hidden_genre_groups.id', '=', 'hidden_genre_group_genre.genre_group_id')
-                    ->whereColumn('hidden_genre_group_genre.genre_id', 'genres.id')
-                    ->where('hidden_genre_groups.hidden_on_index', true);
-            })
             ->orderBy('genre_groups.order')
             ->orderBy('genre_group_genre.order')
             ->orderBy('genre_groups.title')
-            ->orderBy('genres.title')
-            ->get([
-                'genre_product.product_id',
-                'genres.id',
-                'genres.title',
-            ])
+            ->orderBy('genres.title');
+
+        if ($hasHiddenGroups) {
+            $this->excludeGenresInHiddenGroups($groupedQuery);
+        }
+
+        $groupedSelect = [
+            'genre_product.product_id',
+            'genres.id',
+            'genres.title',
+        ];
+
+        if ($includeColors) {
+            $groupedSelect[] = 'genres.color as tag_color';
+            $groupedSelect[] = 'genres.text_color as tag_text_color';
+        }
+
+        $groupedGenres = $groupedQuery->get($groupedSelect);
+
+        $groupedGenres = $groupedGenres
             ->unique(fn($genre): string => $genre->product_id . '|' . $genre->id)
             ->values();
+
+        $ungroupedSelect = [
+            'genre_product.product_id',
+            'genres.id',
+            'genres.title',
+        ];
+
+        if ($includeColors) {
+            $ungroupedSelect[] = 'genres.color as tag_color';
+            $ungroupedSelect[] = 'genres.text_color as tag_text_color';
+        }
 
         $ungroupedGenres = DB::table('genre_product')
             ->join('genres', 'genres.id', '=', 'genre_product.genre_id')
@@ -323,15 +354,15 @@ final class ProductIndexResults
             })
             ->orderBy('genres.order')
             ->orderBy('genres.title')
-            ->get([
-                'genre_product.product_id',
-                'genres.id',
-                'genres.title',
-            ]);
+            ->get($ungroupedSelect);
 
-        return $groupedGenres
-            ->concat($ungroupedGenres)
-            ->groupBy('product_id');
+        $genres = $groupedGenres->concat($ungroupedGenres);
+
+        if ($includeColors) {
+            $genres = $this->applyEffectiveGenreColors($genres);
+        }
+
+        return $genres->groupBy('product_id');
     }
 
     public function loadContributors(array $productIds, array $visibleFields): Collection
@@ -479,6 +510,95 @@ final class ProductIndexResults
     private function dateSortValueFromInput(string $date): int
     {
         return (int) str_replace('-', '', $date);
+    }
+
+    private function excludeGenresInHiddenGroups(\Illuminate\Database\Query\Builder $query): void
+    {
+        $query->whereNotExists(function ($query): void {
+            $query
+                ->select('hidden_genre_group_genre.genre_id')
+                ->from('genre_group_genre as hidden_genre_group_genre')
+                ->join('genre_groups as hidden_genre_groups', 'hidden_genre_groups.id', '=', 'hidden_genre_group_genre.genre_group_id')
+                ->whereColumn('hidden_genre_group_genre.genre_id', 'genres.id')
+                ->where('hidden_genre_groups.hidden_on_index', true);
+        });
+    }
+
+    private function orderedGroupColorsByGenreId(Collection $genres): Collection
+    {
+        $genreIds = $genres
+            ->pluck('id')
+            ->map(fn($genreId): int => (int) $genreId)
+            ->unique()
+            ->values();
+
+        if ($genreIds->isEmpty()) {
+            return collect();
+        }
+
+        $rows = DB::table('genre_group_genre')
+            ->join('genre_groups', 'genre_groups.id', '=', 'genre_group_genre.genre_group_id')
+            ->whereIn('genre_group_genre.genre_id', $genreIds->all())
+            ->where('genre_groups.hidden_on_index', false)
+            ->whereAny(['genre_groups.color', 'genre_groups.text_color'], '<>', '')
+            ->orderBy('genre_group_genre.genre_id')
+            ->orderBy('genre_groups.order')
+            ->orderBy('genre_group_genre.order')
+            ->orderBy('genre_groups.title')
+            ->get([
+                'genre_group_genre.genre_id',
+                'genre_groups.color',
+                'genre_groups.text_color',
+            ]);
+
+        $colorsByGenreId = collect();
+
+        foreach ($rows as $row) {
+            $genreId = (int) $row->genre_id;
+            $colors = $colorsByGenreId->get($genreId, (object) [
+                'color' => null,
+                'text_color' => null,
+            ]);
+
+            $colors->color ??= TagColor::normalize($row->color ?? null);
+            $colors->text_color ??= TagColor::normalize($row->text_color ?? null);
+
+            $colorsByGenreId->put($genreId, $colors);
+        }
+
+        return $colorsByGenreId;
+    }
+
+    private function applyEffectiveGenreColors(Collection $genres): Collection
+    {
+        $groupColorsByGenreId = $this->orderedGroupColorsByGenreId($genres);
+        $colorViewDataByGenreId = $genres
+            ->unique('id')
+            ->mapWithKeys(function ($genre) use ($groupColorsByGenreId): array {
+                $groupColors = $groupColorsByGenreId->get((int) $genre->id);
+
+                return [
+                    (int) $genre->id => TagColor::viewData(
+                        TagColor::normalize($groupColors->color ?? null)
+                            ?? TagColor::normalize($genre->tag_color ?? null),
+                        TagColor::normalize($groupColors->text_color ?? null)
+                            ?? TagColor::normalize($genre->tag_text_color ?? null),
+                    ),
+                ];
+            });
+        $emptyColorViewData = TagColor::viewData(null, null);
+
+        return $genres->map(function ($genre) use ($colorViewDataByGenreId, $emptyColorViewData) {
+            $colors = $colorViewDataByGenreId->get((int) $genre->id, $emptyColorViewData);
+
+            foreach ($colors as $key => $value) {
+                $genre->{$key} = $value;
+            }
+
+            unset($genre->tag_color, $genre->tag_text_color);
+
+            return $genre;
+        });
     }
 
     private function displayValue(Product $product, string $field): string

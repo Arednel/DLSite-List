@@ -167,6 +167,37 @@ class GenreGroupRelationshipTest extends TestCase
         ], GenreGroup::query()->hiddenOnIndex()->pluck('title')->all());
     }
 
+    public function test_tags_and_groups_can_persist_optional_hex_colors(): void
+    {
+        $genre = Genre::query()->create([
+            'title' => 'Colored Relationship Tag',
+            'description' => null,
+            'order' => 1,
+            'color' => '#ff3366',
+            'text_color' => '#111111',
+        ]);
+        $group = GenreGroup::query()->create([
+            'title' => 'Colored Relationship Group',
+            'description' => null,
+            'order' => 1,
+            'color' => '#3366ff',
+            'text_color' => '#eeeeee',
+        ]);
+
+        $this->assertSame('#ff3366', $genre->refresh()->color);
+        $this->assertSame('#111111', $genre->refresh()->text_color);
+        $this->assertSame('#3366ff', $group->refresh()->color);
+        $this->assertSame('#eeeeee', $group->refresh()->text_color);
+
+        $genre->forceFill(['color' => null, 'text_color' => null])->save();
+        $group->forceFill(['color' => null, 'text_color' => null])->save();
+
+        $this->assertNull($genre->refresh()->color);
+        $this->assertNull($genre->refresh()->text_color);
+        $this->assertNull($group->refresh()->color);
+        $this->assertNull($group->refresh()->text_color);
+    }
+
     private function attachTagToGroup(GenreGroup $group, Genre $genre, int $order): int
     {
         DB::table('genre_group_genre')->insert([

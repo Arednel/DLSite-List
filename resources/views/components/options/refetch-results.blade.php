@@ -7,6 +7,7 @@
     'promoteCustomAction',
     'keepCustomAction',
     'showControls',
+    'tagRows' => [],
 ])
 
 <div class="result-list">
@@ -50,8 +51,15 @@
                     <div>
                         <h3>Fetched JP</h3>
                         <div class="tag-row">
-                            @forelse ($result->fetched_japanese_tags ?? [] as $tag)
-                                <span class="tag tag--solid tag--sm">{{ $tag }}</span>
+                            @forelse ($tagRows[$result->getKey()]['fetched_japanese_tags'] ?? [] as $tag)
+                                <span @class([
+                                    'tag',
+                                    'tag--solid',
+                                    'tag--sm',
+                                    'tag--background-colored' => $tag['has_background_color'],
+                                    'tag--text-colored' => $tag['has_font_color'],
+                                ])
+                                    @if (filled($tag['color_style'])) style="{{ $tag['color_style'] }}" @endif>{{ $tag['title'] }}</span>
                             @empty
                                 <span class="empty-state">None</span>
                             @endforelse
@@ -61,8 +69,15 @@
                     <div>
                         <h3>Fetched EN</h3>
                         <div class="tag-row">
-                            @forelse ($result->fetched_english_tags ?? [] as $tag)
-                                <span class="tag tag--solid tag--sm">{{ $tag }}</span>
+                            @forelse ($tagRows[$result->getKey()]['fetched_english_tags'] ?? [] as $tag)
+                                <span @class([
+                                    'tag',
+                                    'tag--solid',
+                                    'tag--sm',
+                                    'tag--background-colored' => $tag['has_background_color'],
+                                    'tag--text-colored' => $tag['has_font_color'],
+                                ])
+                                    @if (filled($tag['color_style'])) style="{{ $tag['color_style'] }}" @endif>{{ $tag['title'] }}</span>
                             @empty
                                 <span class="empty-state">None</span>
                             @endforelse
@@ -72,8 +87,15 @@
                     <div>
                         <h3>New JP</h3>
                         <div class="tag-row">
-                            @forelse ($result->added_japanese_tags ?? [] as $tag)
-                                <span class="tag tag--soft tag--sm">{{ $tag }}</span>
+                            @forelse ($tagRows[$result->getKey()]['added_japanese_tags'] ?? [] as $tag)
+                                <span @class([
+                                    'tag',
+                                    'tag--soft',
+                                    'tag--sm',
+                                    'tag--background-colored' => $tag['has_background_color'],
+                                    'tag--text-colored' => $tag['has_font_color'],
+                                ])
+                                    @if (filled($tag['color_style'])) style="{{ $tag['color_style'] }}" @endif>{{ $tag['title'] }}</span>
                             @empty
                                 <span class="empty-state">None</span>
                             @endforelse
@@ -83,8 +105,15 @@
                     <div>
                         <h3>New EN</h3>
                         <div class="tag-row">
-                            @forelse ($result->added_english_tags ?? [] as $tag)
-                                <span class="tag tag--soft tag--sm">{{ $tag }}</span>
+                            @forelse ($tagRows[$result->getKey()]['added_english_tags'] ?? [] as $tag)
+                                <span @class([
+                                    'tag',
+                                    'tag--soft',
+                                    'tag--sm',
+                                    'tag--background-colored' => $tag['has_background_color'],
+                                    'tag--text-colored' => $tag['has_font_color'],
+                                ])
+                                    @if (filled($tag['color_style'])) style="{{ $tag['color_style'] }}" @endif>{{ $tag['title'] }}</span>
                             @empty
                                 <span class="empty-state">None</span>
                             @endforelse
@@ -94,8 +123,15 @@
                     <div>
                         <h3>Stale JP</h3>
                         <div class="tag-row">
-                            @forelse ($result->stale_japanese_tags ?? [] as $tag)
-                                <span class="tag tag--outline tag--sm">{{ $tag }}</span>
+                            @forelse ($tagRows[$result->getKey()]['stale_japanese_tags'] ?? [] as $tag)
+                                <span @class([
+                                    'tag',
+                                    'tag--outline',
+                                    'tag--sm',
+                                    'tag--background-colored' => $tag['has_background_color'],
+                                    'tag--text-colored' => $tag['has_font_color'],
+                                ])
+                                    @if (filled($tag['color_style'])) style="{{ $tag['color_style'] }}" @endif>{{ $tag['title'] }}</span>
                             @empty
                                 <span class="empty-state">None</span>
                             @endforelse
@@ -105,8 +141,15 @@
                     <div>
                         <h3>Stale EN</h3>
                         <div class="tag-row">
-                            @forelse ($result->stale_english_tags ?? [] as $tag)
-                                <span class="tag tag--outline tag--sm">{{ $tag }}</span>
+                            @forelse ($tagRows[$result->getKey()]['stale_english_tags'] ?? [] as $tag)
+                                <span @class([
+                                    'tag',
+                                    'tag--outline',
+                                    'tag--sm',
+                                    'tag--background-colored' => $tag['has_background_color'],
+                                    'tag--text-colored' => $tag['has_font_color'],
+                                ])
+                                    @if (filled($tag['color_style'])) style="{{ $tag['color_style'] }}" @endif>{{ $tag['title'] }}</span>
                             @empty
                                 <span class="empty-state">None</span>
                             @endforelse
@@ -116,8 +159,15 @@
                     <div>
                         <h3>Custom -> Fetched JP</h3>
                         <div class="tag-row">
-                            @forelse ($result->custom_to_fetched_japanese_tags ?? [] as $tag)
-                                <span class="tag tag--soft tag--sm">{{ $tag }}</span>
+                            @forelse ($tagRows[$result->getKey()]['custom_to_fetched_japanese_tags'] ?? [] as $tag)
+                                <span @class([
+                                    'tag',
+                                    'tag--soft',
+                                    'tag--sm',
+                                    'tag--background-colored' => $tag['has_background_color'],
+                                    'tag--text-colored' => $tag['has_font_color'],
+                                ])
+                                    @if (filled($tag['color_style'])) style="{{ $tag['color_style'] }}" @endif>{{ $tag['title'] }}</span>
                             @empty
                                 <span class="empty-state">None</span>
                             @endforelse
@@ -127,8 +177,15 @@
                     <div>
                         <h3>Custom -> Fetched EN</h3>
                         <div class="tag-row">
-                            @forelse ($result->custom_to_fetched_english_tags ?? [] as $tag)
-                                <span class="tag tag--soft tag--sm">{{ $tag }}</span>
+                            @forelse ($tagRows[$result->getKey()]['custom_to_fetched_english_tags'] ?? [] as $tag)
+                                <span @class([
+                                    'tag',
+                                    'tag--soft',
+                                    'tag--sm',
+                                    'tag--background-colored' => $tag['has_background_color'],
+                                    'tag--text-colored' => $tag['has_font_color'],
+                                ])
+                                    @if (filled($tag['color_style'])) style="{{ $tag['color_style'] }}" @endif>{{ $tag['title'] }}</span>
                             @empty
                                 <span class="empty-state">None</span>
                             @endforelse

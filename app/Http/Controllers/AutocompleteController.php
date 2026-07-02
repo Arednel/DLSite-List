@@ -24,7 +24,11 @@ class AutocompleteController extends Controller
         }
 
         return response()->json(
-            $this->tagSearch->search($query, Option::tagAutocompleteOrder())
+            $this->tagSearch->search(
+                $query,
+                Option::tagAutocompleteOrder(),
+                Option::tagColorSurfaceEnabled(Option::TAG_COLOR_SURFACE_AUTOCOMPLETE),
+            )
         );
     }
 

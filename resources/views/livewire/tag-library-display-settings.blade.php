@@ -14,6 +14,21 @@
                 title="When enabled, Index tag chips use saved group and membership order instead of plain tag order and title."></i>
         </label>
 
+        <fieldset class="option-fieldset">
+            <legend>
+                Tag color surfaces
+                <i class="fa-solid fa-circle-question"
+                    title="Choose where saved tag and tag group colors are shown."></i>
+            </legend>
+
+            @foreach ($colorSurfaceLabels as $surface => $label)
+                <label class="option-toggle">
+                    <input type="checkbox" wire:model.live="colorSurfaces.{{ $surface }}">
+                    <span>{{ $label }}</span>
+                </label>
+            @endforeach
+        </fieldset>
+
         <div class="option-actions option-actions--inline">
             <button type="submit" class="tag tag--soft tag--lg is-clickable">Save Tag Library settings</button>
             <button type="button" class="tag tag--soft tag--lg is-clickable option-reset-button"

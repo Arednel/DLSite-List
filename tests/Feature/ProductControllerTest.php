@@ -628,6 +628,7 @@ class ProductControllerTest extends TestCase
             ->assertSee('name="id"', false)
             ->assertSee('name="work_name"', false)
             ->assertSee('name="age_category"', false)
+            ->assertSee('id="age_category" name="age_category" class="form-control"', false)
             ->assertSee('name="work_image"', false)
             ->assertSee('name="sample_images[]"', false)
             ->assertSee('file-upload-input', false)
@@ -723,6 +724,23 @@ class ProductControllerTest extends TestCase
             ])
             ->assertDontSee('name="sample_images[]"', false)
             ->assertDontSee('name="notes"', false);
+    }
+
+    public function test_custom_create_metadata_fields_render_compact_age_and_placeholders(): void
+    {
+        Option::setCustomQuickAddFieldLayout([
+            ['field' => ProductField::AgeCategory->value, 'visible' => true],
+            ['field' => ProductField::Circle->value, 'visible' => true],
+            ['field' => ProductField::Description->value, 'visible' => true],
+        ]);
+
+        $this->get('/create/custom')
+            ->assertOk()
+            ->assertSee('id="age_category" name="age_category" class="form-control"', false)
+            ->assertDontSee('id="age_category" name="age_category" class="form-control form-field-long"', false)
+            ->assertSee('placeholder="Circle name"', false)
+            ->assertSee('placeholder="Japanese description"', false)
+            ->assertSee('placeholder="English description"', false);
     }
 
     public function test_create_preserves_index_return_state_for_go_back_and_mode_switch(): void
@@ -979,13 +997,16 @@ class ProductControllerTest extends TestCase
         $this->get("/edit/{$product->id}")
             ->assertOk()
             ->assertSee('name="circle"', false)
+            ->assertSee('placeholder="Circle name"', false)
             ->assertSee('name="maker_id"', false)
             ->assertSee('name="scenario"', false)
             ->assertSee('name="voice_actor"', false)
             ->assertSee('name="illustration"', false)
             ->assertSee('name="author"', false)
             ->assertSee('name="description"', false)
-            ->assertSee('name="description_english"', false);
+            ->assertSee('name="description_english"', false)
+            ->assertSee('placeholder="Japanese description"', false)
+            ->assertSee('placeholder="English description"', false);
 
         $this->post("/update/{$product->id}", [
             'work_name' => $product->work_name,
@@ -1083,6 +1104,95 @@ class ProductControllerTest extends TestCase
             ->assertSee('READONLY_FETCHED_EN_TOKEN')
             ->assertSee('readonly', false)
             ->assertDontSee('name="genre_fetched_english"', false);
+    }
+
+    public function test_edit_readonly_tags_use_colors_only_when_surface_is_enabled(): void
+    {
+        $englishGenre = $this->createGenre('READONLY_COLORED_TAG_TOKEN', Genre::TYPE_AUTO_GENERATED_ENGLISH);
+        Genre::query()->whereKey($englishGenre->getKey())->update([
+            'color' => '#aa3366',
+            'text_color' => '#111111',
+        ]);
+        $product = Product::factory()->create([
+            'work_name' => 'READONLY_COLORED_EDIT_TOKEN',
+        ]);
+        $this->attachGenres($product, [$englishGenre]);
+
+        $this->get("/edit/{$product->id}")
+            ->assertOk()
+            ->assertSee('READONLY_COLORED_TAG_TOKEN')
+            ->assertDontSee('readonly-tag-chip--background-colored', false)
+            ->assertDontSee('readonly-tag-chip--text-colored', false)
+            ->assertDontSee('--tag-color: #aa3366;', false)
+            ->assertDontSee('--tag-text-color: #111111;', false);
+
+        Option::setTagColorSurfaces([Option::TAG_COLOR_SURFACE_EDIT_READONLY => true]);
+
+        $this->get("/edit/{$product->id}")
+            ->assertOk()
+            ->assertSee('READONLY_COLORED_TAG_TOKEN')
+            ->assertSee('readonly-tag-text-field', false)
+            ->assertSee('readonly-tag-text', false)
+            ->assertSee('readonly-tag-text--background-colored', false)
+            ->assertSee('readonly-tag-text--font-colored', false)
+            ->assertDontSee('readonly-tag-chip', false)
+            ->assertSee('--tag-color: #aa3366;', false)
+            ->assertSee('--tag-text-color: #111111;', false);
+    }
+
+    public function test_edit_readonly_tag_background_and_font_colors_render_independently(): void
+    {
+        Option::setTagColorSurfaces([Option::TAG_COLOR_SURFACE_EDIT_READONLY => true]);
+
+        $backgroundOnly = $this->createGenre('READONLY_BACKGROUND_ONLY_TAG', Genre::TYPE_AUTO_GENERATED_ENGLISH);
+        Genre::query()->whereKey($backgroundOnly->getKey())->update([
+            'color' => '#aa3366',
+            'text_color' => null,
+        ]);
+        $fontOnly = $this->createGenre('READONLY_FONT_ONLY_TAG', Genre::TYPE_AUTO_GENERATED_ENGLISH);
+        Genre::query()->whereKey($fontOnly->getKey())->update([
+            'color' => null,
+            'text_color' => '#111111',
+        ]);
+        $product = Product::factory()->create([
+            'work_name' => 'READONLY_INDEPENDENT_COLORS_TOKEN',
+        ]);
+        $this->attachGenres($product, [$backgroundOnly, $fontOnly]);
+
+        $response = $this->get("/edit/{$product->id}")
+            ->assertOk()
+            ->assertSee('READONLY_BACKGROUND_ONLY_TAG')
+            ->assertSee('READONLY_FONT_ONLY_TAG')
+            ->assertSee('readonly-tag-text-field', false)
+            ->assertSee('readonly-tag-text--background-colored', false)
+            ->assertSee('readonly-tag-text--font-colored', false);
+
+        $html = $response->getContent();
+
+        $this->assertStringContainsString('--tag-color: #aa3366;', $html);
+        $this->assertStringContainsString('--tag-text-color: #111111;', $html);
+        $this->assertStringNotContainsString('readonly-tag-chip', $html);
+    }
+
+    public function test_edit_readonly_genres_keep_inline_text_field_layout_when_colors_are_enabled(): void
+    {
+        Option::setTagColorSurfaces([Option::TAG_COLOR_SURFACE_EDIT_READONLY => true]);
+
+        $firstGenre = $this->createGenre('READONLY_INLINE_FIRST_TAG', Genre::TYPE_AUTO_GENERATED_ENGLISH);
+        $secondGenre = $this->createGenre('READONLY_INLINE_SECOND_TAG', Genre::TYPE_AUTO_GENERATED_ENGLISH);
+        $product = Product::factory()->create([
+            'work_name' => 'READONLY_INLINE_LAYOUT_TOKEN',
+        ]);
+        $this->attachGenres($product, [$firstGenre, $secondGenre]);
+
+        $response = $this->get("/edit/{$product->id}")
+            ->assertOk()
+            ->assertSee('Fetched EN Genres')
+            ->assertSee('READONLY_INLINE_FIRST_TAG')
+            ->assertSee('READONLY_INLINE_SECOND_TAG')
+            ->assertSee(', ', false)
+            ->assertDontSee('readonly-tag-chips', false)
+            ->assertDontSee('readonly-tag-chip', false);
     }
 
     public function test_edit_renders_editable_fetched_english_tags_when_edit_layout_enables_it(): void
@@ -2091,6 +2201,32 @@ class ProductControllerTest extends TestCase
         $this->assertSame(5, $product->num_re_listen_times);
         $this->assertSame(4, $product->re_listen_value);
         $this->assertSame(2, $product->priority);
+    }
+
+    public function test_update_preserves_non_editable_title_fields_when_not_submitted(): void
+    {
+        Option::setEditFieldLayout([
+            ['field' => ProductField::Title->value, 'visible' => true, 'editable' => false],
+            ['field' => ProductField::Progress->value, 'visible' => true, 'editable' => true],
+        ]);
+
+        $product = Product::factory()->create([
+            'work_name' => 'READONLY_UPDATE_JP_TITLE_TOKEN',
+            'work_name_english' => 'READONLY_UPDATE_EN_TITLE_TOKEN',
+            'progress' => 'Plan to Listen',
+        ]);
+
+        $this->post("/update/{$product->id}", [
+            'work_name' => 'MALICIOUS_READONLY_TITLE_TOKEN',
+            'work_name_english' => 'MALICIOUS_READONLY_EN_TITLE_TOKEN',
+            'progress' => 'Completed',
+        ])->assertSessionHasNoErrors();
+
+        $product->refresh();
+
+        $this->assertSame('READONLY_UPDATE_JP_TITLE_TOKEN', $product->work_name);
+        $this->assertSame('READONLY_UPDATE_EN_TITLE_TOKEN', $product->work_name_english);
+        $this->assertSame('Completed', $product->progress);
     }
 
     public function test_update_does_not_clear_hidden_edit_layout_fields(): void

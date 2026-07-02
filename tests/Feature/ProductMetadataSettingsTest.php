@@ -229,6 +229,7 @@ class ProductMetadataSettingsTest extends TestCase
     {
         Livewire::test(ProductFieldLayoutSettings::class)
             ->set('indexFields.score.visible', false)
+            ->set('editFields.title.editable', false)
             ->set('editFields.voice_actor.visible', true)
             ->set('editFields.voice_actor.editable', true)
             ->set('editFields.notes.visible', false)
@@ -242,6 +243,7 @@ class ProductMetadataSettingsTest extends TestCase
             ->assertSet('notice', 'Field layouts saved.');
 
         $this->assertFalse($this->layoutRow(Option::indexFieldLayout(), ProductField::Score)['visible']);
+        $this->assertFalse($this->layoutRow(Option::editFieldLayout(), ProductField::Title)['editable']);
         $this->assertTrue($this->layoutRow(Option::editFieldLayout(), ProductField::VoiceActor)['visible']);
         $this->assertTrue($this->layoutRow(Option::editFieldLayout(), ProductField::VoiceActor)['editable']);
         $this->assertFalse($this->layoutRow(Option::editFieldLayout(), ProductField::Notes)['visible']);

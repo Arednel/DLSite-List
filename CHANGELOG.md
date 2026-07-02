@@ -2,6 +2,11 @@
 
 ## Development
 
+* 2026-07-02 -- 1.5.4 Tag Colors & Edit Form Update
+  * Added tag and tag-group background/font colors with configurable display surfaces for Index, Tag Library, autocomplete, Edit readonly tags, and Refetch review
+  * Improved Edit/Add form metadata layout with compact Age, placeholders, readonly div-style fields, configurable readonly titles, and tighter tag help icons
+  * Update related docs, tests
+
 * 2026-06-25 -- 1.5.3 Index Search & Layout Polish
   * Renamed and reordered Field Layouts sections for clearer Index/Form grouping
   * Changed general Index search to ignore descriptions while the Description column is hidden

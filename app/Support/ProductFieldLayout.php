@@ -54,10 +54,8 @@ final class ProductFieldLayout
             $normalized += self::noteMetadata($field, $surface);
 
             if ($surface === self::SURFACE_EDIT) {
-                $normalized['editable'] = (
-                    $field->isVisibilityLocked($surface)
-                    && $field->isEditableByDefault($surface)
-                ) || ($visible && filter_var($row['editable'] ?? false, FILTER_VALIDATE_BOOL));
+                $normalized['editable'] = $visible
+                    && filter_var($row['editable'] ?? false, FILTER_VALIDATE_BOOL);
 
                 if ($field === ProductField::Tags) {
                     $normalized['fetched_editable'] = $visible

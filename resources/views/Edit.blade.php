@@ -51,7 +51,7 @@
                                                             :product="$product" :age-category-options="$ageCategoryOptions" :contributor-inputs="$contributorInputs"
                                                             :english-genres="$englishGenres" :custom-genres="$customGenres" :genre-fetched-english-input="$genreFetchedEnglishInput"
                                                             :genre-custom-input="$genreCustomInput" :readonly-field-values="$readonlyFieldValues" :month-labels="$monthLabels"
-                                                            :days="$days" :years="$years" />
+                                                            :days="$days" :years="$years" :show-readonly-genre-colors="$showReadonlyGenreColors" />
                                                     @endforeach
                                                 </tbody>
                                             </table>

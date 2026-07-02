@@ -245,6 +245,20 @@ button.tag {
     background: #f9d7e9;
 }
 
+.tag--background-colored {
+    border-color: color-mix(in srgb, var(--tag-color) 68%, #ffffff);
+    background: color-mix(in srgb, var(--tag-color) 14%, #ffffff);
+}
+
+.tag--background-colored:not(:disabled):hover {
+    border-color: var(--tag-color);
+    background: color-mix(in srgb, var(--tag-color) 22%, #ffffff);
+}
+
+.tag--text-colored {
+    color: var(--tag-text-color);
+}
+
 .tag--gradient {
     background: linear-gradient(90deg, var(--pink-400) 0%, var(--pink-500) 52%, var(--pink-600) 100%);
     color: #ffffff;

@@ -141,6 +141,8 @@ A tag can belong to multiple groups. Index tag chips sort by tag order/title by 
 
 `Genre::groups()` and `GenreGroup::genres()` centralize the Laravel many-to-many ordering for tag groups. They expose the pivot `id` and `order` fields, include pivot timestamps, and apply the default group/tag order used by Tag Library. `Genre::visibleOnIndex()`, `Genre::hiddenOnIndex()`, `GenreGroup::visibleOnIndex()`, and `GenreGroup::hiddenOnIndex()` keep reusable index visibility rules in the models while `ProductIndexResults` keeps its raw SQL tag-chip query for page-level performance.
 
+Tag and group colors are stored as nullable `#RRGGBB` strings. `genres.color` / `genre_groups.color` control the tag background/accent color, while `genres.text_color` / `genre_groups.text_color` control the font color. `app/Support/TagColor.php` normalizes colors and batches effective color-pair lookup for autocomplete, Edit readonly tags, and Refetch review tags, including one ordered group-color lookup that resolves background and font colors together. Index tag colors stay in `ProductIndexResults` so the Index can select the needed color columns or subqueries without hydrating tag relationships. Group background/font colors override tag background/font colors independently through ordered group membership; when rendering inside a specific Tag Library group card, that card's group color value wins for whichever value is set. Edit readonly tag colors render as inline text marks inside the normal readonly field container, not as separate tag plaques.
+
 `genre_product` is the many-to-many pivot table between `products` and `genres`.
 It also stores a `source` value:
 - `fetched` for scraper-provided genre attachments
@@ -180,6 +182,7 @@ The `/tags` Livewire manager also owns tag groups, group/tag order, and Index vi
 - removing a tag from a group detaches only that membership, so other group memberships remain
 - group hidden state hides every assigned tag from Index without changing each tag's own hidden setting
 - the persisted `Enable group ordering on Index` option is off by default; when enabled, Index tag chips use saved group and membership order instead of plain tag order/title ordering
+- tag background/font color editing is handled in the tag settings modal, and group background/font color editing is handled on each group card; rendering is controlled by the `tag_color_surfaces` option map
 - the All Tags list can be filtered by Index visibility, group status, specific group, and empty/used state without hiding group management rows
 - the All Tags list has a session-only Edit Tags mode; normal mode keeps tag chips as Index filter links, while edit mode changes tag clicks into Livewire actions that open a teleported tag settings modal
 - the tag settings modal updates tag-level Index visibility and group memberships in one save, preserving existing pivot orders and appending newly selected memberships to the end of their groups
@@ -214,6 +217,7 @@ Queue tables:
 - `series_autocomplete_order` controls series suggestion ordering, defaults to `usage`, and can be set to `first_word`
 - `auto_series_from_title_name` controls whether DLSite create fills an empty Series field from `japanese.title_name`, and defaults to enabled
 - `tag_library_index_group_ordering_enabled` controls whether Index tag chips use group order, and defaults to disabled
+- `tag_color_surfaces` controls where stored tag/group background and font colors render, with Index and Tag Library enabled by default and Autocomplete/Edit readonly/Refetch disabled by default
 - `index_field_layout`, `edit_field_layout`, `filter_field_layout`, `quick_add_field_layout`, and `custom_quick_add_field_layout` store surface-specific configurable field order/visibility/editability layouts
 - `index_sort_field_layout` stores Advanced Filter sort dropdown order/visibility while leaving valid sort execution enum-backed
 - `index_table_width` controls the Index list/table width
@@ -243,7 +247,8 @@ Runtime note:
 - `ProductIndex` keeps its filter/sort state in the URL through Livewire's `queryString()` config, then normalizes that state into `app/Support/ProductIndexFilters.php`
 - `app/Support/ProductIndexFilters.php` provides the normalized filter query used by progress tabs, preserved search state, tag links, explicit Livewire query-string keys, and the visibility-affecting filter groups used by return redirects
 - Index genre links, tag filters, genre-backed search, edit tag loading, and Tag Library use `VisibleGenreAttachment` for the same visible-tag rule as rendered tags: custom source or fetched `en` language row
-- Index tag chips exclude tags hidden by their own `genres.hidden_on_index` flag or assigned to any hidden group. By default they sort by tag order/title; when group ordering is enabled they render each remaining grouped tag once through its first visible group membership, then render ungrouped tags after grouped tags.
+- Index tag chips exclude tags hidden by their own `genres.hidden_on_index` flag or assigned to any hidden group. The raw Index query first checks whether any hidden groups exist and skips the hidden-group anti-join when none do, so libraries without hidden groups keep the cheaper tag query path. By default tags sort by tag order/title; when group ordering is enabled they render each remaining grouped tag once through its first visible group membership, then render ungrouped tags after grouped tags.
+- Index tag-chip color resolution is query-based for performance: when Index colors are disabled or no tag/group colors are configured, the color columns are not selected and the group-color lookup is skipped. When enabled and at least one color exists, the query resolves tag background/font colors plus the first ordered group background/font colors. Effective color decoration is cached per unique genre id for the current page, and uncolored tags render as plain links without the colored-chip class/style path.
 - opening and closing the advanced filter modal is local Alpine state registered in `public/scripts/index-advanced-filters.js`, not Livewire state, so showing the modal does not rerun the Index query or reset draft filter values
 - changing advanced sort draft fields is client-side/deferred through that Alpine component until Apply, so the modal does not send requests while choosing primary/secondary sort columns
 - desktop table headers and the advanced sort modal both update the same Livewire-backed server-side sort state
@@ -290,6 +295,7 @@ Runtime note:
 - the Refetch tab work list and queued all/selected refetch ids use numeric RJ descending order, matching the Index default order
 - custom-only works are skipped during refetch because they do not have DLSite metadata to fetch from
 - applying a refetch run attaches new fetched tags with `genre_product.source = fetched` and one language row per fetched bucket, unless the review form ignores new JP/EN tags globally or for that work
+- Refetch review colors are resolved once per review page from existing stored genres by `title_key` when the refetch color surface is enabled; fetched tags that do not yet exist in `genres` render with the default style, and the Blade view receives prepared tag rows instead of doing color lookups itself
 - stale fetched JP/EN actions remove only that language row when another fetched language remains; the tag moves to `genre_product.source = custom` only when no fetched language rows remain and the selected stale action is move-to-custom
 - custom tags that DLSite now returns as fetched are promoted to fetched by default; the review form has global and per-work controls to keep those tags custom instead
 - refetch diff/apply reads current fetched/custom tags through the Product genre relationships and compares titles by the same `Genre::titleKey()` identity rule used for storage

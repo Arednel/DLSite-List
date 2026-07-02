@@ -60,6 +60,45 @@ class PerformanceSmokeTest extends TestCase
                 fn() => $this->get('/')->assertOk(),
             ),
         );
+
+        Option::setIndexPerPage(Option::INDEX_PER_PAGE_UNLIMITED);
+        $measurements['default-column unlimited index'] = $this->averageResponseTime(
+            'default-column unlimited index',
+            fn() => $this->get('/')->assertOk(),
+        );
+        $measurements['full-column unlimited index'] = $this->withFullIndexLayout(
+            fn(): float => $this->averageResponseTime(
+                'full-column unlimited index',
+                fn() => $this->get('/')->assertOk(),
+            ),
+        );
+        Option::setIndexPerPage(Option::DEFAULT_INDEX_PER_PAGE);
+
+        $this->seedUniqueTagColors();
+        $measurements['default-column paginated index with unique tag colors'] = $this->averageResponseTime(
+            'default-column paginated index with unique tag colors',
+            fn() => $this->get('/')->assertOk(),
+        );
+        $measurements['full-column paginated index with unique tag colors'] = $this->withFullIndexLayout(
+            fn(): float => $this->averageResponseTime(
+                'full-column paginated index with unique tag colors',
+                fn() => $this->get('/')->assertOk(),
+            ),
+        );
+        Option::setIndexPerPage(Option::INDEX_PER_PAGE_UNLIMITED);
+        $measurements['default-column unlimited index with unique tag colors'] = $this->averageResponseTime(
+            'default-column unlimited index with unique tag colors',
+            fn() => $this->get('/')->assertOk(),
+        );
+        $measurements['full-column unlimited index with unique tag colors'] = $this->withFullIndexLayout(
+            fn(): float => $this->averageResponseTime(
+                'full-column unlimited index with unique tag colors',
+                fn() => $this->get('/')->assertOk(),
+            ),
+        );
+        Option::setIndexPerPage(Option::DEFAULT_INDEX_PER_PAGE);
+        $this->clearConfiguredTagColors();
+
         $measurements['filtered index with tag and sort'] = $this->averageResponseTime(
             'filtered index with tag and sort',
             fn() => $this->get('/?' . http_build_query([
@@ -98,19 +137,6 @@ class PerformanceSmokeTest extends TestCase
             'options refetch tab',
             fn() => $this->get('/options?tab=refetch')->assertOk(),
         );
-
-        Option::setIndexPerPage(Option::INDEX_PER_PAGE_UNLIMITED);
-        $measurements['default-column unlimited index'] = $this->averageResponseTime(
-            'default-column unlimited index',
-            fn() => $this->get('/')->assertOk(),
-        );
-        $measurements['full-column unlimited index'] = $this->withFullIndexLayout(
-            fn(): float => $this->averageResponseTime(
-                'full-column unlimited index',
-                fn() => $this->get('/')->assertOk(),
-            ),
-        );
-        Option::setIndexPerPage(Option::DEFAULT_INDEX_PER_PAGE);
 
         $measurements['update redirect fast path'] = $this->averageResponseTime(
             'update redirect fast path',
@@ -315,6 +341,40 @@ class PerformanceSmokeTest extends TestCase
                     );
                 });
         }
+    }
+
+    private function seedUniqueTagColors(): void
+    {
+        $offset = 0;
+
+        DB::table('genres')
+            ->orderBy('id')
+            ->get(['id'])
+            ->chunk(500)
+            ->each(function ($chunk) use (&$offset): void {
+                foreach ($chunk->values() as $index => $genre) {
+                    DB::table('genres')
+                        ->where('id', $genre->id)
+                        ->update([
+                            'color' => sprintf('#%06x', (($offset + $index + 1) * 65497) % 0xFFFFFF),
+                            'text_color' => sprintf('#%06x', (($offset + $index + 1) * 32647) % 0xFFFFFF),
+                        ]);
+                }
+
+                $offset += $chunk->count();
+            });
+    }
+
+    private function clearConfiguredTagColors(): void
+    {
+        DB::table('genres')->update([
+            'color' => null,
+            'text_color' => null,
+        ]);
+        DB::table('genre_groups')->update([
+            'color' => null,
+            'text_color' => null,
+        ]);
     }
 
     private function validatePerformanceSeedConfig(): void

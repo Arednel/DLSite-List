@@ -32,6 +32,8 @@ class Genre extends Model
         'description',
         'order',
         'hidden_on_index',
+        'color',
+        'text_color',
     ];
 
     protected $casts = [
@@ -96,10 +98,10 @@ class Genre extends Model
     public static function resolveIdsFromTitles(array $titles): array
     {
         return collect($titles)
-            ->map(fn (mixed $title) => self::normalizeTitle($title))
+            ->map(fn(mixed $title) => self::normalizeTitle($title))
             ->filter()
-            ->unique(fn (string $title): string => self::titleKey($title))
-            ->map(fn (string $title) => self::resolveByTitle($title)->getKey())
+            ->unique(fn(string $title): string => self::titleKey($title))
+            ->map(fn(string $title) => self::resolveByTitle($title)->getKey())
             ->values()
             ->all();
     }

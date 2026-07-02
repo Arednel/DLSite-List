@@ -17,6 +17,8 @@ class GenreGroup extends Model
         'description',
         'order',
         'hidden_on_index',
+        'color',
+        'text_color',
     ];
 
     protected $casts = [
