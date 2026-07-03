@@ -11,6 +11,7 @@
     <link rel="stylesheet" href="{{ asset('css/options.css') }}?v={{ filemtime(public_path('css/options.css')) }}">
     <link rel="stylesheet"
         href="{{ asset('css/list-menu-float.css') }}?v={{ filemtime(public_path('css/list-menu-float.css')) }}">
+    <x-title-tooltip-assets />
 
     @livewireStyles
 </head>

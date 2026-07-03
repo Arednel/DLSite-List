@@ -2,6 +2,9 @@
 
 ## Development
 
+* 2026-07-03 -- 1.5.6 Tooltip Tap Support
+  * Added click/tap popup fallback for title tooltips on mobile and desktop
+
 * 2026-07-03 -- 1.5.5 Index tag ordering Fix
   * Fixed Index group ordering so grouped tags keep saved group/tag order while ungrouped tags sort alphabetically
 

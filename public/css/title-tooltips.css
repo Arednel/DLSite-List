@@ -1,0 +1,41 @@
+.title-tooltip-popover {
+    position: absolute;
+    z-index: 10000;
+    max-width: min(280px, calc(100vw - 24px));
+    padding: 8px 10px;
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    border-radius: 6px;
+    background: rgba(17, 24, 39, 0.96);
+    color: #f9fafb;
+    box-shadow: 0 10px 24px rgba(0, 0, 0, 0.28);
+    font-size: 13px;
+    line-height: 1.35;
+    overflow-wrap: anywhere;
+    pointer-events: none;
+}
+
+.title-tooltip-popover[hidden] {
+    display: none;
+}
+
+.title-tooltip-popover::after {
+    content: "";
+    position: absolute;
+    left: var(--title-tooltip-arrow-left, 50%);
+    width: 8px;
+    height: 8px;
+    background: rgba(17, 24, 39, 0.96);
+    transform: translateX(-50%) rotate(45deg);
+}
+
+.title-tooltip-popover[data-placement="top"]::after {
+    bottom: -4px;
+    border-right: 1px solid rgba(255, 255, 255, 0.12);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.12);
+}
+
+.title-tooltip-popover[data-placement="bottom"]::after {
+    top: -4px;
+    border-top: 1px solid rgba(255, 255, 255, 0.12);
+    border-left: 1px solid rgba(255, 255, 255, 0.12);
+}
