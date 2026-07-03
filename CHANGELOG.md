@@ -2,6 +2,9 @@
 
 ## Development
 
+* 2026-07-03 -- 1.5.7 Code Cleanup
+  * HTML, CSS Code Cleanup
+
 * 2026-07-03 -- 1.5.6 Tooltip Tap Support
   * Added click/tap popup fallback for title tooltips on mobile and desktop
 

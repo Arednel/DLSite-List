@@ -115,20 +115,6 @@
     text-align: center
 }
 
-.dark-mode .product-form-page html {
-    height: 100%
-}
-
-.dark-mode .product-form-page body {
-    background-color: #121212;
-    font-family: Verdana, Arial;
-    font-size: 11px;
-    height: 100%;
-    margin: 0;
-    text-align: center;
-    -webkit-text-size-adjust: 100%
-}
-
 .dark-mode .product-form-page #product-form-container {
     margin-bottom: 0;
     margin-left: auto;
@@ -249,10 +235,6 @@
     padding: 0
 }
 
-.dark-mode .dark-mode .product-form-page .form-control {
-    background-color: #333
-}
-
 .dark-mode #dialog {
     border: 10px solid #353535;
     margin: 10px auto;
@@ -266,15 +248,6 @@
 
 .dark-mode #dialog td td {
     border-width: 0
-}
-
-.dark-mode .dark-mode #dialog {
-    background-color: #222;
-    border: 10px solid #222 !important
-}
-
-.dark-mode .dark-mode #dialog td {
-    border: none !important
 }
 
 .dark-mode #contentWrapper {
@@ -300,20 +273,6 @@ body.product-form-page {
     font-size: 11px;
     margin: 0;
     text-align: center
-}
-
-.product-form-page html {
-    height: 100%
-}
-
-.product-form-page body {
-    background-color: #fff;
-    font-family: Verdana, Arial;
-    font-size: 11px;
-    height: 100%;
-    margin: 0;
-    text-align: center;
-    -webkit-text-size-adjust: 100%
 }
 
 .product-form-page #product-form-container {
@@ -525,6 +484,15 @@ body.product-form-page {
 #contentWrapper {
     margin-bottom: 0
 }
+
+.product-form-page #content,
+.dark-mode .product-form-page #content,
+.product-form-page .form-page-title,
+.dark-mode .product-form-page .form-page-title {
+    box-sizing: border-box;
+    width: 100%;
+}
+
 
 .form-button.danger {
     background-color: #e74c3c !important;
