@@ -267,7 +267,6 @@ final class ProductIndexResults
                 ->whereIn('genre_product.product_id', $productIds)
                 ->where(VisibleGenreAttachment::query())
                 ->where('genres.hidden_on_index', false)
-                ->orderBy('genres.order')
                 ->orderBy('genres.title')
                 ->orderBy('genres.id');
 
@@ -305,9 +304,11 @@ final class ProductIndexResults
             ->where('genres.hidden_on_index', false)
             ->where('genre_groups.hidden_on_index', false)
             ->orderBy('genre_groups.order')
-            ->orderBy('genre_group_genre.order')
             ->orderBy('genre_groups.title')
-            ->orderBy('genres.title');
+            ->orderBy('genre_groups.id')
+            ->orderBy('genre_group_genre.order')
+            ->orderBy('genres.title')
+            ->orderBy('genres.id');
 
         if ($hasHiddenGroups) {
             $this->excludeGenresInHiddenGroups($groupedQuery);
@@ -352,8 +353,8 @@ final class ProductIndexResults
                     ->from('genre_group_genre')
                     ->whereColumn('genre_group_genre.genre_id', 'genres.id');
             })
-            ->orderBy('genres.order')
             ->orderBy('genres.title')
+            ->orderBy('genres.id')
             ->get($ungroupedSelect);
 
         $genres = $groupedGenres->concat($ungroupedGenres);

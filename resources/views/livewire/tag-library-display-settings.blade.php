@@ -11,7 +11,7 @@
             <input type="checkbox" wire:model.live="indexGroupOrderingEnabled">
             <span>Enable group ordering on Index</span>
             <i class="fa-solid fa-circle-question"
-                title="When enabled, Index tag chips use saved group and membership order instead of plain tag order and title."></i>
+                title="When enabled, Index tag chips use saved group order, saved tag order inside groups, then ungrouped tags alphabetically."></i>
         </label>
 
         <fieldset class="option-fieldset">

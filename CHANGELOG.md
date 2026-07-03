@@ -2,6 +2,9 @@
 
 ## Development
 
+* 2026-07-03 -- 1.5.5 Index tag ordering Fix
+  * Fixed Index group ordering so grouped tags keep saved group/tag order while ungrouped tags sort alphabetically
+
 * 2026-07-02 -- 1.5.4 Tag Colors & Edit Form Update
   * Added tag and tag-group background/font colors with configurable display surfaces for Index, Tag Library, autocomplete, Edit readonly tags, and Refetch review
   * Improved Edit/Add form metadata layout with compact Age, placeholders, readonly div-style fields, configurable readonly titles, and tighter tag help icons

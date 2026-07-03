@@ -19,7 +19,7 @@ class TagLibraryDisplaySettingsTest extends TestCase
             ->assertSee('Enable group ordering on Index')
             ->assertSee('Tag color surfaces')
             ->assertSee('When enabled, Tag Library opens with the All Tags list expanded instead of collapsed.')
-            ->assertSee('When enabled, Index tag chips use saved group and membership order instead of plain tag order and title.')
+            ->assertSee('When enabled, Index tag chips use saved group order, saved tag order inside groups, then ungrouped tags alphabetically.')
             ->assertDontSee('option-setting-description', false)
             ->html();
 

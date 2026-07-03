@@ -662,7 +662,7 @@ class ProductIndexLivewireTest extends TestCase
             ->assertDontSee('genre=' . $currentGenre->getKey() . '&amp;genre=', false);
     }
 
-    public function test_index_tag_chips_default_to_plain_tag_order_without_group_ordering(): void
+    public function test_index_tag_chips_default_to_alphabetical_order_without_group_ordering(): void
     {
         Option::setIndexFieldLayout([
             ['field' => ProductField::Tags->value, 'visible' => true],
@@ -679,40 +679,40 @@ class ProductIndexLivewireTest extends TestCase
             'description' => null,
             'order' => 2,
         ]);
-        $earlyTagInSecondGroup = Genre::query()->create([
-            'title' => 'TAG_PLAIN_ORDER_FIRST',
+        $alphaGroupedTag = Genre::query()->create([
+            'title' => 'TAG_PLAIN_ORDER_ALPHA_GROUPED',
+            'description' => null,
+            'order' => 9,
+        ]);
+        $middleUngroupedTag = Genre::query()->create([
+            'title' => 'TAG_PLAIN_ORDER_MIDDLE_UNGROUPED',
             'description' => null,
             'order' => 1,
         ]);
-        $middleUngroupedTag = Genre::query()->create([
-            'title' => 'TAG_PLAIN_ORDER_UNGROUPED',
+        $zuluGroupedTag = Genre::query()->create([
+            'title' => 'TAG_PLAIN_ORDER_ZZZ_GROUPED',
             'description' => null,
             'order' => 2,
         ]);
-        $lateTagInFirstGroup = Genre::query()->create([
-            'title' => 'TAG_PLAIN_ORDER_LAST',
-            'description' => null,
-            'order' => 3,
-        ]);
-        $this->attachTagToGroup($secondGroup, $earlyTagInSecondGroup, 10);
-        $this->attachTagToGroup($firstGroup, $lateTagInFirstGroup, 1);
+        $this->attachTagToGroup($secondGroup, $alphaGroupedTag, 10);
+        $this->attachTagToGroup($firstGroup, $zuluGroupedTag, 1);
 
         app(ProductGenreSync::class)->syncCustom($product, [
-            $lateTagInFirstGroup->getKey(),
+            $zuluGroupedTag->getKey(),
             $middleUngroupedTag->getKey(),
-            $earlyTagInSecondGroup->getKey(),
+            $alphaGroupedTag->getKey(),
         ]);
 
         Livewire::test(ProductIndex::class)
             ->assertSeeInOrder([
                 'TAG_PLAIN_ORDER_WORK',
-                'TAG_PLAIN_ORDER_FIRST',
-                'TAG_PLAIN_ORDER_UNGROUPED',
-                'TAG_PLAIN_ORDER_LAST',
+                'TAG_PLAIN_ORDER_ALPHA_GROUPED',
+                'TAG_PLAIN_ORDER_MIDDLE_UNGROUPED',
+                'TAG_PLAIN_ORDER_ZZZ_GROUPED',
             ]);
     }
 
-    public function test_index_tag_chips_follow_group_and_tag_order_with_ungrouped_last_when_enabled(): void
+    public function test_index_tag_chips_follow_group_order_and_tag_order_with_ungrouped_alphabetical_when_enabled(): void
     {
         Option::setIndexFieldLayout([
             ['field' => ProductField::Tags->value, 'visible' => true],
@@ -730,8 +730,13 @@ class ProductIndexLivewireTest extends TestCase
             'description' => null,
             'order' => 1,
         ]);
-        $ungrouped = Genre::query()->create([
-            'title' => 'TAG_ORDER_UNGROUPED',
+        $alphaUngrouped = Genre::query()->create([
+            'title' => 'TAG_ORDER_ALPHA_UNGROUPED',
+            'description' => null,
+            'order' => 9,
+        ]);
+        $zuluUngrouped = Genre::query()->create([
+            'title' => 'TAG_ORDER_ZZZ_UNGROUPED',
             'description' => null,
             'order' => 1,
         ]);
@@ -762,7 +767,8 @@ class ProductIndexLivewireTest extends TestCase
         $this->attachTagToGroup($secondGroup, $multiGroupTag, 0);
 
         app(ProductGenreSync::class)->syncCustom($product, [
-            $ungrouped->getKey(),
+            $zuluUngrouped->getKey(),
+            $alphaUngrouped->getKey(),
             $firstGroupSecondTag->getKey(),
             $firstGroupFirstTag->getKey(),
             $secondGroupTag->getKey(),
@@ -776,13 +782,54 @@ class ProductIndexLivewireTest extends TestCase
                 'TAG_ORDER_FIRST_GROUP_SECOND',
                 'TAG_ORDER_MULTI_GROUP',
                 'TAG_ORDER_SECOND_GROUP',
-                'TAG_ORDER_UNGROUPED',
+                'TAG_ORDER_ALPHA_UNGROUPED',
+                'TAG_ORDER_ZZZ_UNGROUPED',
             ]);
 
         $this->assertSame(1, substr_count($component->html(), 'TAG_ORDER_MULTI_GROUP'));
     }
 
-    public function test_index_tag_chips_use_group_title_to_break_equal_group_and_pivot_order_ties(): void
+    public function test_index_group_ordering_keeps_saved_tag_order_within_group(): void
+    {
+        Option::setIndexFieldLayout([
+            ['field' => ProductField::Tags->value, 'visible' => true],
+        ]);
+        Option::setTagLibraryIndexGroupOrderingEnabled(true);
+
+        $product = $this->createProduct(1, ['work_name' => 'TAG_ALPHA_ORDER_WORK']);
+        $group = GenreGroup::query()->create([
+            'title' => 'Alphabetical Group',
+            'description' => null,
+            'order' => 1,
+        ]);
+        $firstTag = Genre::query()->create([
+            'title' => 'Zzz Ordered First Tag',
+            'description' => null,
+            'order' => 1,
+        ]);
+        $secondTag = Genre::query()->create([
+            'title' => 'Alpha Ordered Second Tag',
+            'description' => null,
+            'order' => 1,
+        ]);
+
+        $this->attachTagToGroup($group, $firstTag, 1);
+        $this->attachTagToGroup($group, $secondTag, 2);
+
+        app(ProductGenreSync::class)->syncCustom($product, [
+            $secondTag->getKey(),
+            $firstTag->getKey(),
+        ]);
+
+        Livewire::test(ProductIndex::class)
+            ->assertSeeInOrder([
+                'TAG_ALPHA_ORDER_WORK',
+                'Zzz Ordered First Tag',
+                'Alpha Ordered Second Tag',
+            ]);
+    }
+
+    public function test_index_tag_chips_use_group_title_to_break_equal_group_order_ties(): void
     {
         Option::setIndexFieldLayout([
             ['field' => ProductField::Tags->value, 'visible' => true],
