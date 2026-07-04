@@ -37,7 +37,8 @@ final class ProductIndexResults
         're_listen_value' => ['re_listen_value'],
         'priority' => ['priority'],
         'circle' => ['circle', 'maker_id'],
-        'description' => ['description', 'description_english'],
+        'description_japanese' => ['description'],
+        'description_english' => ['description_english'],
     ];
 
     private const DISPLAY_VALUE_FIELDS = [
@@ -57,7 +58,7 @@ final class ProductIndexResults
         $query = $this->filteredQuery(
             $filters,
             $this->indexColumns($visibleFields),
-            $this->includeDescriptionsInSearch($visibleFields, $searchHiddenDescriptionsEnabled),
+            $this->descriptionSearchColumns($visibleFields, $searchHiddenDescriptionsEnabled),
         );
         $query = $this->applySqlSorting($query, $filters->sorts());
 
@@ -69,9 +70,9 @@ final class ProductIndexResults
     public function containsProduct(
         ProductIndexFilters $filters,
         Product $product,
-        bool $includeDescriptionsInSearch,
+        array $descriptionSearchColumns,
     ): bool {
-        return $this->filteredQuery($filters, null, $includeDescriptionsInSearch)
+        return $this->filteredQuery($filters, null, $descriptionSearchColumns)
             ->whereKey($product->getKey())
             ->exists();
     }
@@ -81,13 +82,13 @@ final class ProductIndexResults
         Product $product,
         int|string $perPage,
         int $page,
-        bool $includeDescriptionsInSearch,
+        array $descriptionSearchColumns,
     ): bool {
         if ($perPage === Option::INDEX_PER_PAGE_UNLIMITED) {
-            return $this->containsProduct($filters, $product, $includeDescriptionsInSearch);
+            return $this->containsProduct($filters, $product, $descriptionSearchColumns);
         }
 
-        return $this->applySqlSorting($this->filteredQuery($filters, null, $includeDescriptionsInSearch), $filters->sorts())
+        return $this->applySqlSorting($this->filteredQuery($filters, null, $descriptionSearchColumns), $filters->sorts())
             ->forPage(max(1, $page), max(1, (int) $perPage))
             ->pluck('id')
             ->containsStrict((string) $product->getKey());
@@ -97,13 +98,13 @@ final class ProductIndexResults
         ProductIndexFilters $filters,
         Product $product,
         int|string $perPage,
-        bool $includeDescriptionsInSearch,
+        array $descriptionSearchColumns,
     ): ?int {
         if ($perPage === Option::INDEX_PER_PAGE_UNLIMITED) {
             return null;
         }
 
-        $position = $this->applySqlSorting($this->filteredQuery($filters, null, $includeDescriptionsInSearch), $filters->sorts())
+        $position = $this->applySqlSorting($this->filteredQuery($filters, null, $descriptionSearchColumns), $filters->sorts())
             ->pluck('id')
             ->search((string) $product->getKey(), true);
 
@@ -115,28 +116,41 @@ final class ProductIndexResults
     public function lastPage(
         ProductIndexFilters $filters,
         int|string $perPage,
-        bool $includeDescriptionsInSearch,
+        array $descriptionSearchColumns,
     ): ?int {
         if ($perPage === Option::INDEX_PER_PAGE_UNLIMITED) {
             return null;
         }
 
         $perPage = max(1, (int) $perPage);
-        $total = $this->filteredQuery($filters, null, $includeDescriptionsInSearch)->count();
+        $total = $this->filteredQuery($filters, null, $descriptionSearchColumns)->count();
 
         return max(1, (int) ceil($total / $perPage));
     }
 
-    public function includeDescriptionsInSearch(array $visibleFields, bool $searchHiddenDescriptionsEnabled): bool
+    public function descriptionSearchColumns(array $visibleFields, bool $searchHiddenDescriptionsEnabled): array
     {
-        return $searchHiddenDescriptionsEnabled
-            || in_array(ProductField::Description->value, $visibleFields, true);
+        if ($searchHiddenDescriptionsEnabled) {
+            return ['description', 'description_english'];
+        }
+
+        $columns = [];
+
+        if (in_array(ProductField::DescriptionJapanese->value, $visibleFields, true)) {
+            $columns[] = 'description';
+        }
+
+        if (in_array(ProductField::DescriptionEnglish->value, $visibleFields, true)) {
+            $columns[] = 'description_english';
+        }
+
+        return $columns;
     }
 
     private function filteredQuery(
         ProductIndexFilters $filters,
         ?array $columns = null,
-        bool $includeDescriptionsInSearch = false,
+        array $descriptionSearchColumns = [],
     ): Builder {
         return Product::query()
             ->select($columns ?? ['id'])
@@ -179,6 +193,10 @@ final class ProductIndexResults
             ->when(
                 $filters->description !== '',
                 fn($query) => $query->filterDescription($filters->description)
+            )
+            ->when(
+                $filters->descriptionEnglish !== '',
+                fn($query) => $query->filterDescriptionEnglish($filters->descriptionEnglish)
             )
             ->when(
                 $filters->title !== '',
@@ -245,7 +263,7 @@ final class ProductIndexResults
             )
             ->when(
                 $filters->search !== '',
-                fn($query) => $query->searchIndex($filters->search, $includeDescriptionsInSearch)
+                fn($query) => $query->searchIndex($filters->search, $descriptionSearchColumns)
             );
     }
 

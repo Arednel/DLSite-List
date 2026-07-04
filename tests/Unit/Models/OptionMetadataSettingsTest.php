@@ -79,7 +79,9 @@ class OptionMetadataSettingsTest extends TestCase
     public function test_field_layouts_are_normalized_when_saved(): void
     {
         Option::setIndexFieldLayout([
-            ['field' => ProductField::Description->value, 'visible' => true],
+            ['field' => 'description', 'visible' => true],
+            ['field' => ProductField::DescriptionJapanese->value, 'visible' => true],
+            ['field' => ProductField::DescriptionEnglish->value, 'visible' => false],
             ['field' => ProductField::Score->value, 'visible' => false],
         ]);
 
@@ -90,10 +92,13 @@ class OptionMetadataSettingsTest extends TestCase
         $this->assertSame(ProductField::Title->value, $layout[1]['field']);
         $this->assertTrue($layout[1]['visible']);
         $this->assertTrue($layout[1]['visibility_locked']);
-        $this->assertSame(ProductField::Description->value, $layout[2]['field']);
+        $this->assertSame(ProductField::DescriptionJapanese->value, $layout[2]['field']);
         $this->assertTrue($layout[2]['visible']);
-        $this->assertSame(ProductField::Score->value, $layout[3]['field']);
+        $this->assertSame(ProductField::DescriptionEnglish->value, $layout[3]['field']);
         $this->assertFalse($layout[3]['visible']);
+        $this->assertSame(ProductField::Score->value, $layout[4]['field']);
+        $this->assertFalse($layout[4]['visible']);
+        $this->assertNotContains('description', collect($layout)->pluck('field')->all());
         $this->assertContains(ProductField::Tags->value, collect($layout)->pluck('field')->all());
         $this->assertSame(
             'Notes are already shown inside Title; enable this for a separate column.',
@@ -175,7 +180,8 @@ class OptionMetadataSettingsTest extends TestCase
 
         Option::setIndexPerPage(250);
         Option::setIndexFieldLayout([
-            ['field' => ProductField::Description->value, 'visible' => true],
+            ['field' => ProductField::DescriptionJapanese->value, 'visible' => true],
+            ['field' => ProductField::DescriptionEnglish->value, 'visible' => true],
             ['field' => ProductField::Score->value, 'visible' => false],
         ]);
         Option::setFilterFieldLayout([
@@ -200,8 +206,10 @@ class OptionMetadataSettingsTest extends TestCase
         $settings = Option::productIndexSettings();
 
         $this->assertSame(250, $settings->perPage);
-        $this->assertSame(ProductField::Description->value, $settings->indexColumns[2]['field']);
-        $this->assertContains(ProductField::Description->value, $settings->visibleIndexFields);
+        $this->assertSame(ProductField::DescriptionJapanese->value, $settings->indexColumns[2]['field']);
+        $this->assertSame(ProductField::DescriptionEnglish->value, $settings->indexColumns[3]['field']);
+        $this->assertContains(ProductField::DescriptionJapanese->value, $settings->visibleIndexFields);
+        $this->assertContains(ProductField::DescriptionEnglish->value, $settings->visibleIndexFields);
         $this->assertNotContains(ProductField::Score->value, $settings->visibleIndexFields);
         $filterFieldIds = collect($settings->filterFields)->pluck('field')->all();
 

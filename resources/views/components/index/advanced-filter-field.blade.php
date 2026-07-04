@@ -58,11 +58,19 @@
         </div>
     @break
 
-    @case('description')
-        <div class="filter-widget description">
-            <label class="widget-header" for="filter_description">Description</label>
+    @case('description_japanese')
+        <div class="filter-widget description-japanese">
+            <label class="widget-header" for="filter_description">Japanese Description</label>
             <input id="filter_description" type="text" name="description" wire:model="draft.description"
-                placeholder="Description text">
+                placeholder="Japanese description text">
+        </div>
+    @break
+
+    @case('description_english')
+        <div class="filter-widget description-english">
+            <label class="widget-header" for="filter_description_english">English Description</label>
+            <input id="filter_description_english" type="text" name="description_english"
+                wire:model="draft.description_english" placeholder="English description text">
         </div>
     @break
 

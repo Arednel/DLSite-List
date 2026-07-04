@@ -102,7 +102,8 @@ class ProductIndexFiltersTest extends TestCase
             'voice_actor' => 'Voice Token',
             'illustration' => 'Illustration Token',
             'author' => 'Author Token',
-            'description' => 'Description Token',
+            'description' => 'Japanese Description Token',
+            'description_english' => 'English Description Token',
         ]);
 
         $this->assertSame('Circle Token', $filters->circle);
@@ -110,14 +111,16 @@ class ProductIndexFiltersTest extends TestCase
         $this->assertSame('Voice Token', $filters->voiceActor);
         $this->assertSame('Illustration Token', $filters->illustration);
         $this->assertSame('Author Token', $filters->author);
-        $this->assertSame('Description Token', $filters->description);
+        $this->assertSame('Japanese Description Token', $filters->description);
+        $this->assertSame('English Description Token', $filters->descriptionEnglish);
         $this->assertSame([
             'circle' => 'Circle Token',
             'scenario' => 'Scenario Token',
             'voice_actor' => 'Voice Token',
             'illustration' => 'Illustration Token',
             'author' => 'Author Token',
-            'description' => 'Description Token',
+            'description' => 'Japanese Description Token',
+            'description_english' => 'English Description Token',
         ], array_intersect_key($filters->toInput(), array_flip([
             'circle',
             'scenario',
@@ -125,6 +128,7 @@ class ProductIndexFiltersTest extends TestCase
             'illustration',
             'author',
             'description',
+            'description_english',
         ])));
         $this->assertSame([
             'circle' => 'Circle Token',
@@ -132,7 +136,8 @@ class ProductIndexFiltersTest extends TestCase
             'voice_actor' => 'Voice Token',
             'illustration' => 'Illustration Token',
             'author' => 'Author Token',
-            'description' => 'Description Token',
+            'description' => 'Japanese Description Token',
+            'description_english' => 'English Description Token',
         ], $filters->toQuery());
     }
 
@@ -158,6 +163,7 @@ class ProductIndexFiltersTest extends TestCase
             ['illustration'],
             ['author'],
             ['description'],
+            ['description_english'],
             ['tags', 'tag_match'],
             ['age_category'],
             ['progress'],

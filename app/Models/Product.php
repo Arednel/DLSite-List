@@ -178,11 +178,17 @@ class Product extends Model
     #[Scope]
     protected function filterDescription(Builder $query, string $description): void
     {
-        $query->whereAny(['description', 'description_english'], 'like', '%' . trim($description) . '%');
+        $query->whereLike('description', '%' . trim($description) . '%');
     }
 
     #[Scope]
-    protected function searchIndex(Builder $query, string $search, bool $includeDescriptions): void
+    protected function filterDescriptionEnglish(Builder $query, string $description): void
+    {
+        $query->whereLike('description_english', '%' . trim($description) . '%');
+    }
+
+    #[Scope]
+    protected function searchIndex(Builder $query, string $search, array $descriptionColumns = []): void
     {
         $search = '%' . trim($search) . '%';
         $columns = [
@@ -194,9 +200,10 @@ class Product extends Model
             'circle',
         ];
 
-        if ($includeDescriptions) {
-            array_push($columns, 'description', 'description_english');
-        }
+        array_push($columns, ...array_values(array_intersect(
+            ['description', 'description_english'],
+            $descriptionColumns,
+        )));
 
         $query->where(function (Builder $searchQuery) use ($columns, $search): void {
             $searchQuery->whereAny($columns, 'like', $search)

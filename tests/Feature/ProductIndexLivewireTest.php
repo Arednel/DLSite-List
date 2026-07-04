@@ -403,7 +403,8 @@ class ProductIndexLivewireTest extends TestCase
                 ProductField::Illustration->value,
                 ProductField::VoiceActor->value,
                 ProductField::Author->value,
-                ProductField::Description->value,
+                ProductField::DescriptionJapanese->value,
+                ProductField::DescriptionEnglish->value,
                 ProductField::Tags->value,
             ],
         );
@@ -438,30 +439,34 @@ class ProductIndexLivewireTest extends TestCase
         $this->assertArrayNotHasKey('end_date_sort', $attributes);
     }
 
-    public function test_index_field_layout_can_show_hidden_description_and_reorder_columns(): void
+    public function test_index_field_layout_can_show_split_hidden_descriptions_and_reorder_columns(): void
     {
         $this->createProduct(1, [
             'work_name' => 'FIELD_LAYOUT_VISIBLE_WORK',
-            'description' => 'FIELD_LAYOUT_VISIBLE_DESCRIPTION',
+            'description' => 'FIELD_LAYOUT_VISIBLE_JP_DESCRIPTION',
+            'description_english' => 'FIELD_LAYOUT_VISIBLE_EN_DESCRIPTION',
         ]);
 
         Option::setIndexFieldLayout([
-            ['field' => 'description', 'visible' => true],
-            ['field' => 'score', 'visible' => false],
-            ['field' => 'tags', 'visible' => true],
+            ['field' => ProductField::DescriptionEnglish->value, 'visible' => true],
+            ['field' => ProductField::DescriptionJapanese->value, 'visible' => true],
+            ['field' => ProductField::Score->value, 'visible' => false],
+            ['field' => ProductField::Tags->value, 'visible' => true],
         ]);
 
         $products = app(ProductIndexResults::class)->getProducts(
             new ProductIndexFilters,
             Option::INDEX_PER_PAGE_UNLIMITED,
-            ['description'],
+            [ProductField::DescriptionJapanese->value, ProductField::DescriptionEnglish->value],
         );
 
         $this->assertArrayHasKey('description', $products->first()->getAttributes());
+        $this->assertArrayHasKey('description_english', $products->first()->getAttributes());
 
         Livewire::test(ProductIndex::class)
-            ->assertSee('FIELD_LAYOUT_VISIBLE_DESCRIPTION')
-            ->assertSeeInOrder(['Description', 'Tags', 'Series']);
+            ->assertSee('FIELD_LAYOUT_VISIBLE_JP_DESCRIPTION')
+            ->assertSee('FIELD_LAYOUT_VISIBLE_EN_DESCRIPTION')
+            ->assertSeeInOrder(['English Description', 'Japanese Description', 'Tags', 'Series']);
     }
 
     public function test_index_layout_can_hide_image_while_title_stays_locked_visible(): void
@@ -1283,7 +1288,7 @@ class ProductIndexLivewireTest extends TestCase
         ]);
         Option::setIndexPerPage(25);
         Option::setIndexFieldLayout([
-            ['field' => ProductField::Description->value, 'visible' => true],
+            ['field' => ProductField::DescriptionJapanese->value, 'visible' => true],
         ]);
         Option::setFilterFieldLayout([
             ['field' => ProductField::Priority->value, 'visible' => true],
@@ -1333,7 +1338,8 @@ class ProductIndexLivewireTest extends TestCase
     public function test_general_search_ignores_hidden_descriptions_by_default(): void
     {
         Option::setIndexFieldLayout([
-            ['field' => ProductField::Description->value, 'visible' => false],
+            ['field' => ProductField::DescriptionJapanese->value, 'visible' => false],
+            ['field' => ProductField::DescriptionEnglish->value, 'visible' => false],
         ]);
 
         $hiddenDescription = $this->createProduct(1, [
@@ -1352,54 +1358,85 @@ class ProductIndexLivewireTest extends TestCase
             ->assertDontSee($hiddenDescription->work_name);
     }
 
-    public function test_general_search_matches_descriptions_when_description_column_is_visible(): void
+    public function test_general_search_matches_only_visible_description_language_columns(): void
     {
         Option::setIndexFieldLayout([
-            ['field' => ProductField::Description->value, 'visible' => true],
+            ['field' => ProductField::DescriptionJapanese->value, 'visible' => true],
+            ['field' => ProductField::DescriptionEnglish->value, 'visible' => false],
         ]);
 
-        $product = $this->createProduct(1, [
-            'work_name' => 'VISIBLE_DESCRIPTION_SEARCH_WORK',
-            'description' => 'VISIBLE_DESCRIPTION_GENERAL_SEARCH_TOKEN',
+        $japaneseDescription = $this->createProduct(1, [
+            'work_name' => 'VISIBLE_JP_DESCRIPTION_SEARCH_WORK',
+            'description' => 'VISIBLE_JP_DESCRIPTION_GENERAL_SEARCH_TOKEN',
+            'description_english' => 'HIDDEN_EN_DESCRIPTION_GENERAL_SEARCH_TOKEN',
+        ]);
+        $englishDescription = $this->createProduct(2, [
+            'work_name' => 'HIDDEN_EN_DESCRIPTION_SEARCH_WORK',
+            'description' => 'Unrelated description',
+            'description_english' => 'VISIBLE_LANGUAGE_EN_ONLY_SEARCH_TOKEN',
         ]);
 
         Livewire::test(ProductIndex::class)
-            ->set('searchInput', 'VISIBLE_DESCRIPTION_GENERAL_SEARCH_TOKEN')
+            ->set('searchInput', 'VISIBLE_JP_DESCRIPTION_GENERAL_SEARCH_TOKEN')
             ->call('applySearch')
-            ->assertSee($product->work_name);
+            ->assertSee($japaneseDescription->work_name);
+
+        Livewire::test(ProductIndex::class)
+            ->set('searchInput', 'VISIBLE_LANGUAGE_EN_ONLY_SEARCH_TOKEN')
+            ->call('applySearch')
+            ->assertDontSee($englishDescription->work_name);
     }
 
     public function test_general_search_matches_hidden_descriptions_when_override_is_enabled(): void
     {
         Option::setIndexFieldLayout([
-            ['field' => ProductField::Description->value, 'visible' => false],
+            ['field' => ProductField::DescriptionJapanese->value, 'visible' => false],
+            ['field' => ProductField::DescriptionEnglish->value, 'visible' => false],
         ]);
         Option::setIndexSearchHiddenDescriptionsEnabled(true);
 
         $product = $this->createProduct(1, [
             'work_name' => 'OVERRIDE_DESCRIPTION_SEARCH_WORK',
             'description' => 'OVERRIDE_DESCRIPTION_GENERAL_SEARCH_TOKEN',
+            'description_english' => 'OVERRIDE_EN_DESCRIPTION_GENERAL_SEARCH_TOKEN',
         ]);
 
         Livewire::test(ProductIndex::class)
             ->set('searchInput', 'OVERRIDE_DESCRIPTION_GENERAL_SEARCH_TOKEN')
             ->call('applySearch')
             ->assertSee($product->work_name);
+
+        Livewire::test(ProductIndex::class)
+            ->set('searchInput', 'OVERRIDE_EN_DESCRIPTION_GENERAL_SEARCH_TOKEN')
+            ->call('applySearch')
+            ->assertSee($product->work_name);
     }
 
-    public function test_description_filter_matches_descriptions_when_index_description_column_is_hidden(): void
+    public function test_description_filters_match_each_language_when_index_description_columns_are_hidden(): void
     {
         Option::setIndexFieldLayout([
-            ['field' => ProductField::Description->value, 'visible' => false],
+            ['field' => ProductField::DescriptionJapanese->value, 'visible' => false],
+            ['field' => ProductField::DescriptionEnglish->value, 'visible' => false],
         ]);
 
-        $product = $this->createProduct(1, [
-            'work_name' => 'DESCRIPTION_FILTER_HIDDEN_COLUMN_WORK',
+        $japaneseDescription = $this->createProduct(1, [
+            'work_name' => 'JP_DESCRIPTION_FILTER_HIDDEN_COLUMN_WORK',
             'description' => 'DESCRIPTION_FILTER_HIDDEN_COLUMN_TOKEN',
+            'description_english' => 'Different English text',
+        ]);
+        $englishDescription = $this->createProduct(2, [
+            'work_name' => 'EN_DESCRIPTION_FILTER_HIDDEN_COLUMN_WORK',
+            'description' => 'Different Japanese text',
+            'description_english' => 'DESCRIPTION_EN_FILTER_HIDDEN_COLUMN_TOKEN',
         ]);
 
         Livewire::test(ProductIndex::class, ['description' => 'DESCRIPTION_FILTER_HIDDEN_COLUMN_TOKEN'])
-            ->assertSee($product->work_name);
+            ->assertSee($japaneseDescription->work_name)
+            ->assertDontSee($englishDescription->work_name);
+
+        Livewire::test(ProductIndex::class, ['description_english' => 'DESCRIPTION_EN_FILTER_HIDDEN_COLUMN_TOKEN'])
+            ->assertSee($englishDescription->work_name)
+            ->assertDontSee($japaneseDescription->work_name);
     }
 
     public function test_filter_changes_reset_pagination_to_first_page(): void

@@ -222,15 +222,21 @@
                                                     @endforelse
                                                 @break
 
-                                                @case('description')
+                                                @case('description_japanese')
                                                     <div class="description-cell">
                                                         @if ($product->description)
                                                             <div>{{ $product->description }}</div>
+                                                        @else
+                                                            -
                                                         @endif
+                                                    </div>
+                                                @break
+
+                                                @case('description_english')
+                                                    <div class="description-cell">
                                                         @if ($product->description_english)
                                                             <div>{{ $product->description_english }}</div>
-                                                        @endif
-                                                        @if (!$product->description && !$product->description_english)
+                                                        @else
                                                             -
                                                         @endif
                                                     </div>

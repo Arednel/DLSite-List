@@ -95,20 +95,33 @@
         @endif
     @break
 
-    @case('description')
+    @case('description_japanese')
         @if ($field['editable'])
             <tr>
-                <td width="130" class="form-table-cell">Description</td>
+                <td width="130" class="form-table-cell">Japanese Description</td>
                 <td class="form-table-cell">
                     <textarea id="description" name="description" class="form-control form-field-long" rows="4" cols="65"
                         placeholder="Japanese description">{{ old('description', $product->description) }}</textarea>
-                    <textarea id="description_english" name="description_english" class="form-control form-field-long margin-top-8"
-                        rows="4" cols="65" placeholder="English description">{{ old('description_english', $product->description_english) }}</textarea>
                 </td>
                 <td class="form-table-cell form-table-cell--long-spacer" aria-hidden="true"></td>
             </tr>
         @else
-            <x-fields.readonly-text label="Description" :value="$readonlyFieldValues['description'] ?? null" rows="5" />
+            <x-fields.readonly-text label="Japanese Description" :value="$readonlyFieldValues['description_japanese'] ?? null" rows="5" />
+        @endif
+    @break
+
+    @case('description_english')
+        @if ($field['editable'])
+            <tr>
+                <td width="130" class="form-table-cell">English Description</td>
+                <td class="form-table-cell">
+                    <textarea id="description_english" name="description_english" class="form-control form-field-long" rows="4"
+                        cols="65" placeholder="English description">{{ old('description_english', $product->description_english) }}</textarea>
+                </td>
+                <td class="form-table-cell form-table-cell--long-spacer" aria-hidden="true"></td>
+            </tr>
+        @else
+            <x-fields.readonly-text label="English Description" :value="$readonlyFieldValues['description_english'] ?? null" rows="5" />
         @endif
     @break
 

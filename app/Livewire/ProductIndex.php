@@ -44,6 +44,8 @@ class ProductIndex extends Component
 
     public string $description = '';
 
+    public string $description_english = '';
+
     public string $tags = '';
 
     public string $tag_match = '';

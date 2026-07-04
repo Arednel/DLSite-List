@@ -137,7 +137,7 @@ The `options` table stores app settings as scalar string values keyed by `option
 
 Current settings:
 - `index_per_page`: controls how many works the Index list renders per page
-- `index_search_hidden_descriptions_enabled`: controls whether general Index search can match descriptions when the Description column is hidden
+- `index_search_hidden_descriptions_enabled`: controls whether general Index search can match Japanese and English descriptions when their Index columns are hidden
 - `tag_autocomplete_order`: controls how tag autocomplete suggestions are ordered
 - `series_autocomplete_order`: controls how series autocomplete suggestions are ordered
 - `auto_series_from_title_name`: controls whether DLSite create fills an empty Series from `japanese.title_name`
@@ -194,7 +194,8 @@ Index field layout default order:
 - `illustration` hidden by default
 - `voice_actor` hidden by default
 - `author` hidden by default
-- `description` hidden by default
+- `description_japanese` hidden by default
+- `description_english` hidden by default
 - `tags`
 - `notes` hidden by default; Notes are already shown inside Title, and this row enables a separate column
 - `start_date` hidden by default
@@ -221,7 +222,8 @@ Edit form field layout default order:
 - `illustration` hidden by default
 - `voice_actor` hidden by default
 - `author` hidden by default
-- `description` hidden by default
+- `description_japanese` hidden by default
+- `description_english` hidden by default
 
 Filter modal field layout default order:
 - `title`
@@ -243,7 +245,8 @@ Filter modal field layout default order:
 - `illustration` hidden by default
 - `voice_actor` hidden by default
 - `author` hidden by default
-- `description` hidden by default
+- `description_japanese` hidden by default
+- `description_english` hidden by default
 
 Quick Add field layout default order:
 - `rj_code` locked visible
@@ -264,7 +267,8 @@ Quick Add field layout default order:
 - `illustration` hidden by default
 - `voice_actor` hidden by default
 - `author` hidden by default
-- `description` hidden by default
+- `description_japanese` hidden by default
+- `description_english` hidden by default
 
 Custom Quick Add field layout default order:
 - `rj_code` locked visible
@@ -287,7 +291,8 @@ Custom Quick Add field layout default order:
 - `illustration` hidden by default
 - `voice_actor` hidden by default
 - `author` hidden by default
-- `description` hidden by default
+- `description_japanese` hidden by default
+- `description_english` hidden by default
 
 Index sort field dropdown default order:
 - `rj`
@@ -314,9 +319,9 @@ The Index Sort Menu section appears after Index Filter Fields and uses the same 
 
 Create form layout note:
 - hidden Quick Add fields are not persisted from submitted form data
-- DLSite Create still keeps scraped DLSite metadata for hidden age, circle, creator, and description rows
+- DLSite Create still keeps scraped DLSite metadata for hidden age, circle, creator, Japanese description, and English description rows
 - visible DLSite Create metadata rows act as manual overrides when the user enters a value
-- visible Custom Quick Add metadata rows are saved directly because custom works have no scraped fallback
+- visible Custom Quick Add metadata rows are saved directly because custom works have no scraped fallback; hidden custom description language rows save `null`
 
 Index table width default:
 - `default`
@@ -345,10 +350,12 @@ Options reset behavior:
 - global reset does not change products, tags, refetch runs, legacy hidden fallback keys, or unrelated future option rows
 
 Index search defaults:
-- general Index search ignores descriptions while the Index Description column is hidden
-- showing the Index Description column makes general search include Japanese and English descriptions
-- enabling `Search hidden descriptions` makes general search include descriptions even while the column is hidden
-- the explicit Description filter always searches descriptions, regardless of Index column visibility
+- general Index search ignores Japanese and English descriptions while their Index columns are hidden
+- showing `description_japanese` makes general search include `products.description`
+- showing `description_english` makes general search include `products.description_english`
+- enabling `Search hidden descriptions` makes general search include both description columns even while both Index columns are hidden
+- the explicit Japanese Description filter uses the `description` query key and searches `products.description`
+- the explicit English Description filter uses the `description_english` query key and searches `products.description_english`
 
 Tag Library defaults:
 - collapsed by default

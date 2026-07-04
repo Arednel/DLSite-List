@@ -583,7 +583,8 @@ class PerformanceSmokeTest extends TestCase
             ProductField::Illustration,
             ProductField::VoiceActor,
             ProductField::Author,
-            ProductField::Description,
+            ProductField::DescriptionJapanese,
+            ProductField::DescriptionEnglish,
             ProductField::Tags,
         ])
             ->map(fn(ProductField $field): array => [

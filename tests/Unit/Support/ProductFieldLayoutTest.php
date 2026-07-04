@@ -23,7 +23,8 @@ class ProductFieldLayoutTest extends TestCase
                 ProductField::Illustration,
                 ProductField::VoiceActor,
                 ProductField::Author,
-                ProductField::Description,
+                ProductField::DescriptionJapanese,
+                ProductField::DescriptionEnglish,
                 ProductField::Tags,
                 ProductField::Notes,
                 ProductField::StartDate,
@@ -50,7 +51,8 @@ class ProductFieldLayoutTest extends TestCase
                 ProductField::Illustration,
                 ProductField::VoiceActor,
                 ProductField::Author,
-                ProductField::Description,
+                ProductField::DescriptionJapanese,
+                ProductField::DescriptionEnglish,
             ],
             ProductFieldLayout::SURFACE_FILTER => [
                 ProductField::Title,
@@ -72,7 +74,8 @@ class ProductFieldLayoutTest extends TestCase
                 ProductField::Illustration,
                 ProductField::VoiceActor,
                 ProductField::Author,
-                ProductField::Description,
+                ProductField::DescriptionJapanese,
+                ProductField::DescriptionEnglish,
             ],
             ProductFieldLayout::SURFACE_QUICK_ADD => [
                 ProductField::RjCode,
@@ -93,7 +96,8 @@ class ProductFieldLayoutTest extends TestCase
                 ProductField::Illustration,
                 ProductField::VoiceActor,
                 ProductField::Author,
-                ProductField::Description,
+                ProductField::DescriptionJapanese,
+                ProductField::DescriptionEnglish,
             ],
             ProductFieldLayout::SURFACE_CUSTOM_QUICK_ADD => [
                 ProductField::RjCode,
@@ -116,7 +120,8 @@ class ProductFieldLayoutTest extends TestCase
                 ProductField::Illustration,
                 ProductField::VoiceActor,
                 ProductField::Author,
-                ProductField::Description,
+                ProductField::DescriptionJapanese,
+                ProductField::DescriptionEnglish,
             ],
         ];
 
@@ -138,7 +143,8 @@ class ProductFieldLayoutTest extends TestCase
         $this->assertTrue(ProductField::AgeCategory->isHiddenByDefault(ProductFieldLayout::SURFACE_EDIT));
         $this->assertTrue(ProductField::AgeCategory->isHiddenByDefault(ProductFieldLayout::SURFACE_QUICK_ADD));
         $this->assertFalse(ProductField::AgeCategory->isHiddenByDefault(ProductFieldLayout::SURFACE_CUSTOM_QUICK_ADD));
-        $this->assertTrue(ProductField::Description->isHiddenByDefault(ProductFieldLayout::SURFACE_FILTER));
+        $this->assertTrue(ProductField::DescriptionJapanese->isHiddenByDefault(ProductFieldLayout::SURFACE_FILTER));
+        $this->assertTrue(ProductField::DescriptionEnglish->isHiddenByDefault(ProductFieldLayout::SURFACE_FILTER));
         $this->assertTrue(ProductField::StartDate->isHiddenByDefault(ProductFieldLayout::SURFACE_FILTER));
         $this->assertTrue(ProductField::Notes->isHiddenByDefault(ProductFieldLayout::SURFACE_INDEX));
     }
@@ -159,7 +165,8 @@ class ProductFieldLayoutTest extends TestCase
             ProductField::Illustration->value,
             ProductField::VoiceActor->value,
             ProductField::Author->value,
-            ProductField::Description->value,
+            ProductField::DescriptionJapanese->value,
+            ProductField::DescriptionEnglish->value,
             ProductField::Tags->value,
             ProductField::Notes->value,
             ProductField::StartDate->value,
@@ -208,7 +215,8 @@ class ProductFieldLayoutTest extends TestCase
             ProductField::Illustration->value,
             ProductField::VoiceActor->value,
             ProductField::Author->value,
-            ProductField::Description->value,
+            ProductField::DescriptionJapanese->value,
+            ProductField::DescriptionEnglish->value,
         ], collect($editLayout)->pluck('field')->all());
 
         $this->assertSame([
@@ -254,7 +262,8 @@ class ProductFieldLayoutTest extends TestCase
             ProductField::Illustration->value,
             ProductField::VoiceActor->value,
             ProductField::Author->value,
-            ProductField::Description->value,
+            ProductField::DescriptionJapanese->value,
+            ProductField::DescriptionEnglish->value,
         ], collect(ProductFieldLayout::normalize(null, ProductFieldLayout::SURFACE_FILTER))->pluck('field')->all());
 
         $this->assertSame([
@@ -305,7 +314,8 @@ class ProductFieldLayoutTest extends TestCase
             ProductField::Illustration->value,
             ProductField::VoiceActor->value,
             ProductField::Author->value,
-            ProductField::Description->value,
+            ProductField::DescriptionJapanese->value,
+            ProductField::DescriptionEnglish->value,
         ], collect($layout)->pluck('field')->all());
 
         $this->assertSame([
@@ -350,7 +360,8 @@ class ProductFieldLayoutTest extends TestCase
             ProductField::Illustration->value,
             ProductField::VoiceActor->value,
             ProductField::Author->value,
-            ProductField::Description->value,
+            ProductField::DescriptionJapanese->value,
+            ProductField::DescriptionEnglish->value,
         ], collect($layout)->pluck('field')->all());
 
         $this->assertSame([
@@ -420,21 +431,28 @@ class ProductFieldLayoutTest extends TestCase
             ['field' => 'voice_actor', 'visible' => true],
             ['field' => 'not_real', 'visible' => true],
             ['field' => 'description', 'visible' => true],
+            ['field' => ProductField::DescriptionJapanese->value, 'visible' => true],
+            ['field' => ProductField::DescriptionEnglish->value, 'visible' => true, 'editable' => true],
         ], ProductFieldLayout::SURFACE_EDIT);
 
         $this->assertSame('voice_actor', $layout[0]['field']);
         $this->assertFalse($layout[0]['visible']);
         $this->assertFalse($layout[0]['editable']);
-        $this->assertSame('description', $layout[1]['field']);
+        $this->assertSame(ProductField::DescriptionJapanese->value, $layout[1]['field']);
         $this->assertTrue($layout[1]['visible']);
         $this->assertFalse($layout[1]['editable']);
+        $this->assertSame(ProductField::DescriptionEnglish->value, $layout[2]['field']);
+        $this->assertTrue($layout[2]['visible']);
+        $this->assertTrue($layout[2]['editable']);
+        $this->assertNotContains('description', collect($layout)->pluck('field')->all());
         $this->assertContains(ProductField::Score->value, collect($layout)->pluck('field')->all());
     }
 
     public function test_index_columns_prepare_visible_rendering_metadata(): void
     {
         $columns = ProductFieldLayout::indexColumns([
-            ['field' => ProductField::Description->value, 'label' => 'Description', 'visible' => false],
+            ['field' => ProductField::DescriptionJapanese->value, 'label' => 'Japanese Description', 'visible' => false],
+            ['field' => ProductField::DescriptionEnglish->value, 'label' => 'English Description', 'visible' => true],
             ['field' => ProductField::Circle->value, 'label' => 'Circle', 'visible' => true],
             ['field' => ProductField::Score->value, 'label' => 'Score', 'visible' => true],
             ['field' => ProductField::StartDate->value, 'label' => 'Start Date', 'visible' => true],
@@ -442,6 +460,13 @@ class ProductFieldLayoutTest extends TestCase
         ]);
 
         $this->assertSame([
+            [
+                'field' => ProductField::DescriptionEnglish->value,
+                'label' => 'English Description',
+                'class' => 'description-english',
+                'sort_field' => null,
+                'contributor_role' => null,
+            ],
             [
                 'field' => ProductField::Circle->value,
                 'label' => 'Circle',
@@ -469,13 +494,21 @@ class ProductFieldLayoutTest extends TestCase
     public function test_edit_fields_prepare_visible_rendering_metadata(): void
     {
         $fields = ProductFieldLayout::editFields([
-            ['field' => ProductField::Description->value, 'label' => 'Description', 'visible' => false, 'editable' => true],
+            ['field' => ProductField::DescriptionJapanese->value, 'label' => 'Japanese Description', 'visible' => false, 'editable' => true],
+            ['field' => ProductField::DescriptionEnglish->value, 'label' => 'English Description', 'visible' => true, 'editable' => true],
             ['field' => ProductField::VoiceActor->value, 'label' => 'Voice Actor', 'visible' => true, 'editable' => true],
             ['field' => ProductField::Tags->value, 'label' => 'Tags', 'visible' => true, 'editable' => false, 'fetched_editable' => true],
             ['field' => 'not_real', 'label' => 'Broken', 'visible' => true, 'editable' => true],
         ]);
 
         $this->assertSame([
+            [
+                'field' => ProductField::DescriptionEnglish->value,
+                'label' => 'English Description',
+                'editable' => true,
+                'fetched_editable' => false,
+                'contributor_role' => null,
+            ],
             [
                 'field' => ProductField::VoiceActor->value,
                 'label' => 'Voice Actor',
@@ -496,13 +529,19 @@ class ProductFieldLayoutTest extends TestCase
     public function test_filter_fields_prepare_visible_rendering_metadata(): void
     {
         $fields = ProductFieldLayout::filterFields([
-            ['field' => ProductField::Description->value, 'label' => 'Description', 'visible' => false],
+            ['field' => ProductField::DescriptionJapanese->value, 'label' => 'Japanese Description', 'visible' => false],
+            ['field' => ProductField::DescriptionEnglish->value, 'label' => 'English Description', 'visible' => true],
             ['field' => ProductField::VoiceActor->value, 'label' => 'Voice Actor', 'visible' => true],
             ['field' => ProductField::AgeCategory->value, 'label' => 'Age', 'visible' => true],
             ['field' => 'not_real', 'label' => 'Broken', 'visible' => true],
         ]);
 
         $this->assertSame([
+            [
+                'field' => ProductField::DescriptionEnglish->value,
+                'label' => 'English Description',
+                'class' => 'description-english',
+            ],
             [
                 'field' => ProductField::VoiceActor->value,
                 'label' => 'Voice Actor',

@@ -256,7 +256,7 @@ class ProductMetadataSettingsTest extends TestCase
     {
         $component = Livewire::test(ProductFieldLayoutSettings::class);
 
-        $indexOrder = $this->moveFieldToPosition($component->get('indexOrder'), ProductField::Description, 0);
+        $indexOrder = $this->moveFieldToPosition($component->get('indexOrder'), ProductField::DescriptionJapanese, 0);
         $editOrder = $this->moveFieldToPosition($component->get('editOrder'), ProductField::Tags, 0);
         $filterOrder = $this->moveFieldToPosition($component->get('filterOrder'), ProductField::VoiceActor, 0);
         $quickAddOrder = $this->moveFieldToPosition($component->get('quickAddOrder'), ProductField::Priority, 1);
@@ -276,7 +276,7 @@ class ProductMetadataSettingsTest extends TestCase
             ->assertHasNoErrors()
             ->assertSet('saved', true);
 
-        $this->assertSame(ProductField::Description->value, Option::indexFieldLayout()[0]['field']);
+        $this->assertSame(ProductField::DescriptionJapanese->value, Option::indexFieldLayout()[0]['field']);
         $this->assertSame(ProductField::Tags->value, Option::editFieldLayout()[0]['field']);
         $this->assertSame(ProductField::VoiceActor->value, Option::filterFieldLayout()[0]['field']);
         $this->assertSame(ProductField::Priority->value, Option::quickAddFieldLayout()[1]['field']);
@@ -286,9 +286,9 @@ class ProductMetadataSettingsTest extends TestCase
     public function test_field_layout_component_moves_rows_and_preserves_field_keyed_state(): void
     {
         $component = Livewire::test(ProductFieldLayoutSettings::class)
-            ->set('indexFields.description.visible', true);
+            ->set('indexFields.description_japanese.visible', true);
 
-        $descriptionIndex = array_search(ProductField::Description->value, $component->get('indexOrder'), true);
+        $descriptionIndex = array_search(ProductField::DescriptionJapanese->value, $component->get('indexOrder'), true);
         $this->assertIsInt($descriptionIndex);
 
         $direction = $descriptionIndex === 0 ? 1 : -1;
@@ -296,16 +296,16 @@ class ProductMetadataSettingsTest extends TestCase
 
         $component
             ->call('move', 'indexOrder', $descriptionIndex, $direction)
-            ->assertSet('indexFields.description.visible', true)
-            ->assertSet("indexOrder.{$expectedIndex}", ProductField::Description->value)
+            ->assertSet('indexFields.description_japanese.visible', true)
+            ->assertSet("indexOrder.{$expectedIndex}", ProductField::DescriptionJapanese->value)
             ->call('save')
             ->assertHasNoErrors()
             ->assertSet('saved', true);
 
-        $descriptionRow = $this->layoutRow(Option::indexFieldLayout(), ProductField::Description);
+        $descriptionRow = $this->layoutRow(Option::indexFieldLayout(), ProductField::DescriptionJapanese);
 
         $this->assertTrue($descriptionRow['visible']);
-        $this->assertSame(ProductField::Description->value, Option::indexFieldLayout()[$expectedIndex]['field']);
+        $this->assertSame(ProductField::DescriptionJapanese->value, Option::indexFieldLayout()[$expectedIndex]['field']);
     }
 
     public function test_field_layout_component_ignores_invalid_move_requests(): void

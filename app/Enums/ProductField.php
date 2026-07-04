@@ -21,7 +21,8 @@ enum ProductField: string
     case Illustration = 'illustration';
     case VoiceActor = 'voice_actor';
     case Author = 'author';
-    case Description = 'description';
+    case DescriptionJapanese = 'description_japanese';
+    case DescriptionEnglish = 'description_english';
     case Tags = 'tags';
     case Notes = 'notes';
     case StartDate = 'start_date';
@@ -48,7 +49,8 @@ enum ProductField: string
             self::Illustration => 'Illustration Author',
             self::VoiceActor => 'Voice Actor',
             self::Author => 'Author',
-            self::Description => 'Description',
+            self::DescriptionJapanese => 'Japanese Description',
+            self::DescriptionEnglish => 'English Description',
             self::Tags => 'Tags',
             self::Notes => 'Notes',
             self::StartDate => 'Start Date',
@@ -175,7 +177,8 @@ enum ProductField: string
                     self::Illustration,
                     self::VoiceActor,
                     self::Author,
-                    self::Description,
+                    self::DescriptionJapanese,
+                    self::DescriptionEnglish,
                 ],
                 'visibility_locked' => [self::Title],
                 'hidden_by_default' => self::metadataFields(hiddenAgeCategory: true),
@@ -216,7 +219,8 @@ enum ProductField: string
                     self::Illustration,
                     self::VoiceActor,
                     self::Author,
-                    self::Description,
+                    self::DescriptionJapanese,
+                    self::DescriptionEnglish,
                 ],
                 'visibility_locked' => [],
                 'hidden_by_default' => [
@@ -249,7 +253,8 @@ enum ProductField: string
                     self::Illustration,
                     self::VoiceActor,
                     self::Author,
-                    self::Description,
+                    self::DescriptionJapanese,
+                    self::DescriptionEnglish,
                 ],
                 'visibility_locked' => [self::RjCode],
                 'hidden_by_default' => self::metadataFields(hiddenAgeCategory: true),
@@ -278,7 +283,8 @@ enum ProductField: string
                     self::Illustration,
                     self::VoiceActor,
                     self::Author,
-                    self::Description,
+                    self::DescriptionJapanese,
+                    self::DescriptionEnglish,
                 ],
                 'visibility_locked' => [
                     self::RjCode,
@@ -303,7 +309,8 @@ enum ProductField: string
                     self::Illustration,
                     self::VoiceActor,
                     self::Author,
-                    self::Description,
+                    self::DescriptionJapanese,
+                    self::DescriptionEnglish,
                     self::Tags,
                     self::Notes,
                     self::StartDate,
@@ -340,7 +347,8 @@ enum ProductField: string
             self::Illustration,
             self::VoiceActor,
             self::Author,
-            self::Description,
+            self::DescriptionJapanese,
+            self::DescriptionEnglish,
         ];
     }
 }

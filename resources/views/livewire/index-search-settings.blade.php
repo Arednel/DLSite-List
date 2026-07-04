@@ -4,7 +4,7 @@
             <input type="checkbox" wire:model.live="searchHiddenDescriptions">
             <span>Search hidden descriptions</span>
             <i class="fa-solid fa-circle-question"
-                title="When enabled, general Index search can match description text even when the Description column is hidden."></i>
+                title="When enabled, general Index search can match Japanese and English description text even when both description columns are hidden."></i>
         </label>
 
         <div class="option-actions option-actions--inline">

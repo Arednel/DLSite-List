@@ -317,7 +317,7 @@ class ProductController extends Controller
 
         $editFieldLayout = Option::editFieldLayout();
         $editableFields = ProductFieldLayout::editableFields($editFieldLayout);
-        $product->fill($this->updatePayload($request, $data, $editableFields));
+        $product->fill($this->updatePayload($request, $data, $editableFields, $product));
         $productFieldsChanged = $product->isDirty(self::VISIBILITY_AFFECTING_PRODUCT_FIELDS);
         $product->save();
         $contributorsChanged = $this->syncProductEditContributors($request, $product, $data, $editableFields);
@@ -408,17 +408,11 @@ class ProductController extends Controller
             ->all();
     }
 
-    private function readonlyDescription(Product $product): ?string
-    {
-        return collect([$product->description, $product->description_english])
-            ->filter(fn(mixed $value): bool => filled($value))
-            ->join("\n\n") ?: null;
-    }
-
     private function readonlyFieldValues(Product $product): array
     {
         return [
-            ProductField::Description->value => $this->readonlyDescription($product),
+            ProductField::DescriptionJapanese->value => $product->description,
+            ProductField::DescriptionEnglish->value => $product->description_english,
             ProductField::Notes->value => $product->notes,
             ProductField::StartDate->value => $this->readonlyDate($product->start_date),
             ProductField::FinishDate->value => $this->readonlyDate($product->end_date),
@@ -529,7 +523,7 @@ class ProductController extends Controller
             $request,
             $data,
             $visibleFields,
-            ProductField::Description,
+            ProductField::DescriptionJapanese,
             'description',
             $workData->description,
         );
@@ -537,7 +531,7 @@ class ProductController extends Controller
             $request,
             $data,
             $visibleFields,
-            ProductField::Description,
+            ProductField::DescriptionEnglish,
             'description_english',
             $workData->englishDescription,
         );
@@ -601,12 +595,15 @@ class ProductController extends Controller
         array $data,
         array $visibleFields,
     ): array {
-        if (! $this->createFieldVisible($visibleFields, ProductField::Description)) {
-            return [null, null];
-        }
-
-        $description = $request->wasSubmitted('description') ? ($data['description'] ?? null) : null;
-        $englishDescription = $request->wasSubmitted('description_english')
+        $description = $this->createFieldSubmitted($request, $visibleFields, ProductField::DescriptionJapanese, 'description')
+            ? ($data['description'] ?? null)
+            : null;
+        $englishDescription = $this->createFieldSubmitted(
+            $request,
+            $visibleFields,
+            ProductField::DescriptionEnglish,
+            'description_english'
+        )
             ? ($data['description_english'] ?? null)
             : null;
 
@@ -714,8 +711,12 @@ class ProductController extends Controller
             ->all();
     }
 
-    private function updatePayload(UpdateProductRequest $request, array $data, array $editableFields): array
-    {
+    private function updatePayload(
+        UpdateProductRequest $request,
+        array $data,
+        array $editableFields,
+        Product $product,
+    ): array {
         $payload = [];
 
         if (
@@ -728,6 +729,13 @@ class ProductController extends Controller
             ];
         }
 
+        $japaneseDescriptionForDuplicateCheck = $this->effectiveJapaneseDescriptionForUpdate(
+            $request,
+            $data,
+            $editableFields,
+            $product,
+        );
+
         foreach ($this->updatePayloadFieldMap() as $field => $submittedColumns) {
             if (
                 ! in_array($field, $editableFields, true)
@@ -738,7 +746,7 @@ class ProductController extends Controller
 
             $payload = [
                 ...$payload,
-                ...$this->updatePayloadForField($field, $data, $submittedColumns),
+                ...$this->updatePayloadForField($field, $data, $submittedColumns, $japaneseDescriptionForDuplicateCheck),
             ];
         }
 
@@ -759,7 +767,8 @@ class ProductController extends Controller
                 'circle' => 'circle',
                 'maker_id' => 'maker_id',
             ],
-            ProductField::Description->value => ['description' => 'description', 'description_english' => 'description_english'],
+            ProductField::DescriptionJapanese->value => ['description' => 'description'],
+            ProductField::DescriptionEnglish->value => ['description_english' => 'description_english'],
             ProductField::Notes->value => ['notes' => 'notes'],
             ProductField::StartDate->value => ['add.start_date' => 'start_date'],
             ProductField::FinishDate->value => ['add.finish_date' => 'end_date'],
@@ -772,10 +781,14 @@ class ProductController extends Controller
     /**
      * @param  array<string, string>  $submittedColumns
      */
-    private function updatePayloadForField(string $field, array $data, array $submittedColumns): array
-    {
-        if ($field === ProductField::Description->value) {
-            return $this->descriptionUpdatePayload($data);
+    private function updatePayloadForField(
+        string $field,
+        array $data,
+        array $submittedColumns,
+        ?string $japaneseDescriptionForDuplicateCheck,
+    ): array {
+        if ($field === ProductField::DescriptionEnglish->value) {
+            return $this->descriptionUpdatePayload($data, $japaneseDescriptionForDuplicateCheck);
         }
 
         return collect($submittedColumns)
@@ -783,13 +796,32 @@ class ProductController extends Controller
             ->all();
     }
 
-    private function descriptionUpdatePayload(array $data): array
+    private function effectiveJapaneseDescriptionForUpdate(
+        UpdateProductRequest $request,
+        array $data,
+        array $editableFields,
+        Product $product,
+    ): ?string {
+        if (
+            in_array(ProductField::DescriptionJapanese->value, $editableFields, true)
+            && $request->wasSubmitted('description')
+        ) {
+            return $data['description'] ?? null;
+        }
+
+        return $product->description;
+    }
+
+    private function descriptionUpdatePayload(array $data, ?string $japaneseDescription): array
     {
+        $englishDescription = $data['description_english'] ?? null;
+
+        if ($englishDescription === $japaneseDescription) {
+            $englishDescription = null;
+        }
+
         return [
-            'description' => $data['description'] ?? null,
-            'description_english' => ($data['description_english'] ?? null) === ($data['description'] ?? null)
-                ? null
-                : ($data['description_english'] ?? null),
+            'description_english' => $englishDescription,
         ];
     }
 

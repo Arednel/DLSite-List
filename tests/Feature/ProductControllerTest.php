@@ -735,7 +735,8 @@ class ProductControllerTest extends TestCase
         Option::setCustomQuickAddFieldLayout([
             ['field' => ProductField::AgeCategory->value, 'visible' => true],
             ['field' => ProductField::Circle->value, 'visible' => true],
-            ['field' => ProductField::Description->value, 'visible' => true],
+            ['field' => ProductField::DescriptionJapanese->value, 'visible' => true],
+            ['field' => ProductField::DescriptionEnglish->value, 'visible' => true],
         ]);
 
         $this->get('/create/custom')
@@ -936,7 +937,8 @@ class ProductControllerTest extends TestCase
     public function test_edit_renders_readonly_description_from_prepared_value(): void
     {
         Option::setEditFieldLayout([
-            ['field' => ProductField::Description->value, 'visible' => true, 'editable' => false],
+            ['field' => ProductField::DescriptionJapanese->value, 'visible' => true, 'editable' => false],
+            ['field' => ProductField::DescriptionEnglish->value, 'visible' => true, 'editable' => false],
         ]);
 
         $product = Product::factory()->create([
@@ -947,11 +949,13 @@ class ProductControllerTest extends TestCase
 
         $this->get("/edit/{$product->id}")
             ->assertOk()
-            ->assertSee('Description')
+            ->assertSee('Japanese Description')
+            ->assertSee('English Description')
             ->assertSee('READONLY_JP_DESCRIPTION_TOKEN')
             ->assertSee('READONLY_EN_DESCRIPTION_TOKEN')
             ->assertSee('readonly', false)
-            ->assertDontSee('name="description"', false);
+            ->assertDontSee('name="description"', false)
+            ->assertDontSee('name="description_english"', false);
     }
 
     public function test_edit_layout_can_hide_new_configurable_edit_rows(): void
@@ -989,7 +993,8 @@ class ProductControllerTest extends TestCase
             ['field' => ProductField::VoiceActor->value, 'visible' => true, 'editable' => true],
             ['field' => ProductField::Illustration->value, 'visible' => true, 'editable' => true],
             ['field' => ProductField::Author->value, 'visible' => true, 'editable' => true],
-            ['field' => ProductField::Description->value, 'visible' => true, 'editable' => true],
+            ['field' => ProductField::DescriptionJapanese->value, 'visible' => true, 'editable' => true],
+            ['field' => ProductField::DescriptionEnglish->value, 'visible' => true, 'editable' => true],
         ]);
 
         $product = Product::factory()->create([
@@ -1047,7 +1052,8 @@ class ProductControllerTest extends TestCase
     public function test_update_collapses_duplicate_english_description_to_null(): void
     {
         Option::setEditFieldLayout([
-            ['field' => ProductField::Description->value, 'visible' => true, 'editable' => true],
+            ['field' => ProductField::DescriptionJapanese->value, 'visible' => true, 'editable' => true],
+            ['field' => ProductField::DescriptionEnglish->value, 'visible' => true, 'editable' => true],
         ]);
 
         $product = Product::factory()->create([
@@ -1066,6 +1072,55 @@ class ProductControllerTest extends TestCase
 
         $this->assertSame('Same description', $product->description);
         $this->assertNull($product->description_english);
+    }
+
+    public function test_update_collapses_english_description_against_hidden_japanese_description(): void
+    {
+        Option::setEditFieldLayout([
+            ['field' => ProductField::DescriptionJapanese->value, 'visible' => false, 'editable' => false],
+            ['field' => ProductField::DescriptionEnglish->value, 'visible' => true, 'editable' => true],
+        ]);
+
+        $product = Product::factory()->create([
+            'work_name' => 'DUPLICATE_HIDDEN_JP_DESCRIPTION_TOKEN',
+            'description' => 'Stored duplicate description',
+            'description_english' => 'Old English description',
+        ]);
+
+        $this->post("/update/{$product->id}", [
+            'work_name' => $product->work_name,
+            'description_english' => 'Stored duplicate description',
+        ])->assertSessionHasNoErrors();
+
+        $product->refresh();
+
+        $this->assertSame('Stored duplicate description', $product->description);
+        $this->assertNull($product->description_english);
+    }
+
+    public function test_update_preserves_hidden_and_readonly_split_descriptions(): void
+    {
+        Option::setEditFieldLayout([
+            ['field' => ProductField::DescriptionJapanese->value, 'visible' => false, 'editable' => true],
+            ['field' => ProductField::DescriptionEnglish->value, 'visible' => true, 'editable' => false],
+        ]);
+
+        $product = Product::factory()->create([
+            'work_name' => 'PRESERVE_SPLIT_DESCRIPTION_TOKEN',
+            'description' => 'Stored Japanese description',
+            'description_english' => 'Stored English description',
+        ]);
+
+        $this->post("/update/{$product->id}", [
+            'work_name' => $product->work_name,
+            'description' => 'Malicious hidden Japanese overwrite',
+            'description_english' => 'Malicious readonly English overwrite',
+        ])->assertSessionHasNoErrors();
+
+        $product->refresh();
+
+        $this->assertSame('Stored Japanese description', $product->description);
+        $this->assertSame('Stored English description', $product->description_english);
     }
 
     public function test_edit_defaults_go_back_fragment_to_current_product_when_not_provided(): void
@@ -1524,7 +1579,8 @@ class ProductControllerTest extends TestCase
             ['field' => ProductField::AgeCategory->value, 'visible' => true],
             ['field' => ProductField::Circle->value, 'visible' => true],
             ['field' => ProductField::Scenario->value, 'visible' => true],
-            ['field' => ProductField::Description->value, 'visible' => true],
+            ['field' => ProductField::DescriptionJapanese->value, 'visible' => true],
+            ['field' => ProductField::DescriptionEnglish->value, 'visible' => true],
             ['field' => ProductField::VoiceActor->value, 'visible' => false],
         ]);
 
@@ -1562,6 +1618,35 @@ class ProductControllerTest extends TestCase
         $this->assertDatabaseHas('contributors', ['name' => 'MANUAL_CREATE_SCENARIO_TOKEN']);
         $this->assertDatabaseHas('contributors', ['name' => 'SCRAPED_CREATE_VOICE_TOKEN']);
         $this->assertDatabaseMissing('contributors', ['name' => 'MALICIOUS_CREATE_VOICE_TOKEN']);
+    }
+
+    public function test_store_preserves_hidden_scraped_description_language_and_accepts_visible_override(): void
+    {
+        Storage::fake('local');
+        Process::fake(['*' => Process::result()])->preventStrayProcesses();
+
+        Option::setQuickAddFieldLayout([
+            ['field' => ProductField::DescriptionJapanese->value, 'visible' => true],
+            ['field' => ProductField::DescriptionEnglish->value, 'visible' => false],
+        ]);
+
+        $workId = Product::factory()->make()->id;
+        Storage::disk('local')->put("Works/{$workId}.json", json_encode($this->scrapedWorkPayload($workId, [
+            'description' => 'SCRAPED_HIDDEN_SPLIT_JP_DESCRIPTION',
+        ], [
+            'description' => 'SCRAPED_HIDDEN_SPLIT_EN_DESCRIPTION',
+        ])));
+
+        $this->post('/store', [
+            'id' => $workId,
+            'description' => 'VISIBLE_SPLIT_JP_OVERRIDE',
+            'description_english' => 'MALICIOUS_HIDDEN_SPLIT_EN_OVERRIDE',
+        ])->assertSessionHasNoErrors();
+
+        $product = Product::query()->whereKey($workId)->firstOrFail();
+
+        $this->assertSame('VISIBLE_SPLIT_JP_OVERRIDE', $product->description);
+        $this->assertSame('SCRAPED_HIDDEN_SPLIT_EN_DESCRIPTION', $product->description_english);
     }
 
     public function test_store_keeps_manual_series_when_title_name_is_fetched(): void
@@ -1788,7 +1873,8 @@ class ProductControllerTest extends TestCase
         Option::setCustomQuickAddFieldLayout([
             ['field' => ProductField::Circle->value, 'visible' => true],
             ['field' => ProductField::Author->value, 'visible' => true],
-            ['field' => ProductField::Description->value, 'visible' => true],
+            ['field' => ProductField::DescriptionJapanese->value, 'visible' => true],
+            ['field' => ProductField::DescriptionEnglish->value, 'visible' => true],
             ['field' => ProductField::VoiceActor->value, 'visible' => false],
             ['field' => ProductField::SampleImages->value, 'visible' => false],
         ]);
@@ -1820,6 +1906,29 @@ class ProductControllerTest extends TestCase
         $this->assertDatabaseHas('contributors', ['name' => 'CUSTOM_VISIBLE_AUTHOR_TOKEN']);
         $this->assertDatabaseMissing('contributors', ['name' => 'MALICIOUS_CUSTOM_VOICE_TOKEN']);
         Storage::disk('public')->assertMissing("Works/{$workId}/sample_1.jpg");
+    }
+
+    public function test_custom_store_saves_visible_split_description_and_nulls_hidden_language(): void
+    {
+        Storage::fake('public');
+
+        Option::setCustomQuickAddFieldLayout([
+            ['field' => ProductField::DescriptionJapanese->value, 'visible' => true],
+            ['field' => ProductField::DescriptionEnglish->value, 'visible' => false],
+        ]);
+
+        $workId = Product::factory()->make()->id;
+
+        $this->post('/store/custom', $this->customStorePayload($workId, [
+            'work_name' => 'CUSTOM_SPLIT_DESCRIPTION_TOKEN',
+            'description' => 'CUSTOM_VISIBLE_SPLIT_JP_DESCRIPTION',
+            'description_english' => 'MALICIOUS_HIDDEN_SPLIT_EN_DESCRIPTION',
+        ]))->assertSessionHasNoErrors();
+
+        $product = Product::query()->whereKey($workId)->firstOrFail();
+
+        $this->assertSame('CUSTOM_VISIBLE_SPLIT_JP_DESCRIPTION', $product->description);
+        $this->assertNull($product->description_english);
     }
 
     public function test_custom_store_rejects_missing_cover_image(): void
@@ -2658,7 +2767,8 @@ class ProductControllerTest extends TestCase
     public function test_update_return_target_drops_search_that_only_matches_hidden_description(): void
     {
         Option::setIndexFieldLayout([
-            ['field' => ProductField::Description->value, 'visible' => false],
+            ['field' => ProductField::DescriptionJapanese->value, 'visible' => false],
+            ['field' => ProductField::DescriptionEnglish->value, 'visible' => false],
         ]);
 
         $product = Product::factory()->create([
@@ -2683,7 +2793,7 @@ class ProductControllerTest extends TestCase
     public function test_update_return_target_keeps_search_that_matches_visible_description(): void
     {
         Option::setIndexFieldLayout([
-            ['field' => ProductField::Description->value, 'visible' => true],
+            ['field' => ProductField::DescriptionJapanese->value, 'visible' => true],
         ]);
 
         $product = Product::factory()->create([
@@ -2708,7 +2818,8 @@ class ProductControllerTest extends TestCase
     public function test_update_return_target_keeps_search_that_matches_hidden_description_when_override_is_enabled(): void
     {
         Option::setIndexFieldLayout([
-            ['field' => ProductField::Description->value, 'visible' => false],
+            ['field' => ProductField::DescriptionJapanese->value, 'visible' => false],
+            ['field' => ProductField::DescriptionEnglish->value, 'visible' => false],
         ]);
         Option::setIndexSearchHiddenDescriptionsEnabled(true);
 
@@ -3050,7 +3161,8 @@ class ProductControllerTest extends TestCase
     {
         Option::setIndexPerPage(2);
         Option::setIndexFieldLayout([
-            ['field' => ProductField::Description->value, 'visible' => false],
+            ['field' => ProductField::DescriptionJapanese->value, 'visible' => false],
+            ['field' => ProductField::DescriptionEnglish->value, 'visible' => false],
         ]);
         Option::setIndexSearchHiddenDescriptionsEnabled(true);
 

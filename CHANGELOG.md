@@ -2,6 +2,10 @@
 
 ## Development
 
+* 2026-07-04 -- 1.5.8 Split Description Layouts
+  * Split configurable Japanese and English Description fields across Index, Filter, Edit, Quick Add, and Custom Quick Add layouts
+  * Removed extra padding at the bottom on mobile in Edit/Quick Add
+
 * 2026-07-03 -- 1.5.7 Code Cleanup
   * HTML, CSS Code Cleanup
 
