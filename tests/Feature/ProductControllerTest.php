@@ -923,7 +923,6 @@ class ProductControllerTest extends TestCase
                 'Priority',
             ], false)
             ->assertDontSee('name="age_category"', false)
-            ->assertSee('Fetched EN Genres')
             ->assertSee('Sleep Guidance EN')
             ->assertDontSee('JP_ONLY_GUIDANCE_TOKEN')
             ->assertSee($product->notes)
@@ -1161,7 +1160,7 @@ class ProductControllerTest extends TestCase
 
         $this->get("/edit/{$product->id}")
             ->assertOk()
-            ->assertSee('Fetched EN Genres')
+            ->assertSee('Fetched EN Tags')
             ->assertSee('READONLY_FETCHED_EN_TOKEN')
             ->assertSee('readonly', false)
             ->assertDontSee('name="genre_fetched_english"', false);
@@ -1248,7 +1247,7 @@ class ProductControllerTest extends TestCase
 
         $response = $this->get("/edit/{$product->id}")
             ->assertOk()
-            ->assertSee('Fetched EN Genres')
+            ->assertSee('Fetched EN Tags')
             ->assertSee('READONLY_INLINE_FIRST_TAG')
             ->assertSee('READONLY_INLINE_SECOND_TAG')
             ->assertSee(', ', false)
@@ -1271,6 +1270,77 @@ class ProductControllerTest extends TestCase
             ->assertSee('name="genre_fetched_english"', false)
             ->assertSee('EDITABLE_FETCHED_EN_TOKEN')
             ->assertDontSee('No fetched genres.');
+    }
+
+    public function test_edit_renders_custom_and_fetched_tag_rows_in_layout_order(): void
+    {
+        Option::setEditFieldLayout([
+            [
+                'field' => ProductField::Tags->value,
+                'visible' => true,
+                'editable' => true,
+            ],
+            [
+                'field' => 'fetched_english_tags',
+                'visible' => true,
+                'editable' => false,
+            ],
+        ]);
+
+        $customGenre = $this->createGenre('ORDER_CUSTOM_TAG_TOKEN', Genre::TYPE_CUSTOM);
+        $englishGenre = $this->createGenre('ORDER_FETCHED_EN_TAG_TOKEN', Genre::TYPE_AUTO_GENERATED_ENGLISH);
+        $product = Product::factory()->create([
+            'work_name' => 'ORDER_TAG_EDIT_TOKEN',
+        ]);
+        $this->attachGenres($product, [$customGenre, $englishGenre]);
+
+        $this->get("/edit/{$product->id}")
+            ->assertOk()
+            ->assertSeeInOrder([
+                'Custom Tags',
+                'ORDER_CUSTOM_TAG_TOKEN',
+                'Fetched EN Tags',
+                'ORDER_FETCHED_EN_TAG_TOKEN',
+            ])
+            ->assertSee('name="genre_custom"', false)
+            ->assertDontSee('name="genre_fetched_english"', false);
+    }
+
+    public function test_update_syncs_only_visible_editable_tag_rows(): void
+    {
+        Option::setEditFieldLayout([
+            [
+                'field' => ProductField::Tags->value,
+                'visible' => false,
+                'editable' => true,
+            ],
+            [
+                'field' => 'fetched_english_tags',
+                'visible' => true,
+                'editable' => true,
+            ],
+        ]);
+
+        $customGenre = $this->createGenre('SPLIT_PRESERVED_CUSTOM_TAG', Genre::TYPE_CUSTOM);
+        $englishGenre = $this->createGenre('SPLIT_OLD_FETCHED_EN_TAG', Genre::TYPE_AUTO_GENERATED_ENGLISH);
+        $product = Product::factory()->create([
+            'work_name' => 'SPLIT_TAG_UPDATE_TOKEN',
+        ]);
+        $this->attachGenres($product, [$customGenre, $englishGenre]);
+
+        $this->post("/update/{$product->id}", [
+            'work_name' => $product->work_name,
+            'genre_custom' => 'SPLIT_MALICIOUS_CUSTOM_TAG',
+            'genre_fetched_english' => 'SPLIT_NEW_FETCHED_EN_TAG',
+        ])->assertSessionHasNoErrors();
+
+        $product->refresh()->load(['englishGenres', 'customGenres']);
+
+        $this->assertSame(['SPLIT_NEW_FETCHED_EN_TAG'], $product->englishGenres->pluck('title')->all());
+        $this->assertSame(['SPLIT_PRESERVED_CUSTOM_TAG'], $product->customGenres->pluck('title')->all());
+        $this->assertDatabaseMissing('genres', [
+            'title' => 'SPLIT_MALICIOUS_CUSTOM_TAG',
+        ]);
     }
 
     public function test_update_ignores_fetched_english_input_when_option_disabled(): void
@@ -3347,13 +3417,15 @@ class ProductControllerTest extends TestCase
         $layout = Option::editFieldLayout();
 
         foreach ($layout as &$row) {
-            if ($row['field'] !== ProductField::Tags->value) {
-                continue;
+            if ($row['field'] === ProductField::Tags->value) {
+                $row['visible'] = $visible;
+                $row['editable'] = $customEditable;
             }
 
-            $row['visible'] = $visible;
-            $row['editable'] = $customEditable;
-            $row['fetched_editable'] = $fetchedEditable;
+            if ($row['field'] === ProductField::FetchedEnglishTags->value) {
+                $row['visible'] = $visible;
+                $row['editable'] = $fetchedEditable;
+            }
         }
         unset($row);
 

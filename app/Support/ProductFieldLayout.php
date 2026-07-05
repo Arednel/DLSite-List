@@ -22,7 +22,7 @@ final class ProductFieldLayout
     ];
 
     /**
-     * @return list<array{field: string, label: string, visible: bool, editable?: bool, fetched_editable?: bool}>
+     * @return list<array{field: string, label: string, visible: bool, editable?: bool, custom_visible?: bool, fetched_english_visible?: bool}>
      */
     public static function normalize(mixed $layout, string $surface): array
     {
@@ -43,24 +43,19 @@ final class ProductFieldLayout
                 continue;
             }
 
-            $visible = $field->isVisibilityLocked($surface)
-                || filter_var($row['visible'] ?? false, FILTER_VALIDATE_BOOL);
+            $visible = self::normalizedVisibility($field, $surface, $row);
             $normalized = [
                 'field' => $field->value,
-                'label' => $field->label(),
+                'label' => self::label($field, $surface),
                 'visible' => $visible,
             ];
             $normalized += self::lockMetadata($field, $surface);
             $normalized += self::noteMetadata($field, $surface);
+            $normalized += self::tagBucketMetadata($field, $surface, $row);
 
             if ($surface === self::SURFACE_EDIT) {
                 $normalized['editable'] = $visible
                     && filter_var($row['editable'] ?? false, FILTER_VALIDATE_BOOL);
-
-                if ($field === ProductField::Tags) {
-                    $normalized['fetched_editable'] = $visible
-                        && filter_var($row['fetched_editable'] ?? false, FILTER_VALIDATE_BOOL);
-                }
             }
 
             $rowsByField[$field->value] = $normalized;
@@ -100,25 +95,85 @@ final class ProductFieldLayout
 
     private static function defaultRow(ProductField $field, string $surface): array
     {
-        $visible = $field->isVisibilityLocked($surface) || ! $field->isHiddenByDefault($surface);
+        $visible = self::defaultVisibility($field, $surface);
 
         $row = [
             'field' => $field->value,
-            'label' => $field->label(),
+            'label' => self::label($field, $surface),
             'visible' => $visible,
         ];
         $row += self::lockMetadata($field, $surface);
         $row += self::noteMetadata($field, $surface);
+        $row += self::defaultTagBucketMetadata($field, $surface);
 
         if ($surface === self::SURFACE_EDIT) {
             $row['editable'] = $visible && $field->isEditableByDefault($surface);
-
-            if ($field === ProductField::Tags) {
-                $row['fetched_editable'] = false;
-            }
         }
 
         return $row;
+    }
+
+    private static function label(ProductField $field, string $surface): string
+    {
+        if (
+            $field === ProductField::Tags
+            && in_array($surface, [self::SURFACE_EDIT, self::SURFACE_QUICK_ADD, self::SURFACE_CUSTOM_QUICK_ADD], true)
+        ) {
+            return 'Custom Tags';
+        }
+
+        return $field->label();
+    }
+
+    private static function defaultVisibility(ProductField $field, string $surface): bool
+    {
+        if ($surface === self::SURFACE_INDEX && $field === ProductField::Tags) {
+            return true;
+        }
+
+        return $field->isVisibilityLocked($surface) || ! $field->isHiddenByDefault($surface);
+    }
+
+    private static function normalizedVisibility(ProductField $field, string $surface, array $row): bool
+    {
+        if ($surface === self::SURFACE_INDEX && $field === ProductField::Tags) {
+            return self::normalizeBoolean($row['custom_visible'] ?? null, true)
+                || self::normalizeBoolean($row['fetched_english_visible'] ?? null, true);
+        }
+
+        return $field->isVisibilityLocked($surface)
+            || filter_var($row['visible'] ?? false, FILTER_VALIDATE_BOOL);
+    }
+
+    private static function defaultTagBucketMetadata(ProductField $field, string $surface): array
+    {
+        if ($surface !== self::SURFACE_INDEX || $field !== ProductField::Tags) {
+            return [];
+        }
+
+        return [
+            'custom_visible' => true,
+            'fetched_english_visible' => true,
+        ];
+    }
+
+    private static function tagBucketMetadata(ProductField $field, string $surface, array $row): array
+    {
+        if ($surface !== self::SURFACE_INDEX || $field !== ProductField::Tags) {
+            return [];
+        }
+
+        return [
+            'custom_visible' => self::normalizeBoolean($row['custom_visible'] ?? null, true),
+            'fetched_english_visible' => self::normalizeBoolean($row['fetched_english_visible'] ?? null, true),
+        ];
+    }
+
+    private static function normalizeBoolean(mixed $value, bool $default): bool
+    {
+        return $value === null
+            ? $default
+            : filter_var($value, FILTER_VALIDATE_BOOL);
     }
 
     /**
@@ -174,7 +229,7 @@ final class ProductFieldLayout
     }
 
     /**
-     * @return list<array{field: string, label: string, editable: bool, fetched_editable: bool, contributor_role: ?string}>
+     * @return list<array{field: string, label: string, editable: bool, contributor_role: ?string}>
      */
     public static function editFields(array $layout): array
     {
@@ -188,8 +243,6 @@ final class ProductFieldLayout
                     'field' => $meta['field'],
                     'label' => $meta['label'],
                     'editable' => (bool) ($row['editable'] ?? false),
-                    'fetched_editable' => $field === ProductField::Tags
-                        && (bool) ($row['fetched_editable'] ?? false),
                     'contributor_role' => $meta['contributor_role'],
                 ];
             })
@@ -269,10 +322,19 @@ final class ProductFieldLayout
 
     public static function fetchedTagsEditable(array $layout): bool
     {
+        return self::editable($layout, ProductField::FetchedEnglishTags);
+    }
+
+    public static function indexTagBucketVisibility(array $layout): array
+    {
         $row = Arr::first($layout, fn(array $row): bool => $row['field'] === ProductField::Tags->value);
 
-        return (bool) data_get($row, 'visible', false)
-            && (bool) data_get($row, 'fetched_editable', false);
+        return [
+            'custom' => (bool) data_get($row, 'visible', false)
+                && (bool) data_get($row, 'custom_visible', false),
+            'fetched_english' => (bool) data_get($row, 'visible', false)
+                && (bool) data_get($row, 'fetched_english_visible', false),
+        ];
     }
 
     /**

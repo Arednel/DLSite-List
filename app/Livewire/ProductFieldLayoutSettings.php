@@ -192,7 +192,7 @@ class ProductFieldLayoutSettings extends Component
             $fields[$field->value] = [
                 ...$row,
                 'field' => $field->value,
-                'label' => $field->label(),
+                'label' => (string) ($row['label'] ?? $field->label()),
             ];
         }
 
@@ -213,7 +213,7 @@ class ProductFieldLayoutSettings extends Component
             $layout[] = [
                 ...$fields[$field->value],
                 'field' => $field->value,
-                'label' => $field->label(),
+                'label' => (string) ($fields[$field->value]['label'] ?? $field->label()),
             ];
         }
 

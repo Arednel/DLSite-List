@@ -24,6 +24,7 @@ enum ProductField: string
     case DescriptionJapanese = 'description_japanese';
     case DescriptionEnglish = 'description_english';
     case Tags = 'tags';
+    case FetchedEnglishTags = 'fetched_english_tags';
     case Notes = 'notes';
     case StartDate = 'start_date';
     case FinishDate = 'end_date';
@@ -52,6 +53,7 @@ enum ProductField: string
             self::DescriptionJapanese => 'Japanese Description',
             self::DescriptionEnglish => 'English Description',
             self::Tags => 'Tags',
+            self::FetchedEnglishTags => 'Fetched EN Tags',
             self::Notes => 'Notes',
             self::StartDate => 'Start Date',
             self::FinishDate => 'Finish Date',
@@ -164,6 +166,7 @@ enum ProductField: string
                     self::Score,
                     self::Series,
                     self::Title,
+                    self::FetchedEnglishTags,
                     self::Tags,
                     self::Notes,
                     self::StartDate,

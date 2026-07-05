@@ -188,8 +188,12 @@ class Product extends Model
     }
 
     #[Scope]
-    protected function searchIndex(Builder $query, string $search, array $descriptionColumns = []): void
-    {
+    protected function searchIndex(
+        Builder $query,
+        string $search,
+        array $descriptionColumns = [],
+        bool $searchTags = true,
+    ): void {
         $search = '%' . trim($search) . '%';
         $columns = [
             'id',
@@ -205,15 +209,20 @@ class Product extends Model
             $descriptionColumns,
         )));
 
-        $query->where(function (Builder $searchQuery) use ($columns, $search): void {
+        $query->where(function (Builder $searchQuery) use ($columns, $search, $searchTags): void {
             $searchQuery->whereAny($columns, 'like', $search)
                 ->orWhereHas('contributors', function (Builder $contributorQuery) use ($search): void {
                     $contributorQuery->whereLike('contributors.name', $search);
-                })
-                ->orWhereHas('genres', function (Builder $genreQuery) use ($search): void {
-                    $genreQuery->whereLike('title', $search);
-                    $genreQuery->where(VisibleGenreAttachment::query());
                 });
+
+            if (! $searchTags) {
+                return;
+            }
+
+            $searchQuery->orWhereHas('genres', function (Builder $genreQuery) use ($search): void {
+                $genreQuery->whereLike('title', $search);
+                $genreQuery->where(VisibleGenreAttachment::query());
+            });
         });
     }
 

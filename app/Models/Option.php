@@ -243,7 +243,7 @@ class Option extends Model
     }
 
     /**
-     * @return list<array{field: string, label: string, visible: bool, editable: bool, fetched_editable?: bool}>
+     * @return list<array{field: string, label: string, visible: bool, editable: bool}>
      */
     public static function editFieldLayout(): array
     {

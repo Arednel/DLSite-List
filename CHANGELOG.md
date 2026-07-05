@@ -2,6 +2,11 @@
 
 ## Development
 
+* 2026-07-05 -- 1.5.9 Tag Layouts
+  * Added separate Custom Tags and Fetched EN Tags visibility controls for the Index Tags column
+  * Split Edit Form tag layout into independently orderable Custom Tags and Fetched EN Tags rows, with only Custom Tags editable by default
+  * Renamed Quick Add and Custom Quick Add tag rows to Custom Tags
+
 * 2026-07-04 -- 1.5.8 Split Description Layouts
   * Split configurable Japanese and English Description fields across Index, Filter, Edit, Quick Add, and Custom Quick Add layouts
   * Removed extra padding at the bottom on mobile in Edit/Quick Add

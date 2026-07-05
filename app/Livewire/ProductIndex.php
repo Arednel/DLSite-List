@@ -10,6 +10,7 @@ use App\Models\GenreGroup;
 use App\Models\Option;
 use App\Support\ProductIndexFilters;
 use App\Support\ProductIndexResults;
+use App\Support\ProductFieldLayout;
 use App\Support\TagColor;
 use Illuminate\Database\Eloquent\Collection as EloquentCollection;
 use Illuminate\Pagination\LengthAwarePaginator;
@@ -132,7 +133,8 @@ class ProductIndex extends Component
 
         $visibleProductIds = $visibleProducts->modelKeys();
 
-        $tagsColumnVisible = in_array(ProductField::Tags->value, $settings->visibleIndexFields, true);
+        $visibleTagBuckets = ProductFieldLayout::indexTagBucketVisibility($settings->indexFieldLayout);
+        $tagsColumnVisible = $visibleTagBuckets['custom'] || $visibleTagBuckets['fetched_english'];
         $indexTagColorsEnabled = $tagsColumnVisible
             && $visibleProductIds !== []
             && ($settings->tagColorSurfaces[Option::TAG_COLOR_SURFACE_INDEX] ?? false)
@@ -145,6 +147,7 @@ class ProductIndex extends Component
                 $settings->indexGroupOrderingEnabled,
                 $indexTagColorsEnabled,
                 $visibleProductIds !== [] && GenreGroup::hiddenOnIndex()->exists(),
+                $visibleTagBuckets,
             )
             : collect();
 

@@ -38,6 +38,7 @@ class ProductFieldLayoutTest extends TestCase
                 ProductField::Score,
                 ProductField::Series,
                 ProductField::Title,
+                ProductField::FetchedEnglishTags,
                 ProductField::Tags,
                 ProductField::Notes,
                 ProductField::StartDate,
@@ -202,6 +203,7 @@ class ProductFieldLayoutTest extends TestCase
             ProductField::Score->value,
             ProductField::Series->value,
             ProductField::Title->value,
+            ProductField::FetchedEnglishTags->value,
             ProductField::Tags->value,
             ProductField::Notes->value,
             ProductField::StartDate->value,
@@ -224,6 +226,7 @@ class ProductFieldLayoutTest extends TestCase
             ProductField::Score->value,
             ProductField::Series->value,
             ProductField::Title->value,
+            ProductField::FetchedEnglishTags->value,
             ProductField::Tags->value,
             ProductField::Notes->value,
             ProductField::StartDate->value,
@@ -284,10 +287,12 @@ class ProductFieldLayoutTest extends TestCase
     {
         $layout = ProductFieldLayout::normalize(null, ProductFieldLayout::SURFACE_EDIT);
         $tagsRow = collect($layout)->firstWhere('field', ProductField::Tags->value);
+        $fetchedEnglishTagsRow = collect($layout)->firstWhere('field', 'fetched_english_tags');
 
         $this->assertTrue($tagsRow['visible']);
         $this->assertTrue($tagsRow['editable']);
-        $this->assertFalse($tagsRow['fetched_editable']);
+        $this->assertTrue($fetchedEnglishTagsRow['visible']);
+        $this->assertFalse($fetchedEnglishTagsRow['editable']);
         $this->assertFalse(ProductFieldLayout::fetchedTagsEditable($layout));
     }
 
@@ -506,21 +511,18 @@ class ProductFieldLayoutTest extends TestCase
                 'field' => ProductField::DescriptionEnglish->value,
                 'label' => 'English Description',
                 'editable' => true,
-                'fetched_editable' => false,
                 'contributor_role' => null,
             ],
             [
                 'field' => ProductField::VoiceActor->value,
                 'label' => 'Voice Actor',
                 'editable' => true,
-                'fetched_editable' => false,
                 'contributor_role' => 'voice_actor',
             ],
             [
                 'field' => ProductField::Tags->value,
                 'label' => 'Tags',
                 'editable' => false,
-                'fetched_editable' => true,
                 'contributor_role' => null,
             ],
         ], $fields);

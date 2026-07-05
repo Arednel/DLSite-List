@@ -220,8 +220,8 @@ class AutocompleteControllerTest extends TestCase
             ->assertSee('data-autocomplete-source="series"', false);
 
         Option::setEditFieldLayout(array_map(
-            fn(array $row): array => $row['field'] === ProductField::Tags->value
-                ? [...$row, 'fetched_editable' => true]
+            fn(array $row): array => $row['field'] === ProductField::FetchedEnglishTags->value
+                ? [...$row, 'editable' => true]
                 : $row,
             Option::editFieldLayout()
         ));

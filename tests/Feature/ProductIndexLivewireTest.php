@@ -18,6 +18,7 @@ use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
 use Livewire\Livewire;
+use ReflectionMethod;
 use Tests\TestCase;
 
 class ProductIndexLivewireTest extends TestCase
@@ -35,6 +36,15 @@ class ProductIndexLivewireTest extends TestCase
             ->assertSee('WORK_002')
             ->assertDontSee('WORK_001')
             ->assertSee('Showing 1-100 of 101');
+    }
+
+    public function test_index_results_require_visible_fields_for_tag_search_policy(): void
+    {
+        $parameter = (new ReflectionMethod(ProductIndexResults::class, 'getProducts'))
+            ->getParameters()[2];
+
+        $this->assertSame('visibleFields', $parameter->getName());
+        $this->assertFalse($parameter->isDefaultValueAvailable());
     }
 
     public function test_index_uses_fixed_custom_and_unlimited_page_size_options(): void
@@ -223,6 +233,7 @@ class ProductIndexLivewireTest extends TestCase
                     'sort_first_direction' => $direction,
                 ]),
                 Option::INDEX_PER_PAGE_UNLIMITED,
+                [],
             );
 
             $this->assertSame(
@@ -328,6 +339,7 @@ class ProductIndexLivewireTest extends TestCase
                 'sort_first_direction' => 'asc',
             ]),
             Option::INDEX_PER_PAGE_UNLIMITED,
+            [],
         );
 
         $product = $products->first();
@@ -606,6 +618,116 @@ class ProductIndexLivewireTest extends TestCase
             ->assertSee('ROW_DATA_WORK')
             ->assertSee('ROW_DATA_VOICE')
             ->assertSee('ROW_DATA_TAG');
+    }
+
+    public function test_index_tags_column_renders_configured_tag_buckets(): void
+    {
+        $product = $this->createProduct(1, [
+            'work_name' => 'SPLIT_INDEX_TAG_WORK',
+        ]);
+        $customGenre = Genre::query()->create([
+            'title' => 'SPLIT_INDEX_CUSTOM_TAG',
+            'description' => null,
+            'order' => null,
+        ]);
+        $englishGenre = Genre::query()->create([
+            'title' => 'SPLIT_INDEX_FETCHED_EN_TAG',
+            'description' => null,
+            'order' => null,
+        ]);
+
+        app(ProductGenreSync::class)->sync($product, [
+            Genre::LANGUAGE_ENGLISH => [$englishGenre->getKey()],
+        ], [$customGenre->getKey()]);
+
+        Option::setIndexFieldLayout([
+            [
+                'field' => ProductField::Tags->value,
+                'custom_visible' => true,
+                'fetched_english_visible' => false,
+            ],
+        ]);
+
+        Livewire::test(ProductIndex::class)
+            ->assertSee('SPLIT_INDEX_CUSTOM_TAG')
+            ->assertDontSee('SPLIT_INDEX_FETCHED_EN_TAG');
+
+        Option::setIndexFieldLayout([
+            [
+                'field' => ProductField::Tags->value,
+                'custom_visible' => false,
+                'fetched_english_visible' => true,
+            ],
+        ]);
+
+        Livewire::test(ProductIndex::class)
+            ->assertDontSee('SPLIT_INDEX_CUSTOM_TAG')
+            ->assertSee('SPLIT_INDEX_FETCHED_EN_TAG');
+
+        Option::setIndexFieldLayout([
+            [
+                'field' => ProductField::Tags->value,
+                'custom_visible' => false,
+                'fetched_english_visible' => false,
+            ],
+        ]);
+
+        Livewire::test(ProductIndex::class)
+            ->assertDontSee('SPLIT_INDEX_CUSTOM_TAG')
+            ->assertDontSee('SPLIT_INDEX_FETCHED_EN_TAG');
+    }
+
+    public function test_general_search_uses_both_tag_buckets_when_any_index_tag_bucket_is_visible(): void
+    {
+        $customProduct = $this->createProduct(1, [
+            'work_name' => 'SPLIT_SEARCH_CUSTOM_WORK',
+        ]);
+        $fetchedProduct = $this->createProduct(2, [
+            'work_name' => 'SPLIT_SEARCH_FETCHED_WORK',
+        ]);
+        $customGenre = Genre::query()->create([
+            'title' => 'SPLIT_SEARCH_CUSTOM_TAG',
+            'description' => null,
+            'order' => null,
+        ]);
+        $englishGenre = Genre::query()->create([
+            'title' => 'SPLIT_SEARCH_FETCHED_EN_TAG',
+            'description' => null,
+            'order' => null,
+        ]);
+
+        app(ProductGenreSync::class)->syncCustom($customProduct, [$customGenre->getKey()]);
+        app(ProductGenreSync::class)->sync($fetchedProduct, [
+            Genre::LANGUAGE_ENGLISH => [$englishGenre->getKey()],
+        ], []);
+
+        Option::setIndexFieldLayout([
+            [
+                'field' => ProductField::Tags->value,
+                'custom_visible' => true,
+                'fetched_english_visible' => false,
+            ],
+        ]);
+
+        Livewire::test(ProductIndex::class)
+            ->set('searchInput', 'SPLIT_SEARCH_FETCHED_EN_TAG')
+            ->call('applySearch')
+            ->assertSee('SPLIT_SEARCH_FETCHED_WORK')
+            ->assertDontSee('SPLIT_SEARCH_CUSTOM_WORK');
+
+        Option::setIndexFieldLayout([
+            [
+                'field' => ProductField::Tags->value,
+                'custom_visible' => false,
+                'fetched_english_visible' => false,
+            ],
+        ]);
+
+        Livewire::test(ProductIndex::class)
+            ->set('searchInput', 'SPLIT_SEARCH_CUSTOM_TAG')
+            ->call('applySearch')
+            ->assertDontSee('SPLIT_SEARCH_CUSTOM_WORK')
+            ->assertDontSee('SPLIT_SEARCH_FETCHED_WORK');
     }
 
     public function test_index_tag_links_use_prepared_base_url_and_replace_current_genre_filter(): void

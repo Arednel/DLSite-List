@@ -254,6 +254,15 @@
     justify-self: end;
 }
 
+.field-layout-index-tags-label {
+    color: #5e4453;
+    font-weight: 700;
+}
+
+.field-layout-index-tag-buckets {
+    justify-self: end;
+}
+
 .field-layout-lock-note {
     color: #8f6b7e;
     font-size: 0.82rem;
@@ -270,7 +279,6 @@
 .field-layout-edit-stack {
     display: grid;
     gap: 0.4rem;
-    justify-self: end;
 }
 
 .field-layout-edit-stack .field-layout-check--edit {

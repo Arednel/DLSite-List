@@ -1,7 +1,7 @@
 @props(['value' => ''])
 
 <tr>
-    <td width="130" class="form-table-cell">Fetched EN Genres</td>
+    <td width="130" class="form-table-cell">Fetched EN Tags</td>
     <td class="form-table-cell">
         <textarea id="genre_fetched_english" name="genre_fetched_english" class="form-textarea form-field-long"
             placeholder="Comma-separated. Use double quotes for tags that contain commas." rows="3" cols="65"

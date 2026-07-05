@@ -47,11 +47,11 @@ final readonly class ReturnTarget
     ): self {
         $results ??= app(ProductIndexResults::class);
         $query = $this->queryWithoutPage();
-        [$perPage, $descriptionSearchColumns] = $this->indexPaginationAndSearchPolicy($results, $query, $perPage);
+        [$perPage, $descriptionSearchColumns, $searchTags] = $this->indexPaginationAndSearchPolicy($results, $query, $perPage);
         $savedPage = self::normalizePage($this->query['page'] ?? null) ?? 1;
         $filters = ProductIndexFilters::fromQuery($query);
 
-        if ($results->pageContainsProduct($filters, $product, $perPage, $savedPage, $descriptionSearchColumns)) {
+        if ($results->pageContainsProduct($filters, $product, $perPage, $savedPage, $descriptionSearchColumns, $searchTags)) {
             if ($savedPage > 1 && $perPage !== Option::INDEX_PER_PAGE_UNLIMITED) {
                 $query['page'] = (string) $savedPage;
             }
@@ -63,7 +63,7 @@ final readonly class ReturnTarget
         }
 
         if (! $visibilityMayHaveChanged) {
-            $page = $results->pageForProduct($filters, $product, $perPage, $descriptionSearchColumns);
+            $page = $results->pageForProduct($filters, $product, $perPage, $descriptionSearchColumns, $searchTags);
 
             if ($page !== null) {
                 if ($page > 1) {
@@ -77,12 +77,13 @@ final readonly class ReturnTarget
             }
         }
 
-        $query = $this->queryForVisibleProduct($product, $results, $descriptionSearchColumns);
+        $query = $this->queryForVisibleProduct($product, $results, $descriptionSearchColumns, $searchTags);
         $page = $results->pageForProduct(
             ProductIndexFilters::fromQuery($query),
             $product,
             $perPage,
             $descriptionSearchColumns,
+            $searchTags,
         );
 
         if ($page !== null && $page > 1) {
@@ -107,13 +108,13 @@ final readonly class ReturnTarget
             return new self(query: $query);
         }
 
-        [$perPage, $descriptionSearchColumns] = $this->indexPaginationAndSearchPolicy($results, $query, $perPage);
+        [$perPage, $descriptionSearchColumns, $searchTags] = $this->indexPaginationAndSearchPolicy($results, $query, $perPage);
 
         if ($perPage === Option::INDEX_PER_PAGE_UNLIMITED) {
             return new self(query: $query);
         }
 
-        $lastPage = $results->lastPage(ProductIndexFilters::fromQuery($query), $perPage, $descriptionSearchColumns);
+        $lastPage = $results->lastPage(ProductIndexFilters::fromQuery($query), $perPage, $descriptionSearchColumns, $searchTags);
         $page = min($savedPage, $lastPage ?? 1);
 
         if ($page > 1) {
@@ -176,7 +177,7 @@ final readonly class ReturnTarget
     }
 
     /**
-     * @return array{0: int|string, 1: list<string>}
+     * @return array{0: int|string, 1: list<string>, 2: bool}
      */
     private function indexPaginationAndSearchPolicy(
         ProductIndexResults $results,
@@ -184,7 +185,7 @@ final readonly class ReturnTarget
         int|string|null $perPage,
     ): array {
         if ($perPage !== null && blank($query['search'] ?? null)) {
-            return [$perPage, []];
+            return [$perPage, [], true];
         }
 
         $settings = Option::productIndexSettings();
@@ -197,6 +198,8 @@ final readonly class ReturnTarget
                     $settings->searchHiddenDescriptionsEnabled,
                 )
                 : [],
+            ! filled($query['search'] ?? null)
+                || in_array('tags', $settings->visibleIndexFields, true),
         ];
     }
 
@@ -204,12 +207,13 @@ final readonly class ReturnTarget
         Product $product,
         ProductIndexResults $results,
         array $descriptionSearchColumns,
+        bool $searchTags,
     ): array {
         $query = $this->queryWithoutPage();
 
         if (
             ! self::hasVisibilityFilters($query)
-            || $results->containsProduct(ProductIndexFilters::fromQuery($query), $product, $descriptionSearchColumns)
+            || $results->containsProduct(ProductIndexFilters::fromQuery($query), $product, $descriptionSearchColumns, $searchTags)
         ) {
             return ProductIndexFilters::fromQuery($query)->toQuery();
         }
@@ -221,7 +225,7 @@ final readonly class ReturnTarget
 
             $groupQuery = Arr::only($query, $filterGroup);
 
-            if (! $results->containsProduct(ProductIndexFilters::fromQuery($groupQuery), $product, $descriptionSearchColumns)) {
+            if (! $results->containsProduct(ProductIndexFilters::fromQuery($groupQuery), $product, $descriptionSearchColumns, $searchTags)) {
                 $query = Arr::except($query, $filterGroup);
             }
         }

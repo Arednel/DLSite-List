@@ -225,7 +225,7 @@ class ProductMetadataSettingsTest extends TestCase
             ->assertSet('customQuickAddFields.image.visibility_locked', true);
     }
 
-    public function test_field_layout_component_saves_visibility_editability_and_fetched_tag_editability(): void
+    public function test_field_layout_component_saves_visibility_and_editability(): void
     {
         Livewire::test(ProductFieldLayoutSettings::class)
             ->set('indexFields.score.visible', false)
@@ -234,7 +234,7 @@ class ProductMetadataSettingsTest extends TestCase
             ->set('editFields.voice_actor.editable', true)
             ->set('editFields.notes.visible', false)
             ->set('editFields.tags.visible', true)
-            ->set('editFields.tags.fetched_editable', true)
+            ->set('editFields.fetched_english_tags.editable', true)
             ->set('quickAddFields.notes.visible', false)
             ->set('customQuickAddFields.sample_images.visible', false)
             ->call('save')
@@ -247,9 +247,55 @@ class ProductMetadataSettingsTest extends TestCase
         $this->assertTrue($this->layoutRow(Option::editFieldLayout(), ProductField::VoiceActor)['visible']);
         $this->assertTrue($this->layoutRow(Option::editFieldLayout(), ProductField::VoiceActor)['editable']);
         $this->assertFalse($this->layoutRow(Option::editFieldLayout(), ProductField::Notes)['visible']);
-        $this->assertTrue($this->layoutRow(Option::editFieldLayout(), ProductField::Tags)['fetched_editable']);
+        $this->assertTrue(collect(Option::editFieldLayout())->firstWhere('field', 'fetched_english_tags')['editable']);
         $this->assertFalse($this->layoutRow(Option::quickAddFieldLayout(), ProductField::Notes)['visible']);
         $this->assertFalse($this->layoutRow(Option::customQuickAddFieldLayout(), ProductField::SampleImages)['visible']);
+    }
+
+    public function test_field_layout_component_saves_split_tag_bucket_controls_without_filter_split(): void
+    {
+        $component = Livewire::test(ProductFieldLayoutSettings::class)
+            ->assertSet('indexFields.tags.custom_visible', true)
+            ->assertSet('indexFields.tags.fetched_english_visible', true)
+            ->assertSet('editFields.tags.label', 'Custom Tags')
+            ->assertSet('editFields.tags.visible', true)
+            ->assertSet('editFields.tags.editable', true)
+            ->assertSet('editFields.fetched_english_tags.label', 'Fetched EN Tags')
+            ->assertSet('editFields.fetched_english_tags.visible', true)
+            ->assertSet('editFields.fetched_english_tags.editable', false)
+            ->assertSet('quickAddFields.tags.label', 'Custom Tags')
+            ->assertSet('customQuickAddFields.tags.label', 'Custom Tags')
+            ->set('indexFields.tags.custom_visible', false)
+            ->set('indexFields.tags.fetched_english_visible', true)
+            ->set('editFields.tags.visible', false)
+            ->set('editFields.tags.editable', true)
+            ->set('editFields.fetched_english_tags.visible', true)
+            ->set('editFields.fetched_english_tags.editable', true)
+            ->call('save')
+            ->assertHasNoErrors()
+            ->assertSet('saved', true);
+
+        $indexTags = $this->layoutRow(Option::indexFieldLayout(), ProductField::Tags);
+        $editCustomTags = $this->layoutRow(Option::editFieldLayout(), ProductField::Tags);
+        $editFetchedEnglishTags = collect(Option::editFieldLayout())->firstWhere('field', 'fetched_english_tags');
+        $filterTags = $this->layoutRow(Option::filterFieldLayout(), ProductField::Tags);
+
+        $this->assertFalse($indexTags['custom_visible']);
+        $this->assertTrue($indexTags['fetched_english_visible']);
+        $this->assertTrue($indexTags['visible']);
+        $this->assertFalse($editCustomTags['visible']);
+        $this->assertFalse($editCustomTags['editable']);
+        $this->assertIsArray($editFetchedEnglishTags);
+        $this->assertTrue($editFetchedEnglishTags['visible']);
+        $this->assertTrue($editFetchedEnglishTags['editable']);
+        $this->assertArrayNotHasKey('custom_visible', $filterTags);
+        $this->assertArrayNotHasKey('fetched_english_visible', $filterTags);
+
+        $filterStateTags = $component->get('filterFields')['tags'];
+
+        $this->assertSame('Tags', $filterStateTags['label']);
+        $this->assertArrayNotHasKey('custom_visible', $filterStateTags);
+        $this->assertArrayNotHasKey('fetched_english_visible', $filterStateTags);
     }
 
     public function test_field_layout_component_saves_custom_order_for_each_layout_surface(): void
@@ -409,7 +455,11 @@ class ProductMetadataSettingsTest extends TestCase
                 'field' => ProductField::Tags->value,
                 'visible' => true,
                 'editable' => true,
-                'fetched_editable' => true,
+            ],
+            [
+                'field' => 'fetched_english_tags',
+                'visible' => true,
+                'editable' => true,
             ],
         ]);
         Option::setQuickAddFieldLayout([
@@ -453,7 +503,7 @@ class ProductMetadataSettingsTest extends TestCase
         $this->assertSame(ProductField::Image->value, Option::indexFieldLayout()[0]['field']);
         $this->assertTrue(Option::indexFieldLayout()[0]['visible']);
         $this->assertTrue($this->layoutRow(Option::indexFieldLayout(), ProductField::Title)['visibility_locked']);
-        $this->assertFalse($this->layoutRow(Option::editFieldLayout(), ProductField::Tags)['fetched_editable']);
+        $this->assertFalse(collect(Option::editFieldLayout())->firstWhere('field', 'fetched_english_tags')['editable']);
         $this->assertTrue($this->layoutRow(Option::quickAddFieldLayout(), ProductField::RjCode)['visibility_locked']);
         $this->assertTrue($this->layoutRow(Option::quickAddFieldLayout(), ProductField::Notes)['visible']);
         $this->assertTrue($this->layoutRow(Option::customQuickAddFieldLayout(), ProductField::SampleImages)['visible']);
@@ -498,8 +548,9 @@ class ProductMetadataSettingsTest extends TestCase
                 'Custom Quick Add Form Fields',
             ])
             ->assertSee('Required')
-            ->assertSee('Editable Custom Tags')
-            ->assertSee('Editable Fetched EN Tags')
+            ->assertSee('Custom Tags')
+            ->assertSee('Fetched EN Tags')
+            ->assertSee('Editable')
             ->assertSee('Save field layouts')
             ->assertSee('Reset to default');
     }

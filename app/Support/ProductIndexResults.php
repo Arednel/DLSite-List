@@ -7,6 +7,7 @@ use App\Enums\ProductField;
 use App\Enums\ProductIndexSortField;
 use App\Enums\ProductPriority;
 use App\Enums\ProductReListenValue;
+use App\Models\Genre;
 use App\Models\Option;
 use App\Models\Product;
 use Illuminate\Database\Eloquent\Builder;
@@ -52,13 +53,14 @@ final class ProductIndexResults
     public function getProducts(
         ProductIndexFilters $filters,
         int|string $perPage,
-        array $visibleFields = [],
+        array $visibleFields,
         bool $searchHiddenDescriptionsEnabled = false,
     ): EloquentCollection|LengthAwarePaginator {
         $query = $this->filteredQuery(
             $filters,
             $this->indexColumns($visibleFields),
             $this->descriptionSearchColumns($visibleFields, $searchHiddenDescriptionsEnabled),
+            in_array(ProductField::Tags->value, $visibleFields, true),
         );
         $query = $this->applySqlSorting($query, $filters->sorts());
 
@@ -71,8 +73,9 @@ final class ProductIndexResults
         ProductIndexFilters $filters,
         Product $product,
         array $descriptionSearchColumns,
+        bool $searchTags = true,
     ): bool {
-        return $this->filteredQuery($filters, null, $descriptionSearchColumns)
+        return $this->filteredQuery($filters, null, $descriptionSearchColumns, $searchTags)
             ->whereKey($product->getKey())
             ->exists();
     }
@@ -83,12 +86,13 @@ final class ProductIndexResults
         int|string $perPage,
         int $page,
         array $descriptionSearchColumns,
+        bool $searchTags = true,
     ): bool {
         if ($perPage === Option::INDEX_PER_PAGE_UNLIMITED) {
-            return $this->containsProduct($filters, $product, $descriptionSearchColumns);
+            return $this->containsProduct($filters, $product, $descriptionSearchColumns, $searchTags);
         }
 
-        return $this->applySqlSorting($this->filteredQuery($filters, null, $descriptionSearchColumns), $filters->sorts())
+        return $this->applySqlSorting($this->filteredQuery($filters, null, $descriptionSearchColumns, $searchTags), $filters->sorts())
             ->forPage(max(1, $page), max(1, (int) $perPage))
             ->pluck('id')
             ->containsStrict((string) $product->getKey());
@@ -99,12 +103,13 @@ final class ProductIndexResults
         Product $product,
         int|string $perPage,
         array $descriptionSearchColumns,
+        bool $searchTags = true,
     ): ?int {
         if ($perPage === Option::INDEX_PER_PAGE_UNLIMITED) {
             return null;
         }
 
-        $position = $this->applySqlSorting($this->filteredQuery($filters, null, $descriptionSearchColumns), $filters->sorts())
+        $position = $this->applySqlSorting($this->filteredQuery($filters, null, $descriptionSearchColumns, $searchTags), $filters->sorts())
             ->pluck('id')
             ->search((string) $product->getKey(), true);
 
@@ -117,13 +122,14 @@ final class ProductIndexResults
         ProductIndexFilters $filters,
         int|string $perPage,
         array $descriptionSearchColumns,
+        bool $searchTags = true,
     ): ?int {
         if ($perPage === Option::INDEX_PER_PAGE_UNLIMITED) {
             return null;
         }
 
         $perPage = max(1, (int) $perPage);
-        $total = $this->filteredQuery($filters, null, $descriptionSearchColumns)->count();
+        $total = $this->filteredQuery($filters, null, $descriptionSearchColumns, $searchTags)->count();
 
         return max(1, (int) ceil($total / $perPage));
     }
@@ -151,6 +157,7 @@ final class ProductIndexResults
         ProductIndexFilters $filters,
         ?array $columns = null,
         array $descriptionSearchColumns = [],
+        bool $searchTags = true,
     ): Builder {
         return Product::query()
             ->select($columns ?? ['id'])
@@ -263,7 +270,7 @@ final class ProductIndexResults
             )
             ->when(
                 $filters->search !== '',
-                fn($query) => $query->searchIndex($filters->search, $descriptionSearchColumns)
+                fn($query) => $query->searchIndex($filters->search, $descriptionSearchColumns, $searchTags)
             );
     }
 
@@ -272,8 +279,9 @@ final class ProductIndexResults
         bool $useGroupOrdering,
         bool $includeColors = false,
         bool $hasHiddenGroups = false,
+        array $visibleTagBuckets = ['custom' => true, 'fetched_english' => true],
     ): Collection {
-        if ($productIds === []) {
+        if ($productIds === [] || ! (($visibleTagBuckets['custom'] ?? false) || ($visibleTagBuckets['fetched_english'] ?? false))) {
             return collect();
         }
 
@@ -291,6 +299,8 @@ final class ProductIndexResults
             if ($hasHiddenGroups) {
                 $this->excludeGenresInHiddenGroups($query);
             }
+
+            $this->applyVisibleTagBuckets($query, $visibleTagBuckets);
 
             if ($includeColors) {
                 return $this->applyEffectiveGenreColors(
@@ -332,6 +342,8 @@ final class ProductIndexResults
             $this->excludeGenresInHiddenGroups($groupedQuery);
         }
 
+        $this->applyVisibleTagBuckets($groupedQuery, $visibleTagBuckets);
+
         $groupedSelect = [
             'genre_product.product_id',
             'genres.id',
@@ -372,8 +384,11 @@ final class ProductIndexResults
                     ->whereColumn('genre_group_genre.genre_id', 'genres.id');
             })
             ->orderBy('genres.title')
-            ->orderBy('genres.id')
-            ->get($ungroupedSelect);
+            ->orderBy('genres.id');
+
+        $this->applyVisibleTagBuckets($ungroupedGenres, $visibleTagBuckets);
+
+        $ungroupedGenres = $ungroupedGenres->get($ungroupedSelect);
 
         $genres = $groupedGenres->concat($ungroupedGenres);
 
@@ -541,6 +556,32 @@ final class ProductIndexResults
                 ->whereColumn('hidden_genre_group_genre.genre_id', 'genres.id')
                 ->where('hidden_genre_groups.hidden_on_index', true);
         });
+    }
+
+    private function applyVisibleTagBuckets(\Illuminate\Database\Query\Builder $query, array $visibleTagBuckets): void
+    {
+        $customVisible = (bool) ($visibleTagBuckets['custom'] ?? false);
+        $fetchedEnglishVisible = (bool) ($visibleTagBuckets['fetched_english'] ?? false);
+
+        if ($customVisible && $fetchedEnglishVisible) {
+            return;
+        }
+
+        if ($customVisible) {
+            $query->where('genre_product.source', Genre::PIVOT_SOURCE_CUSTOM);
+
+            return;
+        }
+
+        if ($fetchedEnglishVisible) {
+            $query->where('genre_product.source', Genre::PIVOT_SOURCE_FETCHED)
+                ->whereExists(function ($languageQuery): void {
+                    $languageQuery->select('genre_product_languages.id')
+                        ->from('genre_product_languages')
+                        ->whereColumn('genre_product_languages.genre_product_id', 'genre_product.id')
+                        ->where('genre_product_languages.language', Genre::LANGUAGE_ENGLISH);
+                });
+        }
     }
 
     private function orderedGroupColorsByGenreId(Collection $genres): Collection

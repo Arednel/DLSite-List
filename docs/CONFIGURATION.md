@@ -172,8 +172,10 @@ Pagination built-in choices:
 The General tab also accepts a custom positive integer. `unlimited` disables Index pagination and renders every matching work.
 
 Tag editing defaults:
-- Custom Tags editable: enabled when Tags is visible/editable in the Edit Form layout
-- Fetched EN Tags editable: disabled unless the Edit Form layout enables it
+- Index Table Fields show one Tags column with separate Custom Tags and Fetched EN Tags visibility toggles; both buckets are visible by default
+- Edit Form Fields show separate Fetched EN Tags and Custom Tags rows in that default order; both are visible by default
+- Custom Tags editable: enabled by default in the Edit Form layout
+- Fetched EN Tags editable: disabled by default unless its Edit Form row enables it
 
 When Fetched EN Tags editing is enabled, Edit Work allows changing the fetched English tag bucket. Japanese-only fetched tags remain stored but hidden.
 
@@ -196,7 +198,7 @@ Index field layout default order:
 - `author` hidden by default
 - `description_japanese` hidden by default
 - `description_english` hidden by default
-- `tags`
+- `tags` with Custom Tags and Fetched EN Tags visible by default
 - `notes` hidden by default; Notes are already shown inside Title, and this row enables a separate column
 - `start_date` hidden by default
 - `end_date` hidden by default
@@ -209,7 +211,8 @@ Edit form field layout default order:
 - `score`
 - `series`
 - `title` locked visible
-- `tags`
+- `fetched_english_tags` shown as Fetched EN Tags
+- `tags` shown as Custom Tags
 - `notes`
 - `start_date`
 - `end_date`
@@ -235,7 +238,7 @@ Filter modal field layout default order:
 - `priority`
 - `num_re_listen_times`
 - `re_listen_value`
-- `tags`
+- `tags` shown as Custom Tags
 - `start_date` hidden by default
 - `end_date` hidden by default
 - `created_at` hidden by default
@@ -254,7 +257,7 @@ Quick Add field layout default order:
 - `score`
 - `series`
 - `title`
-- `tags`
+- `tags` shown as Custom Tags
 - `notes`
 - `start_date`
 - `end_date`
@@ -313,7 +316,7 @@ Index sort field dropdown default order:
 - `voice_actor` hidden by default
 - `author` hidden by default
 
-The Index Table Fields, Index Filter Fields, Edit Form Fields, Quick Add Form Fields, and Custom Quick Add Form Fields sections each store their own layout JSON in `options.value`. Rows can be reordered by dragging the row handle or by using the Up/Down buttons, and changes are persisted when Save is submitted. Field settings are keyed by field id while editing, so reordering rows does not change checkbox state. Unknown or duplicate field ids are ignored and missing known fields fall back to the surface default order. Index `title` is always visible but can still be reordered. Edit Form `title` is also locked visible and represents the Japanese/English title inputs after the fixed RJ Code + Title display row. Quick Add keeps `rj_code` locked visible. Custom Quick Add keeps `rj_code`, `title`, `age_category`, and `image` locked visible. In the Edit Form Fields section, the `tags` row stores separate toggles for Custom Tags and Fetched EN Tags, grouped in the same edit-controls column on desktop.
+The Index Table Fields, Index Filter Fields, Edit Form Fields, Quick Add Form Fields, and Custom Quick Add Form Fields sections each store their own layout JSON in `options.value`. Rows can be reordered by dragging the row handle or by using the Up/Down buttons, and changes are persisted when Save is submitted. Field settings are keyed by field id while editing, so reordering rows does not change checkbox state. Unknown or duplicate field ids are ignored and missing known fields fall back to the surface default order. Index `title` is always visible but can still be reordered. Edit Form `title` is also locked visible and represents the Japanese/English title inputs after the fixed RJ Code + Title display row. Quick Add keeps `rj_code` locked visible. Custom Quick Add keeps `rj_code`, `title`, `age_category`, and `image` locked visible. In Index Table Fields, `tags` keeps one column/order row but stores separate Custom Tags and Fetched EN Tags visibility flags. In Edit Form Fields, Custom Tags use the `tags` row and Fetched EN Tags use the separate `fetched_english_tags` row so they can be ordered, shown, hidden, and made editable independently. Index Filter Fields and Index Sort Menu do not split Tags.
 
 The Index Sort Menu section appears after Index Filter Fields and uses the same Options row controls to reorder and show/hide values in the Advanced Filter sort dropdowns. It only changes the dropdown presentation: valid URL sort state and sortable visible table columns keep sorting through `ProductIndexSortField`. Sortable optional Index headers include circle/creator columns, start/finish dates, total times re-listened, re-listen value, and priority when those columns are visible.
 

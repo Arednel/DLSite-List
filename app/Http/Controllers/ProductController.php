@@ -321,9 +321,7 @@ class ProductController extends Controller
         $productFieldsChanged = $product->isDirty(self::VISIBILITY_AFFECTING_PRODUCT_FIELDS);
         $product->save();
         $contributorsChanged = $this->syncProductEditContributors($request, $product, $data, $editableFields);
-        $genresChanged = ProductFieldLayout::visible($editFieldLayout, ProductField::Tags)
-            ? $this->syncProductEditGenres($request, $product, $data, $editFieldLayout)
-            : false;
+        $genresChanged = $this->syncProductEditGenres($request, $product, $data, $editFieldLayout);
 
         $returnTarget = ReturnTarget::fromRequest($request, $product->getKey());
         $newProgress = in_array(ProductField::Progress->value, $editableFields, true) && $request->wasSubmitted('progress')

@@ -126,20 +126,18 @@
     @break
 
     @case('tags')
-        @if (!$field['editable'] && !$field['fetched_editable'])
-            <x-fields.genre-readonly label="Tags" :genres="$englishGenres->merge($customGenres)" :show-color-chips="$showReadonlyGenreColors" />
+        @if ($field['editable'])
+            <x-fields.genre-custom :value="$genreCustomInput" />
         @else
-            @if ($field['fetched_editable'])
-                <x-fields.genre-fetched-editable :value="$genreFetchedEnglishInput" />
-            @else
-                <x-fields.genre-readonly label="Fetched EN Genres" :genres="$englishGenres" :show-color-chips="$showReadonlyGenreColors" />
-            @endif
+            <x-fields.genre-readonly label="Custom Tags" :genres="$customGenres" empty="No custom tags." :show-color-chips="$showReadonlyGenreColors" />
+        @endif
+    @break
 
-            @if ($field['editable'])
-                <x-fields.genre-custom :value="$genreCustomInput" />
-            @else
-                <x-fields.genre-readonly label="Custom Tags" :genres="$customGenres" empty="No custom tags." :show-color-chips="$showReadonlyGenreColors" />
-            @endif
+    @case('fetched_english_tags')
+        @if ($field['editable'])
+            <x-fields.genre-fetched-editable :value="$genreFetchedEnglishInput" />
+        @else
+            <x-fields.genre-readonly label="Fetched EN Tags" :genres="$englishGenres" :show-color-chips="$showReadonlyGenreColors" />
         @endif
     @break
 

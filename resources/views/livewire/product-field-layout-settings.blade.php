@@ -31,38 +31,42 @@
                                 </div>
                             </div>
 
-                            <label class="field-layout-check" wire:sort:ignore>
-                                <input type="checkbox"
-                                    wire:model.live="{{ $layoutConfig['fields'] }}.{{ $row['field'] }}.visible"
-                                    @disabled($row['visibility_locked'] ?? false)>
-                                <span>
+                            @if (!$layoutConfig['sort'] && $layoutProperty === 'index' && $row['field'] === 'tags')
+                                <div class="field-layout-index-tags-label" wire:sort:ignore>
                                     {{ $row['label'] }}
-                                    @if ($row['note'] ?? false)
-                                        <span class="field-layout-note">{{ $row['note'] }}</span>
-                                    @endif
-                                </span>
-                                @if ($row['visibility_locked'] ?? false)
-                                    <span class="field-layout-lock-note">Required</span>
-                                @endif
-                            </label>
+                                </div>
 
-                            @if (!$layoutConfig['sort'] && $layoutProperty === 'edit' && $row['field'] === 'tags')
-                                <div class="field-layout-edit-stack" wire:sort:ignore>
+                                <div class="field-layout-edit-stack field-layout-index-tag-buckets" wire:sort:ignore>
                                     <label class="field-layout-check field-layout-check--edit">
                                         <input type="checkbox"
-                                            wire:model.live="{{ $layoutConfig['fields'] }}.{{ $row['field'] }}.editable"
-                                            @disabled(!($row['visible'] ?? false))>
-                                        <span>Editable Custom Tags</span>
+                                            wire:model.live="{{ $layoutConfig['fields'] }}.{{ $row['field'] }}.custom_visible">
+                                        <span>Custom Tags</span>
                                     </label>
 
                                     <label class="field-layout-check field-layout-check--edit">
                                         <input type="checkbox"
-                                            wire:model.live="{{ $layoutConfig['fields'] }}.{{ $row['field'] }}.fetched_editable"
-                                            @disabled(!($row['visible'] ?? false))>
-                                        <span>Editable Fetched EN Tags</span>
+                                            wire:model.live="{{ $layoutConfig['fields'] }}.{{ $row['field'] }}.fetched_english_visible">
+                                        <span>Fetched EN Tags</span>
                                     </label>
                                 </div>
-                            @elseif (!$layoutConfig['sort'] && $layoutProperty === 'edit')
+                            @else
+                                <label class="field-layout-check" wire:sort:ignore>
+                                    <input type="checkbox"
+                                        wire:model.live="{{ $layoutConfig['fields'] }}.{{ $row['field'] }}.visible"
+                                        @disabled($row['visibility_locked'] ?? false)>
+                                    <span>
+                                        {{ $row['label'] }}
+                                        @if ($row['note'] ?? false)
+                                            <span class="field-layout-note">{{ $row['note'] }}</span>
+                                        @endif
+                                    </span>
+                                    @if ($row['visibility_locked'] ?? false)
+                                        <span class="field-layout-lock-note">Required</span>
+                                    @endif
+                                </label>
+                            @endif
+
+                            @if (!$layoutConfig['sort'] && $layoutProperty === 'edit')
                                 <label class="field-layout-check field-layout-check--edit" wire:sort:ignore>
                                     <input type="checkbox"
                                         wire:model.live="{{ $layoutConfig['fields'] }}.{{ $row['field'] }}.editable"
