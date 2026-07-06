@@ -2,6 +2,9 @@
 
 ## Development
 
+* 2026-07-06 -- 1.6.0 Tag Library Mobile View
+  * Improved Tag Library edit modal sizing on mobile so it keeps top spacing and scrolls within the viewport
+
 * 2026-07-05 -- 1.5.9 Tag Layouts
   * Added separate Custom Tags and Fetched EN Tags visibility controls for the Index Tags column
   * Split Edit Form tag layout into independently orderable Custom Tags and Fetched EN Tags rows, with only Custom Tags editable by default

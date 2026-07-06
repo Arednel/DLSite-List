@@ -798,25 +798,32 @@ button.tag-library-tag {
 }
 
 .tag-library-modal-backdrop {
+    box-sizing: border-box;
     position: fixed;
     inset: 0;
     z-index: 20;
     display: flex;
     align-items: center;
     justify-content: center;
+    height: 100dvh;
     padding: 1rem;
     background: rgba(47, 26, 38, 0.34);
+    overflow-y: auto;
 }
 
 .tag-library-modal-card {
+    box-sizing: border-box;
     width: min(100%, 28rem);
+    max-height: calc(100dvh - 2rem);
     border: 1px solid rgba(238, 152, 152, 0.9);
     border-radius: 8px;
     background: #FFF8FC;
     color: #7D6A6A;
     box-shadow: 0 22px 50px rgba(47, 26, 38, 0.2);
     padding: 1.25rem;
+    overflow-y: auto;
     text-align: left;
+    -webkit-overflow-scrolling: touch;
 }
 
 .tag-library-modal-card--wide {
@@ -1007,6 +1014,16 @@ button.tag-library-tag {
 }
 
 @media (max-width: 768px) {
+    .tag-library-modal-backdrop {
+        align-items: flex-start;
+        padding-top: max(16px, env(safe-area-inset-top));
+        padding-bottom: max(24px, env(safe-area-inset-bottom));
+    }
+
+    .tag-library-modal-card {
+        max-height: calc(100dvh - 48px - env(safe-area-inset-top) - env(safe-area-inset-bottom));
+    }
+
     .tag-library-container {
         width: 100%;
         margin-top: 0;
