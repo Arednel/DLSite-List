@@ -1,31 +1,25 @@
 <div>
     <form wire:submit.prevent="save" class="option-form">
-        <label class="option-toggle">
-            <input type="checkbox" wire:model.live="expandedByDefault">
-            <span>Open Tag Library with all tags shown</span>
-            <i class="fa-solid fa-circle-question"
-                title="When enabled, Tag Library opens with the All Tags list expanded instead of collapsed."></i>
-        </label>
+        <x-options.switch wire:model.live="expandedByDefault"
+            help="When enabled, Tag Library opens with the All Tags list expanded instead of collapsed.">
+            Open Tag Library with all tags shown
+        </x-options.switch>
 
-        <label class="option-toggle">
-            <input type="checkbox" wire:model.live="indexGroupOrderingEnabled">
-            <span>Enable group ordering on Index</span>
-            <i class="fa-solid fa-circle-question"
-                title="When enabled, Index tag chips use saved group order, saved tag order inside groups, then ungrouped tags alphabetically."></i>
-        </label>
+        <x-options.switch wire:model.live="indexGroupOrderingEnabled"
+            help="When enabled, Index tag chips use saved group order, saved tag order inside groups, then ungrouped tags alphabetically.">
+            Enable group ordering on Index
+        </x-options.switch>
 
         <fieldset class="option-fieldset">
             <legend>
                 Tag color surfaces
-                <i class="fa-solid fa-circle-question"
-                    title="Choose where saved tag and tag group colors are shown."></i>
+                <i class="fa-solid fa-circle-question" title="Choose where saved tag and tag group colors are shown."></i>
             </legend>
 
             @foreach ($colorSurfaceLabels as $surface => $label)
-                <label class="option-toggle">
-                    <input type="checkbox" wire:model.live="colorSurfaces.{{ $surface }}">
-                    <span>{{ $label }}</span>
-                </label>
+                <x-options.switch wire:model.live="colorSurfaces.{{ $surface }}">
+                    {{ $label }}
+                </x-options.switch>
             @endforeach
         </fieldset>
 

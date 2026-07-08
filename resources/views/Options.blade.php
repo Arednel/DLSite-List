@@ -18,12 +18,12 @@
     @livewireStyles
 </head>
 
-<body>
+<body class="options-page">
     <x-list-menu-float :quick-add-url="route('products.create', [], false)" />
 
-    <main class="page">
-        <div class="container">
-            <header class="hero">
+    <main class="options-shell">
+        <div class="options-container">
+            <header class="options-header">
                 <h1>Options</h1>
             </header>
 
@@ -34,7 +34,7 @@
                     : 'general';
             @endphp
 
-            <nav class="options-tabs" aria-label="Options sections" role="tablist">
+            <nav class="options-tabs options-tab-list" aria-label="Options sections" role="tablist">
                 <a class="options-tab {{ $activeTab === 'general' ? 'is-active' : '' }}"
                     href="{{ route('options.index', ['tab' => 'general'], false) }}" role="tab"
                     aria-controls="general-tab-panel" aria-selected="{{ $activeTab === 'general' ? 'true' : 'false' }}">
@@ -55,7 +55,7 @@
             </nav>
 
             @if ($activeTab === 'general')
-                <section id="general-tab-panel" class="panel" role="tabpanel">
+                <section id="general-tab-panel" class="panel options-panel" role="tabpanel">
                     <h2>Index Pagination</h2>
                     <p class="option-description">
                         Choose how many works are shown on each Index page.
@@ -104,7 +104,7 @@
             @endif
 
             @if ($activeTab === 'field-layouts')
-                <section id="field-layouts-tab-panel" class="panel" role="tabpanel">
+                <section id="field-layouts-tab-panel" class="panel options-panel" role="tabpanel">
                     <h2>Field Layouts</h2>
                     <p class="option-description">
                         Choose which product fields are visible, editable, and how configurable columns are ordered.
@@ -117,7 +117,7 @@
             @endif
 
             @if ($activeTab === 'refetch')
-                <section id="refetch-tab-panel" class="panel" role="tabpanel">
+                <section id="refetch-tab-panel" class="panel options-panel" role="tabpanel">
                     <h2>Refetch Tags</h2>
                     <p class="option-description">
                         Fetch the latest DLsite genre tags for all works or for only selected works.
@@ -131,7 +131,7 @@
                         </div>
                     @endif
 
-                    <div class="option-actions">
+                    <div class="option-actions option-actions--primary">
                         <form method="POST" action="{{ route('options.refetch-tags.start') }}">
                             @csrf
                             <input type="hidden" name="scope" value="all">

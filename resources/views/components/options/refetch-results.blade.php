@@ -54,7 +54,6 @@
                             @forelse ($tagRows[$result->getKey()]['fetched_japanese_tags'] ?? [] as $tag)
                                 <span @class([
                                     'tag',
-                                    'tag--solid',
                                     'tag--sm',
                                     'tag--background-colored' => $tag['has_background_color'],
                                     'tag--text-colored' => $tag['has_font_color'],
@@ -72,7 +71,6 @@
                             @forelse ($tagRows[$result->getKey()]['fetched_english_tags'] ?? [] as $tag)
                                 <span @class([
                                     'tag',
-                                    'tag--solid',
                                     'tag--sm',
                                     'tag--background-colored' => $tag['has_background_color'],
                                     'tag--text-colored' => $tag['has_font_color'],

@@ -1,11 +1,9 @@
 <div>
     <form wire:submit.prevent="save" class="option-form">
-        <label class="option-toggle">
-            <input type="checkbox" wire:model.live="searchHiddenDescriptions">
-            <span>Search hidden descriptions</span>
-            <i class="fa-solid fa-circle-question"
-                title="When enabled, general Index search can match Japanese and English description text even when both description columns are hidden."></i>
-        </label>
+        <x-options.switch wire:model.live="searchHiddenDescriptions"
+            help="When enabled, general Index search can match Japanese and English description text even when both description columns are hidden.">
+            Search hidden descriptions
+        </x-options.switch>
 
         <div class="option-actions option-actions--inline">
             <button type="submit" class="tag tag--soft tag--lg is-clickable">Save Index search setting</button>

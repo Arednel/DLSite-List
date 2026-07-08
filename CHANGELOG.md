@@ -2,6 +2,10 @@
 
 ## Development
 
+* 2026-07-08 -- 1.6.1 Options UI Style
+  * Restyled Options and Refetch pages to match the compact Index and Tag Library theme
+  * Added section header bands, switch controls, and cleaner mobile Field Layout controls
+
 * 2026-07-06 -- 1.6.0 Tag Library Mobile View
   * Improved Tag Library edit modal sizing on mobile so it keeps top spacing and scrolls within the viewport
 

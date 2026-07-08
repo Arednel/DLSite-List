@@ -17,19 +17,19 @@
     @livewireStyles
 </head>
 
-<body>
+<body class="options-page">
     <x-list-menu-float :quick-add-url="route('products.create', [], false)" />
 
-    <main class="page">
-        <div class="container">
-            <header class="hero">
+    <main class="options-shell">
+        <div class="options-container">
+            <header class="options-header">
                 <h1>Refetch Tags</h1>
             </header>
 
             <livewire:options-refetch-progress :run="$run" />
 
             @if ($run->hasReviewResults())
-                <section class="panel">
+                <section class="panel options-panel">
                     <h2>Review</h2>
                     <div class="summary-grid">
                         <div>New JP <strong>{{ $summary['added_japanese'] }}</strong></div>
@@ -109,7 +109,7 @@
                 </section>
             @endif
 
-            <div class="option-actions">
+            <div class="option-actions option-actions--footer">
                 <a class="tag tag--soft tag--md is-clickable" href="{{ route('options.index') }}">Back to Options</a>
             </div>
         </div>

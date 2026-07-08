@@ -1,9 +1,8 @@
 <div>
     <form wire:submit.prevent="save" class="option-form">
-        <label class="option-toggle">
-            <input type="checkbox" wire:model.live="enabled">
-            <span>Set Series from DLsite title name when the Series field is empty</span>
-        </label>
+        <x-options.switch wire:model.live="enabled">
+            Set Series from DLsite title name when the Series field is empty
+        </x-options.switch>
 
         <div class="option-actions option-actions--inline">
             <button type="submit" class="tag tag--soft tag--lg is-clickable">Save auto-series setting</button>

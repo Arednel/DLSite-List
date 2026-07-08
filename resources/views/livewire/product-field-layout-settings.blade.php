@@ -37,24 +37,24 @@
                                 </div>
 
                                 <div class="field-layout-edit-stack field-layout-index-tag-buckets" wire:sort:ignore>
-                                    <label class="field-layout-check field-layout-check--edit">
-                                        <input type="checkbox"
-                                            wire:model.live="{{ $layoutConfig['fields'] }}.{{ $row['field'] }}.custom_visible">
-                                        <span>Custom Tags</span>
-                                    </label>
+                                    <x-options.switch
+                                        wire:model.live="{{ $layoutConfig['fields'] }}.{{ $row['field'] }}.custom_visible"
+                                        wrapper-class="field-layout-check field-layout-check--edit field-layout-switch">
+                                        Custom Tags
+                                    </x-options.switch>
 
-                                    <label class="field-layout-check field-layout-check--edit">
-                                        <input type="checkbox"
-                                            wire:model.live="{{ $layoutConfig['fields'] }}.{{ $row['field'] }}.fetched_english_visible">
-                                        <span>Fetched EN Tags</span>
-                                    </label>
+                                    <x-options.switch
+                                        wire:model.live="{{ $layoutConfig['fields'] }}.{{ $row['field'] }}.fetched_english_visible"
+                                        wrapper-class="field-layout-check field-layout-check--edit field-layout-switch">
+                                        Fetched EN Tags
+                                    </x-options.switch>
                                 </div>
                             @else
-                                <label class="field-layout-check" wire:sort:ignore>
-                                    <input type="checkbox"
-                                        wire:model.live="{{ $layoutConfig['fields'] }}.{{ $row['field'] }}.visible"
-                                        @disabled($row['visibility_locked'] ?? false)>
-                                    <span>
+                                <x-options.switch
+                                    wire:model.live="{{ $layoutConfig['fields'] }}.{{ $row['field'] }}.visible"
+                                    wrapper-class="field-layout-check field-layout-switch" :sort-ignore="true"
+                                    :disabled="$row['visibility_locked'] ?? false">
+                                    <span class="field-layout-switch-label">
                                         {{ $row['label'] }}
                                         @if ($row['note'] ?? false)
                                             <span class="field-layout-note">{{ $row['note'] }}</span>
@@ -63,16 +63,16 @@
                                     @if ($row['visibility_locked'] ?? false)
                                         <span class="field-layout-lock-note">Required</span>
                                     @endif
-                                </label>
+                                </x-options.switch>
                             @endif
 
                             @if (!$layoutConfig['sort'] && $layoutProperty === 'edit')
-                                <label class="field-layout-check field-layout-check--edit" wire:sort:ignore>
-                                    <input type="checkbox"
-                                        wire:model.live="{{ $layoutConfig['fields'] }}.{{ $row['field'] }}.editable"
-                                        @disabled(!($row['visible'] ?? false))>
-                                    <span>Editable</span>
-                                </label>
+                                <x-options.switch
+                                    wire:model.live="{{ $layoutConfig['fields'] }}.{{ $row['field'] }}.editable"
+                                    wrapper-class="field-layout-check field-layout-check--edit field-layout-switch"
+                                    :sort-ignore="true" :disabled="!($row['visible'] ?? false)">
+                                    Editable
+                                </x-options.switch>
                             @endif
                         </div>
                     @endforeach

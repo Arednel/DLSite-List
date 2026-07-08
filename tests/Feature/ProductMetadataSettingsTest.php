@@ -555,6 +555,25 @@ class ProductMetadataSettingsTest extends TestCase
             ->assertSee('Reset to default');
     }
 
+    public function test_field_layout_component_renders_switch_controls(): void
+    {
+        Livewire::test(ProductFieldLayoutSettings::class)
+            ->assertSee('option-switch', false)
+            ->assertSee('option-switch-input', false)
+            ->assertSee('option-switch-track', false)
+            ->assertSee('wire:sort:ignore', false)
+            ->assertSee('wire:model.live="indexFields.image.visible"', false)
+            ->assertSee('wire:model.live="indexFields.tags.custom_visible"', false)
+            ->assertSee('wire:model.live="editFields.title.editable"', false);
+    }
+
+    public function test_locked_field_layout_visibility_switches_render_disabled(): void
+    {
+        Livewire::test(ProductFieldLayoutSettings::class)
+            ->assertSee('wire:model.live="editFields.title.visible"', false)
+            ->assertSee('disabled', false);
+    }
+
     public function test_field_layout_component_moves_a_row_up_and_down(): void
     {
         $component = Livewire::test(ProductFieldLayoutSettings::class);
