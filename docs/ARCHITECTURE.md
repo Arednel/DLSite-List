@@ -81,7 +81,7 @@ Shared UI note:
 - desktop keeps the floating hover menu
 - mobile uses a toggle button that opens the same menu as a left-side drawer
 - `resources/views/Index.blade.php` hosts `ProductIndex` inside a sticky-footer page shell; the Livewire view keeps the desktop table on larger screens and switches to stacked cards on mobile so search/actions still fit
-- `resources/views/Create.blade.php` switches between DLSite create and custom create modes, renders the saved Quick Add or Custom Quick Add field layout through a configurable row component, includes the same optional metadata/creator/Japanese-description/English-description rows as Edit Work hidden by default, and keeps required create fields locked visible; `resources/views/Create.blade.php` and `resources/views/Edit.blade.php` use `public/css/edit.css` for both desktop and mobile form layouts and render reusable field components from `resources/views/components/fields/*.blade.php`
+- `resources/views/Create.blade.php` switches between DLSite create and custom create modes, renders the saved Quick Add or Custom Quick Add field layout through a configurable row component, includes the same optional metadata/creator/Japanese-description/English-description rows as Edit Work hidden by default, and keeps required create fields locked visible; `ProductController` resolves the saved `product_form_theme` into a page-level theme class for `resources/views/Create.blade.php` and `resources/views/Edit.blade.php`, which use `public/css/edit.css` for both desktop and mobile form layouts and render reusable field components from `resources/views/components/fields/*.blade.php`
 - `app/View/Components/Fields/*.php` provides the class-based field components used by those Blade views
 - `AppServiceProvider` registers the enum-backed field component aliases used by `<x-fields.* />`
 - the progress, score, priority, and re-listen field component classes read their select options from the matching enums in `app/Enums/*.php`
@@ -287,7 +287,7 @@ Runtime note:
 - the Refetch tab links to the latest refetch run when at least one run exists
 - the General tab includes an Index Pagination setting powered by Livewire and persisted in `options.index_per_page`; changing the mode can reveal the custom-value input immediately, but the setting is only persisted when Save is submitted
 - the General tab includes Livewire autocomplete ordering settings persisted in `options.tag_autocomplete_order` and `options.series_autocomplete_order`
-- the General tab includes Livewire settings for automatic Series from DLSite `title_name` and Index table width
+- the General tab includes Livewire settings for automatic Series from DLSite `title_name`, Add/Edit form page theme, and Index table width
 - the Field Layouts tab includes Index Table Custom Tags/Fetched EN Tags visibility toggles inside one Tags row, keeps Index Filter Fields and Index Sort Menu unsplit, and uses separate Edit Form rows for Custom Tags and Fetched EN Tags
 - the Field Layouts tab orders its Livewire settings as Index Table Fields, Index Filter Fields, Index Sort Menu, Edit Form Fields, Quick Add Form Fields, and Custom Quick Add Form Fields; field layout rows use Livewire `wire:sort` drag handles plus Up/Down buttons, keep checkbox state in field-keyed maps while editing, and are persisted only when Save is submitted
 - Options Livewire settings components share saved notice, validation-reset, and reset-confirmation state through `ConfirmsOptionReset`

@@ -76,6 +76,30 @@ class OptionMetadataSettingsTest extends TestCase
         ], Option::tagColorSurfaces());
     }
 
+    public function test_product_form_theme_defaults_to_black_and_normalizes_invalid_values(): void
+    {
+        $this->assertSame(Option::PRODUCT_FORM_THEME_BLACK, Option::productFormTheme());
+        $this->assertSame([
+            Option::PRODUCT_FORM_THEME_CHERRY => 'Cherry',
+            Option::PRODUCT_FORM_THEME_BLACK => 'Black',
+        ], Option::productFormThemeOptions());
+
+        Option::setProductFormTheme(Option::PRODUCT_FORM_THEME_CHERRY);
+
+        $this->assertSame(Option::PRODUCT_FORM_THEME_CHERRY, Option::productFormTheme());
+
+        Option::setProductFormTheme(Option::PRODUCT_FORM_THEME_BLACK);
+
+        $this->assertSame(Option::PRODUCT_FORM_THEME_BLACK, Option::productFormTheme());
+
+        Option::query()->updateOrCreate(
+            ['key' => Option::PRODUCT_FORM_THEME],
+            ['value' => 'not-a-theme'],
+        );
+
+        $this->assertSame(Option::PRODUCT_FORM_THEME_BLACK, Option::productFormTheme());
+    }
+
     public function test_field_layouts_are_normalized_when_saved(): void
     {
         Option::setIndexFieldLayout([
@@ -255,6 +279,7 @@ class OptionMetadataSettingsTest extends TestCase
     {
         Option::setTagLibraryIndexGroupOrderingEnabled(true);
         Option::setIndexSearchHiddenDescriptionsEnabled(true);
+        Option::setProductFormTheme(Option::PRODUCT_FORM_THEME_CHERRY);
         Option::setTagColorSurfaces([
             'index' => false,
             'tag_library' => false,
@@ -267,6 +292,7 @@ class OptionMetadataSettingsTest extends TestCase
 
         $this->assertFalse(Option::tagLibraryIndexGroupOrderingEnabled());
         $this->assertFalse(Option::indexSearchHiddenDescriptionsEnabled());
+        $this->assertSame(Option::PRODUCT_FORM_THEME_BLACK, Option::productFormTheme());
         $this->assertSame([
             'index' => true,
             'tag_library' => true,

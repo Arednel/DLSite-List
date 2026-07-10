@@ -288,6 +288,7 @@ class ProductController extends Controller
 
         return view('Edit', [
             'product' => $product,
+            'productFormThemeClass' => $this->productFormThemeClass(),
             'englishGenres' => $englishGenres,
             'customGenres' => $customGenres,
             'genreFetchedEnglishInput' => $this->formatGenreInput($englishGenres->pluck('title')->all()),
@@ -675,6 +676,7 @@ class ProductController extends Controller
 
         return view('Create', [
             'isCustomCreate' => $isCustomCreate,
+            'productFormThemeClass' => $this->productFormThemeClass(),
             'quickAddFields' => $isCustomCreate
                 ? ProductFieldLayout::customQuickAddFields(Option::customQuickAddFieldLayout())
                 : ProductFieldLayout::quickAddFields(Option::quickAddFieldLayout()),
@@ -684,6 +686,11 @@ class ProductController extends Controller
             'ageCategoryOptions' => ProductAgeCategory::options(),
             ...$this->buildDateFieldOptions(),
         ]);
+    }
+
+    private function productFormThemeClass(): string
+    {
+        return 'product-form-theme-' . Option::productFormTheme();
     }
 
     private function storeCustomCoverImage(UploadedFile $file, string $workID): string

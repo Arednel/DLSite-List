@@ -141,6 +141,7 @@ Current settings:
 - `tag_autocomplete_order`: controls how tag autocomplete suggestions are ordered
 - `series_autocomplete_order`: controls how series autocomplete suggestions are ordered
 - `auto_series_from_title_name`: controls whether DLSite create fills an empty Series from `japanese.title_name`
+- `product_form_theme`: controls the Add Work, Add Custom Work, and Edit Work page theme. Defaults to `black`
 - `tag_library_tags_expanded_by_default`: controls whether Tag Library opens with the full tag list shown
 - `tag_library_index_group_ordering_enabled`: controls whether Index tag chips use tag group order instead of plain alphabetical title ordering
 - `tag_color_surfaces`: JSON map controlling where stored tag/group background and font colors render. Defaults are `index=true`, `tag_library=true`, `autocomplete=false`, `edit_readonly=false`, and `refetch=false`.
@@ -183,6 +184,13 @@ Automatic Series from DLSite `title_name` default:
 - enabled
 
 When enabled, DLSite create fills Series from `japanese.title_name` only if the Series field is empty. Manually entered Series values win. Custom create does not use this option.
+
+Product form theme default:
+- `black`
+
+Product form theme choices:
+- `cherry`: uses the same warm Cherry palette as Index, Tag Library, and Options
+- `black`: preserves the previous dark Add/Edit form style
 
 Index field layout default order:
 - `image`
@@ -349,7 +357,7 @@ Options reset behavior:
 - reset confirmation modals are teleported to the document body so they stay centered in the viewport instead of inside the Options panel
 - reset confirmation modals close from Cancel, Escape, or clicking outside the modal card
 - the global reset confirmation button is disabled for 3 seconds and shows a countdown before it can be clicked
-- reset defaults are pagination `100`, hidden-description search disabled, table width `default`, all five default field layouts, all default Index sort dropdown values, automatic Series enabled, Tag Library collapsed, Index group ordering disabled, and autocomplete `usage`
+- reset defaults are pagination `100`, hidden-description search disabled, table width `default`, all five default field layouts, all default Index sort dropdown values, automatic Series enabled, product form theme `black`, Tag Library collapsed, Index group ordering disabled, and autocomplete `usage`
 - global reset does not change products, tags, refetch runs, legacy hidden fallback keys, or unrelated future option rows
 
 Index search defaults:

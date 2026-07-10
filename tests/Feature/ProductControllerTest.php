@@ -603,6 +603,8 @@ class ProductControllerTest extends TestCase
     {
         $this->get('/create')
             ->assertOk()
+            ->assertSee('class="product-form-theme-black"', false)
+            ->assertDontSee('class="dark-mode"', false)
             ->assertSee('Add Work')
             ->assertSee('DLSite Create')
             ->assertSee('Custom Create')
@@ -620,10 +622,24 @@ class ProductControllerTest extends TestCase
             ->assertDontSee('name="sample_images[]"', false);
     }
 
+    public function test_create_renders_selected_cherry_form_theme(): void
+    {
+        Option::setProductFormTheme(Option::PRODUCT_FORM_THEME_CHERRY);
+
+        $this->get('/create')
+            ->assertOk()
+            ->assertSee('class="product-form-theme-cherry"', false)
+            ->assertDontSee('class="dark-mode"', false);
+    }
+
     public function test_custom_create_renders_form_page(): void
     {
+        Option::setProductFormTheme(Option::PRODUCT_FORM_THEME_CHERRY);
+
         $this->get('/create/custom')
             ->assertOk()
+            ->assertSee('class="product-form-theme-cherry"', false)
+            ->assertDontSee('class="dark-mode"', false)
             ->assertSee('Add Custom Work')
             ->assertSee('DLSite Create')
             ->assertSee('Custom Create')
@@ -900,6 +916,8 @@ class ProductControllerTest extends TestCase
 
         $this->get("/edit/{$product->id}?{$query}")
             ->assertOk()
+            ->assertSee('class="product-form-theme-black"', false)
+            ->assertDontSee('class="dark-mode"', false)
             ->assertSee('Edit Work')
             ->assertSee('width=device-width, initial-scale=1', false)
             ->assertSee('css/title-tooltips.css', false)
@@ -931,6 +949,18 @@ class ProductControllerTest extends TestCase
             ->assertSee('name="return_fragment"', false)
             ->assertSee('href="/?progress=Listening#' . $product->id . '"', false)
             ->assertDontSee('name="redirect"', false);
+    }
+
+    public function test_edit_renders_selected_cherry_form_theme(): void
+    {
+        Option::setProductFormTheme(Option::PRODUCT_FORM_THEME_CHERRY);
+
+        $product = Product::factory()->create();
+
+        $this->get("/edit/{$product->id}")
+            ->assertOk()
+            ->assertSee('class="product-form-theme-cherry"', false)
+            ->assertDontSee('class="dark-mode"', false);
     }
 
     public function test_edit_renders_readonly_description_from_prepared_value(): void

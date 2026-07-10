@@ -20,6 +20,8 @@ class Option extends Model
 
     public const AUTO_SERIES_FROM_TITLE_NAME = 'auto_series_from_title_name';
 
+    public const PRODUCT_FORM_THEME = 'product_form_theme';
+
     public const TAG_LIBRARY_TAGS_EXPANDED_BY_DEFAULT = 'tag_library_tags_expanded_by_default';
 
     public const TAG_LIBRARY_INDEX_GROUP_ORDERING_ENABLED = 'tag_library_index_group_ordering_enabled';
@@ -60,6 +62,10 @@ class Option extends Model
 
     public const INDEX_TABLE_WIDTH_CUSTOM = 'custom';
 
+    public const PRODUCT_FORM_THEME_CHERRY = 'cherry';
+
+    public const PRODUCT_FORM_THEME_BLACK = 'black';
+
     public const DEFAULT_INDEX_PER_PAGE = 100;
 
     public const FIXED_INDEX_PER_PAGE_OPTIONS = [
@@ -77,6 +83,11 @@ class Option extends Model
         self::INDEX_TABLE_WIDTH_WIDE => 'Wide',
         self::INDEX_TABLE_WIDTH_FULL => 'Full',
         self::INDEX_TABLE_WIDTH_CUSTOM => 'Custom',
+    ];
+
+    public const PRODUCT_FORM_THEME_OPTIONS = [
+        self::PRODUCT_FORM_THEME_CHERRY => 'Cherry',
+        self::PRODUCT_FORM_THEME_BLACK => 'Black',
     ];
 
     public const DEFAULT_TAG_COLOR_SURFACES = [
@@ -176,6 +187,29 @@ class Option extends Model
     public static function resetAutoSeriesFromTitleNameToDefault(): void
     {
         self::setAutoSeriesFromTitleName(true);
+    }
+
+    public static function productFormTheme(): string
+    {
+        return self::normalizeProductFormTheme(self::valueFor(self::PRODUCT_FORM_THEME));
+    }
+
+    public static function setProductFormTheme(string $theme): void
+    {
+        self::setValue(self::PRODUCT_FORM_THEME, self::normalizeProductFormTheme($theme));
+    }
+
+    public static function resetProductFormThemeToDefault(): void
+    {
+        self::setProductFormTheme(self::PRODUCT_FORM_THEME_BLACK);
+    }
+
+    /**
+     * @return array<string, string>
+     */
+    public static function productFormThemeOptions(): array
+    {
+        return self::PRODUCT_FORM_THEME_OPTIONS;
     }
 
     public static function tagLibraryTagsExpandedByDefault(): bool
@@ -375,6 +409,7 @@ class Option extends Model
         self::resetFieldLayoutsToDefault();
         self::resetIndexSortFieldLayoutToDefault();
         self::resetAutoSeriesFromTitleNameToDefault();
+        self::resetProductFormThemeToDefault();
         self::resetTagLibraryTagsExpandedByDefaultToDefault();
         self::resetTagLibraryIndexGroupOrderingEnabledToDefault();
         self::resetTagColorSurfacesToDefault();
@@ -515,6 +550,13 @@ class Option extends Model
         }
 
         return AutocompleteOrder::tryFrom((string) $order) ?? AutocompleteOrder::Usage;
+    }
+
+    private static function normalizeProductFormTheme(?string $theme): string
+    {
+        return array_key_exists((string) $theme, self::PRODUCT_FORM_THEME_OPTIONS)
+            ? (string) $theme
+            : self::PRODUCT_FORM_THEME_BLACK;
     }
 
     private static function valueFor(string $key): ?string

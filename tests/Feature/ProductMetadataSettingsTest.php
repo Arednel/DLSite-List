@@ -10,6 +10,7 @@ use App\Livewire\IndexPaginationSettings;
 use App\Livewire\IndexTableWidthSettings;
 use App\Livewire\OptionsResetDefaults;
 use App\Livewire\ProductFieldLayoutSettings;
+use App\Livewire\ProductFormThemeSettings;
 use App\Livewire\TagLibraryDisplaySettings;
 use App\Models\Option;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -84,6 +85,74 @@ class ProductMetadataSettingsTest extends TestCase
         $component
             ->call('refreshFromSettings')
             ->assertSet('enabled', true)
+            ->assertSet('saved', false)
+            ->assertSet('notice', '');
+    }
+
+    public function test_product_form_theme_setting_hydrates_from_option_and_saves_changes(): void
+    {
+        Option::setProductFormTheme(Option::PRODUCT_FORM_THEME_CHERRY);
+
+        Livewire::test(ProductFormThemeSettings::class)
+            ->assertSet('theme', Option::PRODUCT_FORM_THEME_CHERRY)
+            ->assertSet('saved', false)
+            ->assertSet('notice', '')
+            ->set('theme', Option::PRODUCT_FORM_THEME_BLACK)
+            ->call('save')
+            ->assertHasNoErrors()
+            ->assertSet('theme', Option::PRODUCT_FORM_THEME_BLACK)
+            ->assertSet('saved', true)
+            ->assertSet('notice', 'Form page theme setting saved.');
+
+        $this->assertSame(Option::PRODUCT_FORM_THEME_BLACK, Option::productFormTheme());
+    }
+
+    public function test_product_form_theme_setting_rejects_invalid_theme(): void
+    {
+        Option::setProductFormTheme(Option::PRODUCT_FORM_THEME_CHERRY);
+
+        Livewire::test(ProductFormThemeSettings::class)
+            ->set('theme', 'not-a-theme')
+            ->call('save')
+            ->assertHasErrors(['theme'])
+            ->assertSet('saved', false)
+            ->assertSet('notice', '');
+
+        $this->assertSame(Option::PRODUCT_FORM_THEME_CHERRY, Option::productFormTheme());
+    }
+
+    public function test_product_form_theme_setting_resets_to_default_after_confirmation(): void
+    {
+        Option::setProductFormTheme(Option::PRODUCT_FORM_THEME_CHERRY);
+
+        Livewire::test(ProductFormThemeSettings::class)
+            ->assertSet('theme', Option::PRODUCT_FORM_THEME_CHERRY)
+            ->call('askResetToDefault')
+            ->assertSet('confirmingResetToDefault', true)
+            ->call('resetToDefault')
+            ->assertHasNoErrors()
+            ->assertSet('confirmingResetToDefault', false)
+            ->assertSet('theme', Option::PRODUCT_FORM_THEME_BLACK)
+            ->assertSet('saved', true)
+            ->assertSet('notice', 'Form page theme reset to default.');
+
+        $this->assertSame(Option::PRODUCT_FORM_THEME_BLACK, Option::productFormTheme());
+    }
+
+    public function test_product_form_theme_setting_refreshes_after_global_defaults_reset(): void
+    {
+        Option::setProductFormTheme(Option::PRODUCT_FORM_THEME_CHERRY);
+
+        $component = Livewire::test(ProductFormThemeSettings::class)
+            ->assertSet('theme', Option::PRODUCT_FORM_THEME_CHERRY)
+            ->call('save')
+            ->assertSet('saved', true);
+
+        Option::resetProductFormThemeToDefault();
+
+        $component
+            ->call('refreshFromSettings')
+            ->assertSet('theme', Option::PRODUCT_FORM_THEME_BLACK)
             ->assertSet('saved', false)
             ->assertSet('notice', '');
     }
@@ -469,6 +538,7 @@ class ProductMetadataSettingsTest extends TestCase
             ['field' => ProductField::SampleImages->value, 'visible' => false],
         ]);
         Option::setAutoSeriesFromTitleName(false);
+        Option::setProductFormTheme(Option::PRODUCT_FORM_THEME_CHERRY);
         Option::setTagLibraryTagsExpandedByDefault(true);
         Option::setTagAutocompleteOrder(AutocompleteOrder::FirstWord);
         Option::setSeriesAutocompleteOrder(AutocompleteOrder::FirstWord);
@@ -497,6 +567,7 @@ class ProductMetadataSettingsTest extends TestCase
         $this->assertSame(Option::DEFAULT_INDEX_PER_PAGE, Option::indexPerPage());
         $this->assertSame('1024px', Option::indexTableWidthCss());
         $this->assertTrue(Option::autoSeriesFromTitleName());
+        $this->assertSame(Option::PRODUCT_FORM_THEME_BLACK, Option::productFormTheme());
         $this->assertFalse(Option::tagLibraryTagsExpandedByDefault());
         $this->assertSame(AutocompleteOrder::Usage, Option::tagAutocompleteOrder());
         $this->assertSame(AutocompleteOrder::Usage, Option::seriesAutocompleteOrder());
@@ -518,6 +589,7 @@ class ProductMetadataSettingsTest extends TestCase
             ->assertSeeLivewire(IndexTableWidthSettings::class)
             ->assertDontSeeLivewire(ProductFieldLayoutSettings::class)
             ->assertSeeLivewire(AutoSeriesSettings::class)
+            ->assertSeeLivewire(ProductFormThemeSettings::class)
             ->assertSeeLivewire(AutocompleteSettings::class)
             ->assertSeeLivewire(TagLibraryDisplaySettings::class)
             ->assertSeeLivewire(OptionsResetDefaults::class);
@@ -531,6 +603,7 @@ class ProductMetadataSettingsTest extends TestCase
             ->assertDontSeeLivewire(IndexTableWidthSettings::class)
             ->assertSeeLivewire(ProductFieldLayoutSettings::class)
             ->assertDontSeeLivewire(AutoSeriesSettings::class)
+            ->assertDontSeeLivewire(ProductFormThemeSettings::class)
             ->assertDontSeeLivewire(AutocompleteSettings::class)
             ->assertDontSeeLivewire(TagLibraryDisplaySettings::class)
             ->assertSeeLivewire(OptionsResetDefaults::class);

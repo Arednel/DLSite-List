@@ -84,6 +84,13 @@
 
                     <livewire:auto-series-settings />
 
+                    <h2>Form Page Theme</h2>
+                    <p class="option-description">
+                        Choose the visual theme for Add Work, Add Custom Work, and Edit Work pages.
+                    </p>
+
+                    <livewire:product-form-theme-settings />
+
                     <h2>Autocomplete</h2>
                     <p class="option-description">
                         Choose how tag and series suggestions are ordered in autocomplete dropdowns.

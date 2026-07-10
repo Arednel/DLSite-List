@@ -1,6 +1,6 @@
 <!DOCTYPE html>
 
-<html lang="en" class="dark-mode">
+<html lang="en" class="{{ $productFormThemeClass }}">
 
 <head>
     <title>Edit</title>

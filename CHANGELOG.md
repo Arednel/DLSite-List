@@ -2,6 +2,9 @@
 
 ## Development
 
+* 2026-07-10 -- 1.6.2 Add, Edit Work UI Style
+  * Added Cherry/Black theme options for Add/Edit form pages
+
 * 2026-07-08 -- 1.6.1 Options UI Style
   * Restyled Options and Refetch pages to match the compact Index and Tag Library theme
   * Added section header bands, switch controls, and cleaner mobile Field Layout controls
