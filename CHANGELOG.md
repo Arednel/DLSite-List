@@ -2,6 +2,11 @@
 
 ## Development
 
+* 2026-07-10 -- 1.6.3 UI Cleanup
+  * Added Field Layouts helper tooltips for the Updated Date filter and sort options
+  * Updated per-setting saved notices
+  * General fixes
+
 * 2026-07-10 -- 1.6.2 Add, Edit Work UI Style
   * Added Cherry/Black theme options for Add/Edit form pages
 

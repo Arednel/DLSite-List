@@ -272,6 +272,11 @@ body.options-page {
     padding-top: 2px;
 }
 
+.options-shell>.option-actions--footer {
+    padding: 12px 24px 18px;
+    border-top: 1px solid rgba(var(--options-border-rgb), 0.58);
+}
+
 .options-page .option-actions--modal {
     justify-content: flex-end;
     margin-top: 12px;
@@ -639,8 +644,8 @@ body.options-page {
 }
 
 .options-page .review-actions {
-    display: flex;
-    flex-wrap: wrap;
+    display: grid;
+    grid-template-columns: repeat(5, minmax(0, 1fr));
     align-items: end;
     gap: 8px;
 }
@@ -648,7 +653,12 @@ body.options-page {
 .options-page .review-actions label {
     display: grid;
     gap: 5px;
-    min-width: min(12rem, 100%);
+    min-width: 0;
+}
+
+.options-page .review-actions>button {
+    grid-column: 1 / -1;
+    justify-self: start;
 }
 
 .options-page .review-actions--compact {
@@ -944,6 +954,10 @@ body.options-page {
         padding: 16px 12px 18px;
     }
 
+    .options-shell>.option-actions--footer {
+        padding: 12px;
+    }
+
     .options-page .option-actions,
     .options-page .review-actions,
     .options-page .progress-summary,
@@ -951,6 +965,15 @@ body.options-page {
     .options-page .tag-row {
         align-items: stretch;
         flex-direction: column;
+    }
+
+    .options-page .review-actions {
+        grid-template-columns: 1fr;
+    }
+
+    .options-page .review-actions>button {
+        width: 100%;
+        justify-self: stretch;
     }
 
     .options-page .option-reset-button {

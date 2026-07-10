@@ -53,7 +53,7 @@
                                 <x-options.switch
                                     wire:model.live="{{ $layoutConfig['fields'] }}.{{ $row['field'] }}.visible"
                                     wrapper-class="field-layout-check field-layout-switch" :sort-ignore="true"
-                                    :disabled="$row['visibility_locked'] ?? false">
+                                    :disabled="$row['visibility_locked'] ?? false" :help="$this->fieldLayoutHelp($layoutProperty, $row['field'])">
                                     <span class="field-layout-switch-label">
                                         {{ $row['label'] }}
                                         @if ($row['note'] ?? false)
@@ -82,13 +82,13 @@
 
         <div class="option-actions option-actions--inline">
             <button type="submit" class="tag tag--soft tag--lg is-clickable">Save field layouts</button>
+            @if ($saved)
+                <span class="saved-notice">{{ $notice }}</span>
+            @endif
             <button type="button" class="tag tag--soft tag--lg is-clickable option-reset-button"
                 wire:click="askResetToDefault">
                 Reset to default
             </button>
-            @if ($saved)
-                <span class="saved-notice">{{ $notice }}</span>
-            @endif
         </div>
 
         @include('livewire.partials.options-reset-confirmation-modal', [

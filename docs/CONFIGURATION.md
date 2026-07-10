@@ -374,7 +374,7 @@ Tag Library defaults:
 - typing in Tag Library search still opens matching results regardless of this default
 - Index group ordering is disabled by default
 - when enabled, Index tag chips use saved group order, saved tag order inside groups, then ungrouped tags alphabetically instead of plain alphabetical title ordering
-- the Options page shows inline helper tooltips for the expanded-list and Index group-ordering switches
+- the Options page shows inline helper tooltips for the expanded-list, Index group-ordering, and Field Layouts Updated Date filter/sort switches
 - tag background/font colors render on Index and Tag Library by default, while Autocomplete suggestions, Edit readonly tags, and Refetch review tags stay uncolored until enabled in Options. Edit readonly tag colors render inline inside the normal readonly text field.
 
 Autocomplete ordering default:

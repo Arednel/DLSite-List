@@ -15,13 +15,13 @@
 
         <div class="option-actions option-actions--inline">
             <button type="submit" class="tag tag--soft tag--lg is-clickable">Save form theme</button>
+            @if ($saved)
+                <span class="saved-notice">{{ $notice }}</span>
+            @endif
             <button type="button" class="tag tag--soft tag--lg is-clickable option-reset-button"
                 wire:click="askResetToDefault">
                 Reset to default
             </button>
-            @if ($saved)
-                <span class="saved-notice">{{ $notice }}</span>
-            @endif
         </div>
 
         @include('livewire.partials.options-reset-confirmation-modal', [

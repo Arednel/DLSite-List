@@ -109,9 +109,10 @@
                 </section>
             @endif
 
-            <div class="option-actions option-actions--footer">
-                <a class="tag tag--soft tag--md is-clickable" href="{{ route('options.index') }}">Back to Options</a>
-            </div>
+        </div>
+
+        <div class="option-actions option-actions--footer">
+            <a class="tag tag--soft tag--md is-clickable" href="{{ route('options.index') }}">Back to Options</a>
         </div>
     </main>
 

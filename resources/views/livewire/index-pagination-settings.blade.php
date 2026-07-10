@@ -23,14 +23,13 @@
         <div class="notice notice--error">{{ $message }}</div>
     @enderror
 
-    @if ($saved)
-        <div class="notice" wire:dirty.remove wire:target="mode,customValue">{{ $notice }}</div>
-    @endif
-
     <div class="option-actions">
         <button type="submit" class="tag tag--soft tag--lg is-clickable">
             Save pagination
         </button>
+        @if ($saved)
+            <span class="saved-notice">{{ $notice }}</span>
+        @endif
         <button type="button" class="tag tag--soft tag--lg is-clickable option-reset-button"
             wire:click="askResetToDefault">
             Reset to default

@@ -121,6 +121,19 @@ class ProductFieldLayoutSettings extends Component
             ->all();
     }
 
+    public function fieldLayoutHelp(string $layout, string $field): ?string
+    {
+        if ($field !== ProductIndexSortField::UpdatedAt->value) {
+            return null;
+        }
+
+        return match ($layout) {
+            'filter' => 'Filters by when the work record was last updated in this site database.',
+            'sort' => 'Sorts by when the work record was last updated in this site database.',
+            default => null,
+        };
+    }
+
     public function updated(): void
     {
         $this->clearSavedNotice();
