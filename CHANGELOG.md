@@ -2,6 +2,12 @@
 
 ## Development
 
+* 2026-07-11 -- 1.6.4 License & Dependencies
+  * Added MIT License
+  * Updated README.md
+  * Updated dlsite-async, requests, pillow python package (requires venv update)
+  * Updated python requirements to 3.14.6+
+
 * 2026-07-10 -- 1.6.3 UI Cleanup
   * Added Field Layouts helper tooltips for the Updated Date filter and sort options
   * Updated per-setting saved notices

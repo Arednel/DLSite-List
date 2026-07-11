@@ -24,7 +24,7 @@ docker compose --env-file docker/.env.docker up --build -d
 - PHP 8.3
 - Composer
 - MySQL 8
-- [Python 3.10.11](https://www.python.org/downloads/release/python-31011) (tested with this version) and [pip](https://pypi.org/project/pip)
+- [Python 3.14.6](https://www.python.org/downloads/release/python-3146) (tested with this version) and [pip](https://pypi.org/project/pip)
 
 ### 1) Create `.env` from `.env.example` then run from the project root:
 
@@ -69,6 +69,20 @@ docker compose --env-file docker/.env.docker --profile test run --rm --build tes
 ```
 
 ## Additional docs
-- `docs/CONFIGURATION.md`
-- `docs/ARCHITECTURE.md`
-- `docs/TESTING.md`
+- [Configuration](docs/CONFIGURATION.md)
+- [Architecture](docs/ARCHITECTURE.md)
+- [Testing](docs/TESTING.md)
+
+## Contributing
+Contributions are very welcome.
+
+## License
+
+Distributed under the terms of the [MIT License](LICENSE), _DLSite List_ is free and open-source software.
+
+## Issues
+If you encounter any problems, please [file an issue](https://github.com/Arednel/DLSite-List/issues) along with a detailed description.
+
+## Acknowledgements
+
+- [bhrevol/dlsite-async](https://github.com/bhrevol/dlsite-async) — used to retrieve DLSite work metadata.
