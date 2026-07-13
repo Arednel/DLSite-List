@@ -2,6 +2,7 @@
 
 namespace App\Support\DLSite;
 
+use App\Logging\WeeklyRotatingFileHandler;
 use Illuminate\Contracts\Process\ProcessResult;
 use Illuminate\Support\Facades\Process;
 
@@ -27,11 +28,17 @@ class DLSitePythonRunner
      */
     private function runScript(string $script, array $arguments): ProcessResult
     {
-        return Process::forever()->run([
-            $this->pythonExecutable(),
-            base_path("python/{$script}"),
-            ...$arguments,
-        ]);
+        return Process::forever()
+            ->env([
+                'LOG_RETENTION_DAYS' => (string) WeeklyRotatingFileHandler::normalizeRetentionDays(
+                    config('logging.retention_days'),
+                ),
+            ])
+            ->run([
+                $this->pythonExecutable(),
+                base_path("python/{$script}"),
+                ...$arguments,
+            ]);
     }
 
     private function pythonExecutable(): string

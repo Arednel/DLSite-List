@@ -1,9 +1,14 @@
 <?php
 
+use App\Logging\WeeklyRotatingFileHandler;
 use Monolog\Handler\NullHandler;
 use Monolog\Handler\StreamHandler;
 use Monolog\Handler\SyslogUdpHandler;
 use Monolog\Processor\PsrLogMessageProcessor;
+
+$retentionDays = WeeklyRotatingFileHandler::normalizeRetentionDays(
+    env('LOG_RETENTION_DAYS', WeeklyRotatingFileHandler::DEFAULT_RETENTION_DAYS),
+);
 
 return [
 
@@ -19,6 +24,8 @@ return [
     */
 
     'default' => env('LOG_CHANNEL', 'stack'),
+
+    'retention_days' => $retentionDays,
 
     /*
     |--------------------------------------------------------------------------
@@ -54,8 +61,20 @@ return [
     'channels' => [
         'stack' => [
             'driver' => 'stack',
-            'channels' => ['single'],
+            'channels' => ['weekly'],
             'ignore_exceptions' => false,
+        ],
+
+        'weekly' => [
+            'driver' => 'monolog',
+            'handler' => WeeklyRotatingFileHandler::class,
+            'handler_with' => [
+                'filename' => storage_path('logs/laravel.log'),
+                'retentionDays' => $retentionDays,
+                'useLocking' => true,
+            ],
+            'level' => env('LOG_LEVEL', 'debug'),
+            'processors' => [PsrLogMessageProcessor::class],
         ],
 
         'single' => [
@@ -89,7 +108,7 @@ return [
             'handler_with' => [
                 'host' => env('PAPERTRAIL_URL'),
                 'port' => env('PAPERTRAIL_PORT'),
-                'connectionString' => 'tls://'.env('PAPERTRAIL_URL').':'.env('PAPERTRAIL_PORT'),
+                'connectionString' => 'tls://' . env('PAPERTRAIL_URL') . ':' . env('PAPERTRAIL_PORT'),
             ],
             'processors' => [PsrLogMessageProcessor::class],
         ],

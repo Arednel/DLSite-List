@@ -58,6 +58,19 @@ Relevant variables:
 - `DB_USERNAME`
 - `DB_PASSWORD`
 
+## Log Rotation and Retention
+
+Laravel and the DLSite scraper write weekly plain-text logs under `storage/logs`:
+
+- Laravel: `laravel-YYYY-MM-DD.log`
+- Python scraper: `DLSiteScraper-YYYY-MM-DD.log`
+
+The date is the UTC Monday that starts the log week. A new file is created on the first write in each Monday-through-Sunday UTC week. Completed weekly files stay in place as readable archives; no scheduler, compression, or rename step is used.
+
+`LOG_RETENTION_DAYS` controls archive retention and defaults to `90`. It must be a positive integer; missing, invalid, zero, and negative values fall back to `90`. Laravel passes the normalized value to Python scraper subprocesses, while direct Python execution applies the same default itself.
+
+Cleanup is checked lazily on every log write. An archive becomes eligible only after its complete seven-day period plus the configured retention has elapsed, so the default effective retention is 90–96 days. Cleanup considers only valid Monday-dated files for the relevant logger and ignores the active week, future dates, malformed names, unrelated logs, and legacy log filenames. An archive already removed by another process is treated as successfully cleaned. Other cleanup failures are reported to PHP system error output or Python stderr without interrupting the application or scraper write.
+
 MySQL engine is configured as InnoDB in:
 - `config/database.php` (`mysql.engine`)
 

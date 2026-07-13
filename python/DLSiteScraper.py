@@ -9,15 +9,22 @@ import json
 from dlsite_async import DlsiteAPI
 import requests
 import re
+from pathlib import Path
+
+from weekly_logging import WeeklyFileHandler
 
 storageDir = sys.argv[1]
 workID = sys.argv[2]
 
-# Set the log file path and name
-log_file = os.path.join(storageDir, "logs", "DLSiteScraper.log")
 # Configure logging
 logging.basicConfig(
-    filename=log_file,
+    handlers=[
+        WeeklyFileHandler(
+            Path(storageDir, "logs"),
+            "DLSiteScraper",
+            retention_days=os.getenv("LOG_RETENTION_DAYS"),
+        )
+    ],
     level=logging.DEBUG,
     format="%(asctime)s \n%(message)s",
     datefmt="[%Y-%m-%d] [%H:%M:%S]",
@@ -103,6 +110,7 @@ def download_image(url, save_path, retries=5, delay=5):
                 logging.error(f"Giving up on {url} after {retries} attempts.")
                 return False
 
+
 def map_known_error(error_message: str, work_id: str):
     """
     Returns (user_message, exit_code) for known errors, else None.
@@ -121,6 +129,7 @@ def map_known_error(error_message: str, work_id: str):
             return user_message, exit_code
 
     return None
+
 
 try:
     workJapanese = asyncio.run(japaneseDLsite())
@@ -144,7 +153,9 @@ try:
         json.dump(combined, f, ensure_ascii=False, indent=2)
 
     # After saving JSON
-    images_dir = os.path.join(storageDir, "app", "public", "Works", workJapanese.product_id)
+    images_dir = os.path.join(
+        storageDir, "app", "public", "Works", workJapanese.product_id
+    )
     os.makedirs(images_dir, exist_ok=True)
 
     # Main cover
@@ -153,7 +164,9 @@ try:
     download_image(cover_url, cover_path)
 
     # Sample images
-    for idx, img_url in enumerate(workJapanese_serialized.get("sample_images") or [], start=1):
+    for idx, img_url in enumerate(
+        workJapanese_serialized.get("sample_images") or [], start=1
+    ):
         img_path = os.path.join(images_dir, f"sample_{idx}.jpg")
         download_image(img_url, img_path)
 

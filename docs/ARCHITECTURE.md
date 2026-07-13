@@ -48,6 +48,9 @@
 - Shared contributor and DLSite metadata helpers:
   - `app/Support/ProductContributorSync.php`
   - `app/Support/DLSite/DLSiteWorkData.php`
+- Logging:
+  - `app/Logging/WeeklyRotatingFileHandler.php`
+  - `python/weekly_logging.py`
 - Product layout helpers:
   - `app/Enums/ProductContributorRole.php`
   - `app/Enums/ProductField.php`
@@ -307,6 +310,7 @@ Runtime note:
 
 ## Scraper Integration
 - `app/Support/DLSite/DLSitePythonRunner.php` runs Python scripts through Laravel's Process facade with the project `python/venv`.
+- `DLSitePythonRunner` passes Laravel's normalized `LOG_RETENTION_DAYS` value into Python subprocesses.
 - Product create runs `python/DLSiteScraper.py` through `DLSitePythonRunner`.
 - Python fetches Japanese/English DLSite metadata, stores JSON in `storage/app/Works`, and downloads images to `storage/app/public/Works/{RJ}`.
 - The stored JSON is also the source for metadata backfill migrations when a matching `products.rj_number` exists.
@@ -314,6 +318,14 @@ Runtime note:
 - `DLSiteTagFetcher` runs `python/DLSiteTagFetcher.py` through `DLSitePythonRunner` for the Refetch Tags queue job.
 - `python/DLSiteTagFetcher.py` fetches tags only, returns `japanese.genre` and `english.genre` JSON through stdout, and does not write files.
 - Known DLSite fetch errors are stored as skipped work results and are shown on the review page.
+
+## Logging
+
+- Laravel's default stack uses a [Laravel 12 custom Monolog handler channel](https://laravel.com/docs/12.x/logging#creating-monolog-handler-channels) configured in `config/logging.php`, with locked writes to `storage/logs/laravel-{UTC Monday}.log`.
+- `python/DLSiteScraper.py` uses the dependency-free `python/weekly_logging.py` helper and writes `storage/logs/DLSiteScraper-{UTC Monday}.log`.
+- Both implementations calculate weeks and retention in UTC, rotate by selecting a new Monday-dated file on the first write of a new week, and leave completed files as plain-text archives.
+- Cleanup is checked on every write rather than scheduled. Only strictly matching Monday-dated archives are eligible, and an archive is retained until its complete week plus the configured retention period has elapsed.
+- Concurrent cleanup that finds an archive already removed is treated as successful. Other cleanup failures use PHP system error output or Python stderr rather than the application logger, preventing recursive log failures and allowing the current write to continue.
 
 ## Validation / Normalization Notes
 - RJ input can be raw RJ code or URL containing RJ code.

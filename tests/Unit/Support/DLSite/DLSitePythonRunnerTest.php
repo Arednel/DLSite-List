@@ -12,6 +12,8 @@ class DLSitePythonRunnerTest extends TestCase
 {
     public function test_it_runs_the_scraper_with_the_project_python_venv_and_storage_path(): void
     {
+        config(['logging.retention_days' => 45]);
+
         Process::fake([
             '*' => Process::result(),
         ])->preventStrayProcesses();
@@ -26,12 +28,16 @@ class DLSitePythonRunnerTest extends TestCase
                 base_path('python/DLSiteScraper.py'),
                 storage_path(),
                 'RJ123456',
+            ] && $process->environment === [
+                'LOG_RETENTION_DAYS' => '45',
             ] && $process->timeout === null;
         });
     }
 
     public function test_it_runs_the_tag_fetcher_with_the_project_python_venv(): void
     {
+        config(['logging.retention_days' => 0]);
+
         Process::fake([
             '*' => Process::result(),
         ])->preventStrayProcesses();
@@ -43,6 +49,8 @@ class DLSitePythonRunnerTest extends TestCase
                 $this->expectedPythonExecutable(),
                 base_path('python/DLSiteTagFetcher.py'),
                 'RJ654321',
+            ] && $process->environment === [
+                'LOG_RETENTION_DAYS' => '90',
             ] && $process->timeout === null;
         });
     }

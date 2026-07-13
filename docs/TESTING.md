@@ -1,7 +1,7 @@
 # Testing
 
 ## Scope
-Current automated coverage is in Laravel PHPUnit tests:
+Current automated coverage includes Laravel PHPUnit and Python `unittest` tests:
 - `tests/Feature/AutocompleteControllerTest.php`
   - covers database-backed tag and series suggestion endpoints, optional tag background/font color payloads and group-over-tag color precedence, language-agnostic tag results, word-prefix and non-ASCII matching, local popularity ordering, first-word ordering, separate tag/series ordering settings, result limits, and autocomplete asset/data-attribute rendering on Index/Create/Edit
 - `tests/Unit/Support/AutocompleteMatcherTest.php`
@@ -52,7 +52,11 @@ Current automated coverage is in Laravel PHPUnit tests:
 - `tests/Unit/Models/OptionMetadataSettingsTest.php`
   - covers field layout option persistence/fallbacks for Index/Edit/Filter/Create layouts, Index sort dropdown layout option persistence/fallbacks, automatic Series option normalization, product form theme normalization/Black default reset, Index table width normalization, and batched ProductIndex settings normalization/fallbacks
 - `tests/Unit/Support/DLSite/DLSitePythonRunnerTest.php`
-  - covers the Laravel Process command arrays used for scraper and tag-fetcher Python calls, including the project venv executable and disabled timeout
+  - covers the Laravel Process command arrays used for scraper and tag-fetcher Python calls, including the project venv executable, disabled timeout, and normalized log-retention subprocess environment
+- `tests/Unit/Logging/WeeklyRotatingFileHandlerTest.php`
+  - covers UTC weekly filenames and boundaries, same-week appends, Monday file switching, first-write cleanup after same-week expiry, complete-week retention, selective cleanup, concurrent archive removal, invalid retention fallback, and non-blocking cleanup failures
+- `tests/Unit/Logging/LoggingConfigurationTest.php`
+  - covers the Laravel stack/custom Monolog channel configuration, locked writes, and a real configured channel write
 - `tests/Unit/Support/GenreSyncPayloadTest.php`
   - covers shared `genre_product.source` sync payload creation, deduplication, fetched-over-custom precedence, and fetched language map creation
 - `tests/Unit/Support/ProductGenreSyncTest.php`
@@ -72,7 +76,8 @@ Current automated coverage is in Laravel PHPUnit tests:
 - `tests/Unit/Models/TagRefetchStateTest.php`
   - covers refetch run/result state helper methods used by Blade and controller code, including active/cancelling/cancelled run state, run summaries, and result change-bucket helpers
 
-There are no project-owned Python tests.
+- `python/tests/test_weekly_logging.py`
+  - covers Python's matching UTC week calculation, weekly append/switch behavior, first-write cleanup after same-week expiry, complete-week retention, selective cleanup, concurrent archive removal, invalid retention fallback, the production handler interface, and non-blocking cleanup failures
 
 ## Test Environment Setup
 ### Local test setup
@@ -113,6 +118,12 @@ The Docker test service is one-off and does not run during the normal app startu
 ## Running Tests
 - Run all tests:
   - `php artisan test`
+- Run the normal Laravel suite without the explicit performance smoke test:
+  - `php artisan test --exclude-filter=PerformanceSmokeTest`
+- Run weekly logging and Python runner tests:
+  - `php artisan test tests/Unit/Logging tests/Unit/Support/DLSite/DLSitePythonRunnerTest.php`
+- Run project-owned Python tests from an activated Python environment:
+  - `python -m unittest discover -s python/tests -v`
 - Run all tests inside Docker:
   - `docker compose --env-file docker/.env.docker --profile test run --rm --build tests`
 - Run a filtered subset:

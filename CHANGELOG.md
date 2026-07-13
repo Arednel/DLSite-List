@@ -2,6 +2,9 @@
 
 ## Development
 
+* 2026-07-13 -- 1.6.6 Log Rotation
+  * Added Monday-based UTC weekly log files for Laravel and the Python scraper
+
 * 2026-07-13 -- 1.6.5 Code Cleanup
   * Simplified product routing, validation, option defaults, and relationship queries using Laravel conventions
   * Removed unused wrappers and cleaned up related tests
