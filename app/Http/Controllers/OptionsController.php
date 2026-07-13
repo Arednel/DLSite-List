@@ -138,16 +138,9 @@ class OptionsController extends Controller
         }
 
         $titleKeys = $run->results
-            ->flatMap(fn(TagRefetchWorkResult $result): array => [
-                ...($result->fetched_japanese_tags ?? []),
-                ...($result->fetched_english_tags ?? []),
-                ...($result->added_japanese_tags ?? []),
-                ...($result->added_english_tags ?? []),
-                ...($result->stale_japanese_tags ?? []),
-                ...($result->stale_english_tags ?? []),
-                ...($result->custom_to_fetched_japanese_tags ?? []),
-                ...($result->custom_to_fetched_english_tags ?? []),
-            ])
+            ->flatMap(fn(TagRefetchWorkResult $result): array => collect(self::REFETCH_TAG_FIELDS)
+                ->flatMap(fn(string $field): array => $result->{$field} ?? [])
+                ->all())
             ->map(fn(string $title): string => Genre::titleKey($title))
             ->unique()
             ->values();

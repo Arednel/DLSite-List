@@ -74,6 +74,10 @@ class TagRefetchStateTest extends TestCase
             'custom_to_fetched_japanese_tags' => ['Custom JP'],
             'custom_to_fetched_english_tags' => [],
         ]);
+        $englishOnly = new TagRefetchWorkResult([
+            'custom_to_fetched_japanese_tags' => [],
+            'custom_to_fetched_english_tags' => ['Custom EN'],
+        ]);
         $unchanged = new TagRefetchWorkResult([
             'added_japanese_tags' => [],
             'added_english_tags' => [],
@@ -91,6 +95,10 @@ class TagRefetchStateTest extends TestCase
         $this->assertFalse($changed->hasCustomToFetchedEnglishTags());
         $this->assertTrue($changed->hasCustomToFetchedTags());
         $this->assertTrue($changed->hasTagChanges());
+        $this->assertFalse($englishOnly->hasCustomToFetchedJapaneseTags());
+        $this->assertTrue($englishOnly->hasCustomToFetchedEnglishTags());
+        $this->assertTrue($englishOnly->hasCustomToFetchedTags());
+        $this->assertTrue($englishOnly->hasTagChanges());
 
         $this->assertFalse($unchanged->hasAddedJapaneseTags());
         $this->assertFalse($unchanged->hasAddedEnglishTags());

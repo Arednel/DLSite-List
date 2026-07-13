@@ -58,16 +58,14 @@ final class ProductContributorSync
      */
     public function namesByRole(Product $product): array
     {
-        return DB::table('contributor_product')
-            ->join('contributors', 'contributors.id', '=', 'contributor_product.contributor_id')
-            ->where('contributor_product.product_id', $product->getKey())
+        return $product->contributors()
             ->orderBy('contributors.name')
             ->get([
+                'contributors.id',
                 'contributors.name',
-                'contributor_product.role',
             ])
-            ->groupBy('role')
-            ->map(fn($rows): array => $rows->pluck('name')->values()->all())
+            ->groupBy('pivot.role')
+            ->map(fn($contributors): array => $contributors->pluck('name')->values()->all())
             ->all();
     }
 }

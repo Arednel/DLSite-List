@@ -172,7 +172,7 @@ class ProductMetadataSettingsTest extends TestCase
 
         $this->assertSame($mode, Option::indexTableWidth()['mode']);
         $this->assertSame('', Option::indexTableWidth()['custom']);
-        $this->assertSame($expectedCss, Option::indexTableWidthCss());
+        $this->assertSame($expectedCss, Option::productIndexSettings()->tableWidthCss);
     }
 
     public function test_table_width_component_saves_custom_width(): void
@@ -191,7 +191,7 @@ class ProductMetadataSettingsTest extends TestCase
             'mode' => Option::INDEX_TABLE_WIDTH_CUSTOM,
             'custom' => '72vw',
         ], Option::indexTableWidth());
-        $this->assertSame('72vw', Option::indexTableWidthCss());
+        $this->assertSame('72vw', Option::productIndexSettings()->tableWidthCss);
     }
 
     #[DataProvider('invalidCustomWidthProvider')]
@@ -211,7 +211,7 @@ class ProductMetadataSettingsTest extends TestCase
             ->assertSet('notice', '');
 
         $this->assertSame(Option::INDEX_TABLE_WIDTH_DEFAULT, Option::indexTableWidth()['mode']);
-        $this->assertSame('1024px', Option::indexTableWidthCss());
+        $this->assertSame('1024px', Option::productIndexSettings()->tableWidthCss);
     }
 
     public function test_table_width_component_clears_validation_and_resets_to_default(): void
@@ -236,7 +236,7 @@ class ProductMetadataSettingsTest extends TestCase
             ->assertSet('saved', true)
             ->assertSet('notice', 'Index table width reset to default.');
 
-        $this->assertSame('1024px', Option::indexTableWidthCss());
+        $this->assertSame('1024px', Option::productIndexSettings()->tableWidthCss);
     }
 
     public function test_table_width_component_can_cancel_reset_without_changing_saved_value(): void
@@ -254,7 +254,7 @@ class ProductMetadataSettingsTest extends TestCase
             ->assertSet('mode', Option::INDEX_TABLE_WIDTH_CUSTOM)
             ->assertSet('custom', '72vw');
 
-        $this->assertSame('72vw', Option::indexTableWidthCss());
+        $this->assertSame('72vw', Option::productIndexSettings()->tableWidthCss);
     }
 
     public function test_table_width_component_refreshes_after_global_defaults_reset(): void
@@ -554,7 +554,7 @@ class ProductMetadataSettingsTest extends TestCase
             ->assertSet('confirmingResetToDefault', false);
 
         $this->assertSame(250, Option::indexPerPage());
-        $this->assertSame('72vw', Option::indexTableWidthCss());
+        $this->assertSame('72vw', Option::productIndexSettings()->tableWidthCss);
 
         Livewire::test(OptionsResetDefaults::class)
             ->call('askResetToDefault')
@@ -565,7 +565,7 @@ class ProductMetadataSettingsTest extends TestCase
             ->assertSet('notice', 'All Options settings reset to defaults.');
 
         $this->assertSame(Option::DEFAULT_INDEX_PER_PAGE, Option::indexPerPage());
-        $this->assertSame('1024px', Option::indexTableWidthCss());
+        $this->assertSame('1024px', Option::productIndexSettings()->tableWidthCss);
         $this->assertTrue(Option::autoSeriesFromTitleName());
         $this->assertSame(Option::PRODUCT_FORM_THEME_BLACK, Option::productFormTheme());
         $this->assertFalse(Option::tagLibraryTagsExpandedByDefault());
@@ -579,6 +579,7 @@ class ProductMetadataSettingsTest extends TestCase
         $this->assertTrue($this->layoutRow(Option::quickAddFieldLayout(), ProductField::Notes)['visible']);
         $this->assertTrue($this->layoutRow(Option::customQuickAddFieldLayout(), ProductField::SampleImages)['visible']);
         $this->assertSame('keep-me', DB::table('options')->where('key', 'unrelated_option')->value('value'));
+        $this->assertSame(['unrelated_option'], Option::query()->pluck('key')->all());
     }
 
     public function test_general_options_page_mounts_non_layout_settings_components(): void

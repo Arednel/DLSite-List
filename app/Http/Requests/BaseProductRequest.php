@@ -2,12 +2,12 @@
 
 namespace App\Http\Requests;
 
+use App\Enums\ProductAgeCategory;
+use App\Enums\ProductContributorRole;
 use App\Enums\ProductPriority;
 use App\Enums\ProductProgress;
 use App\Enums\ProductReListenValue;
 use App\Enums\ProductScore;
-use App\Enums\ProductAgeCategory;
-use App\Enums\ProductContributorRole;
 use App\Support\TagInput;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Support\Arr;
@@ -17,11 +17,6 @@ use Illuminate\Validation\Validator;
 
 abstract class BaseProductRequest extends FormRequest
 {
-    /**
-     * @var list<string>
-     */
-    protected array $originalInputKeys = [];
-
     protected array $originalInput = [];
 
     protected function normalizeRjIdInput(): void
@@ -55,6 +50,12 @@ abstract class BaseProductRequest extends FormRequest
             'notes' => ['nullable', 'string'],
             'start_date' => ['nullable', 'array'],
             'end_date' => ['nullable', 'array'],
+            'add.start_date.month' => ['nullable', 'integer', 'between:1,12'],
+            'add.start_date.day' => ['nullable', 'integer', 'between:1,31'],
+            'add.start_date.year' => ['nullable', 'integer', 'between:1900,2100'],
+            'add.finish_date.month' => ['nullable', 'integer', 'between:1,12'],
+            'add.finish_date.day' => ['nullable', 'integer', 'between:1,31'],
+            'add.finish_date.year' => ['nullable', 'integer', 'between:1900,2100'],
             'num_re_listen_times' => ['nullable', 'integer', 'min:0'],
             're_listen_value' => ['nullable', Rule::enum(ProductReListenValue::class)],
             'priority' => ['nullable', Rule::enum(ProductPriority::class)],
@@ -67,7 +68,6 @@ abstract class BaseProductRequest extends FormRequest
     protected function prepareForValidation(): void
     {
         $this->originalInput = $this->all();
-        $this->originalInputKeys = array_keys($this->all());
 
         $this->merge([
             'genre_custom' => $this->normalizeGenreList($this->input('genre_custom')),
@@ -83,38 +83,66 @@ abstract class BaseProductRequest extends FormRequest
         ]);
     }
 
-    public function wasSubmitted(string $key): bool
+    public function validationData(): array
     {
-        if (in_array($key, $this->originalInputKeys, true) || Arr::has($this->originalInput, $key)) {
-            return true;
+        $data = parent::validationData();
+
+        // Preserve zero-padded form values while validating them as integers.
+        foreach (['start_date', 'finish_date'] as $date) {
+            foreach (['month', 'day', 'year'] as $part) {
+                $key = "add.{$date}.{$part}";
+                $value = Arr::get($data, $key);
+
+                if (is_string($value) && preg_match('/^[+-]?\d+$/', $value)) {
+                    Arr::set($data, $key, (int) $value);
+                }
+            }
         }
 
-        $prefix = $key . '.';
+        return $data;
+    }
 
-        return collect(Arr::dot($this->originalInput))
-            ->keys()
-            ->contains(fn(string $inputKey): bool => str_starts_with($inputKey, $prefix));
+    public function wasSubmitted(string $key): bool
+    {
+        return Arr::has($this->originalInput, $key);
     }
 
     public function after(): array
     {
         return [
             function (Validator $validator): void {
-                $this->validateDateParts($validator, 'start_date', 'add.start_date', 'Start date is invalid.');
-                $this->validateDateParts($validator, 'end_date', 'add.finish_date', 'Finish date is invalid.');
+                $this->aliasDatePartErrors($validator, 'add.start_date', 'Start date is invalid.');
+                $this->aliasDatePartErrors($validator, 'add.finish_date', 'Finish date is invalid.');
+                $this->validateCompleteDate($validator, 'start_date', 'add.start_date', 'Start date is invalid.');
+                $this->validateCompleteDate($validator, 'end_date', 'add.finish_date', 'Finish date is invalid.');
                 $this->validateDateOrder($validator);
             },
         ];
     }
 
-    /**
-     * Validate date parts for a given key (month/day/year).
-     */
-    protected function validateDateParts(Validator $validator, string $sourceKey, string $errorKey, string $message): void
-    {
+    protected function aliasDatePartErrors(
+        Validator $validator,
+        string $errorKey,
+        string $message,
+    ): void {
+        if ($validator->errors()->has("{$errorKey}.*")) {
+            $validator->errors()->add($errorKey, $message);
+        }
+    }
+
+    protected function validateCompleteDate(
+        Validator $validator,
+        string $sourceKey,
+        string $errorKey,
+        string $message,
+    ): void {
+        if ($validator->errors()->has($errorKey)) {
+            return;
+        }
+
         $date = $this->input($sourceKey);
 
-        if (!is_array($date)) {
+        if (! is_array($date)) {
             return;
         }
 
@@ -122,30 +150,12 @@ abstract class BaseProductRequest extends FormRequest
         $day = $date['day'] ?? null;
         $year = $date['year'] ?? null;
 
-        $hasMonth = filled($month);
-        $hasDay = filled($day);
-        $hasYear = filled($year);
-
-        if (!($hasMonth || $hasDay || $hasYear)) {
-            return;
-        }
-
-        if ($hasMonth && ((int) $month < 1 || (int) $month > 12)) {
-            $validator->errors()->add($errorKey, $message);
-            return;
-        }
-
-        if ($hasDay && ((int) $day < 1 || (int) $day > 31)) {
-            $validator->errors()->add($errorKey, $message);
-            return;
-        }
-
-        if ($hasYear && ((int) $year < 1900 || (int) $year > 2100)) {
-            $validator->errors()->add($errorKey, $message);
-            return;
-        }
-
-        if ($hasMonth && $hasDay && $hasYear && !checkdate((int) $month, (int) $day, (int) $year)) {
+        if (
+            filled($month)
+            && filled($day)
+            && filled($year)
+            && ! checkdate((int) $month, (int) $day, (int) $year)
+        ) {
             $validator->errors()->add($errorKey, $message);
         }
     }
@@ -176,7 +186,7 @@ abstract class BaseProductRequest extends FormRequest
         $day = $date['day'] ?? null;
         $year = $date['year'] ?? null;
 
-        if (! filled($month) || ! filled($day) || ! filled($year)) {
+        if (!filled($month) || !filled($day) || !filled($year)) {
             return null;
         }
 

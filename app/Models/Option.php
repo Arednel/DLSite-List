@@ -106,6 +106,25 @@ class Option extends Model
         self::CUSTOM_QUICK_ADD_FIELD_LAYOUT => ProductFieldLayout::SURFACE_CUSTOM_QUICK_ADD,
     ];
 
+    private const RESETTABLE_OPTIONS = [
+        self::INDEX_PER_PAGE,
+        self::INDEX_SEARCH_HIDDEN_DESCRIPTIONS_ENABLED,
+        self::TAG_AUTOCOMPLETE_ORDER,
+        self::SERIES_AUTOCOMPLETE_ORDER,
+        self::AUTO_SERIES_FROM_TITLE_NAME,
+        self::PRODUCT_FORM_THEME,
+        self::TAG_LIBRARY_TAGS_EXPANDED_BY_DEFAULT,
+        self::TAG_LIBRARY_INDEX_GROUP_ORDERING_ENABLED,
+        self::TAG_COLOR_SURFACES,
+        self::INDEX_FIELD_LAYOUT,
+        self::EDIT_FIELD_LAYOUT,
+        self::FILTER_FIELD_LAYOUT,
+        self::QUICK_ADD_FIELD_LAYOUT,
+        self::CUSTOM_QUICK_ADD_FIELD_LAYOUT,
+        self::INDEX_SORT_FIELD_LAYOUT,
+        self::INDEX_TABLE_WIDTH,
+    ];
+
     protected $fillable = [
         'key',
         'value',
@@ -113,11 +132,7 @@ class Option extends Model
 
     public static function indexPerPage(): int|string
     {
-        $option = self::query()
-            ->where('key', self::INDEX_PER_PAGE)
-            ->first(['value']);
-
-        return self::normalizeIndexPerPage($option?->value ?? self::DEFAULT_INDEX_PER_PAGE);
+        return self::normalizeIndexPerPage(self::valueFor(self::INDEX_PER_PAGE));
     }
 
     public static function setIndexPerPage(int|string $value): void
@@ -130,7 +145,7 @@ class Option extends Model
 
     public static function resetIndexPerPageToDefault(): void
     {
-        self::setIndexPerPage(self::DEFAULT_INDEX_PER_PAGE);
+        self::forget(self::INDEX_PER_PAGE);
     }
 
     public static function indexSearchHiddenDescriptionsEnabled(): bool
@@ -145,7 +160,7 @@ class Option extends Model
 
     public static function resetIndexSearchHiddenDescriptionsEnabledToDefault(): void
     {
-        self::setIndexSearchHiddenDescriptionsEnabled(false);
+        self::forget(self::INDEX_SEARCH_HIDDEN_DESCRIPTIONS_ENABLED);
     }
 
     public static function tagAutocompleteOrder(): AutocompleteOrder
@@ -170,8 +185,7 @@ class Option extends Model
 
     public static function resetAutocompleteToDefault(): void
     {
-        self::setTagAutocompleteOrder(AutocompleteOrder::Usage);
-        self::setSeriesAutocompleteOrder(AutocompleteOrder::Usage);
+        self::forget(self::TAG_AUTOCOMPLETE_ORDER, self::SERIES_AUTOCOMPLETE_ORDER);
     }
 
     public static function autoSeriesFromTitleName(): bool
@@ -186,7 +200,7 @@ class Option extends Model
 
     public static function resetAutoSeriesFromTitleNameToDefault(): void
     {
-        self::setAutoSeriesFromTitleName(true);
+        self::forget(self::AUTO_SERIES_FROM_TITLE_NAME);
     }
 
     public static function productFormTheme(): string
@@ -201,7 +215,7 @@ class Option extends Model
 
     public static function resetProductFormThemeToDefault(): void
     {
-        self::setProductFormTheme(self::PRODUCT_FORM_THEME_BLACK);
+        self::forget(self::PRODUCT_FORM_THEME);
     }
 
     /**
@@ -224,7 +238,7 @@ class Option extends Model
 
     public static function resetTagLibraryTagsExpandedByDefaultToDefault(): void
     {
-        self::setTagLibraryTagsExpandedByDefault(false);
+        self::forget(self::TAG_LIBRARY_TAGS_EXPANDED_BY_DEFAULT);
     }
 
     public static function tagLibraryIndexGroupOrderingEnabled(): bool
@@ -239,7 +253,7 @@ class Option extends Model
 
     public static function resetTagLibraryIndexGroupOrderingEnabledToDefault(): void
     {
-        self::setTagLibraryIndexGroupOrderingEnabled(false);
+        self::forget(self::TAG_LIBRARY_INDEX_GROUP_ORDERING_ENABLED);
     }
 
     /**
@@ -260,7 +274,7 @@ class Option extends Model
 
     public static function resetTagColorSurfacesToDefault(): void
     {
-        self::setTagColorSurfaces(self::DEFAULT_TAG_COLOR_SURFACES);
+        self::forget(self::TAG_COLOR_SURFACES);
     }
 
     public static function tagColorSurfaceEnabled(string $surface): bool
@@ -349,9 +363,7 @@ class Option extends Model
 
     public static function resetFieldLayoutsToDefault(): void
     {
-        foreach (self::FIELD_LAYOUT_OPTIONS as $key => $surface) {
-            self::setFieldLayout($key, $surface, []);
-        }
+        self::forget(...array_keys(self::FIELD_LAYOUT_OPTIONS));
     }
 
     /**
@@ -372,7 +384,7 @@ class Option extends Model
 
     public static function resetIndexSortFieldLayoutToDefault(): void
     {
-        self::setIndexSortFieldLayout([]);
+        self::forget(self::INDEX_SORT_FIELD_LAYOUT);
     }
 
     /**
@@ -395,30 +407,12 @@ class Option extends Model
 
     public static function resetIndexTableWidthToDefault(): void
     {
-        self::setIndexTableWidth([
-            'mode' => self::INDEX_TABLE_WIDTH_DEFAULT,
-            'custom' => '',
-        ]);
+        self::forget(self::INDEX_TABLE_WIDTH);
     }
 
     public static function resetVisibleSettingsToDefault(): void
     {
-        self::resetIndexPerPageToDefault();
-        self::resetIndexSearchHiddenDescriptionsEnabledToDefault();
-        self::resetIndexTableWidthToDefault();
-        self::resetFieldLayoutsToDefault();
-        self::resetIndexSortFieldLayoutToDefault();
-        self::resetAutoSeriesFromTitleNameToDefault();
-        self::resetProductFormThemeToDefault();
-        self::resetTagLibraryTagsExpandedByDefaultToDefault();
-        self::resetTagLibraryIndexGroupOrderingEnabledToDefault();
-        self::resetTagColorSurfacesToDefault();
-        self::resetAutocompleteToDefault();
-    }
-
-    public static function indexTableWidthCss(): string
-    {
-        return self::indexTableWidthCssFrom(self::indexTableWidth());
+        self::forget(...self::RESETTABLE_OPTIONS);
     }
 
     public static function productIndexSettings(): ProductIndexSettings
@@ -570,6 +564,11 @@ class Option extends Model
             ['key' => $key],
             ['value' => $value],
         );
+    }
+
+    private static function forget(string ...$keys): void
+    {
+        self::query()->whereIn('key', $keys)->delete();
     }
 
     private static function jsonFromValue(?string $value): mixed

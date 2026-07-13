@@ -11,6 +11,7 @@ use App\Http\Requests\BaseProductRequest;
 use App\Http\Requests\StoreCustomProductRequest;
 use App\Http\Requests\StoreProductRequest;
 use App\Http\Requests\UpdateProductRequest;
+use App\Models\Contributor;
 use App\Models\Genre;
 use App\Models\Option;
 use App\Models\Product;
@@ -239,11 +240,13 @@ class ProductController extends Controller
                 : null,
         ]);
 
-        $this->syncProductCustomGenres(
+        $this->genreSync->syncCustom(
             $product,
-            $this->createFieldVisible($visibleCreateFields, ProductField::Tags)
-                ? ($validated['genre_custom'] ?? [])
-                : [],
+            Genre::resolveIdsFromTitles(
+                $this->createFieldVisible($visibleCreateFields, ProductField::Tags)
+                    ? ($validated['genre_custom'] ?? [])
+                    : [],
+            ),
         );
         $this->contributorSync->sync(
             $product,
@@ -258,19 +261,10 @@ class ProductController extends Controller
     }
 
     /**
-     * Display the specified resource.
-     */
-    public function show(string $id)
-    {
-        dd('show');
-    }
-
-    /**
      * Show the form for editing the specified resource.
      */
-    public function edit(Request $request, string $id)
+    public function edit(Request $request, Product $product)
     {
-        $product = Product::findOrFail($id);
         $editGenres = $this->loadEditGenresForProduct($product->getKey());
         $showReadonlyGenreColors = Option::tagColorSurfaceEnabled(Option::TAG_COLOR_SURFACE_EDIT_READONLY);
         $genreColorPairs = $showReadonlyGenreColors
@@ -291,8 +285,8 @@ class ProductController extends Controller
             'productFormThemeClass' => $this->productFormThemeClass(),
             'englishGenres' => $englishGenres,
             'customGenres' => $customGenres,
-            'genreFetchedEnglishInput' => $this->formatGenreInput($englishGenres->pluck('title')->all()),
-            'genreCustomInput' => $this->formatGenreInput($customGenres->pluck('title')->all()),
+            'genreFetchedEnglishInput' => TagInput::format($englishGenres->pluck('title')),
+            'genreCustomInput' => TagInput::format($customGenres->pluck('title')),
             'showReadonlyGenreColors' => $showReadonlyGenreColors,
             'editFields' => ProductFieldLayout::editFields(Option::editFieldLayout()),
             'contributorInputs' => $this->formatContributorInputs($product),
@@ -308,10 +302,8 @@ class ProductController extends Controller
     /**
      * Update the specified resource in storage.
      */
-    public function update(UpdateProductRequest $request, string $id)
+    public function update(UpdateProductRequest $request, Product $product)
     {
-        $product = Product::findOrFail($id);
-
         $oldProgress = $product->progress;
 
         $data = $request->validated();
@@ -342,15 +334,10 @@ class ProductController extends Controller
     /**
      * Remove the specified resource from storage.
      */
-    public function destroy(Request $request, string $id)
+    public function destroy(Request $request, Product $product)
     {
         $returnTarget = ReturnTarget::fromRequest($request);
-        $product = Product::find($id);
-
-        // Missing records should be a safe no-op.
-        if (! $product) {
-            return redirect($returnTarget->toUrl());
-        }
+        $id = (string) $product->getKey();
 
         $jsonPath = "Works/{$id}.json";
         $imageDirectory = "Works/{$id}";
@@ -395,11 +382,6 @@ class ProductController extends Controller
         }
     }
 
-    private function formatGenreInput(?array $tags): string
-    {
-        return TagInput::format($tags ?? []);
-    }
-
     private function formatContributorInputs(Product $product): array
     {
         return collect($this->contributorSync->namesByRole($product))
@@ -413,17 +395,12 @@ class ProductController extends Controller
             ProductField::DescriptionJapanese->value => $product->description,
             ProductField::DescriptionEnglish->value => $product->description_english,
             ProductField::Notes->value => $product->notes,
-            ProductField::StartDate->value => $this->readonlyDate($product->start_date),
-            ProductField::FinishDate->value => $this->readonlyDate($product->end_date),
+            ProductField::StartDate->value => PartialDateFormatter::format($product->start_date),
+            ProductField::FinishDate->value => PartialDateFormatter::format($product->end_date),
             ProductField::TotalTimesReListened->value => $product->num_re_listen_times,
             ProductField::ReListenValue->value => ProductReListenValue::tryFrom((string) $product->re_listen_value)?->label(),
             ProductField::Priority->value => ProductPriority::tryFrom((string) $product->priority)?->label(),
         ];
-    }
-
-    private function readonlyDate(?array $date): ?string
-    {
-        return PartialDateFormatter::format($date);
     }
 
     /**
@@ -881,7 +858,7 @@ class ProductController extends Controller
     private function normalizedNameList(array $names): array
     {
         return collect($names)
-            ->map(fn(mixed $name): string => mb_convert_case(trim((string) $name), MB_CASE_FOLD, 'UTF-8'))
+            ->map(fn(mixed $name): string => Contributor::nameKey($name))
             ->filter()
             ->sort()
             ->values()
@@ -939,11 +916,6 @@ class ProductController extends Controller
             Genre::LANGUAGE_JAPANESE => Genre::resolveIdsFromTitles($japaneseTitles),
             Genre::LANGUAGE_ENGLISH => Genre::resolveIdsFromTitles($englishTitles),
         ], Genre::resolveIdsFromTitles($customTitles));
-    }
-
-    private function syncProductCustomGenres(Product $product, array $customTitles): bool
-    {
-        return $this->genreSync->syncCustom($product, Genre::resolveIdsFromTitles($customTitles));
     }
 
     private function syncProductEditGenres(

@@ -2,6 +2,10 @@
 
 ## Development
 
+* 2026-07-13 -- 1.6.5 Code Cleanup
+  * Simplified product routing, validation, option defaults, and relationship queries using Laravel conventions
+  * Removed unused wrappers and cleaned up related tests
+
 * 2026-07-11 -- 1.6.4 License & Dependencies
   * Added MIT License
   * Updated README.md

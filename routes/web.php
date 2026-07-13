@@ -1,10 +1,11 @@
 <?php
 
-use Illuminate\Support\Facades\Route;
-
 use App\Http\Controllers\AutocompleteController;
-use App\Http\Controllers\ProductController;
 use App\Http\Controllers\OptionsController;
+use App\Http\Controllers\ProductController;
+use App\Support\ReturnTarget;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Route;
 
 /*
 |--------------------------------------------------------------------------
@@ -23,9 +24,10 @@ Route::get('/', [ProductController::class, 'Index'])->name('index');
 // Works CRUD logic
 Route::get('/create', [ProductController::class, 'create'])->name('products.create');
 Route::post('/store', [ProductController::class, 'store'])->name('products.store');
-Route::get('/edit/{id}', [ProductController::class, 'edit'])->name('products.edit');
-Route::post('/update/{id}', [ProductController::class, 'update'])->name('products.update');
-Route::post('/destroy/{id}', [ProductController::class, 'destroy'])->name('products.destroy');
+Route::get('/edit/{product}', [ProductController::class, 'edit'])->name('products.edit');
+Route::post('/update/{product}', [ProductController::class, 'update'])->name('products.update');
+Route::post('/destroy/{product}', [ProductController::class, 'destroy'])->name('products.destroy')
+    ->missing(fn(Request $request) => redirect(ReturnTarget::fromRequest($request)->toUrl()));
 
 // Add custom work
 Route::get('/create/custom', [ProductController::class, 'create_custom'])->name('products.create.custom');

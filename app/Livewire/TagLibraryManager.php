@@ -88,6 +88,21 @@ class TagLibraryManager extends Component
 
     public string $editingTagGroupSearch = '';
 
+    protected function rules(): array
+    {
+        return [
+            'newTagTitle' => ['required', 'string', 'max:255'],
+        ];
+    }
+
+    protected function messages(): array
+    {
+        return [
+            'newTagTitle.required' => 'Enter a tag title.',
+            'newTagTitle.max' => 'Tag titles may not be greater than 255 characters.',
+        ];
+    }
+
     public function mount(): void
     {
         $this->showAllTags = Option::tagLibraryTagsExpandedByDefault();
@@ -177,19 +192,11 @@ class TagLibraryManager extends Component
 
     public function createTag(): void
     {
-        $title = trim($this->newTagTitle);
-
-        if ($title === '') {
-            throw ValidationException::withMessages([
-                'newTagTitle' => 'Enter a tag title.',
-            ]);
-        }
-
-        if (mb_strlen($title) > 255) {
-            throw ValidationException::withMessages([
-                'newTagTitle' => 'Tag titles may not be greater than 255 characters.',
-            ]);
-        }
+        $validated = $this->validateOnly(
+            'newTagTitle',
+            dataOverrides: ['newTagTitle' => trim($this->newTagTitle)],
+        );
+        $title = $validated['newTagTitle'];
 
         $existing = Genre::query()
             ->where('title_key', Genre::titleKey($title))
@@ -204,7 +211,7 @@ class TagLibraryManager extends Component
             return;
         }
 
-        $genre = Genre::resolveByTitle($title);
+        Genre::resolveByTitle($title);
 
         $this->newTagTitle = '';
         $this->search = '';
@@ -983,8 +990,12 @@ class TagLibraryManager extends Component
         }
     }
 
-    private function validatedTitle(string $value, string $field, string $label, int $max): string
-    {
+    private function validatedTitle(
+        string $value,
+        string $field,
+        string $label,
+        int $max,
+    ): string {
         $title = trim($value);
         $validator = Validator::make(
             ['title' => $title],

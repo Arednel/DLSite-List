@@ -72,7 +72,7 @@ class ProductGenreSyncTest extends TestCase
             Genre::LANGUAGE_ENGLISH => [$oldEnglishGenre->getKey()],
         ], []);
 
-        $changed = $sync->syncEditableEnglishGenres($product, [$newEnglishGenre->getKey()], []);
+        $changed = $sync->syncEditableTagBuckets($product, [$newEnglishGenre->getKey()], []);
 
         $this->assertTrue($changed);
         $product->refresh()->load(['japaneseGenres', 'englishGenres']);
@@ -90,7 +90,7 @@ class ProductGenreSyncTest extends TestCase
         $sharedGenre = Genre::query()->create(['title' => 'Shared']);
         $customGenre = Genre::query()->create(['title' => 'Custom']);
 
-        app(ProductGenreSync::class)->syncEditableEnglishGenres(
+        app(ProductGenreSync::class)->syncEditableTagBuckets(
             $product,
             [$sharedGenre->getKey()],
             [$sharedGenre->getKey(), $customGenre->getKey()],

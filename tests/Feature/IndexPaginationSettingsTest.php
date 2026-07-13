@@ -176,9 +176,8 @@ class IndexPaginationSettingsTest extends TestCase
             ->assertSet('notice', 'Index pagination reset to default.');
 
         $this->assertSame(Option::DEFAULT_INDEX_PER_PAGE, Option::indexPerPage());
-        $this->assertDatabaseHas('options', [
+        $this->assertDatabaseMissing('options', [
             'key' => Option::INDEX_PER_PAGE,
-            'value' => (string) Option::DEFAULT_INDEX_PER_PAGE,
         ]);
     }
 

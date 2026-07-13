@@ -164,13 +164,15 @@ class OptionMetadataSettingsTest extends TestCase
 
         Option::resetFieldLayoutsToDefault();
 
+        $this->assertDatabaseMissing('options', ['key' => Option::QUICK_ADD_FIELD_LAYOUT]);
+        $this->assertDatabaseMissing('options', ['key' => Option::CUSTOM_QUICK_ADD_FIELD_LAYOUT]);
         $this->assertSame(
             ProductField::RjCode->value,
-            json_decode(DB::table('options')->where('key', Option::QUICK_ADD_FIELD_LAYOUT)->value('value'), true)[0]['field'],
+            Option::quickAddFieldLayout()[0]['field'],
         );
         $this->assertSame(
             ProductField::RjCode->value,
-            json_decode(DB::table('options')->where('key', Option::CUSTOM_QUICK_ADD_FIELD_LAYOUT)->value('value'), true)[0]['field'],
+            Option::customQuickAddFieldLayout()[0]['field'],
         );
     }
 
@@ -341,21 +343,21 @@ class OptionMetadataSettingsTest extends TestCase
 
     public function test_index_table_width_normalizes_invalid_custom_values(): void
     {
-        $this->assertSame('1024px', Option::indexTableWidthCss());
+        $this->assertSame('1024px', Option::productIndexSettings()->tableWidthCss);
 
         Option::setIndexTableWidth([
             'mode' => Option::INDEX_TABLE_WIDTH_WIDE,
             'custom' => '',
         ]);
 
-        $this->assertSame('1400px', Option::indexTableWidthCss());
+        $this->assertSame('1400px', Option::productIndexSettings()->tableWidthCss);
 
         Option::setIndexTableWidth([
             'mode' => Option::INDEX_TABLE_WIDTH_CUSTOM,
             'custom' => '75%',
         ]);
 
-        $this->assertSame('75%', Option::indexTableWidthCss());
+        $this->assertSame('75%', Option::productIndexSettings()->tableWidthCss);
 
         $this->assertSame([
             'mode' => Option::INDEX_TABLE_WIDTH_DEFAULT,
@@ -364,6 +366,41 @@ class OptionMetadataSettingsTest extends TestCase
             'mode' => Option::INDEX_TABLE_WIDTH_CUSTOM,
             'custom' => 'calc(100%)',
         ]));
+    }
+
+    public function test_individual_resets_remove_saved_option_rows(): void
+    {
+        $resetCases = [
+            [[Option::INDEX_PER_PAGE], fn() => Option::resetIndexPerPageToDefault()],
+            [[Option::INDEX_SEARCH_HIDDEN_DESCRIPTIONS_ENABLED], fn() => Option::resetIndexSearchHiddenDescriptionsEnabledToDefault()],
+            [[Option::TAG_AUTOCOMPLETE_ORDER, Option::SERIES_AUTOCOMPLETE_ORDER], fn() => Option::resetAutocompleteToDefault()],
+            [[Option::AUTO_SERIES_FROM_TITLE_NAME], fn() => Option::resetAutoSeriesFromTitleNameToDefault()],
+            [[Option::PRODUCT_FORM_THEME], fn() => Option::resetProductFormThemeToDefault()],
+            [[Option::TAG_LIBRARY_TAGS_EXPANDED_BY_DEFAULT], fn() => Option::resetTagLibraryTagsExpandedByDefaultToDefault()],
+            [[Option::TAG_LIBRARY_INDEX_GROUP_ORDERING_ENABLED], fn() => Option::resetTagLibraryIndexGroupOrderingEnabledToDefault()],
+            [[Option::TAG_COLOR_SURFACES], fn() => Option::resetTagColorSurfacesToDefault()],
+            [[
+                Option::INDEX_FIELD_LAYOUT,
+                Option::EDIT_FIELD_LAYOUT,
+                Option::FILTER_FIELD_LAYOUT,
+                Option::QUICK_ADD_FIELD_LAYOUT,
+                Option::CUSTOM_QUICK_ADD_FIELD_LAYOUT,
+            ], fn() => Option::resetFieldLayoutsToDefault()],
+            [[Option::INDEX_SORT_FIELD_LAYOUT], fn() => Option::resetIndexSortFieldLayoutToDefault()],
+            [[Option::INDEX_TABLE_WIDTH], fn() => Option::resetIndexTableWidthToDefault()],
+        ];
+
+        foreach ($resetCases as [$keys, $reset]) {
+            foreach ($keys as $key) {
+                Option::query()->updateOrCreate(['key' => $key], ['value' => 'custom']);
+            }
+
+            $reset();
+
+            foreach ($keys as $key) {
+                $this->assertDatabaseMissing('options', ['key' => $key]);
+            }
+        }
     }
 
     /**

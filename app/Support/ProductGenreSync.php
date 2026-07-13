@@ -34,18 +34,6 @@ final class ProductGenreSync
     }
 
     /**
-     * @param  list<int|string>  $englishFetchedGenreIds
-     * @param  list<int|string>  $customGenreIds
-     */
-    public function syncEditableEnglishGenres(
-        Product $product,
-        array $englishFetchedGenreIds,
-        array $customGenreIds,
-    ): bool {
-        return $this->syncEditableTagBuckets($product, $englishFetchedGenreIds, $customGenreIds);
-    }
-
-    /**
      * @param  list<int|string>|null  $englishFetchedGenreIds
      * @param  list<int|string>|null  $customGenreIds
      */
@@ -108,11 +96,9 @@ final class ProductGenreSync
      */
     private function currentCustomGenreIds(Product $product): array
     {
-        return DB::table('genre_product')
-            ->where('product_id', $product->getKey())
-            ->where('source', Genre::PIVOT_SOURCE_CUSTOM)
-            ->pluck('genre_id')
-            ->pipe(fn($genreIds): array => $this->normalizeGenreIds($genreIds->all()));
+        return $this->normalizeGenreIds(
+            $product->customGenres()->pluck('genres.id')->all()
+        );
     }
 
     /**

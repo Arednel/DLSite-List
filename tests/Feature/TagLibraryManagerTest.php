@@ -113,6 +113,21 @@ class TagLibraryManagerTest extends TestCase
         ]);
     }
 
+    public function test_create_tag_preserves_validation_messages(): void
+    {
+        Livewire::test(TagLibraryManager::class)
+            ->set('newTagTitle', '   ')
+            ->call('createTag')
+            ->assertHasErrors(['newTagTitle' => 'Enter a tag title.']);
+
+        Livewire::test(TagLibraryManager::class)
+            ->set('newTagTitle', str_repeat('A', 256))
+            ->call('createTag')
+            ->assertHasErrors([
+                'newTagTitle' => 'Tag titles may not be greater than 255 characters.',
+            ]);
+    }
+
     public function test_empty_tag_delete_confirmation_can_be_opened_and_cancelled(): void
     {
         $emptyGenre = Genre::resolveByTitle('Delete Cancel Empty Tag');

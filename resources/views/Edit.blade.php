@@ -32,7 +32,7 @@
                                     </div>
                                     <div class="dialog-body">
                                         <form name="edit_work" method="post" id="main-form"
-                                            action="{{ route('products.update', ['id' => $product->id]) }}">
+                                            action="{{ route('products.update', ['product' => $product]) }}">
                                             @csrf
 
                                             @foreach ($returnQuery as $queryKey => $queryValue)
@@ -65,7 +65,7 @@
 
                                         <form class="dialog-actions dialog-actions-right" id="delete-form"
                                             method="POST"
-                                            action="{{ route('products.destroy', ['id' => $product->id]) }}">
+                                            action="{{ route('products.destroy', ['product' => $product]) }}">
                                             @csrf
 
                                             @foreach ($returnQuery as $queryKey => $queryValue)

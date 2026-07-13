@@ -272,7 +272,7 @@
                                                 <a href="{{ route(
                                                     'products.edit',
                                                     [
-                                                        'id' => $product->id,
+                                                        'product' => $product,
                                                         'return_query' => $currentQuery,
                                                         'return_fragment' => $product->id,
                                                     ],

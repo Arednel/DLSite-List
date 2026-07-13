@@ -382,7 +382,7 @@ class OptionsControllerTest extends TestCase
 
         $this->assertSame(TagRefetchWorkResult::STATUS_FETCHED, $result->status);
         $this->assertSame(['During Cancel JP'], $result->fetched_japanese_tags);
-        $this->assertTrue($run->wasCancelled());
+        $this->assertNotNull($run->cancelled_at);
         $this->assertSame(TagRefetchRun::STATUS_REVIEW, $run->status);
         $this->assertSame(1, $run->fetched_count);
     }
@@ -601,7 +601,7 @@ class OptionsControllerTest extends TestCase
         $newerRun->refresh();
 
         $this->assertSame(TagRefetchRun::STATUS_CANCELLING, $run->status);
-        $this->assertTrue($run->wasCancelled());
+        $this->assertNotNull($run->cancelled_at);
         $this->assertSame(TagRefetchRun::STATUS_RUNNING, $newerRun->status);
         $this->assertNull($newerRun->cancelled_at);
         $this->assertNotNull(DB::table('job_batches')->where('id', $batchId)->value('cancelled_at'));
@@ -700,13 +700,27 @@ class OptionsControllerTest extends TestCase
             'color' => '#aa3366',
             'text_color' => '#111111',
         ]);
-        $run = $this->createReviewRun($product, [], [], [], ['Colored Refetch Tag']);
+        $customTransitionGenre = $this->createGenre('Colored Custom Transition', Genre::TYPE_CUSTOM);
+        Genre::query()->whereKey($customTransitionGenre->getKey())->update([
+            'color' => '#2255aa',
+            'text_color' => '#eeeeee',
+        ]);
+        $run = $this->createReviewRun(
+            $product,
+            [],
+            [],
+            [],
+            ['Colored Refetch Tag'],
+            ['Colored Custom Transition'],
+        );
 
         $this->get(route('options.refetch-tags.show', $run))
             ->assertOk()
             ->assertSee('Colored Refetch Tag')
             ->assertDontSee('--tag-color: #aa3366;', false)
-            ->assertDontSee('--tag-text-color: #111111;', false);
+            ->assertDontSee('--tag-text-color: #111111;', false)
+            ->assertDontSee('--tag-color: #2255aa;', false)
+            ->assertDontSee('--tag-text-color: #eeeeee;', false);
 
         Option::setTagColorSurfaces([Option::TAG_COLOR_SURFACE_REFETCH => true]);
 
@@ -716,7 +730,9 @@ class OptionsControllerTest extends TestCase
             ->assertSee('tag--background-colored', false)
             ->assertSee('tag--text-colored', false)
             ->assertSee('--tag-color: #aa3366;', false)
-            ->assertSee('--tag-text-color: #111111;', false);
+            ->assertSee('--tag-text-color: #111111;', false)
+            ->assertSee('--tag-color: #2255aa;', false)
+            ->assertSee('--tag-text-color: #eeeeee;', false);
     }
 
     public function test_refetch_results_blade_does_not_embed_php_color_logic(): void
@@ -901,7 +917,7 @@ class OptionsControllerTest extends TestCase
         $run->refresh();
 
         $this->assertSame(TagRefetchRun::STATUS_APPLIED, $run->status);
-        $this->assertTrue($run->wasCancelled());
+        $this->assertNotNull($run->cancelled_at);
         $this->assertSame(['Partial JP'], $fetchedProduct->japaneseGenres->pluck('title')->all());
         $this->assertSame([], $skippedProduct->japaneseGenres->pluck('title')->all());
     }
