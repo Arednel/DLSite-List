@@ -23,7 +23,7 @@
 
 <body class="tag-library-page">
     <div class="tag-library-shell">
-        <x-list-menu-float :quick-add-url="route('products.create', [], false)" />
+        <x-list-menu-float :quick-add-url="route('products.create', [], false)" :product-form-modal-enabled="$productFormModalEnabled" :product-form-modal-completion-action="$productFormModalCompletionAction" />
 
         <main id="list-container" class="list-container tag-library-container">
             <div class="list-block tag-library-block">

@@ -26,6 +26,7 @@ use App\Support\TagColor;
 use App\Support\TagInput;
 use App\Support\VisibleGenreAttachment;
 use Illuminate\Http\Request;
+use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Collection;
@@ -34,6 +35,7 @@ use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\URL;
 use Illuminate\Validation\ValidationException;
+use Illuminate\View\View;
 
 class ProductController extends Controller
 {
@@ -79,7 +81,7 @@ class ProductController extends Controller
 
     public function tagLibrary()
     {
-        return view('TagLibrary');
+        return view('TagLibrary', $this->productFormModalSettings());
     }
 
     /**
@@ -180,7 +182,7 @@ class ProductController extends Controller
         $returnTarget = ReturnTarget::fromRequest($request)
             ->forProduct($product);
 
-        return redirect($returnTarget->toUrl());
+        return $this->productMutationResponse($request, $returnTarget->toUrl());
     }
 
     public function store_custom(StoreCustomProductRequest $request)
@@ -257,7 +259,7 @@ class ProductController extends Controller
         $returnTarget = ReturnTarget::fromRequest($request)
             ->forProduct($product);
 
-        return redirect($returnTarget->toUrl());
+        return $this->productMutationResponse($request, $returnTarget->toUrl());
     }
 
     /**
@@ -282,6 +284,7 @@ class ProductController extends Controller
 
         return view('Edit', [
             'product' => $product,
+            'isModal' => $request->boolean('modal'),
             'productFormThemeClass' => $this->productFormThemeClass(),
             'englishGenres' => $englishGenres,
             'customGenres' => $customGenres,
@@ -325,10 +328,12 @@ class ProductController extends Controller
             $returnTarget = $returnTarget->withIndexProgress($newProgress);
         }
 
-        return redirect($returnTarget->forProduct(
+        $redirectUrl = $returnTarget->forProduct(
             $product,
             visibilityMayHaveChanged: $productFieldsChanged || $genresChanged || $contributorsChanged,
-        )->toUrl());
+        )->toUrl();
+
+        return $this->productMutationResponse($request, $redirectUrl);
     }
 
     /**
@@ -359,7 +364,7 @@ class ProductController extends Controller
         $product->delete();
 
         // Return to same page but no anchor (work is gone)
-        return redirect($returnTarget->afterDeleting()->toUrl());
+        return $this->productMutationResponse($request, $returnTarget->afterDeleting()->toUrl());
     }
 
     private function scrape(string $workID, DLSitePythonRunner $pythonRunner): void
@@ -647,12 +652,17 @@ class ProductController extends Controller
 
         $returnParameters = ['return_url' => $returnUrl];
 
+        if ($request->boolean('modal')) {
+            $returnParameters['modal'] = '1';
+        }
+
         if ($returnTarget->query !== []) {
             $returnParameters['return_query'] = $returnTarget->query;
         }
 
         return view('Create', [
             'isCustomCreate' => $isCustomCreate,
+            'isModal' => $request->boolean('modal'),
             'productFormThemeClass' => $this->productFormThemeClass(),
             'quickAddFields' => $isCustomCreate
                 ? ProductFieldLayout::customQuickAddFields(Option::customQuickAddFieldLayout())
@@ -668,6 +678,28 @@ class ProductController extends Controller
     private function productFormThemeClass(): string
     {
         return 'product-form-theme-' . Option::productFormTheme();
+    }
+
+    /**
+     * @return array{productFormModalEnabled: bool, productFormModalCompletionAction: string}
+     */
+    private function productFormModalSettings(): array
+    {
+        return [
+            'productFormModalEnabled' => Option::productFormModalEnabled(),
+            'productFormModalCompletionAction' => Option::productFormModalCompletionAction(),
+        ];
+    }
+
+    private function productMutationResponse(Request $request, string $redirectUrl): RedirectResponse|View
+    {
+        if (! $request->boolean('modal')) {
+            return redirect($redirectUrl);
+        }
+
+        return view('WorkFormCompleted', [
+            'redirectUrl' => $redirectUrl,
+        ]);
     }
 
     private function storeCustomCoverImage(UploadedFile $file, string $workID): string

@@ -1,7 +1,7 @@
 <div style="--index-table-width: {{ $tableWidthCss }}">
     <div class="header"></div>
 
-    <x-list-menu-float :quick-add-url="$quickAddUrl" />
+    <x-list-menu-float :quick-add-url="$quickAddUrl" :product-form-modal-enabled="$productFormModalEnabled" :product-form-modal-completion-action="$productFormModalCompletionAction" />
 
     <div id="list-container" class="list-container">
         <div class="cover-block">
@@ -278,7 +278,8 @@
                                                     ],
                                                     false,
                                                 ) }}"
-                                                    class="product-edit-link">Edit</a>
+                                                    class="product-edit-link" data-work-form-modal-link
+                                                    data-work-form-modal-title="Edit Work">Edit</a>
                                             </span>
                                         </div>
                                     </td>

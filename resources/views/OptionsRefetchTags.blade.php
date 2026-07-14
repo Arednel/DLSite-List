@@ -18,7 +18,7 @@
 </head>
 
 <body class="options-page">
-    <x-list-menu-float :quick-add-url="route('products.create', [], false)" />
+    <x-list-menu-float :quick-add-url="route('products.create', [], false)" :product-form-modal-enabled="$productFormModalEnabled" :product-form-modal-completion-action="$productFormModalCompletionAction" />
 
     <main class="options-shell">
         <div class="options-container">

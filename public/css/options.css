@@ -204,6 +204,26 @@ body.options-page {
     gap: 8px 14px;
 }
 
+.options-page .option-subsetting {
+    border: 0;
+    margin: 14px 0 0;
+    padding: 0 0 0 28px;
+}
+
+.options-page .option-subsetting legend {
+    color: rgba(var(--options-text-rgb), 0.86);
+    font-size: 12px;
+    font-weight: 700;
+    margin-bottom: 8px;
+    padding: 0;
+}
+
+.options-page .option-subsetting .option-radio {
+    align-items: center;
+    display: flex;
+    gap: 7px;
+}
+
 .options-page .option-field {
     display: grid;
     gap: 6px;

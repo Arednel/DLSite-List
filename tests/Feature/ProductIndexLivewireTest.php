@@ -1435,6 +1435,27 @@ class ProductIndexLivewireTest extends TestCase
         $this->assertCount(1, $optionQueries, implode("\n", $optionQueries));
     }
 
+    public function test_index_renders_modal_configuration_without_changing_real_work_links(): void
+    {
+        Option::setProductFormModalEnabled(true);
+        Option::setProductFormModalCompletionAction(Option::PRODUCT_FORM_MODAL_COMPLETION_REFRESH);
+        $product = $this->createProduct(1, [
+            'work_name' => 'MODAL_LINK_WORK',
+            'progress' => 'Listening',
+        ]);
+
+        Livewire::withQueryParams(['progress' => 'Listening'])
+            ->test(ProductIndex::class)
+            ->assertSee('data-work-form-modal', false)
+            ->assertSee('data-enabled="true"', false)
+            ->assertSee('data-completion-action="refresh"', false)
+            ->assertSee('href="/create?return_query%5Bprogress%5D=Listening"', false)
+            ->assertDontSee('href="/create?modal=1', false)
+            ->assertSee('href="/edit/' . $product->id . '?', false)
+            ->assertSee('data-work-form-modal-title="Edit Work"', false)
+            ->assertSee('scripts/work-form-modal.js', false);
+    }
+
     public function test_search_results_paginate_across_pages(): void
     {
         Option::setIndexPerPage(2);

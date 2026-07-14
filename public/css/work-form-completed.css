@@ -1,0 +1,124 @@
+body.work-form-completed-page {
+    --work-completed-bg: #F9E0DC;
+    --work-completed-surface: #FFFDF8;
+    --work-completed-border: #EE9898;
+    --work-completed-text: #7D6A6A;
+    --work-completed-accent: #DD7D7D;
+    --work-completed-accent-soft: #F4BFB7;
+    --work-completed-accent-dark: #9F5F5F;
+
+    align-items: center;
+    background:
+        radial-gradient(circle at top, rgba(255, 253, 248, 0.92), transparent 55%),
+        var(--work-completed-bg);
+    color: var(--work-completed-text);
+    display: grid;
+    font-family: Verdana, Arial, sans-serif;
+    justify-items: center;
+    margin: 0;
+    min-height: 100vh;
+    min-height: 100dvh;
+    padding: 24px;
+}
+
+body.work-form-completed-page *,
+body.work-form-completed-page *::before,
+body.work-form-completed-page *::after {
+    box-sizing: border-box;
+}
+
+.work-form-completed-page .work-form-completed-card {
+    background: linear-gradient(180deg, #FFFDF8, #FFF8F3);
+    border: 1px solid var(--work-completed-border);
+    border-radius: 10px;
+    box-shadow:
+        0 18px 40px rgba(125, 106, 106, 0.14),
+        0 3px 10px rgba(238, 152, 152, 0.18);
+    max-width: 440px;
+    padding: 34px 32px 32px;
+    text-align: center;
+    width: 100%;
+}
+
+.work-form-completed-page .work-form-completed-mark {
+    align-items: center;
+    background: var(--work-completed-accent-soft);
+    border: 1px solid var(--work-completed-accent);
+    border-radius: 50%;
+    display: inline-flex;
+    height: 58px;
+    justify-content: center;
+    margin-bottom: 18px;
+    width: 58px;
+}
+
+.work-form-completed-page .work-form-completed-mark::after {
+    border-bottom: 3px solid var(--work-completed-accent-dark);
+    border-right: 3px solid var(--work-completed-accent-dark);
+    content: "";
+    height: 21px;
+    margin-top: -5px;
+    transform: rotate(45deg);
+    width: 11px;
+}
+
+.work-form-completed-page h1 {
+    color: var(--work-completed-text);
+    font-size: 22px;
+    font-weight: 400;
+    line-height: 1.35;
+    margin: 0;
+}
+
+.work-form-completed-page .work-form-completed-message {
+    color: rgba(125, 106, 106, 0.9);
+    font-size: 12px;
+    line-height: 1.65;
+    margin: 12px auto 22px;
+    max-width: 340px;
+}
+
+.work-form-completed-page .work-form-completed-action {
+    align-items: center;
+    background: var(--work-completed-accent);
+    border: 1px solid var(--work-completed-accent-dark);
+    border-radius: 8px;
+    color: #FFFDF8;
+    display: inline-flex;
+    font-size: 12px;
+    font-weight: 700;
+    justify-content: center;
+    min-height: 36px;
+    min-width: 112px;
+    padding: 9px 18px;
+    text-decoration: none;
+    transition:
+        background-color 0.18s ease,
+        box-shadow 0.18s ease,
+        transform 0.18s ease;
+}
+
+.work-form-completed-page .work-form-completed-action:hover {
+    background: var(--work-completed-accent-dark);
+    box-shadow: 0 6px 14px rgba(125, 106, 106, 0.2);
+    transform: translateY(-1px);
+}
+
+.work-form-completed-page .work-form-completed-action:focus-visible {
+    outline: 3px solid rgba(221, 125, 125, 0.35);
+    outline-offset: 3px;
+}
+
+@media (max-width: 768px) {
+    body.work-form-completed-page {
+        padding: 16px;
+    }
+
+    .work-form-completed-page .work-form-completed-card {
+        padding: 28px 20px 26px;
+    }
+
+    .work-form-completed-page h1 {
+        font-size: 20px;
+    }
+}

@@ -146,7 +146,7 @@ class ProductIndex extends Component
                 $visibleProductIds,
                 $settings->indexGroupOrderingEnabled,
                 $indexTagColorsEnabled,
-                $visibleProductIds !== [] && GenreGroup::hiddenOnIndex()->exists(),
+                $visibleProductIds !== [] && GenreGroup::query()->hiddenOnIndex()->exists(),
                 $visibleTagBuckets,
             )
             : collect();
@@ -184,6 +184,8 @@ class ProductIndex extends Component
             'quickAddUrl' => route('products.create', [
                 'return_query' => $currentQuery,
             ], false),
+            'productFormModalEnabled' => $settings->productFormModalEnabled,
+            'productFormModalCompletionAction' => $settings->productFormModalCompletionAction,
             'sortIcons' => $this->sortIcons,
             'tableWidthCss' => $settings->tableWidthCss,
         ]);

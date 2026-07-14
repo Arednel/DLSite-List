@@ -155,6 +155,8 @@ Current settings:
 - `series_autocomplete_order`: controls how series autocomplete suggestions are ordered
 - `auto_series_from_title_name`: controls whether DLSite create fills an empty Series from `japanese.title_name`
 - `product_form_theme`: controls the Add Work, Add Custom Work, and Edit Work page theme. Defaults to `black`
+- `product_form_modal_enabled`: controls whether ordinary left-clicks open Quick Add and Index Edit Work links in a modal. Defaults to `false`
+- `product_form_modal_completion_action`: controls what the host page does after a successful modal create, update, or delete. Valid values are `redirect`, `refresh`, and `close`; invalid values fall back to `redirect`
 - `tag_library_tags_expanded_by_default`: controls whether Tag Library opens with the full tag list shown
 - `tag_library_index_group_ordering_enabled`: controls whether Index tag chips use tag group order instead of plain alphabetical title ordering
 - `tag_color_surfaces`: JSON map controlling where stored tag/group background and font colors render. Defaults are `index=true`, `tag_library=true`, `autocomplete=false`, `edit_readonly=false`, and `refetch=false`.
@@ -204,6 +206,21 @@ Product form theme default:
 Product form theme choices:
 - `cherry`: uses the same warm Cherry palette as Index, Tag Library, and Options
 - `black`: preserves the previous dark Add/Edit form style
+
+Work form modal defaults:
+- disabled
+- completion action `redirect`
+
+Work form modal completion choices:
+- `redirect`: navigate the host page to Laravel's calculated Index redirect, preserving its filter, page, and work-anchor behavior
+- `refresh`: close the modal and reload the page that opened it
+- `close`: close the modal without navigating or refreshing; the visible host page may remain stale until it is reloaded
+
+The modal setting applies to Quick Add on Index, Options, Tag Library, and Refetch pages, and to Edit Work links on Index. It intercepts only an unmodified primary-button click. Middle-click, right-click, Ctrl/Cmd/Shift/Alt-click, links with another target, and browsers without native `<dialog>` support keep normal anchor navigation, so the same URL can still be opened as a standalone page.
+
+The modal uses a same-origin iframe and adds `modal=1` only to that iframe request. The marker survives switching between DLSite and Custom Create, validation redirects, and create/update/delete submissions. After a successful submission, the iframe posts Laravel's calculated redirect URL to the host page, which applies the selected completion action. The modal can also be dismissed with its Close button, Escape, or a backdrop click; Go Back/Close inside the form closes the modal without reporting a successful change.
+
+The master switch and each completion choice include question-mark help text. Saving or resetting these Livewire settings updates modal behavior immediately on the Options page.
 
 Index field layout default order:
 - `image`
@@ -359,7 +376,7 @@ Index table width choices:
 This width is applied to the Index list/table panel and the top cover image. The top cover image keeps a capped desktop height, and product row thumbnails keep their fixed list size.
 
 Options page tabs:
-- `General` is the default tab and contains Index Pagination, Index Search, Index Table Width, Series Metadata, Autocomplete, Tag Library settings, and Reset All Options
+- `General` is the default tab and contains Index Pagination, Index Search, Index Table Width, Series Metadata, Add/Edit form theme and modal behavior, Autocomplete, Tag Library settings, and Reset All Options
 - `Field Layouts` is the second tab and contains Index Table Fields, Index Filter Fields, Index Sort Menu, Edit Form Fields, Quick Add Form Fields, Custom Quick Add Form Fields, and Reset All Options
 - `Refetch` contains the tag refetch workflow
 
@@ -370,7 +387,7 @@ Options reset behavior:
 - reset confirmation modals are teleported to the document body so they stay centered in the viewport instead of inside the Options panel
 - reset confirmation modals close from Cancel, Escape, or clicking outside the modal card
 - the global reset confirmation button is disabled for 3 seconds and shows a countdown before it can be clicked
-- reset defaults are pagination `100`, hidden-description search disabled, table width `default`, all five default field layouts, all default Index sort dropdown values, automatic Series enabled, product form theme `black`, Tag Library collapsed, Index group ordering disabled, and autocomplete `usage`
+- reset defaults are pagination `100`, hidden-description search disabled, table width `default`, all five default field layouts, all default Index sort dropdown values, automatic Series enabled, product form theme `black`, work form modals disabled with completion action `redirect`, Tag Library collapsed, Index group ordering disabled, and autocomplete `usage`
 - global reset does not change products, tags, refetch runs, legacy hidden fallback keys, or unrelated future option rows
 
 Index search defaults:

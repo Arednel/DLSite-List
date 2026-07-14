@@ -22,6 +22,10 @@ class Option extends Model
 
     public const PRODUCT_FORM_THEME = 'product_form_theme';
 
+    public const PRODUCT_FORM_MODAL_ENABLED = 'product_form_modal_enabled';
+
+    public const PRODUCT_FORM_MODAL_COMPLETION_ACTION = 'product_form_modal_completion_action';
+
     public const TAG_LIBRARY_TAGS_EXPANDED_BY_DEFAULT = 'tag_library_tags_expanded_by_default';
 
     public const TAG_LIBRARY_INDEX_GROUP_ORDERING_ENABLED = 'tag_library_index_group_ordering_enabled';
@@ -66,6 +70,12 @@ class Option extends Model
 
     public const PRODUCT_FORM_THEME_BLACK = 'black';
 
+    public const PRODUCT_FORM_MODAL_COMPLETION_REDIRECT = 'redirect';
+
+    public const PRODUCT_FORM_MODAL_COMPLETION_REFRESH = 'refresh';
+
+    public const PRODUCT_FORM_MODAL_COMPLETION_CLOSE = 'close';
+
     public const DEFAULT_INDEX_PER_PAGE = 100;
 
     public const FIXED_INDEX_PER_PAGE_OPTIONS = [
@@ -88,6 +98,12 @@ class Option extends Model
     public const PRODUCT_FORM_THEME_OPTIONS = [
         self::PRODUCT_FORM_THEME_CHERRY => 'Cherry',
         self::PRODUCT_FORM_THEME_BLACK => 'Black',
+    ];
+
+    public const PRODUCT_FORM_MODAL_COMPLETION_OPTIONS = [
+        self::PRODUCT_FORM_MODAL_COMPLETION_REDIRECT => 'Follow redirect',
+        self::PRODUCT_FORM_MODAL_COMPLETION_REFRESH => 'Refresh current page',
+        self::PRODUCT_FORM_MODAL_COMPLETION_CLOSE => 'Close modal only',
     ];
 
     public const DEFAULT_TAG_COLOR_SURFACES = [
@@ -113,6 +129,8 @@ class Option extends Model
         self::SERIES_AUTOCOMPLETE_ORDER,
         self::AUTO_SERIES_FROM_TITLE_NAME,
         self::PRODUCT_FORM_THEME,
+        self::PRODUCT_FORM_MODAL_ENABLED,
+        self::PRODUCT_FORM_MODAL_COMPLETION_ACTION,
         self::TAG_LIBRARY_TAGS_EXPANDED_BY_DEFAULT,
         self::TAG_LIBRARY_INDEX_GROUP_ORDERING_ENABLED,
         self::TAG_COLOR_SURFACES,
@@ -224,6 +242,44 @@ class Option extends Model
     public static function productFormThemeOptions(): array
     {
         return self::PRODUCT_FORM_THEME_OPTIONS;
+    }
+
+    public static function productFormModalEnabled(): bool
+    {
+        return self::booleanValueFor(self::PRODUCT_FORM_MODAL_ENABLED, false);
+    }
+
+    public static function setProductFormModalEnabled(bool $enabled): void
+    {
+        self::setBooleanValue(self::PRODUCT_FORM_MODAL_ENABLED, $enabled);
+    }
+
+    public static function productFormModalCompletionAction(): string
+    {
+        return self::normalizeProductFormModalCompletionAction(
+            self::valueFor(self::PRODUCT_FORM_MODAL_COMPLETION_ACTION),
+        );
+    }
+
+    public static function setProductFormModalCompletionAction(string $action): void
+    {
+        self::setValue(
+            self::PRODUCT_FORM_MODAL_COMPLETION_ACTION,
+            self::normalizeProductFormModalCompletionAction($action),
+        );
+    }
+
+    /**
+     * @return array<string, string>
+     */
+    public static function productFormModalCompletionOptions(): array
+    {
+        return self::PRODUCT_FORM_MODAL_COMPLETION_OPTIONS;
+    }
+
+    public static function resetProductFormModalSettingsToDefault(): void
+    {
+        self::forget(self::PRODUCT_FORM_MODAL_ENABLED, self::PRODUCT_FORM_MODAL_COMPLETION_ACTION);
     }
 
     public static function tagLibraryTagsExpandedByDefault(): bool
@@ -427,6 +483,8 @@ class Option extends Model
                 self::INDEX_TABLE_WIDTH,
                 self::TAG_LIBRARY_INDEX_GROUP_ORDERING_ENABLED,
                 self::TAG_COLOR_SURFACES,
+                self::PRODUCT_FORM_MODAL_ENABLED,
+                self::PRODUCT_FORM_MODAL_COMPLETION_ACTION,
             ])
             ->pluck('value', 'key');
 
@@ -465,6 +523,13 @@ class Option extends Model
             ),
             tagColorSurfaces: self::normalizeTagColorSurfaces(
                 self::jsonFromValue($values->get(self::TAG_COLOR_SURFACES)),
+            ),
+            productFormModalEnabled: self::normalizeBoolean(
+                $values->get(self::PRODUCT_FORM_MODAL_ENABLED),
+                false,
+            ),
+            productFormModalCompletionAction: self::normalizeProductFormModalCompletionAction(
+                $values->get(self::PRODUCT_FORM_MODAL_COMPLETION_ACTION),
             ),
         );
     }
@@ -551,6 +616,13 @@ class Option extends Model
         return array_key_exists((string) $theme, self::PRODUCT_FORM_THEME_OPTIONS)
             ? (string) $theme
             : self::PRODUCT_FORM_THEME_BLACK;
+    }
+
+    private static function normalizeProductFormModalCompletionAction(?string $action): string
+    {
+        return array_key_exists((string) $action, self::PRODUCT_FORM_MODAL_COMPLETION_OPTIONS)
+            ? (string) $action
+            : self::PRODUCT_FORM_MODAL_COMPLETION_REDIRECT;
     }
 
     private static function valueFor(string $key): ?string

@@ -29,5 +29,7 @@ final readonly class ProductIndexSettings
         public bool $searchHiddenDescriptionsEnabled,
         public bool $indexGroupOrderingEnabled,
         public array $tagColorSurfaces,
+        public bool $productFormModalEnabled,
+        public string $productFormModalCompletionAction,
     ) {}
 }

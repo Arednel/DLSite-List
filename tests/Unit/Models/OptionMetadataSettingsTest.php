@@ -100,6 +100,47 @@ class OptionMetadataSettingsTest extends TestCase
         $this->assertSame(Option::PRODUCT_FORM_THEME_BLACK, Option::productFormTheme());
     }
 
+    public function test_product_form_modal_settings_use_safe_defaults_and_normalize_invalid_values(): void
+    {
+        $this->assertFalse(Option::productFormModalEnabled());
+        $this->assertSame(
+            Option::PRODUCT_FORM_MODAL_COMPLETION_REDIRECT,
+            Option::productFormModalCompletionAction(),
+        );
+        $this->assertSame([
+            Option::PRODUCT_FORM_MODAL_COMPLETION_REDIRECT => 'Follow redirect',
+            Option::PRODUCT_FORM_MODAL_COMPLETION_REFRESH => 'Refresh current page',
+            Option::PRODUCT_FORM_MODAL_COMPLETION_CLOSE => 'Close modal only',
+        ], Option::productFormModalCompletionOptions());
+
+        Option::setProductFormModalEnabled(true);
+        Option::setProductFormModalCompletionAction(Option::PRODUCT_FORM_MODAL_COMPLETION_CLOSE);
+
+        $this->assertTrue(Option::productFormModalEnabled());
+        $this->assertSame(
+            Option::PRODUCT_FORM_MODAL_COMPLETION_CLOSE,
+            Option::productFormModalCompletionAction(),
+        );
+
+        Option::query()->updateOrCreate(
+            ['key' => Option::PRODUCT_FORM_MODAL_COMPLETION_ACTION],
+            ['value' => 'not-an-action'],
+        );
+
+        $this->assertSame(
+            Option::PRODUCT_FORM_MODAL_COMPLETION_REDIRECT,
+            Option::productFormModalCompletionAction(),
+        );
+
+        Option::resetProductFormModalSettingsToDefault();
+
+        $this->assertFalse(Option::productFormModalEnabled());
+        $this->assertSame(
+            Option::PRODUCT_FORM_MODAL_COMPLETION_REDIRECT,
+            Option::productFormModalCompletionAction(),
+        );
+    }
+
     public function test_field_layouts_are_normalized_when_saved(): void
     {
         Option::setIndexFieldLayout([
@@ -190,6 +231,11 @@ class OptionMetadataSettingsTest extends TestCase
         $this->assertFalse($defaults->indexGroupOrderingEnabled);
         $this->assertFalse($defaults->searchHiddenDescriptionsEnabled);
         $this->assertSame(Option::DEFAULT_TAG_COLOR_SURFACES, $defaults->tagColorSurfaces);
+        $this->assertFalse($defaults->productFormModalEnabled);
+        $this->assertSame(
+            Option::PRODUCT_FORM_MODAL_COMPLETION_REDIRECT,
+            $defaults->productFormModalCompletionAction,
+        );
         $this->assertSame([
             ProductField::Title->value,
             ProductField::Score->value,
@@ -228,6 +274,8 @@ class OptionMetadataSettingsTest extends TestCase
             Option::TAG_COLOR_SURFACE_INDEX => false,
             Option::TAG_COLOR_SURFACE_REFETCH => true,
         ]);
+        Option::setProductFormModalEnabled(true);
+        Option::setProductFormModalCompletionAction(Option::PRODUCT_FORM_MODAL_COMPLETION_REFRESH);
 
         $settings = Option::productIndexSettings();
 
@@ -249,6 +297,11 @@ class OptionMetadataSettingsTest extends TestCase
         $this->assertTrue($settings->searchHiddenDescriptionsEnabled);
         $this->assertFalse($settings->tagColorSurfaces[Option::TAG_COLOR_SURFACE_INDEX]);
         $this->assertTrue($settings->tagColorSurfaces[Option::TAG_COLOR_SURFACE_REFETCH]);
+        $this->assertTrue($settings->productFormModalEnabled);
+        $this->assertSame(
+            Option::PRODUCT_FORM_MODAL_COMPLETION_REFRESH,
+            $settings->productFormModalCompletionAction,
+        );
     }
 
     public function test_product_index_settings_fall_back_from_invalid_saved_values(): void
@@ -282,6 +335,8 @@ class OptionMetadataSettingsTest extends TestCase
         Option::setTagLibraryIndexGroupOrderingEnabled(true);
         Option::setIndexSearchHiddenDescriptionsEnabled(true);
         Option::setProductFormTheme(Option::PRODUCT_FORM_THEME_CHERRY);
+        Option::setProductFormModalEnabled(true);
+        Option::setProductFormModalCompletionAction(Option::PRODUCT_FORM_MODAL_COMPLETION_CLOSE);
         Option::setTagColorSurfaces([
             'index' => false,
             'tag_library' => false,
@@ -295,6 +350,11 @@ class OptionMetadataSettingsTest extends TestCase
         $this->assertFalse(Option::tagLibraryIndexGroupOrderingEnabled());
         $this->assertFalse(Option::indexSearchHiddenDescriptionsEnabled());
         $this->assertSame(Option::PRODUCT_FORM_THEME_BLACK, Option::productFormTheme());
+        $this->assertFalse(Option::productFormModalEnabled());
+        $this->assertSame(
+            Option::PRODUCT_FORM_MODAL_COMPLETION_REDIRECT,
+            Option::productFormModalCompletionAction(),
+        );
         $this->assertSame([
             'index' => true,
             'tag_library' => true,

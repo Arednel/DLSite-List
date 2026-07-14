@@ -35,6 +35,7 @@ class OptionsController extends Controller
             'latestRefetchRun' => TagRefetchRun::query()
                 ->latest('id')
                 ->first(['id']),
+            ...$this->productFormModalSettings(),
         ]);
     }
 
@@ -72,7 +73,19 @@ class OptionsController extends Controller
             'ignoreAction' => TagRefetchWorkResult::ADDED_ACTION_IGNORE,
             'promoteCustomAction' => TagRefetchWorkResult::CUSTOM_TO_FETCHED_ACTION_PROMOTE,
             'keepCustomAction' => TagRefetchWorkResult::CUSTOM_TO_FETCHED_ACTION_KEEP_CUSTOM,
+            ...$this->productFormModalSettings(),
         ]);
+    }
+
+    /**
+     * @return array{productFormModalEnabled: bool, productFormModalCompletionAction: string}
+     */
+    private function productFormModalSettings(): array
+    {
+        return [
+            'productFormModalEnabled' => Option::productFormModalEnabled(),
+            'productFormModalCompletionAction' => Option::productFormModalCompletionAction(),
+        ];
     }
 
     public function refetchTagsStatus(TagRefetchRun $run): JsonResponse

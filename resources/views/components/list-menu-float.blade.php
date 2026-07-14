@@ -1,5 +1,7 @@
 @props([
     'quickAddUrl' => route('products.create', [], false),
+    'productFormModalEnabled' => false,
+    'productFormModalCompletionAction' => 'redirect',
 ])
 
 <div class="list-menu-float-shell" data-list-menu-shell>
@@ -16,7 +18,8 @@
         data-list-menu-overlay></button>
 
     <div class="list-menu-float" id="list-menu-float" data-list-menu aria-hidden="true">
-        <a class="list-menu-link quick-add" href="{{ $quickAddUrl }}">
+        <a class="list-menu-link quick-add" href="{{ $quickAddUrl }}" data-work-form-modal-link
+            data-work-form-modal-title="Quick Add">
             <svg class="menu-icon icon-quick-add" width="22px" height="20px" viewBox="0 0 22 20">
                 <g>
                     <path
@@ -104,5 +107,19 @@
     </div>
 </div>
 
+<dialog class="work-form-modal" data-work-form-modal data-enabled="{{ $productFormModalEnabled ? 'true' : 'false' }}"
+    data-completion-action="{{ $productFormModalCompletionAction }}" aria-label="Work form">
+    <div class="work-form-modal__surface">
+        <div class="work-form-modal__header">
+            <span class="work-form-modal__title" data-work-form-modal-title>Work form</span>
+            <button type="button" class="work-form-modal__close" data-work-form-modal-close
+                aria-label="Close modal">&times;</button>
+        </div>
+        <iframe class="work-form-modal__frame" data-work-form-modal-frame title="Work form"></iframe>
+    </div>
+</dialog>
+
 <script src="{{ asset('scripts/list-menu-float.js') }}?v={{ filemtime(public_path('scripts/list-menu-float.js')) }}"
+    defer></script>
+<script src="{{ asset('scripts/work-form-modal.js') }}?v={{ filemtime(public_path('scripts/work-form-modal.js')) }}"
     defer></script>

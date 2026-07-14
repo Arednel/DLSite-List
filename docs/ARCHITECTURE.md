@@ -69,6 +69,7 @@
   - `app/Livewire/ProductFieldLayoutSettings.php`
   - `app/Livewire/AutoSeriesSettings.php`
   - `app/Livewire/IndexTableWidthSettings.php`
+  - `app/Livewire/ProductFormModalSettings.php`
   - `app/Livewire/OptionsWorkSearch.php`
   - `app/Livewire/OptionsRefetchProgress.php`
 - Livewire shared settings concern:
@@ -80,9 +81,11 @@
 - Scripts/CSS: `public/scripts/*`, `public/css/*`
 
 Shared UI note:
-- `resources/views/components/list-menu-float.blade.php` is reused by index/tag library
+- `resources/views/components/list-menu-float.blade.php` is reused by Index, Options, Tag Library, and Refetch pages
 - desktop keeps the floating hover menu
 - mobile uses a toggle button that opens the same menu as a left-side drawer
+- the shared navigation also owns the native `<dialog>` work-form host; tightly namespaced shell styles stay in `list-menu-float.css`, while the same-origin iframe keeps Create/Edit `edit.css`, the Edit delete dialog, and host-page CSS isolated from one another
+- only unmodified primary clicks on marked Quick Add and Index Edit links are intercepted; their real `href` values remain standalone routes for middle-click, modified clicks, non-self targets, and browsers without native dialog support
 - `resources/views/Index.blade.php` hosts `ProductIndex` inside a sticky-footer page shell; the Livewire view keeps the desktop table on larger screens and switches to stacked cards on mobile so search/actions still fit
 - `resources/views/Create.blade.php` switches between DLSite create and custom create modes, renders the saved Quick Add or Custom Quick Add field layout through a configurable row component, includes the same optional metadata/creator/Japanese-description/English-description rows as Edit Work hidden by default, and keeps required create fields locked visible; `ProductController` resolves the saved `product_form_theme` into a page-level theme class for `resources/views/Create.blade.php` and `resources/views/Edit.blade.php`, which use `public/css/edit.css` for both desktop and mobile form layouts and render reusable field components from `resources/views/components/fields/*.blade.php`
 - `app/View/Components/Fields/*.php` provides the class-based field components used by those Blade views
@@ -98,7 +101,7 @@ Shared UI note:
 - `app/Models/Product.php` owns the Laravel 12 local scopes used by index filtering/search and keeps derived index keys in sync for RJ sorting and partial date sorting
 - `app/Support/ProductIndexResults.php` builds the filtered product query, hydrates only Index title/status base columns plus attributes needed by visible Index fields, and keeps filter/sort-only columns in SQL for default/RJ/scalar/date sorts
 - `ProductIndexResults` also prepares simple display strings for optional scalar Index cells such as partial listening dates, re-listen value, and priority so the Blade table does not call formatter or enum classes directly
-- `ProductIndex` reads page size, Index layout, Filter layout, and table width through one batched `ProductIndexSettings` option lookup per render, uses Livewire computed properties for derived filter/query/options/sort-icon state, and derives return/progress/tag query arrays from that normalized state
+- `ProductIndex` reads page size, Index layout, Filter layout, table width, and work-form modal settings through one batched `ProductIndexSettings` option lookup per render, uses Livewire computed properties for derived filter/query/options/sort-icon state, and derives return/progress/tag query arrays from that normalized state
 - `ProductIndexSortField` owns valid sort keys, labels, SQL columns, and Advanced Filter sort dropdown layout normalization; the `index_sort_field_layout` option only changes which sort values the dropdown shows and does not disable enum-valid URL or table-header sorting
 - Advanced Filter date ranges use explicit `*_from` and `*_to` URL/query keys. Start/finish date ranges compare against the derived `start_date_sort` / `end_date_sort` `YYYYMMDD` integers, while `created_at` and `updated_at` ranges use Laravel date-only timestamp filtering.
 - Contributor sort fields order by each role's alphabetically first contributor name with nulls last. Circle sorting uses the first circle contributor name when present and falls back to `products.circle`.
@@ -269,6 +272,10 @@ Runtime note:
 - update detects whether visibility-affecting product fields or custom tags changed before redirecting, so unchanged edits can trust the current index query unless the saved return state no longer contains the work; `maker_id` is included in that product-field check because circle filters also match maker IDs
 - destroy keeps the saved index query but clamps stale page numbers to the last valid page after deletion; storage cleanup uses Laravel storage deletes and logs cleanup failures without blocking product deletion
 - create-page Go Back ignores malformed `return_url` input, uses Laravel previous URL behavior with the Index as fallback, preserves that back URL while switching between DLSite Create and Custom Create, and restores the flashed return target after validation or scraper errors
+- modal Quick Add/Edit loads the unchanged Create/Edit routes in the shared iframe with `modal=1`; the marker is preserved by create-mode links, validation redirects, and hidden form inputs, while normal standalone requests remain unmarked
+- successful modal create, update, and delete responses render a small completion page that sends a same-origin `work-form-completed` message with Laravel's calculated redirect URL; the host follows that URL, refreshes itself, or closes according to `product_form_modal_completion_action`, while modal form cancellation sends `work-form-cancelled`
+- `WorkFormCompleted.blade.php` loads the dedicated, tightly scoped `work-form-completed.css` fallback styling; its responsive Cherry/Options confirmation card and top-level Continue link remain usable if parent messaging does not complete
+- the modal host accepts messages only from its iframe and the same origin, closes from its header button, Escape, or backdrop clicks, clears the iframe when closed, and restores focus to the opening link
 - Create pages read Quick Add or Custom Quick Add field layouts from Options and render only the visible rows, while keeping required RJ/custom title/age/cover rows visible even if stored option JSON tries to hide them. Hidden Create layout fields are ignored on submit; DLSite Create keeps scraped metadata for hidden age/circle/creator/Japanese-description/English-description rows and always preserves scraped fetched JP/EN tags, while visible Custom Tags can add submitted custom tags. Custom Quick Add saves visible custom metadata and Custom Tags directly because it has no scraper fallback, so hidden custom description language rows save `null` and hidden Custom Tags are ignored
 - create/store resolves scraped/custom titles into `genres` rows and syncs the pivot
 - DLSite create parses scraped JSON through `DLSiteWorkData`, collapses duplicate English title/description values to `null`, syncs contributor roles, and fills an empty Series from `japanese.title_name` only when `auto_series_from_title_name` is enabled
@@ -290,7 +297,8 @@ Runtime note:
 - the Refetch tab links to the latest refetch run when at least one run exists
 - the General tab includes an Index Pagination setting powered by Livewire and persisted in `options.index_per_page`; changing the mode can reveal the custom-value input immediately, but the setting is only persisted when Save is submitted
 - the General tab includes Livewire autocomplete ordering settings persisted in `options.tag_autocomplete_order` and `options.series_autocomplete_order`
-- the General tab includes Livewire settings for automatic Series from DLSite `title_name`, Add/Edit form page theme, and Index table width
+- the General tab includes Livewire settings for automatic Series from DLSite `title_name`, Add/Edit form page theme, work-form modal behavior, and Index table width
+- `ProductFormModalSettings` persists the default-off master switch and `redirect`/`refresh`/`close` completion action, validates the action, provides question-mark help for every control, participates in individual/global resets, and dispatches a browser event after save/reset so the Options page's modal host updates immediately
 - the Field Layouts tab includes Index Table Custom Tags/Fetched EN Tags visibility toggles inside one Tags row, keeps Index Filter Fields and Index Sort Menu unsplit, and uses separate Edit Form rows for Custom Tags and Fetched EN Tags
 - the Field Layouts tab orders its Livewire settings as Index Table Fields, Index Filter Fields, Index Sort Menu, Edit Form Fields, Quick Add Form Fields, and Custom Quick Add Form Fields; field layout rows use Livewire `wire:sort` drag handles plus Up/Down buttons, keep checkbox state in field-keyed maps while editing, and are persisted only when Save is submitted
 - Options Livewire settings components share saved notice, validation-reset, and reset-confirmation state through `ConfirmsOptionReset`

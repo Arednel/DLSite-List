@@ -168,37 +168,37 @@ class ProductControllerTest extends TestCase
         ]);
         $this->attachGenres($noise, [$noiseGenre, $noiseCustomGenre]);
 
-        $this->get('/?search='.strtolower($target->id))
+        $this->get('/?search=' . strtolower($target->id))
             ->assertOk()
             ->assertSee($target->work_name)
             ->assertDontSee($noise->work_name);
 
-        $this->get('/?search='.strtolower($jpToken))
+        $this->get('/?search=' . strtolower($jpToken))
             ->assertOk()
             ->assertSee($target->work_name)
             ->assertDontSee($noise->work_name);
 
-        $this->get('/?search='.strtolower($enToken))
+        $this->get('/?search=' . strtolower($enToken))
             ->assertOk()
             ->assertSee($target->work_name_english)
             ->assertDontSee($noise->work_name_english);
 
-        $this->get('/?search='.strtolower($seriesToken))
+        $this->get('/?search=' . strtolower($seriesToken))
             ->assertOk()
             ->assertSee($target->series)
             ->assertDontSee($noise->series);
 
-        $this->get('/?search='.strtolower($genreToken))
+        $this->get('/?search=' . strtolower($genreToken))
             ->assertOk()
             ->assertSee($target->work_name)
             ->assertDontSee($noise->work_name);
 
-        $this->get('/?search='.strtolower($customToken))
+        $this->get('/?search=' . strtolower($customToken))
             ->assertOk()
             ->assertSee($target->work_name)
             ->assertDontSee($noise->work_name);
 
-        $this->get('/?search='.strtolower($hiddenJapaneseGenre->title))
+        $this->get('/?search=' . strtolower($hiddenJapaneseGenre->title))
             ->assertOk()
             ->assertDontSee($hiddenJapanese->work_name);
     }
@@ -255,12 +255,12 @@ class ProductControllerTest extends TestCase
             'work_name' => 'GENRE_ID_NOISE_TOKEN',
         ]);
 
-        $this->get('/?genre='.$sharedGenre->getKey())
+        $this->get('/?genre=' . $sharedGenre->getKey())
             ->assertOk()
             ->assertSee($matching->work_name)
             ->assertDontSee($noise->work_name);
 
-        $this->get('/?genre='.$hiddenJapaneseGenre->getKey())
+        $this->get('/?genre=' . $hiddenJapaneseGenre->getKey())
             ->assertOk()
             ->assertDontSee($hiddenJapanese->work_name);
     }
@@ -593,7 +593,7 @@ class ProductControllerTest extends TestCase
             ->assertSee('href="/create"', false)
             ->assertDontSee('hero__back', false);
 
-        $this->get('/?genre='.$sharedLanguageGenre->getKey())
+        $this->get('/?genre=' . $sharedLanguageGenre->getKey())
             ->assertOk()
             ->assertSee($firstProduct->work_name)
             ->assertDontSee($japaneseOnlyProduct->work_name);
@@ -785,6 +785,31 @@ class ProductControllerTest extends TestCase
             ->assertSee('href="/create/custom?return_url=http%3A%2F%2Flocalhost&amp;return_query%5Bsearch%5D=rain&amp;return_query%5Bprogress%5D=Listening&amp;return_query%5Bpage%5D=3"', false);
     }
 
+    public function test_modal_create_preserves_marker_across_forms_and_mode_switches(): void
+    {
+        $this->get('/create?modal=1')
+            ->assertOk()
+            ->assertSee('name="modal" value="1"', false)
+            ->assertSee('data-work-form-modal-cancel', false)
+            ->assertSee('scripts/work-form-frame.js', false)
+            ->assertSee('modal=1', false)
+            ->assertDontSee('>Go back<', false);
+
+        $this->get('/create/custom?modal=1')
+            ->assertOk()
+            ->assertSee('name="modal" value="1"', false)
+            ->assertSee('data-work-form-modal-cancel', false)
+            ->assertSee('modal=1', false);
+    }
+
+    public function test_modal_create_validation_redirect_keeps_modal_url(): void
+    {
+        $this->from('/create/custom?modal=1')
+            ->post('/store/custom', ['modal' => '1'])
+            ->assertRedirect('/create/custom?modal=1')
+            ->assertSessionHasErrors(['id', 'work_name', 'age_category', 'work_image']);
+    }
+
     public function test_create_go_back_uses_previous_url_with_index_fallback(): void
     {
         $this->from('/tags')->get('/create')
@@ -875,22 +900,22 @@ class ProductControllerTest extends TestCase
         $response->assertOk();
 
         foreach (ProductProgress::options() as $value => $label) {
-            $response->assertSee('value="'.e($value).'"', false);
+            $response->assertSee('value="' . e($value) . '"', false);
             $response->assertSee($label);
         }
 
         foreach (ProductScore::options() as $value => $label) {
-            $response->assertSee('value="'.e($value).'"', false);
+            $response->assertSee('value="' . e($value) . '"', false);
             $response->assertSee($label);
         }
 
         foreach (ProductPriority::options() as $value => $label) {
-            $response->assertSee('value="'.e($value).'"', false);
+            $response->assertSee('value="' . e($value) . '"', false);
             $response->assertSee($label);
         }
 
         foreach (ProductReListenValue::options() as $value => $label) {
-            $response->assertSee('value="'.e($value).'"', false);
+            $response->assertSee('value="' . e($value) . '"', false);
             $response->assertSee($label);
         }
     }
@@ -947,7 +972,7 @@ class ProductControllerTest extends TestCase
             ->assertDontSee('name="return_route"', false)
             ->assertSee('name="return_query[progress]"', false)
             ->assertSee('name="return_fragment"', false)
-            ->assertSee('href="/?progress=Listening#'.$product->id.'"', false)
+            ->assertSee('href="/?progress=Listening#' . $product->id . '"', false)
             ->assertDontSee('name="redirect"', false);
     }
 
@@ -961,6 +986,20 @@ class ProductControllerTest extends TestCase
             ->assertOk()
             ->assertSee('class="product-form-theme-cherry"', false)
             ->assertDontSee('class="dark-mode"', false);
+    }
+
+    public function test_modal_edit_marks_update_and_delete_forms_and_renders_close_action(): void
+    {
+        $product = Product::factory()->create();
+
+        $response = $this->get("/edit/{$product->id}?modal=1");
+
+        $response->assertOk()
+            ->assertSee('data-work-form-modal-cancel', false)
+            ->assertSee('scripts/work-form-frame.js', false)
+            ->assertDontSee('>Go back<', false);
+
+        $this->assertSame(2, substr_count($response->getContent(), 'name="modal" value="1"'));
     }
 
     public function test_edit_renders_readonly_description_from_prepared_value(): void
@@ -1160,8 +1199,8 @@ class ProductControllerTest extends TestCase
 
         $this->get("/edit/{$product->id}?return_query[progress]=Listening")
             ->assertOk()
-            ->assertSee('name="return_fragment" value="'.$product->id.'"', false)
-            ->assertSee('href="/?progress=Listening#'.$product->id.'"', false);
+            ->assertSee('name="return_fragment" value="' . $product->id . '"', false)
+            ->assertSee('href="/?progress=Listening#' . $product->id . '"', false);
     }
 
     public function test_edit_prefills_comma_custom_tags_as_quoted_csv(): void
@@ -1565,7 +1604,7 @@ class ProductControllerTest extends TestCase
     public function test_store_extracts_rj_from_url_before_validation(): void
     {
         $existing = Product::factory()->create();
-        $urlInput = 'https://www.dlsite.com/maniax/work/=/product_id/'.strtolower($existing->id).'.html';
+        $urlInput = 'https://www.dlsite.com/maniax/work/=/product_id/' . strtolower($existing->id) . '.html';
 
         $response = $this->from('/create')->post('/store', [
             'id' => $urlInput,
@@ -1934,7 +1973,7 @@ class ProductControllerTest extends TestCase
         ]);
 
         $response->assertSessionHasNoErrors();
-        $response->assertRedirect('/#'.$workId);
+        $response->assertRedirect('/#' . $workId);
 
         Storage::disk('public')->assertExists("Works/{$workId}/cover.png");
         Storage::disk('public')->assertExists("Works/{$workId}/sample_1.jpg");
@@ -1962,7 +2001,7 @@ class ProductControllerTest extends TestCase
 
         $this->get('/')
             ->assertOk()
-            ->assertSee('src="storage/Works/'.$workId.'/cover.png"', false)
+            ->assertSee('src="storage/Works/' . $workId . '/cover.png"', false)
             ->assertDontSee('images/No Image.png', false);
     }
 
@@ -2114,6 +2153,28 @@ class ProductControllerTest extends TestCase
 
         $response->assertSessionHasNoErrors();
         $response->assertRedirect("/?progress=Listening&page=2#{$workId}");
+    }
+
+    public function test_modal_custom_store_returns_completion_response_with_calculated_target(): void
+    {
+        Storage::fake('public');
+        $workId = Product::factory()->make()->id;
+
+        $response = $this->post('/store/custom', $this->customStorePayload($workId, [
+            'modal' => '1',
+            'return_query' => ['progress' => 'Listening'],
+            'progress' => 'Listening',
+        ]));
+
+        $response->assertOk()
+            ->assertViewIs('WorkFormCompleted')
+            ->assertViewHas('redirectUrl', "/?progress=Listening#{$workId}")
+            ->assertSee('css/work-form-completed.css', false)
+            ->assertSee('class="work-form-completed-page"', false)
+            ->assertSee('Work change completed')
+            ->assertSee('target="_top"', false)
+            ->assertSee('work-form-completed', false);
+        $this->assertDatabaseHas('products', ['id' => $workId]);
     }
 
     public function test_custom_store_returns_to_new_work_on_calculated_custom_sort_page(): void
@@ -2604,6 +2665,30 @@ class ProductControllerTest extends TestCase
         ])->assertRedirect("/?age_category=ALL_AGES&progress=Completed#{$product->id}");
     }
 
+    public function test_modal_update_returns_completion_response_with_calculated_target(): void
+    {
+        $product = Product::factory()->create([
+            'progress' => 'Listening',
+            'work_name' => 'MODAL_UPDATE_WORK',
+        ]);
+
+        $this->post("/update/{$product->id}", [
+            'modal' => '1',
+            'work_name' => 'MODAL_UPDATE_WORK_CHANGED',
+            'progress' => 'Completed',
+            'return_query' => ['progress' => 'Listening'],
+            'return_fragment' => $product->id,
+        ])->assertOk()
+            ->assertViewIs('WorkFormCompleted')
+            ->assertViewHas('redirectUrl', "/?progress=Completed#{$product->id}")
+            ->assertSee('work-form-completed', false);
+
+        $this->assertDatabaseHas('products', [
+            'id' => $product->id,
+            'work_name' => 'MODAL_UPDATE_WORK_CHANGED',
+        ]);
+    }
+
     public function test_update_redirect_drops_search_when_it_would_hide_the_target_work(): void
     {
         $product = Product::factory()->create([
@@ -3067,12 +3152,12 @@ class ProductControllerTest extends TestCase
             'page' => '2',
         ];
 
-        $this->get('/?'.http_build_query($returnQuery))
+        $this->get('/?' . http_build_query($returnQuery))
             ->assertOk()
             ->assertSee($product->work_name)
             ->assertDontSee('WORKFLOW_LISTENING_SCORE_ONE');
 
-        $this->get("/edit/{$product->id}?".http_build_query([
+        $this->get("/edit/{$product->id}?" . http_build_query([
             'return_query' => $returnQuery,
             'return_fragment' => $product->id,
         ]))
@@ -3178,14 +3263,16 @@ class ProductControllerTest extends TestCase
     {
         $product = Product::factory()->create();
 
-        foreach ([
-            ['month', '0'],
-            ['month', '13'],
-            ['day', '0'],
-            ['day', '32'],
-            ['year', '1899'],
-            ['year', '2101'],
-        ] as [$part, $value]) {
+        foreach (
+            [
+                ['month', '0'],
+                ['month', '13'],
+                ['day', '0'],
+                ['day', '32'],
+                ['year', '1899'],
+                ['year', '2101'],
+            ] as [$part, $value]
+        ) {
             $this->from("/edit/{$product->id}")
                 ->post("/update/{$product->id}", [
                     'work_name' => $product->work_name,
@@ -3234,6 +3321,23 @@ class ProductControllerTest extends TestCase
                 'progress' => 'Completed',
             ],
         ])->assertRedirect('/?progress=Completed');
+
+        $this->assertDatabaseMissing('products', ['id' => $product->id]);
+    }
+
+    public function test_modal_destroy_returns_completion_response_and_deletes_product(): void
+    {
+        Storage::fake('local');
+        Storage::fake('public');
+        $product = Product::factory()->create();
+
+        $this->post("/destroy/{$product->id}", [
+            'modal' => '1',
+            'return_query' => ['progress' => 'Completed'],
+        ])->assertOk()
+            ->assertViewIs('WorkFormCompleted')
+            ->assertViewHas('redirectUrl', '/?progress=Completed')
+            ->assertSee('work-form-completed', false);
 
         $this->assertDatabaseMissing('products', ['id' => $product->id]);
     }
@@ -3429,7 +3533,7 @@ class ProductControllerTest extends TestCase
 
     private function uniqueToken(string $prefix): string
     {
-        return $prefix.'_'.random_int(100000, 999999);
+        return $prefix . '_' . random_int(100000, 999999);
     }
 
     private function expectedPythonExecutable(): string

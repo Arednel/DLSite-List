@@ -47,6 +47,9 @@ class OptionsControllerTest extends TestCase
             ->assertSee('Search hidden descriptions')
             ->assertSee('Configure Tag Library startup behavior')
             ->assertSee('whether saved tag-group order affects Index tag')
+            ->assertSee('Work Form Modals')
+            ->assertSee('Open Quick Add and Edit Work in modal windows')
+            ->assertSee('data-enabled="false"', false)
             ->assertSee('Reset All Options')
             ->assertDontSee('Index Sort Menu')
             ->assertDontSee('Fetched EN Tags')
@@ -55,6 +58,24 @@ class OptionsControllerTest extends TestCase
             ->assertDontSee('Refetch selected works')
             ->assertDontSee('OPTIONS_WORK_TOKEN')
             ->assertDontSee('OPTIONS_EN_TOKEN');
+    }
+
+    public function test_shared_quick_add_modal_configuration_renders_on_content_pages(): void
+    {
+        Option::setProductFormModalEnabled(true);
+        Option::setProductFormModalCompletionAction(Option::PRODUCT_FORM_MODAL_COMPLETION_CLOSE);
+        $product = Product::factory()->create();
+        $run = app(TagRefetchService::class)->createRun([$product->id]);
+
+        foreach (['/options', '/tags', route('options.refetch-tags.show', $run, false)] as $url) {
+            $this->get($url)
+                ->assertOk()
+                ->assertSee('href="/create"', false)
+                ->assertDontSee('href="/create?modal=1"', false)
+                ->assertSee('data-work-form-modal-link', false)
+                ->assertSee('data-enabled="true"', false)
+                ->assertSee('data-completion-action="close"', false);
+        }
     }
 
     public function test_field_layouts_tab_renders_field_layout_settings(): void

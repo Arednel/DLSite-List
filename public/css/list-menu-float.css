@@ -2,6 +2,86 @@
     position: relative;
 }
 
+.work-form-modal {
+    background: transparent;
+    border: 0;
+    height: min(92vh, 960px);
+    margin: auto;
+    max-height: 92vh;
+    max-width: calc(100vw - 32px);
+    overflow: hidden;
+    padding: 0;
+    width: min(1120px, calc(100vw - 32px));
+}
+
+.work-form-modal::backdrop {
+    background: rgba(0, 0, 0, 0.68);
+}
+
+.work-form-modal__surface {
+    background: #222;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    border-radius: 8px;
+    box-shadow: 0 18px 55px rgba(0, 0, 0, 0.45);
+    box-sizing: border-box;
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    overflow: hidden;
+    width: 100%;
+}
+
+.work-form-modal__header {
+    align-items: center;
+    background: #222;
+    box-sizing: border-box;
+    color: #fff;
+    display: flex;
+    flex: 0 0 auto;
+    font-family: Verdana, Arial, sans-serif;
+    font-size: 13px;
+    font-weight: 700;
+    justify-content: space-between;
+    min-height: 42px;
+    padding: 6px 8px 6px 14px;
+}
+
+.work-form-modal__title {
+    line-height: 1.4;
+}
+
+.work-form-modal__close {
+    align-items: center;
+    appearance: none;
+    background: transparent;
+    border: 0;
+    border-radius: 4px;
+    color: #fff;
+    cursor: pointer;
+    display: inline-flex;
+    font: 26px/1 Arial, sans-serif;
+    height: 32px;
+    justify-content: center;
+    margin: 0;
+    padding: 0;
+    width: 32px;
+}
+
+.work-form-modal__close:hover,
+.work-form-modal__close:focus-visible {
+    background: rgba(255, 255, 255, 0.14);
+    outline: none;
+}
+
+.work-form-modal__frame {
+    background: #fff;
+    border: 0;
+    display: block;
+    flex: 1 1 auto;
+    min-height: 0;
+    width: 100%;
+}
+
 .list-menu-float {
     position: fixed;
     display: block;
@@ -79,6 +159,17 @@
 }
 
 @media (max-width: 768px) {
+    .work-form-modal {
+        height: calc(100vh - 16px);
+        max-height: calc(100vh - 16px);
+        max-width: calc(100vw - 16px);
+        width: calc(100vw - 16px);
+    }
+
+    .work-form-modal__surface {
+        border-radius: 6px;
+    }
+
     body.list-menu-mobile-open {
         overflow: hidden;
     }

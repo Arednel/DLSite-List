@@ -45,6 +45,9 @@
                                             action="{{ $isCustomCreate ? route('products.store.custom') : route('products.store') }}"
                                             @if ($isCustomCreate) enctype="multipart/form-data" @endif>
                                             @csrf
+                                            @if ($isModal)
+                                                <input type="hidden" name="modal" value="1">
+                                            @endif
                                             <input type="hidden" name="return_url" value="{{ $returnUrl }}">
                                             @foreach ($returnQuery as $queryKey => $queryValue)
                                                 <input type="hidden" name="return_query[{{ $queryKey }}]"
@@ -70,10 +73,15 @@
                                         </form>
 
                                         <div class="dialog-actions dialog-actions-right">
-                                            <a href="{{ $returnUrl }}"
-                                                class="form-button margin-left-8 ignore-visited-link">
-                                                Go back
-                                            </a>
+                                            @if ($isModal)
+                                                <button type="button" class="form-button margin-left-8"
+                                                    data-work-form-modal-cancel>Close</button>
+                                            @else
+                                                <a href="{{ $returnUrl }}"
+                                                    class="form-button margin-left-8 ignore-visited-link">
+                                                    Go back
+                                                </a>
+                                            @endif
                                         </div>
                                     </div>
                                 </td>
@@ -89,6 +97,8 @@
 <script src="{{ asset('scripts/dateInsert.js') }}?v={{ filemtime(public_path('scripts/dateInsert.js')) }}"></script>
 <script
     src="{{ asset('scripts/autocomplete-text.js') }}?v={{ filemtime(public_path('scripts/autocomplete-text.js')) }}">
+</script>
+<script src="{{ asset('scripts/work-form-frame.js') }}?v={{ filemtime(public_path('scripts/work-form-frame.js')) }}">
 </script>
 
 </html>

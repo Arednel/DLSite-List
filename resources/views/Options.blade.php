@@ -19,7 +19,7 @@
 </head>
 
 <body class="options-page">
-    <x-list-menu-float :quick-add-url="route('products.create', [], false)" />
+    <x-list-menu-float :quick-add-url="route('products.create', [], false)" :product-form-modal-enabled="$productFormModalEnabled" :product-form-modal-completion-action="$productFormModalCompletionAction" />
 
     <main class="options-shell">
         <div class="options-container">
@@ -90,6 +90,14 @@
                     </p>
 
                     <livewire:product-form-theme-settings />
+
+                    <h2>Work Form Modals</h2>
+                    <p class="option-description">
+                        Choose whether Quick Add and Edit Work open over the current page and what happens after a
+                        successful change.
+                    </p>
+
+                    <livewire:product-form-modal-settings />
 
                     <h2>Autocomplete</h2>
                     <p class="option-description">

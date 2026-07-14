@@ -10,6 +10,7 @@ use App\Livewire\IndexPaginationSettings;
 use App\Livewire\IndexTableWidthSettings;
 use App\Livewire\OptionsResetDefaults;
 use App\Livewire\ProductFieldLayoutSettings;
+use App\Livewire\ProductFormModalSettings;
 use App\Livewire\ProductFormThemeSettings;
 use App\Livewire\TagLibraryDisplaySettings;
 use App\Models\Option;
@@ -155,6 +156,63 @@ class ProductMetadataSettingsTest extends TestCase
             ->assertSet('theme', Option::PRODUCT_FORM_THEME_BLACK)
             ->assertSet('saved', false)
             ->assertSet('notice', '');
+    }
+
+    public function test_product_form_modal_setting_hydrates_saves_and_dispatches_runtime_update(): void
+    {
+        Option::setProductFormModalEnabled(true);
+        Option::setProductFormModalCompletionAction(Option::PRODUCT_FORM_MODAL_COMPLETION_CLOSE);
+
+        Livewire::test(ProductFormModalSettings::class)
+            ->assertSet('enabled', true)
+            ->assertSet('completionAction', Option::PRODUCT_FORM_MODAL_COMPLETION_CLOSE)
+            ->set('enabled', false)
+            ->set('completionAction', Option::PRODUCT_FORM_MODAL_COMPLETION_REFRESH)
+            ->call('save')
+            ->assertHasNoErrors()
+            ->assertSet('saved', true)
+            ->assertSet('notice', 'Work form modal settings saved.')
+            ->assertDispatched('work-form-modal-settings-updated');
+
+        $this->assertFalse(Option::productFormModalEnabled());
+        $this->assertSame(
+            Option::PRODUCT_FORM_MODAL_COMPLETION_REFRESH,
+            Option::productFormModalCompletionAction(),
+        );
+    }
+
+    public function test_product_form_modal_setting_validates_and_resets_both_values(): void
+    {
+        Option::setProductFormModalEnabled(true);
+        Option::setProductFormModalCompletionAction(Option::PRODUCT_FORM_MODAL_COMPLETION_CLOSE);
+
+        Livewire::test(ProductFormModalSettings::class)
+            ->set('completionAction', 'not-an-action')
+            ->call('save')
+            ->assertHasErrors(['completionAction'])
+            ->set('completionAction', Option::PRODUCT_FORM_MODAL_COMPLETION_CLOSE)
+            ->call('askResetToDefault')
+            ->call('resetToDefault')
+            ->assertHasNoErrors()
+            ->assertSet('enabled', false)
+            ->assertSet('completionAction', Option::PRODUCT_FORM_MODAL_COMPLETION_REDIRECT)
+            ->assertSet('notice', 'Work form modal settings reset to default.')
+            ->assertDispatched('work-form-modal-settings-updated');
+
+        $this->assertFalse(Option::productFormModalEnabled());
+        $this->assertSame(
+            Option::PRODUCT_FORM_MODAL_COMPLETION_REDIRECT,
+            Option::productFormModalCompletionAction(),
+        );
+    }
+
+    public function test_product_form_modal_setting_renders_help_for_each_choice(): void
+    {
+        $html = Livewire::test(ProductFormModalSettings::class)->html();
+
+        $this->assertStringContainsString('Open Quick Add and Edit Work in modal windows', $html);
+        $this->assertSame(4, substr_count($html, 'fa-solid fa-circle-question'));
+        $this->assertStringContainsString('The visible page may remain stale until it is reloaded.', $html);
     }
 
     #[DataProvider('fixedTableWidthProvider')]
@@ -539,6 +597,8 @@ class ProductMetadataSettingsTest extends TestCase
         ]);
         Option::setAutoSeriesFromTitleName(false);
         Option::setProductFormTheme(Option::PRODUCT_FORM_THEME_CHERRY);
+        Option::setProductFormModalEnabled(true);
+        Option::setProductFormModalCompletionAction(Option::PRODUCT_FORM_MODAL_COMPLETION_CLOSE);
         Option::setTagLibraryTagsExpandedByDefault(true);
         Option::setTagAutocompleteOrder(AutocompleteOrder::FirstWord);
         Option::setSeriesAutocompleteOrder(AutocompleteOrder::FirstWord);
@@ -568,6 +628,11 @@ class ProductMetadataSettingsTest extends TestCase
         $this->assertSame('1024px', Option::productIndexSettings()->tableWidthCss);
         $this->assertTrue(Option::autoSeriesFromTitleName());
         $this->assertSame(Option::PRODUCT_FORM_THEME_BLACK, Option::productFormTheme());
+        $this->assertFalse(Option::productFormModalEnabled());
+        $this->assertSame(
+            Option::PRODUCT_FORM_MODAL_COMPLETION_REDIRECT,
+            Option::productFormModalCompletionAction(),
+        );
         $this->assertFalse(Option::tagLibraryTagsExpandedByDefault());
         $this->assertSame(AutocompleteOrder::Usage, Option::tagAutocompleteOrder());
         $this->assertSame(AutocompleteOrder::Usage, Option::seriesAutocompleteOrder());
@@ -591,6 +656,7 @@ class ProductMetadataSettingsTest extends TestCase
             ->assertDontSeeLivewire(ProductFieldLayoutSettings::class)
             ->assertSeeLivewire(AutoSeriesSettings::class)
             ->assertSeeLivewire(ProductFormThemeSettings::class)
+            ->assertSeeLivewire(ProductFormModalSettings::class)
             ->assertSeeLivewire(AutocompleteSettings::class)
             ->assertSeeLivewire(TagLibraryDisplaySettings::class)
             ->assertSeeLivewire(OptionsResetDefaults::class);
@@ -605,6 +671,7 @@ class ProductMetadataSettingsTest extends TestCase
             ->assertSeeLivewire(ProductFieldLayoutSettings::class)
             ->assertDontSeeLivewire(AutoSeriesSettings::class)
             ->assertDontSeeLivewire(ProductFormThemeSettings::class)
+            ->assertDontSeeLivewire(ProductFormModalSettings::class)
             ->assertDontSeeLivewire(AutocompleteSettings::class)
             ->assertDontSeeLivewire(TagLibraryDisplaySettings::class)
             ->assertSeeLivewire(OptionsResetDefaults::class);
