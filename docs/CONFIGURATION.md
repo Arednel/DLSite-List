@@ -16,14 +16,14 @@ This path:
 - builds the PHP 8.3 app image from `docker/app.dockerfile`
 - installs Composer dependencies and the Python scraper venv inside the app image
 - builds the Nginx image from `docker/web.dockerfile`
-- starts MySQL 8 and phpMyAdmin
+- starts MySQL 8 and phpMyAdmin (phpMyAdmin disabled for security)
 - keeps the Docker test services behind the `test` Compose profile
 - runs `php artisan migrate` through `docker/docker-app-entrypoint.sh`
 - serves `/storage/*` directly from Nginx via `docker/vhost.conf`, so `php artisan storage:link` is not required for Docker
 
 Access points:
 - App: `http://localhost:8080`
-- phpMyAdmin: `http://localhost:8888`
+- phpMyAdmin: `http://localhost:8888` (uncomment in compose.yaml, disabled for security)
 
 Docker test services are assigned to the `test` Compose profile, so they do not start during the normal app startup command.
 

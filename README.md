@@ -16,7 +16,7 @@ docker compose --env-file docker/.env.docker up --build -d
 
 ### 2) After startup
 - DLSite List available at: `http://localhost:8080`
-- phpMyAdmin available at: `http://localhost:8888`
+- phpMyAdmin available at: `http://localhost:8888` (uncomment in compose.yaml, disabled for security)
 
 ## Manual installation process
 

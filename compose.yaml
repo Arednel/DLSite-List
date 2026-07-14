@@ -94,20 +94,20 @@ services:
         env_file: "docker/.env.testing.docker"
 
     # Database management (phpMyAdmin)
-    pma:
-        image: phpmyadmin:5.2
-        environment:
-            - PMA_ARBITRARY=1
-            - PMA_HOST=${DB_HOST}
-            - PMA_USER=${DB_USERNAME}
-            - PMA_PASSWORD=${DB_PASSWORD}
-            - PMA_PORT=${DB_PORT}
-        depends_on:
-            database:
-                condition: service_healthy
-        ports:
-            - 8888:80
-        env_file: "docker/.env.docker"
+    # pma:
+    #     image: phpmyadmin:5.2
+    #     environment:
+    #         - PMA_ARBITRARY=1
+    #         - PMA_HOST=${DB_HOST}
+    #         - PMA_USER=${DB_USERNAME}
+    #         - PMA_PASSWORD=${DB_PASSWORD}
+    #         - PMA_PORT=${DB_PORT}
+    #     depends_on:
+    #         database:
+    #             condition: service_healthy
+    #     ports:
+    #         - 8888:80
+    #     env_file: "docker/.env.docker"
 
 
 volumes:

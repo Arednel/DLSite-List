@@ -2,6 +2,9 @@
 
 ## Development
 
+* 2026-07-14 -- 1.6.8 Disabled phpMyAdmin
+  * Disabled phpMyAdmin in compose.yaml (can be uncommented to turn back on)
+
 * 2026-07-14 -- 1.6.7 Work Form Modals
   * Added an optional native-dialog modal for Quick Add on Index, Options, Tag Library, and Refetch pages and for Edit Work on Index
   * Added configurable redirect, refresh, and close-only behavior after successful create, update, or delete actions
