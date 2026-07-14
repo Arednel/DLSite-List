@@ -2,6 +2,58 @@
     'use strict';
 
     var activeTrigger = null;
+    var pendingRedirectStorageKey = 'work-form-modal.pending-redirect-url';
+
+    function rememberPendingRedirect(redirectUrl) {
+        try {
+            window.sessionStorage.setItem(pendingRedirectStorageKey, redirectUrl.href);
+        } catch (error) {
+            return;
+        }
+    }
+
+    function takePendingRedirect() {
+        try {
+            var pendingRedirectUrl = window.sessionStorage.getItem(pendingRedirectStorageKey);
+
+            window.sessionStorage.removeItem(pendingRedirectStorageKey);
+
+            return pendingRedirectUrl;
+        } catch (error) {
+            return null;
+        }
+    }
+
+    function scrollToPendingRedirect() {
+        var pendingRedirectUrl = takePendingRedirect();
+
+        if (!pendingRedirectUrl || pendingRedirectUrl !== window.location.href) {
+            return;
+        }
+
+        var pendingRedirect;
+        var targetId;
+
+        try {
+            pendingRedirect = new URL(pendingRedirectUrl);
+            targetId = decodeURIComponent(pendingRedirect.hash.slice(1));
+        } catch (error) {
+            return;
+        }
+
+        if (!targetId) {
+            return;
+        }
+
+        var target = document.getElementById(targetId);
+
+        if (target) {
+            // Let the browser finish its reload scroll restoration before moving to the new row.
+            window.requestAnimationFrame(function () {
+                target.scrollIntoView();
+            });
+        }
+    }
 
     function modalHost() {
         return document.querySelector('[data-work-form-modal]');
@@ -121,6 +173,8 @@
         activeTrigger = null;
     }, true);
 
+    window.addEventListener('pageshow', scrollToPendingRedirect);
+
     window.addEventListener('message', function (event) {
         if (event.origin !== window.location.origin || !event.data) {
             return;
@@ -164,6 +218,7 @@
 
         if (redirectUrl.pathname === window.location.pathname
             && redirectUrl.search === window.location.search) {
+            rememberPendingRedirect(redirectUrl);
             window.location.href = redirectUrl.href;
             window.location.reload();
             return;

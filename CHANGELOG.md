@@ -2,6 +2,10 @@
 
 ## Development
 
+* 2026-07-14 -- 1.7.0 Quick Add Fetch Status and Fix
+  * Added in-progress message below the RJ field while DLSite Quick Add submits and fetches work data
+  * Fixed modal Quick Add's Follow redirect on the plain Index so the refreshed page moves to the newly added work
+
 * 2026-07-14 -- 1.6.9 Age-Appropriate DLSite Links
   * Added a default off General option that opens All Ages Index work links on DLSite Home while keeping R15 and R18 links on Maniax
 

@@ -439,6 +439,12 @@ body.product-form-page {
     color: var(--form-error-text);
 }
 
+.product-form-theme-cherry .dlsite-fetch-status,
+.product-form-theme-black .dlsite-fetch-status {
+    color: var(--form-fetch-status-text);
+    margin-top: 4px;
+}
+
 .product-form-theme-cherry .file-upload-input::file-selector-button,
 .product-form-theme-black .file-upload-input::file-selector-button {
     background-color: var(--form-button-bg);
@@ -642,6 +648,7 @@ body.product-form-page {
     --form-error-text: #991B1B;
     --form-error-bg: #FEE2E2;
     --form-error-border: #FCA5A5;
+    --form-fetch-status-text: #166534;
     --form-modal-backdrop: rgba(47, 26, 38, 0.34);
     --form-modal-bg: #FFF8FC;
     --form-shadow: 0 14px 30px rgba(125, 106, 106, 0.10), 0 2px 8px rgba(238, 152, 152, 0.16);
@@ -672,6 +679,7 @@ body.product-form-page {
     --form-error-text: #FF8A80;
     --form-error-bg: #2A1717;
     --form-error-border: #6E2B2B;
+    --form-fetch-status-text: #86EFAC;
     --form-modal-backdrop: rgba(0, 0, 0, 0.5);
     --form-modal-bg: #222222;
     --form-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);

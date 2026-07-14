@@ -43,7 +43,8 @@
                                         </div>
                                         <form name="edit_work" method="post" id="main-form"
                                             action="{{ $isCustomCreate ? route('products.store.custom') : route('products.store') }}"
-                                            @if ($isCustomCreate) enctype="multipart/form-data" @endif>
+                                            @if ($isCustomCreate) enctype="multipart/form-data" @endif
+                                            @if (!$isCustomCreate) data-dlsite-fetch-form @endif>
                                             @csrf
                                             @if ($isModal)
                                                 <input type="hidden" name="modal" value="1">
@@ -100,5 +101,10 @@
 </script>
 <script src="{{ asset('scripts/work-form-frame.js') }}?v={{ filemtime(public_path('scripts/work-form-frame.js')) }}">
 </script>
+@if (!$isCustomCreate)
+    <script
+        src="{{ asset('scripts/dlsite-create-status.js') }}?v={{ filemtime(public_path('scripts/dlsite-create-status.js')) }}">
+    </script>
+@endif
 
 </html>
