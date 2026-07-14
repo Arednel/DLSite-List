@@ -22,6 +22,19 @@ class OptionMetadataSettingsTest extends TestCase
         $this->assertFalse(Option::autoSeriesFromTitleName());
     }
 
+    public function test_dlsite_age_appropriate_links_default_to_disabled_and_can_be_reset(): void
+    {
+        $this->assertFalse(Option::dlsiteAgeAppropriateLinksEnabled());
+
+        Option::setDlsiteAgeAppropriateLinksEnabled(true);
+
+        $this->assertTrue(Option::dlsiteAgeAppropriateLinksEnabled());
+
+        Option::resetDlsiteAgeAppropriateLinksEnabledToDefault();
+
+        $this->assertFalse(Option::dlsiteAgeAppropriateLinksEnabled());
+    }
+
     public function test_tag_library_index_group_ordering_defaults_to_disabled_and_can_be_saved(): void
     {
         $this->assertFalse(Option::tagLibraryIndexGroupOrderingEnabled());
@@ -232,6 +245,7 @@ class OptionMetadataSettingsTest extends TestCase
         $this->assertFalse($defaults->searchHiddenDescriptionsEnabled);
         $this->assertSame(Option::DEFAULT_TAG_COLOR_SURFACES, $defaults->tagColorSurfaces);
         $this->assertFalse($defaults->productFormModalEnabled);
+        $this->assertFalse($defaults->dlsiteAgeAppropriateLinksEnabled);
         $this->assertSame(
             Option::PRODUCT_FORM_MODAL_COMPLETION_REDIRECT,
             $defaults->productFormModalCompletionAction,
@@ -276,6 +290,7 @@ class OptionMetadataSettingsTest extends TestCase
         ]);
         Option::setProductFormModalEnabled(true);
         Option::setProductFormModalCompletionAction(Option::PRODUCT_FORM_MODAL_COMPLETION_REFRESH);
+        Option::setDlsiteAgeAppropriateLinksEnabled(true);
 
         $settings = Option::productIndexSettings();
 
@@ -298,6 +313,7 @@ class OptionMetadataSettingsTest extends TestCase
         $this->assertFalse($settings->tagColorSurfaces[Option::TAG_COLOR_SURFACE_INDEX]);
         $this->assertTrue($settings->tagColorSurfaces[Option::TAG_COLOR_SURFACE_REFETCH]);
         $this->assertTrue($settings->productFormModalEnabled);
+        $this->assertTrue($settings->dlsiteAgeAppropriateLinksEnabled);
         $this->assertSame(
             Option::PRODUCT_FORM_MODAL_COMPLETION_REFRESH,
             $settings->productFormModalCompletionAction,
@@ -337,6 +353,7 @@ class OptionMetadataSettingsTest extends TestCase
         Option::setProductFormTheme(Option::PRODUCT_FORM_THEME_CHERRY);
         Option::setProductFormModalEnabled(true);
         Option::setProductFormModalCompletionAction(Option::PRODUCT_FORM_MODAL_COMPLETION_CLOSE);
+        Option::setDlsiteAgeAppropriateLinksEnabled(true);
         Option::setTagColorSurfaces([
             'index' => false,
             'tag_library' => false,
@@ -351,6 +368,7 @@ class OptionMetadataSettingsTest extends TestCase
         $this->assertFalse(Option::indexSearchHiddenDescriptionsEnabled());
         $this->assertSame(Option::PRODUCT_FORM_THEME_BLACK, Option::productFormTheme());
         $this->assertFalse(Option::productFormModalEnabled());
+        $this->assertFalse(Option::dlsiteAgeAppropriateLinksEnabled());
         $this->assertSame(
             Option::PRODUCT_FORM_MODAL_COMPLETION_REDIRECT,
             Option::productFormModalCompletionAction(),

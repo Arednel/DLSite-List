@@ -2,6 +2,9 @@
 
 ## Development
 
+* 2026-07-14 -- 1.6.9 Age-Appropriate DLSite Links
+  * Added a default off General option that opens All Ages Index work links on DLSite Home while keeping R15 and R18 links on Maniax
+
 * 2026-07-14 -- 1.6.8 Disabled phpMyAdmin
   * Disabled phpMyAdmin in compose.yaml (can be uncommented to turn back on)
 

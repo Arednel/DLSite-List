@@ -6,6 +6,7 @@ use App\Enums\AutocompleteOrder;
 use App\Enums\ProductField;
 use App\Livewire\AutocompleteSettings;
 use App\Livewire\AutoSeriesSettings;
+use App\Livewire\DlsiteLinkSettings;
 use App\Livewire\IndexPaginationSettings;
 use App\Livewire\IndexTableWidthSettings;
 use App\Livewire\OptionsResetDefaults;
@@ -88,6 +89,49 @@ class ProductMetadataSettingsTest extends TestCase
             ->assertSet('enabled', true)
             ->assertSet('saved', false)
             ->assertSet('notice', '');
+    }
+
+    public function test_dlsite_link_setting_hydrates_saves_and_resets_to_default(): void
+    {
+        Option::setDlsiteAgeAppropriateLinksEnabled(true);
+
+        Livewire::test(DlsiteLinkSettings::class)
+            ->assertSet('enabled', true)
+            ->set('enabled', false)
+            ->call('save')
+            ->assertHasNoErrors()
+            ->assertSet('saved', true)
+            ->assertSet('notice', 'DLSite link setting saved.');
+
+        $this->assertFalse(Option::dlsiteAgeAppropriateLinksEnabled());
+
+        Option::setDlsiteAgeAppropriateLinksEnabled(true);
+
+        Livewire::test(DlsiteLinkSettings::class)
+            ->call('askResetToDefault')
+            ->call('resetToDefault')
+            ->assertSet('enabled', false)
+            ->assertSet('confirmingResetToDefault', false)
+            ->assertSet('notice', 'DLSite link setting reset to default.');
+
+        $this->assertFalse(Option::dlsiteAgeAppropriateLinksEnabled());
+    }
+
+    public function test_dlsite_link_setting_refreshes_after_global_reset_and_renders_tooltip(): void
+    {
+        Option::setDlsiteAgeAppropriateLinksEnabled(true);
+
+        $component = Livewire::test(DlsiteLinkSettings::class)
+            ->assertSet('enabled', true)
+            ->assertSee('Use age-appropriate DLSite work links')
+            ->assertSee('When enabled, All Ages works open on DLSite Home; R15 and R18 use Maniax. When disabled, all works use Maniax.');
+
+        Option::resetVisibleSettingsToDefault();
+
+        $component
+            ->call('refreshFromSettings')
+            ->assertSet('enabled', false)
+            ->assertSet('saved', false);
     }
 
     public function test_product_form_theme_setting_hydrates_from_option_and_saves_changes(): void
@@ -596,6 +640,7 @@ class ProductMetadataSettingsTest extends TestCase
             ['field' => ProductField::SampleImages->value, 'visible' => false],
         ]);
         Option::setAutoSeriesFromTitleName(false);
+        Option::setDlsiteAgeAppropriateLinksEnabled(true);
         Option::setProductFormTheme(Option::PRODUCT_FORM_THEME_CHERRY);
         Option::setProductFormModalEnabled(true);
         Option::setProductFormModalCompletionAction(Option::PRODUCT_FORM_MODAL_COMPLETION_CLOSE);
@@ -627,6 +672,7 @@ class ProductMetadataSettingsTest extends TestCase
         $this->assertSame(Option::DEFAULT_INDEX_PER_PAGE, Option::indexPerPage());
         $this->assertSame('1024px', Option::productIndexSettings()->tableWidthCss);
         $this->assertTrue(Option::autoSeriesFromTitleName());
+        $this->assertFalse(Option::dlsiteAgeAppropriateLinksEnabled());
         $this->assertSame(Option::PRODUCT_FORM_THEME_BLACK, Option::productFormTheme());
         $this->assertFalse(Option::productFormModalEnabled());
         $this->assertSame(
@@ -655,6 +701,7 @@ class ProductMetadataSettingsTest extends TestCase
             ->assertSeeLivewire(IndexTableWidthSettings::class)
             ->assertDontSeeLivewire(ProductFieldLayoutSettings::class)
             ->assertSeeLivewire(AutoSeriesSettings::class)
+            ->assertSeeLivewire(DlsiteLinkSettings::class)
             ->assertSeeLivewire(ProductFormThemeSettings::class)
             ->assertSeeLivewire(ProductFormModalSettings::class)
             ->assertSeeLivewire(AutocompleteSettings::class)
@@ -670,6 +717,7 @@ class ProductMetadataSettingsTest extends TestCase
             ->assertDontSeeLivewire(IndexTableWidthSettings::class)
             ->assertSeeLivewire(ProductFieldLayoutSettings::class)
             ->assertDontSeeLivewire(AutoSeriesSettings::class)
+            ->assertDontSeeLivewire(DlsiteLinkSettings::class)
             ->assertDontSeeLivewire(ProductFormThemeSettings::class)
             ->assertDontSeeLivewire(ProductFormModalSettings::class)
             ->assertDontSeeLivewire(AutocompleteSettings::class)

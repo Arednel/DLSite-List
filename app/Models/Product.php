@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Enums\ProductAgeCategory;
 use App\Enums\ProductContributorRole;
 use App\Enums\ProductIndexTagMatch;
 use App\Support\VisibleGenreAttachment;
@@ -60,6 +61,20 @@ class Product extends Model
         $this->rj_number = self::rjNumberFromId($this->id);
         $this->start_date_sort = self::dateSortValue($this->start_date);
         $this->end_date_sort = self::dateSortValue($this->end_date);
+    }
+
+    public function dlsiteWorkUrl(bool $ageAppropriateLinksEnabled): string
+    {
+        $productId = (string) $this->getKey();
+        $maniaxUrl = "https://www.dlsite.com/maniax/work/=/product_id/{$productId}.html";
+
+        if (! $ageAppropriateLinksEnabled) {
+            return $maniaxUrl;
+        }
+
+        return $this->age_category === ProductAgeCategory::AllAges->value
+            ? "https://www.dlsite.com/home/work/=/product_id/{$productId}.html"
+            : $maniaxUrl;
     }
 
     public function genres(): BelongsToMany

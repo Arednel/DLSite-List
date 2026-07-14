@@ -89,6 +89,7 @@
 
                     <tbody class="list-item">
                         @forelse ($visibleProducts as $product)
+                            @php($dlsiteWorkUrl = $product->dlsiteWorkUrl($dlsiteAgeAppropriateLinksEnabled))
                             <tr class="list-table-data" id="{{ $product->id }}"
                                 wire:key="product-{{ $product->id }}">
                                 <td @class([
@@ -110,20 +111,19 @@
                                     ]) data-label="{{ $column['label'] }}">
                                         @switch($column['field'])
                                             @case('image')
-                                                <a href="https://www.dlsite.com/maniax/work/=/product_id/{{ $product->id }}.html"
-                                                    class="product-link" target="_blank">
+                                                <a href="{{ $dlsiteWorkUrl }}" class="product-link" target="_blank">
                                                     <img src="{{ $product->work_image }}" class="image"></a>
                                             @break
 
                                             @case('title')
-                                                <a href="https://www.dlsite.com/maniax/work/=/product_id/{{ $product->id }}.html"
-                                                    class="product-link" target="_blank">{{ $product->id }} -
+                                                <a href="{{ $dlsiteWorkUrl }}" class="product-link"
+                                                    target="_blank">{{ $product->id }} -
                                                     {{ $product->work_name }}</a>
                                                 <div class="notes">
                                                     <div class="note-text">
                                                         @if ($product->work_name != $product->work_name_english && $product->work_name_english)
-                                                            <a href="https://www.dlsite.com/maniax/work/=/product_id/{{ $product->id }}.html"
-                                                                class="product-link" target="_blank">
+                                                            <a href="{{ $dlsiteWorkUrl }}" class="product-link"
+                                                                target="_blank">
                                                                 {{ $product->id }} - {{ $product->work_name_english }}</a>
                                                         @endif
                                                     </div>

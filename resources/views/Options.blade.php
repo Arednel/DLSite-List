@@ -84,6 +84,13 @@
 
                     <livewire:auto-series-settings />
 
+                    <h2>DLSite Links</h2>
+                    <p class="option-description">
+                        Choose whether Index work links use the DLSite section appropriate for the saved age category.
+                    </p>
+
+                    <livewire:dlsite-link-settings />
+
                     <h2>Form Page Theme</h2>
                     <p class="option-description">
                         Choose the visual theme for Add Work, Add Custom Work, and Edit Work pages.

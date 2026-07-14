@@ -154,6 +154,7 @@ Current settings:
 - `tag_autocomplete_order`: controls how tag autocomplete suggestions are ordered
 - `series_autocomplete_order`: controls how series autocomplete suggestions are ordered
 - `auto_series_from_title_name`: controls whether DLSite create fills an empty Series from `japanese.title_name`
+- `dlsite_age_appropriate_links_enabled`: controls whether Index image/title links use the product's stored age to choose DLSite Home or Maniax. Defaults to `false`
 - `product_form_theme`: controls the Add Work, Add Custom Work, and Edit Work page theme. Defaults to `black`
 - `product_form_modal_enabled`: controls whether ordinary left-clicks open Quick Add and Index Edit Work links in a modal. Defaults to `false`
 - `product_form_modal_completion_action`: controls what the host page does after a successful modal create, update, or delete. Valid values are `redirect`, `refresh`, and `close`; invalid values fall back to `redirect`
@@ -199,6 +200,13 @@ Automatic Series from DLSite `title_name` default:
 - enabled
 
 When enabled, DLSite create fills Series from `japanese.title_name` only if the Series field is empty. Manually entered Series values win. Custom create does not use this option.
+
+DLSite age-appropriate link default:
+- disabled
+
+When disabled, every Index DLSite image/title link uses `https://www.dlsite.com/maniax/work/=/product_id/{RJ}.html` without loading or evaluating the product's age. When enabled, an exact stored `ALL_AGES` value uses DLSite Home; `R15`, `R18`, missing, and malformed legacy values use Maniax. The setting does not make the Index Age column visible; Index hydrates `age_category` separately only while the setting is enabled.
+
+The General -> DLSite Links switch includes a question-mark tooltip describing this mapping. Saving applies to the next Index render. Individual reset and Reset All Options restore the disabled default.
 
 Product form theme default:
 - `black`

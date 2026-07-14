@@ -377,6 +377,69 @@ class ProductIndexLivewireTest extends TestCase
             ->assertDontSee('NARROW_COLUMNS_HIDDEN_DESCRIPTION');
     }
 
+    public function test_default_dlsite_links_use_maniax_without_hydrating_hidden_age(): void
+    {
+        Option::setIndexFieldLayout([
+            ['field' => ProductField::AgeCategory->value, 'visible' => false],
+        ]);
+
+        $product = $this->createProduct(1, [
+            'age_category' => 'ALL_AGES',
+        ]);
+
+        DB::enableQueryLog();
+
+        $html = Livewire::test(ProductIndex::class)->html();
+
+        $productQuery = collect(DB::getQueryLog())
+            ->pluck('query')
+            ->first(fn(string $query): bool => str_contains($query, 'products')
+                && str_contains($query, 'work_name'));
+
+        DB::disableQueryLog();
+
+        $maniaxUrl = "https://www.dlsite.com/maniax/work/=/product_id/{$product->id}.html";
+
+        $this->assertSame(3, substr_count($html, $maniaxUrl));
+        $this->assertStringNotContainsString('/home/work/', $html);
+        $this->assertNotNull($productQuery);
+        $this->assertStringNotContainsString('age_category', $productQuery);
+    }
+
+    public function test_enabled_dlsite_links_load_hidden_age_and_reuse_the_age_appropriate_url(): void
+    {
+        Option::setIndexFieldLayout([
+            ['field' => ProductField::AgeCategory->value, 'visible' => false],
+        ]);
+        Option::setDlsiteAgeAppropriateLinksEnabled(true);
+
+        $allAges = $this->createProduct(1, ['age_category' => 'ALL_AGES']);
+        $r15 = $this->createProduct(2, ['age_category' => 'R15']);
+        $r18 = $this->createProduct(3, ['age_category' => 'R18']);
+
+        DB::enableQueryLog();
+
+        $html = Livewire::test(ProductIndex::class)->html();
+
+        $productQuery = collect(DB::getQueryLog())
+            ->pluck('query')
+            ->first(fn(string $query): bool => str_contains($query, 'products')
+                && str_contains($query, 'work_name'));
+
+        DB::disableQueryLog();
+
+        $allAgesUrl = "https://www.dlsite.com/home/work/=/product_id/{$allAges->id}.html";
+        $r15Url = "https://www.dlsite.com/maniax/work/=/product_id/{$r15->id}.html";
+        $r18Url = "https://www.dlsite.com/maniax/work/=/product_id/{$r18->id}.html";
+
+        $this->assertSame(3, substr_count($html, $allAgesUrl));
+        $this->assertSame(3, substr_count($html, $r15Url));
+        $this->assertSame(3, substr_count($html, $r18Url));
+        $this->assertStringNotContainsString('data-label="Age"', $html);
+        $this->assertNotNull($productQuery);
+        $this->assertStringContainsString('age_category', $productQuery);
+    }
+
     public function test_index_results_hydrate_columns_for_visible_index_fields(): void
     {
         $this->createProduct(1, [
@@ -1407,6 +1470,7 @@ class ProductIndexLivewireTest extends TestCase
         $this->createProduct(1, [
             'work_name' => 'BATCHED_OPTION_WORK',
             'description' => 'BATCHED_OPTION_DESCRIPTION',
+            'age_category' => 'ALL_AGES',
         ]);
         Option::setIndexPerPage(25);
         Option::setIndexFieldLayout([
@@ -1419,6 +1483,7 @@ class ProductIndexLivewireTest extends TestCase
             'mode' => Option::INDEX_TABLE_WIDTH_WIDE,
             'custom' => '',
         ]);
+        Option::setDlsiteAgeAppropriateLinksEnabled(true);
 
         $optionQueries = [];
         DB::listen(function ($query) use (&$optionQueries): void {
@@ -1430,7 +1495,8 @@ class ProductIndexLivewireTest extends TestCase
         Livewire::test(ProductIndex::class)
             ->assertSee('BATCHED_OPTION_DESCRIPTION')
             ->assertSee('id="filter_priority"', false)
-            ->assertSee('--index-table-width: 1400px', false);
+            ->assertSee('--index-table-width: 1400px', false)
+            ->assertSee('https://www.dlsite.com/home/work/', false);
 
         $this->assertCount(1, $optionQueries, implode("\n", $optionQueries));
     }

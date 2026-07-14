@@ -20,6 +20,8 @@ class Option extends Model
 
     public const AUTO_SERIES_FROM_TITLE_NAME = 'auto_series_from_title_name';
 
+    public const DLSITE_AGE_APPROPRIATE_LINKS_ENABLED = 'dlsite_age_appropriate_links_enabled';
+
     public const PRODUCT_FORM_THEME = 'product_form_theme';
 
     public const PRODUCT_FORM_MODAL_ENABLED = 'product_form_modal_enabled';
@@ -128,6 +130,7 @@ class Option extends Model
         self::TAG_AUTOCOMPLETE_ORDER,
         self::SERIES_AUTOCOMPLETE_ORDER,
         self::AUTO_SERIES_FROM_TITLE_NAME,
+        self::DLSITE_AGE_APPROPRIATE_LINKS_ENABLED,
         self::PRODUCT_FORM_THEME,
         self::PRODUCT_FORM_MODAL_ENABLED,
         self::PRODUCT_FORM_MODAL_COMPLETION_ACTION,
@@ -219,6 +222,21 @@ class Option extends Model
     public static function resetAutoSeriesFromTitleNameToDefault(): void
     {
         self::forget(self::AUTO_SERIES_FROM_TITLE_NAME);
+    }
+
+    public static function dlsiteAgeAppropriateLinksEnabled(): bool
+    {
+        return self::booleanValueFor(self::DLSITE_AGE_APPROPRIATE_LINKS_ENABLED, false);
+    }
+
+    public static function setDlsiteAgeAppropriateLinksEnabled(bool $enabled): void
+    {
+        self::setBooleanValue(self::DLSITE_AGE_APPROPRIATE_LINKS_ENABLED, $enabled);
+    }
+
+    public static function resetDlsiteAgeAppropriateLinksEnabledToDefault(): void
+    {
+        self::forget(self::DLSITE_AGE_APPROPRIATE_LINKS_ENABLED);
     }
 
     public static function productFormTheme(): string
@@ -485,6 +503,7 @@ class Option extends Model
                 self::TAG_COLOR_SURFACES,
                 self::PRODUCT_FORM_MODAL_ENABLED,
                 self::PRODUCT_FORM_MODAL_COMPLETION_ACTION,
+                self::DLSITE_AGE_APPROPRIATE_LINKS_ENABLED,
             ])
             ->pluck('value', 'key');
 
@@ -530,6 +549,10 @@ class Option extends Model
             ),
             productFormModalCompletionAction: self::normalizeProductFormModalCompletionAction(
                 $values->get(self::PRODUCT_FORM_MODAL_COMPLETION_ACTION),
+            ),
+            dlsiteAgeAppropriateLinksEnabled: self::normalizeBoolean(
+                $values->get(self::DLSITE_AGE_APPROPRIATE_LINKS_ENABLED),
+                false,
             ),
         );
     }

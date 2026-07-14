@@ -31,5 +31,6 @@ final readonly class ProductIndexSettings
         public array $tagColorSurfaces,
         public bool $productFormModalEnabled,
         public string $productFormModalCompletionAction,
+        public bool $dlsiteAgeAppropriateLinksEnabled,
     ) {}
 }

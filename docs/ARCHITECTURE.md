@@ -222,6 +222,7 @@ Queue tables:
 - `tag_autocomplete_order` controls tag suggestion ordering, defaults to `usage`, and can be set to `first_word`
 - `series_autocomplete_order` controls series suggestion ordering, defaults to `usage`, and can be set to `first_word`
 - `auto_series_from_title_name` controls whether DLSite create fills an empty Series field from `japanese.title_name`, and defaults to enabled
+- `dlsite_age_appropriate_links_enabled` controls age-aware Index DLSite URLs and defaults to disabled
 - `tag_library_index_group_ordering_enabled` controls whether Index tag chips use group order, and defaults to disabled
 - `tag_color_surfaces` controls where stored tag/group background and font colors render, with Index and Tag Library enabled by default and Autocomplete/Edit readonly/Refetch disabled by default
 - `index_field_layout`, `edit_field_layout`, `filter_field_layout`, `quick_add_field_layout`, and `custom_quick_add_field_layout` store surface-specific configurable field order/visibility/editability layouts
@@ -247,6 +248,8 @@ Migration note:
 
 Runtime note:
 - `ProductIndex` shows English + custom genres through one lightweight grouped query from `genre_product` + `genres` + `genre_groups` for the current page only when the Tags column is visible, loads contributor pivots only when visible contributor columns need them, and passes those grouped results directly to Blade keyed by product id
+- `Product::dlsiteWorkUrl()` returns the existing Maniax URL immediately while age-appropriate links are disabled. When enabled, only exact `ALL_AGES` values use DLSite Home; R15, R18, null, and malformed values fall back to Maniax
+- `ProductIndex` keeps its single batched Options read and narrow product select for DLSite links. It adds `age_category` to hydration only while age-appropriate links are enabled, even when the Age column is hidden, then calculates one URL per row for the image, Japanese title, and optional English title anchors without changing column visibility
 - `ProductContributorSync` syncs contributor pivots through `Product::contributorsForRole()` and Laravel's role-scoped many-to-many `syncWithPivotValues()` so replacing one creator role does not detach the same contributor from another role
 - index cover images are rendered directly from `products.work_image` only when the Image column is visible
 - `products.start_date` and `products.end_date` JSON remain the editable/display source of truth; their `*_sort` columns store `YYYYMMDD` integers with missing month/day as `00`
@@ -297,7 +300,8 @@ Runtime note:
 - the Refetch tab links to the latest refetch run when at least one run exists
 - the General tab includes an Index Pagination setting powered by Livewire and persisted in `options.index_per_page`; changing the mode can reveal the custom-value input immediately, but the setting is only persisted when Save is submitted
 - the General tab includes Livewire autocomplete ordering settings persisted in `options.tag_autocomplete_order` and `options.series_autocomplete_order`
-- the General tab includes Livewire settings for automatic Series from DLSite `title_name`, Add/Edit form page theme, work-form modal behavior, and Index table width
+- the General tab includes Livewire settings for automatic Series from DLSite `title_name`, DLSite link behavior, Add/Edit form page theme, work-form modal behavior, and Index table width
+- `DlsiteLinkSettings` persists the default-off age-appropriate link switch, validates it as a boolean, shows the Home/Maniax mapping in question-mark help, and participates in individual/global resets
 - `ProductFormModalSettings` persists the default-off master switch and `redirect`/`refresh`/`close` completion action, validates the action, provides question-mark help for every control, participates in individual/global resets, and dispatches a browser event after save/reset so the Options page's modal host updates immediately
 - the Field Layouts tab includes Index Table Custom Tags/Fetched EN Tags visibility toggles inside one Tags row, keeps Index Filter Fields and Index Sort Menu unsplit, and uses separate Edit Form rows for Custom Tags and Fetched EN Tags
 - the Field Layouts tab orders its Livewire settings as Index Table Fields, Index Filter Fields, Index Sort Menu, Edit Form Fields, Quick Add Form Fields, and Custom Quick Add Form Fields; field layout rows use Livewire `wire:sort` drag handles plus Up/Down buttons, keep checkbox state in field-keyed maps while editing, and are persisted only when Save is submitted

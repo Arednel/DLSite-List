@@ -116,10 +116,17 @@ class ProductIndex extends Component
         $filterQuery = $this->filterQuery;
         $settings = Option::productIndexSettings();
 
+        $hydratedIndexFields = $settings->visibleIndexFields;
+
+        if ($settings->dlsiteAgeAppropriateLinksEnabled) {
+            $hydratedIndexFields[] = ProductField::AgeCategory->value;
+            $hydratedIndexFields = array_values(array_unique($hydratedIndexFields));
+        }
+
         $products = $productIndexResults->getProducts(
             $filters,
             $settings->perPage,
-            $settings->visibleIndexFields,
+            $hydratedIndexFields,
             $settings->searchHiddenDescriptionsEnabled,
         );
 
@@ -186,6 +193,7 @@ class ProductIndex extends Component
             ], false),
             'productFormModalEnabled' => $settings->productFormModalEnabled,
             'productFormModalCompletionAction' => $settings->productFormModalCompletionAction,
+            'dlsiteAgeAppropriateLinksEnabled' => $settings->dlsiteAgeAppropriateLinksEnabled,
             'sortIcons' => $this->sortIcons,
             'tableWidthCss' => $settings->tableWidthCss,
         ]);
