@@ -19,4 +19,5 @@
             </div>
         @endif
     </td>
+    <td class="form-table-cell form-table-cell--long-spacer" aria-hidden="true"></td>
 </tr>

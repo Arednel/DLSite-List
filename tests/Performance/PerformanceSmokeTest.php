@@ -16,7 +16,7 @@ class PerformanceSmokeTest extends TestCase
 {
     use RefreshDatabase;
 
-    // Adjust these three values to resize the performance smoke dataset.
+    // Adjust these values to resize the performance smoke dataset.
     private const WORK_COUNT = 500;
 
     private const TAG_COUNT = 500;

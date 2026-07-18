@@ -62,7 +62,7 @@ Current automated coverage includes Laravel PHPUnit and Python `unittest` tests:
   - covers the Livewire refetch progress panel polling while a run is running/cancelling, showing the cancel action only while running, and redirecting once review results are ready
 - `tests/Feature/OptionsWorkSearchTest.php`
   - covers the Livewire selected-work search, numeric RJ-desc visible order, and selected product preservation when filtered results change
-- `tests/Feature/PerformanceSmokeTest.php`
+- `tests/Performance/PerformanceSmokeTest.php`
   - defaults to 500 works, 500 tags, 10000 tag pivot rows, and contributor rows for every Index contributor role, then reports average response times for default/full-column paginated and unlimited Index paths without configured colors, the same four Index paths with unique tag background/font colors, filtered/search/tag Index paths, Options tabs, common/recalculated/filter-cleanup update redirects, and delete page clamp redirects
   - performance smoke timings emit PHPUnit warning issues above 500ms and stronger warning text above 1000ms; use `--do-not-fail-on-phpunit-warning` when you want the command to exit successfully while still showing those warnings
 - `tests/Unit/Support/ProductIndexFiltersTest.php`
@@ -171,15 +171,17 @@ Docker tests use:
 The Docker test service is one-off and does not run during the normal app startup command unless it is requested directly.
 
 ## Running Tests
-- Run all tests:
+- Run Unit + Feature suites:
   - `php artisan test`
-- Run the normal Laravel suite without the explicit performance smoke test:
-  - `php artisan test --exclude-filter=PerformanceSmokeTest`
+- Run performance smoke suite:
+  - `php artisan test --testsuite=Performance`
 - Run weekly logging and Python runner tests:
   - `php artisan test tests/Unit/Logging tests/Unit/Support/DLSite/DLSitePythonRunnerTest.php`
 - Run project-owned Python tests from an activated Python environment:
   - `python -m unittest discover -s python/tests -v`
-- Run all tests inside Docker:
+- Run Unit + Feature suites inside Docker:
   - `docker compose --env-file docker/.env.docker --profile test run --rm --build tests`
+- Run the performance smoke suite inside Docker:
+  - `docker compose --env-file docker/.env.docker --profile test run --rm --build tests php artisan test --testsuite=Performance`
 - Run a focused subset with PHPUnit's filter option:
   - `php artisan test --filter=<TestClassOrMethod>`

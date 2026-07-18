@@ -22,7 +22,8 @@
                 @endforelse
             </div>
         @else
-            <textarea class="form-textarea form-field-long" rows="3" cols="65" readonly>{{ collect($genres)->pluck('title')->implode(', ') ?: __($empty) }}</textarea>
+            <div class="form-textarea form-field-long" rows="3" cols="65" readonly>
+                {{ collect($genres)->pluck('title')->implode(', ') ?: __($empty) }}</div>
         @endif
 
         @if ($help)

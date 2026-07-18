@@ -318,6 +318,10 @@ body.product-form-page {
     box-sizing: border-box;
 }
 
+.form-fields-table .form-table-cell--long-spacer {
+    width: 60px;
+}
+
 .product-form-theme-cherry body.product-form-page,
 .product-form-theme-black body.product-form-page {
     background: var(--form-bg) !important;

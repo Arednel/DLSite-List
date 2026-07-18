@@ -2,6 +2,10 @@
 
 ## Development
 
+* 2026-07-18 -- 1.7.2 Form Fixes & Performance Suite
+  * Fixed Quick add/Edit spacing and non-editable tags fields 
+  * Moved Performance Smoke tests into separate Test Suite
+
 * 2026-07-18 -- 1.7.1 Localization and Locale-Aware Tags
   * Added a global English/Japanese language setting
   * Added rough (automatically translated) Japanese locale
