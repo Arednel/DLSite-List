@@ -6,22 +6,26 @@
             : "(\$el.closest('{$scrollSelector}') || document.querySelector('{$scrollSelector}'))?.scrollIntoView()";
 @endphp
 
-<nav class="index-pagination" role="navigation" aria-label="Pagination Navigation">
+<nav class="index-pagination" role="navigation" aria-label="{{ __('Pagination Navigation') }}">
     <div class="index-pagination__summary">
-        Showing {{ $paginator->firstItem() }}-{{ $paginator->lastItem() }} of {{ $paginator->total() }}
+        {{ __('Showing :first-:last of :total', [
+            'first' => $paginator->firstItem(),
+            'last' => $paginator->lastItem(),
+            'total' => $paginator->total(),
+        ]) }}
     </div>
 
     @if ($paginator->hasPages())
         <div class="index-pagination__controls">
             @if ($paginator->onFirstPage())
                 <button type="button" disabled>
-                    Previous
+                    {{ __('Previous') }}
                 </button>
             @else
                 <button type="button" wire:click="previousPage('{{ $paginator->getPageName() }}')"
                     @if ($scrollIntoViewJsSnippet !== '') x-on:click="{{ $scrollIntoViewJsSnippet }}" @endif
                     wire:loading.attr="disabled">
-                    Previous
+                    {{ __('Previous') }}
                 </button>
             @endif
 
@@ -40,7 +44,8 @@
                             <button type="button" wire:key="index-page-{{ $page }}"
                                 wire:click="gotoPage({{ $page }}, '{{ $paginator->getPageName() }}')"
                                 @if ($scrollIntoViewJsSnippet !== '') x-on:click="{{ $scrollIntoViewJsSnippet }}" @endif
-                                wire:loading.attr="disabled" aria-label="Go to page {{ $page }}">
+                                wire:loading.attr="disabled"
+                                aria-label="{{ __('Go to page :page', ['page' => $page]) }}">
                                 {{ $page }}
                             </button>
                         @endif
@@ -52,11 +57,11 @@
                 <button type="button" wire:click="nextPage('{{ $paginator->getPageName() }}')"
                     @if ($scrollIntoViewJsSnippet !== '') x-on:click="{{ $scrollIntoViewJsSnippet }}" @endif
                     wire:loading.attr="disabled">
-                    Next
+                    {{ __('Next') }}
                 </button>
             @else
                 <button type="button" disabled>
-                    Next
+                    {{ __('Next') }}
                 </button>
             @endif
         </div>

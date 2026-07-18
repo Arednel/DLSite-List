@@ -15,36 +15,36 @@
                 <a href="{{ route('index', $allProgressQuery, false) }}" @class([
                     'progress-button',
                     'progress-all',
-                    'on' => $progressHeading === 'All ASMR',
+                    'on' => $activeProgress === null,
                 ])>
-                    All ASMR</a>
+                    {{ __('All ASMR') }}</a>
                 <a href="{{ route('index', array_merge($allProgressQuery, ['progress' => 'Listening']), false) }}"
                     @class([
                         'progress-button',
                         'progress-listening',
-                        'on' => $progressHeading === 'Listening',
+                        'on' => $activeProgress === 'Listening',
                     ])>
-                    Currently Listening</a>
+                    {{ __('Currently Listening') }}</a>
                 <a href="{{ route('index', array_merge($allProgressQuery, ['progress' => 'Completed']), false) }}"
                     @class([
                         'progress-button',
                         'progress-completed',
-                        'on' => $progressHeading === 'Completed',
+                        'on' => $activeProgress === 'Completed',
                     ])>
-                    Completed</a>
+                    {{ __('Completed') }}</a>
                 <a href="{{ route('index', array_merge($allProgressQuery, ['progress' => 'Plan to Listen']), false) }}"
                     @class([
                         'progress-button',
                         'progress-plan-to-listen',
-                        'on' => $progressHeading === 'Plan to Listen',
+                        'on' => $activeProgress === 'Plan to Listen',
                     ])>
-                    Plan to Listen</a>
+                    {{ __('Plan to Listen') }}</a>
 
                 <div class="search-container">
                     <form wire:submit.prevent="applySearch" class="search-form">
-                        <input type="text" name="search" wire:model="searchInput" placeholder="Search..."
-                            class="search-input">
-                        <button type="submit" class="search-button">
+                        <input type="text" name="search" wire:model="searchInput"
+                            placeholder="{{ __('Search...') }}" class="search-input">
+                        <button type="submit" class="search-button" aria-label="{{ __('Search') }}">
                             <i class="fa-solid fa-magnifying-glass"></i>
                         </button>
                     </form>
@@ -153,11 +153,13 @@
                                             @break
 
                                             @case('age_category')
-                                                {{ $product->age_category === 'ALL_AGES' ? 'All Ages' : $product->age_category ?? '-' }}
+                                                {{ $filterOptions['age_categories'][$product->age_category] ?? ($product->age_category ?? '-') }}
                                             @break
 
                                             @case('progress')
-                                                <div class="progress"><span>{{ $product->progress }}</span></div>
+                                                <div class="progress">
+                                                    <span>{{ $filterOptions['progress'][$product->progress] ?? $product->progress }}</span>
+                                                </div>
                                             @break
 
                                             @case('notes')
@@ -266,7 +268,7 @@
                                             @endswitch
                                         </td>
                                     @endforeach
-                                    <td class="data actions" data-label="Actions">
+                                    <td class="data actions" data-label="{{ __('Actions') }}">
                                         <div class="row-actions">
                                             <span class="edit-action">
                                                 <a href="{{ route(
@@ -279,7 +281,7 @@
                                                     false,
                                                 ) }}"
                                                     class="product-edit-link" data-work-form-modal-link
-                                                    data-work-form-modal-title="Edit Work">Edit</a>
+                                                    data-work-form-modal-title="{{ __('Edit Work') }}">{{ __('Edit') }}</a>
                                             </span>
                                         </div>
                                     </td>
@@ -287,7 +289,7 @@
                                 @empty
                                     <tr class="list-table-empty-row">
                                         <td class="list-table-empty" colspan="{{ 3 + count($indexColumns) }}">
-                                            Nothing found for the current filters.
+                                            {{ __('Nothing found for the current filters.') }}
                                         </td>
                                     </tr>
                                 @endforelse
@@ -299,7 +301,7 @@
                         @elseif ($isUnlimited)
                             <div class="index-pagination">
                                 <div class="index-pagination__summary">
-                                    Showing all {{ $totalProducts }} works
+                                    {{ __('Showing all :count works', ['count' => $totalProducts]) }}
                                 </div>
                             </div>
                         @endif

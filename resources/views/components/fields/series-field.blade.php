@@ -1,7 +1,7 @@
 @props(['value' => ''])
 
 <tr>
-    <td class="form-table-cell" valign="top">Series</td>
+    <td class="form-table-cell" valign="top">{{ __('Series') }}</td>
     <td class="form-table-cell">
         <textarea id="series" name="series" class="form-control form-field-long" rows="2" cols="65"
             data-autocomplete-source="series" data-autocomplete-mode="single"

@@ -31,7 +31,7 @@ class StartTagRefetchRequest extends FormRequest
     public function messages(): array
     {
         return [
-            'product_ids.required_if' => 'Select at least one work to refetch.',
+            'product_ids.required_if' => __('Select at least one work to refetch.'),
         ];
     }
 
@@ -47,7 +47,7 @@ class StartTagRefetchRequest extends FormRequest
                 }
 
                 if ($this->productIds() === []) {
-                    $validator->errors()->add('product_ids', 'Select at least one work to refetch.');
+                    $validator->errors()->add('product_ids', __('Select at least one work to refetch.'));
                 }
             },
         ];

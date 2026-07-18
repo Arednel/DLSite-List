@@ -2,6 +2,12 @@
 
 ## Development
 
+* 2026-07-18 -- 1.7.1 Localization and Locale-Aware Tags
+  * Added a global English/Japanese language setting
+  * Added rough (automatically translated) Japanese locale
+  * Made fetched-tag display, search, filters, editing, and Tag Library results follow the selected language
+  * General small code fixes and simplifications
+
 * 2026-07-14 -- 1.7.0 Quick Add Fetch Status and Fix
   * Added in-progress message below the RJ field while DLSite Quick Add submits and fetches work data
   * Fixed modal Quick Add's Follow redirect on the plain Index so the refreshed page moves to the newly added work

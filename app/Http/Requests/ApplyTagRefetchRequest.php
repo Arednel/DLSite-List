@@ -78,7 +78,7 @@ class ApplyTagRefetchRequest extends FormRequest
                 if (! $run?->canBeApplied()) {
                     $validator->errors()->add(
                         'run',
-                        $run?->applyUnavailableMessage() ?? 'This refetch run is not ready to apply.'
+                        $run?->applyUnavailableMessage() ?? __('This refetch run is not ready to apply.')
                     );
                 }
             },

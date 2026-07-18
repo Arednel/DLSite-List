@@ -8,9 +8,13 @@ use Illuminate\Support\Arr;
 final class ProductFieldLayout
 {
     public const SURFACE_INDEX = 'index';
+
     public const SURFACE_EDIT = 'edit';
+
     public const SURFACE_FILTER = 'filter';
+
     public const SURFACE_QUICK_ADD = 'quick_add';
+
     public const SURFACE_CUSTOM_QUICK_ADD = 'custom_quick_add';
 
     public const SURFACES = [
@@ -22,7 +26,7 @@ final class ProductFieldLayout
     ];
 
     /**
-     * @return list<array{field: string, label: string, visible: bool, editable?: bool, custom_visible?: bool, fetched_english_visible?: bool}>
+     * @return list<array{field: string, label: string, visible: bool, editable?: bool, custom_visible?: bool, fetched_visible?: bool}>
      */
     public static function normalize(mixed $layout, string $surface): array
     {
@@ -88,7 +92,7 @@ final class ProductFieldLayout
     public static function storageLayout(mixed $layout, string $surface): array
     {
         return collect(self::normalize($layout, $surface))
-            ->map(fn(array $row): array => Arr::except($row, ['note']))
+            ->map(fn(array $row): array => Arr::except($row, ['label', 'note']))
             ->values()
             ->all();
     }
@@ -119,7 +123,7 @@ final class ProductFieldLayout
             $field === ProductField::Tags
             && in_array($surface, [self::SURFACE_EDIT, self::SURFACE_QUICK_ADD, self::SURFACE_CUSTOM_QUICK_ADD], true)
         ) {
-            return 'Custom Tags';
+            return __('Custom Tags');
         }
 
         return $field->label();
@@ -138,7 +142,7 @@ final class ProductFieldLayout
     {
         if ($surface === self::SURFACE_INDEX && $field === ProductField::Tags) {
             return self::normalizeBoolean($row['custom_visible'] ?? null, true)
-                || self::normalizeBoolean($row['fetched_english_visible'] ?? null, true);
+                || self::normalizeBoolean($row['fetched_visible'] ?? null, true);
         }
 
         return $field->isVisibilityLocked($surface)
@@ -153,7 +157,7 @@ final class ProductFieldLayout
 
         return [
             'custom_visible' => true,
-            'fetched_english_visible' => true,
+            'fetched_visible' => true,
         ];
     }
 
@@ -165,7 +169,7 @@ final class ProductFieldLayout
 
         return [
             'custom_visible' => self::normalizeBoolean($row['custom_visible'] ?? null, true),
-            'fetched_english_visible' => self::normalizeBoolean($row['fetched_english_visible'] ?? null, true),
+            'fetched_visible' => self::normalizeBoolean($row['fetched_visible'] ?? null, true),
         ];
     }
 
@@ -223,7 +227,10 @@ final class ProductFieldLayout
     public static function indexColumns(array $layout): array
     {
         return collect(self::visibleRows($layout, self::SURFACE_INDEX))
-            ->map(fn(array $visibleRow): array => self::fieldMeta($visibleRow['field'], $visibleRow['row']))
+            ->map(fn(array $visibleRow): array => self::fieldMeta(
+                $visibleRow['field'],
+                self::SURFACE_INDEX,
+            ))
             ->values()
             ->all();
     }
@@ -237,7 +244,7 @@ final class ProductFieldLayout
             ->map(function (array $visibleRow): array {
                 $field = $visibleRow['field'];
                 $row = $visibleRow['row'];
-                $meta = self::fieldMeta($field, $row);
+                $meta = self::fieldMeta($field, self::SURFACE_EDIT);
 
                 return [
                     'field' => $meta['field'],
@@ -257,7 +264,7 @@ final class ProductFieldLayout
     {
         return collect(self::visibleRows($layout, self::SURFACE_FILTER))
             ->map(fn(array $visibleRow): array => Arr::only(
-                self::fieldMeta($visibleRow['field'], $visibleRow['row']),
+                self::fieldMeta($visibleRow['field'], self::SURFACE_FILTER),
                 ['field', 'label', 'class'],
             ))
             ->values()
@@ -287,7 +294,7 @@ final class ProductFieldLayout
     {
         return collect(self::visibleRows($layout, $surface))
             ->map(fn(array $visibleRow): array => Arr::only(
-                self::fieldMeta($visibleRow['field'], $visibleRow['row']),
+                self::fieldMeta($visibleRow['field'], $surface),
                 ['field', 'label', 'class', 'contributor_role'],
             ))
             ->values()
@@ -322,18 +329,18 @@ final class ProductFieldLayout
 
     public static function fetchedTagsEditable(array $layout): bool
     {
-        return self::editable($layout, ProductField::FetchedEnglishTags);
+        return self::editable($layout, ProductField::FetchedTags);
     }
 
-    public static function indexTagBucketVisibility(array $layout): array
+    public static function visibleIndexTagBuckets(array $layout): array
     {
         $row = Arr::first($layout, fn(array $row): bool => $row['field'] === ProductField::Tags->value);
 
         return [
             'custom' => (bool) data_get($row, 'visible', false)
                 && (bool) data_get($row, 'custom_visible', false),
-            'fetched_english' => (bool) data_get($row, 'visible', false)
-                && (bool) data_get($row, 'fetched_english_visible', false),
+            'fetched' => (bool) data_get($row, 'visible', false)
+                && (bool) data_get($row, 'fetched_visible', false),
         ];
     }
 
@@ -368,11 +375,11 @@ final class ProductFieldLayout
     /**
      * @return array{field: string, label: string, class: string, sort_field: ?string, contributor_role: ?string}
      */
-    private static function fieldMeta(ProductField $field, array $row): array
+    private static function fieldMeta(ProductField $field, string $surface): array
     {
         return [
             'field' => $field->value,
-            'label' => (string) ($row['label'] ?? $field->label()),
+            'label' => self::label($field, $surface),
             'class' => str_replace('_', '-', $field->value),
             'sort_field' => $field->sortField()?->value,
             'contributor_role' => $field->contributorRole()?->value,

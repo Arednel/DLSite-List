@@ -84,7 +84,7 @@ The Tag Library can create manual empty tags:
 - duplicate input is detected through `genres.title_key`, so case-only duplicates are not created
 - empty tags are searchable and can be opened as Index tag filters before any work uses them
 - empty tags can be deleted from the Tag Library only while they still have zero product pivots
-- attached JP-only fetched tags remain stored but hidden from Tag Library
+- attached fetched tags are listed only for the current UI language's tag bucket; other fetched-language attachments remain stored
 
 The Tag Library can organize tags into groups:
 - group titles are stored in `genre_groups.title`
@@ -149,6 +149,7 @@ Cancelling a Refetch Tags run is cooperative. Keep the queue worker running afte
 The `options` table stores app settings as scalar string values keyed by `options.key`.
 
 Current settings:
+- `ui_language`: controls the global application UI language. Stored values are `en` and `ja`; missing or invalid values fall back to `en`
 - `index_per_page`: controls how many works the Index list renders per page
 - `index_search_hidden_descriptions_enabled`: controls whether general Index search can match Japanese and English descriptions when their Index columns are hidden
 - `tag_autocomplete_order`: controls how tag autocomplete suggestions are ordered
@@ -173,6 +174,15 @@ Current settings:
 Runtime note:
 - `App\Models\Option` normalizes stored strings into the runtime values the app uses
 
+UI language behavior:
+- Options -> General shows an `English` / `日本語` dropdown backed by `options.ui_language`
+- English is the default; missing or invalid persisted values fall back to English, while invalid dropdown submissions are rejected
+- this is one application-wide setting shared by every browser and session, not a per-user preference
+- app-owned interface copy uses `lang/en.json` and `lang/ja.json`; page `lang` attributes, month names, labels, notices, and accessibility text follow the active locale
+- Save and individual Reset reload the General tab; Reset All reloads its originating Options tab. Notices use the destination locale
+- UI `en` selects stored fetched-tag language `en`; UI `ja` selects stored fetched-tag language `jp`
+- routes, query/API values, database values, user content, and generic Laravel/vendor validation remain unchanged
+
 Pagination default:
 - `100`
 
@@ -189,12 +199,12 @@ Pagination built-in choices:
 The General tab also accepts a custom positive integer. `unlimited` disables Index pagination and renders every matching work.
 
 Tag editing defaults:
-- Index Table Fields show one Tags column with separate Custom Tags and Fetched EN Tags visibility toggles; both buckets are visible by default
-- Edit Form Fields show separate Fetched EN Tags and Custom Tags rows in that default order; both are visible by default
+- Index Table Fields show one Tags column with separate Custom Tags and current-language Fetched Tags visibility toggles; both buckets are visible by default
+- Edit Form Fields show separate current-language Fetched Tags and Custom Tags rows in that default order; both are visible by default
 - Custom Tags editable: enabled by default in the Edit Form layout
-- Fetched EN Tags editable: disabled by default unless its Edit Form row enables it
+- Fetched Tags editable: disabled by default unless its Edit Form row enables it
 
-When Fetched EN Tags editing is enabled, Edit Work allows changing the fetched English tag bucket. Japanese-only fetched tags remain stored but hidden.
+When Fetched Tags editing is enabled, Edit Work changes only the current UI locale's fetched bucket. Other fetched-language and custom tags remain stored unless their own editable field is submitted.
 
 Automatic Series from DLSite `title_name` default:
 - enabled
@@ -226,7 +236,7 @@ Work form modal completion choices:
 
 The modal setting applies to Quick Add on Index, Options, Tag Library, and Refetch pages, and to Edit Work links on Index. It intercepts only an unmodified primary-button click. Middle-click, right-click, Ctrl/Cmd/Shift/Alt-click, links with another target, and browsers without native `<dialog>` support keep normal anchor navigation, so the same URL can still be opened as a standalone page.
 
-The modal uses a same-origin iframe and adds `modal=1` only to that iframe request. The marker survives switching between DLSite and Custom Create, validation redirects, and create/update/delete submissions. After a successful submission, the iframe posts Laravel's calculated redirect URL to the host page, which applies the selected completion action. The modal can also be dismissed with its Close button, Escape, or a backdrop click; Go Back/Close inside the form closes the modal without reporting a successful change.
+The modal uses a same-origin iframe and adds `modal=1` only to that iframe request. The marker survives switching between DLSite and Custom Create, validation redirects, and create/update/delete submissions. After a successful submission, the iframe posts Laravel's calculated redirect URL to the host page, which applies the selected completion action. The modal can also be dismissed with its Close button, Escape, or a backdrop click; Go Back/Close inside the form closes the modal without reporting a successful change. Its JavaScript fallback title comes from the localized `data-work-form-default-title` on the modal host rather than a JavaScript translation catalog.
 
 The master switch and each completion choice include question-mark help text. Saving or resetting these Livewire settings updates modal behavior immediately on the Options page.
 
@@ -244,7 +254,7 @@ Index field layout default order:
 - `author` hidden by default
 - `description_japanese` hidden by default
 - `description_english` hidden by default
-- `tags` with Custom Tags and Fetched EN Tags visible by default
+- `tags` with Custom Tags and current-language Fetched Tags visible by default
 - `notes` hidden by default; Notes are already shown inside Title, and this row enables a separate column
 - `start_date` hidden by default
 - `end_date` hidden by default
@@ -257,7 +267,7 @@ Edit form field layout default order:
 - `score`
 - `series`
 - `title` locked visible
-- `fetched_english_tags` shown as Fetched EN Tags
+- `fetched_tags` shown through the current-locale `Fetched Language Tags` key (`Fetched EN Tags` in English or `取得済みJPタグ` in Japanese)
 - `tags` shown as Custom Tags
 - `notes`
 - `start_date`
@@ -362,7 +372,9 @@ Index sort field dropdown default order:
 - `voice_actor` hidden by default
 - `author` hidden by default
 
-The Index Table Fields, Index Filter Fields, Edit Form Fields, Quick Add Form Fields, and Custom Quick Add Form Fields sections each store their own layout JSON in `options.value`. Rows can be reordered by dragging the row handle or by using the Up/Down buttons, and changes are persisted when Save is submitted. Field settings are keyed by field id while editing, so reordering rows does not change checkbox state. Unknown or duplicate field ids are ignored and missing known fields fall back to the surface default order. Index `title` is always visible but can still be reordered. Edit Form `title` is also locked visible and represents the Japanese/English title inputs after the fixed RJ Code + Title display row. Quick Add keeps `rj_code` locked visible. Custom Quick Add keeps `rj_code`, `title`, `age_category`, and `image` locked visible. In Index Table Fields, `tags` keeps one column/order row but stores separate Custom Tags and Fetched EN Tags visibility flags. In Edit Form Fields, Custom Tags use the `tags` row and Fetched EN Tags use the separate `fetched_english_tags` row so they can be ordered, shown, hidden, and made editable independently. Index Filter Fields and Index Sort Menu do not split Tags.
+The Index Table Fields, Index Filter Fields, Edit Form Fields, Quick Add Form Fields, and Custom Quick Add Form Fields sections each store their own layout JSON in `options.value`. Rows can be reordered by dragging the row handle or with the Up/Down buttons, and changes are persisted on Save. Unknown or duplicate field ids are ignored, and missing known fields use surface defaults. Required fields remain visible.
+
+Index `tags` stores `custom_visible` and `fetched_visible`. Edit uses separate `tags` and `fetched_tags` rows so Custom Tags and current-language Fetched Tags can be ordered, shown, hidden, and made editable independently. Saved rows contain field ids and behavioral flags; localized labels and notes are derived at runtime. Index Filter Fields and Index Sort Menu do not split Tags.
 
 The Index Sort Menu section appears after Index Filter Fields and uses the same Options row controls to reorder and show/hide values in the Advanced Filter sort dropdowns. It only changes the dropdown presentation: valid URL sort state and sortable visible table columns keep sorting through `ProductIndexSortField`. Sortable optional Index headers include circle/creator columns, start/finish dates, total times re-listened, re-listen value, and priority when those columns are visible.
 
@@ -384,7 +396,7 @@ Index table width choices:
 This width is applied to the Index list/table panel and the top cover image. The top cover image keeps a capped desktop height, and product row thumbnails keep their fixed list size.
 
 Options page tabs:
-- `General` is the default tab and contains Index Pagination, Index Search, Index Table Width, Series Metadata, Add/Edit form theme and modal behavior, Autocomplete, Tag Library settings, and Reset All Options
+- `General` is the default tab and contains UI Language, Index Pagination, Index Search, Index Table Width, Series Metadata, Add/Edit form theme and modal behavior, Autocomplete, Tag Library settings, and Reset All Options
 - `Field Layouts` is the second tab and contains Index Table Fields, Index Filter Fields, Index Sort Menu, Edit Form Fields, Quick Add Form Fields, Custom Quick Add Form Fields, and Reset All Options
 - `Refetch` contains the tag refetch workflow
 
@@ -395,7 +407,7 @@ Options reset behavior:
 - reset confirmation modals are teleported to the document body so they stay centered in the viewport instead of inside the Options panel
 - reset confirmation modals close from Cancel, Escape, or clicking outside the modal card
 - the global reset confirmation button is disabled for 3 seconds and shows a countdown before it can be clicked
-- reset defaults are pagination `100`, hidden-description search disabled, table width `default`, all five default field layouts, all default Index sort dropdown values, automatic Series enabled, product form theme `black`, work form modals disabled with completion action `redirect`, Tag Library collapsed, Index group ordering disabled, and autocomplete `usage`
+- reset defaults are UI language `en`, pagination `100`, hidden-description search disabled, table width `default`, all five default field layouts, all default Index sort dropdown values, automatic Series enabled, product form theme `black`, work form modals disabled with completion action `redirect`, Tag Library collapsed, Index group ordering disabled, and autocomplete `usage`
 - global reset does not change products, tags, refetch runs, legacy hidden fallback keys, or unrelated future option rows
 
 Index search defaults:
@@ -432,6 +444,8 @@ Autocomplete ordering choices:
 Scraped JSON files are also used by the product metadata backfill migration. The migration reads `storage/app/Works/{RJ}.json` when it exists and skips missing or invalid JSON without blocking the migration.
 
 `python/DLSiteTagFetcher.py` is used only by the Options -> Refetch Tags workflow. It prints JP/EN genre JSON to stdout and does not write scraped JSON or download images.
+
+Refetch and Quick Add translate only recognized app-defined errors at display boundaries. Persisted and logged errors remain raw, and unknown Python, API, exception, stdout, or stderr text is shown verbatim.
 
 ## Custom Work Upload Paths
 - Required custom cover upload output: `storage/app/public/Works/{RJ}/cover.{ext}`

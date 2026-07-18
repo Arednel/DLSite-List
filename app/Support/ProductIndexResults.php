@@ -279,13 +279,13 @@ final class ProductIndexResults
         bool $useGroupOrdering,
         bool $includeColors = false,
         bool $hasHiddenGroups = false,
-        array $visibleTagBuckets = ['custom' => true, 'fetched_english' => true],
+        array $visibleTagBuckets = ['custom' => true, 'fetched' => true],
     ): Collection {
-        if ($productIds === [] || ! (($visibleTagBuckets['custom'] ?? false) || ($visibleTagBuckets['fetched_english'] ?? false))) {
+        if ($productIds === [] || ! (($visibleTagBuckets['custom'] ?? false) || ($visibleTagBuckets['fetched'] ?? false))) {
             return collect();
         }
 
-        // Index only needs visible EN/custom tags, so use one lightweight query
+        // Index only needs visible current-language/custom tags, so use one lightweight query
         // instead of hydrating genre relationships for every listed product.
         if (! $useGroupOrdering) {
             $query = DB::table('genre_product')
@@ -561,9 +561,9 @@ final class ProductIndexResults
     private function applyVisibleTagBuckets(\Illuminate\Database\Query\Builder $query, array $visibleTagBuckets): void
     {
         $customVisible = (bool) ($visibleTagBuckets['custom'] ?? false);
-        $fetchedEnglishVisible = (bool) ($visibleTagBuckets['fetched_english'] ?? false);
+        $fetchedVisible = (bool) ($visibleTagBuckets['fetched'] ?? false);
 
-        if ($customVisible && $fetchedEnglishVisible) {
+        if ($customVisible && $fetchedVisible) {
             return;
         }
 
@@ -573,14 +573,8 @@ final class ProductIndexResults
             return;
         }
 
-        if ($fetchedEnglishVisible) {
-            $query->where('genre_product.source', Genre::PIVOT_SOURCE_FETCHED)
-                ->whereExists(function ($languageQuery): void {
-                    $languageQuery->select('genre_product_languages.id')
-                        ->from('genre_product_languages')
-                        ->whereColumn('genre_product_languages.genre_product_id', 'genre_product.id')
-                        ->where('genre_product_languages.language', Genre::LANGUAGE_ENGLISH);
-                });
+        if ($fetchedVisible) {
+            $query->where('genre_product.source', Genre::PIVOT_SOURCE_FETCHED);
         }
     }
 

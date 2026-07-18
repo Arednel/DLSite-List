@@ -15,7 +15,7 @@ enum ProductAgeCategory: string
     public function label(): string
     {
         return match ($this) {
-            self::AllAges => 'All Ages',
+            self::AllAges => __('All Ages'),
             self::R15 => 'R15',
             self::R18 => 'R18',
         };

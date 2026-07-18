@@ -111,7 +111,7 @@ class OptionsController extends Controller
         if (! $service->cancelRun($run)) {
             return redirect()
                 ->route('options.refetch-tags.show', $run)
-                ->withErrors(['run' => 'Only running refetch runs can be cancelled.']);
+                ->withErrors(['run' => __('Only running refetch runs can be cancelled.')]);
         }
 
         return redirect()->route('options.refetch-tags.show', $run);

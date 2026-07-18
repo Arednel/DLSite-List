@@ -2,12 +2,12 @@
     <div class="option-actions option-actions--inline">
         <button type="button" class="tag tag--soft tag--lg is-clickable option-reset-button"
             wire:click="askResetToDefault">
-            Reset All Options
+            {{ __('Reset All Options') }}
         </button>
 
-        @if ($saved)
-            <span class="saved-notice">All Options settings reset to defaults.</span>
-        @endif
+        @session('options_reset_notice')
+            <span class="saved-notice">{{ __($value) }}</span>
+        @endsession
     </div>
 
     @include('livewire.partials.options-reset-confirmation-modal', [

@@ -1,5 +1,5 @@
 <tr>
-    <td class="form-table-cell">Status</td>
+    <td class="form-table-cell">{{ __('Status') }}</td>
     <td class="form-table-cell">
         <select id="progress" name="progress" class="form-control">
             @foreach ($options as $optionValue => $label)

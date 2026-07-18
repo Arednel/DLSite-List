@@ -128,8 +128,8 @@ class ProductFieldLayoutSettings extends Component
         }
 
         return match ($layout) {
-            'filter' => 'Filters by when the work record was last updated in this site database.',
-            'sort' => 'Sorts by when the work record was last updated in this site database.',
+            'filter' => __('Filters by when the work record was last updated in this site database.'),
+            'sort' => __('Sorts by when the work record was last updated in this site database.'),
             default => null,
         };
     }

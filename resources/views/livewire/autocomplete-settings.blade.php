@@ -1,9 +1,9 @@
 <form wire:submit.prevent="save" class="stack">
     <div>
         <label class="field-label" for="tag-autocomplete-order">
-            Tag suggestions
+            {{ __('Tag suggestions') }}
             <i class="fa-solid fa-circle-question"
-                title="Most used first orders all matching tags by attached work count. First word first shows tags that start with your text before later-word matches, then uses work count."></i>
+                title="{{ __('Most used first orders all matching tags by attached work count. First word first shows tags that start with your text before later-word matches, then uses work count.') }}"></i>
         </label>
         <select id="tag-autocomplete-order" class="option-control option-control-select" wire:model.change.live="tagOrder">
             @foreach ($orderOptions as $value => $label)
@@ -14,9 +14,9 @@
 
     <div>
         <label class="field-label" for="series-autocomplete-order">
-            Series suggestions
+            {{ __('Series suggestions') }}
             <i class="fa-solid fa-circle-question"
-                title="Most used first orders all matching series by work count. First word first shows series that start with your text before later-word matches, then uses work count."></i>
+                title="{{ __('Most used first orders all matching series by work count. First word first shows series that start with your text before later-word matches, then uses work count.') }}"></i>
         </label>
         <select id="series-autocomplete-order" class="option-control option-control-select"
             wire:model.change.live="seriesOrder">
@@ -36,14 +36,14 @@
 
     <div class="option-actions">
         <button type="submit" class="tag tag--soft tag--lg is-clickable">
-            Save autocomplete
+            {{ __('Save autocomplete') }}
         </button>
         @if ($saved)
-            <span class="saved-notice">{{ $notice }}</span>
+            <span class="saved-notice">{{ __($notice) }}</span>
         @endif
         <button type="button" class="tag tag--soft tag--lg is-clickable option-reset-button"
             wire:click="askResetToDefault">
-            Reset to default
+            {{ __('Reset to default') }}
         </button>
     </div>
 

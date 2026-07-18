@@ -27,9 +27,9 @@ class ProductFormModalSettings extends Component
         return view('livewire.product-form-modal-settings', [
             'completionOptions' => Option::productFormModalCompletionOptions(),
             'completionHelp' => [
-                Option::PRODUCT_FORM_MODAL_COMPLETION_REDIRECT => 'Navigate this browser page to calculated Index URL, preserving the current redirect, filter, page, and work-anchor behavior.',
-                Option::PRODUCT_FORM_MODAL_COMPLETION_REFRESH => 'Close the modal and reload the page that opened it. Quick Add from Options or Tag Library stays on that page.',
-                Option::PRODUCT_FORM_MODAL_COMPLETION_CLOSE => 'Close the modal without navigating or refreshing. The visible page may remain stale until it is reloaded.',
+                Option::PRODUCT_FORM_MODAL_COMPLETION_REDIRECT => __('Navigate this browser page to calculated Index URL, preserving the current redirect, filter, page, and work-anchor behavior.'),
+                Option::PRODUCT_FORM_MODAL_COMPLETION_REFRESH => __('Close the modal and reload the page that opened it. Quick Add from Options or Tag Library stays on that page.'),
+                Option::PRODUCT_FORM_MODAL_COMPLETION_CLOSE => __('Close the modal without navigating or refreshing. The visible page may remain stale until it is reloaded.'),
             ],
         ]);
     }

@@ -3,7 +3,7 @@
 namespace Tests\Unit\Enums;
 
 use App\Enums\ProductIndexSortField;
-use PHPUnit\Framework\TestCase;
+use Tests\TestCase;
 
 class ProductIndexSortFieldTest extends TestCase
 {

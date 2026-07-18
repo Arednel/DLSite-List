@@ -1,9 +1,9 @@
 <!DOCTYPE html>
 
-<html lang="en">
+<html lang="{{ app()->getLocale() }}">
 
 <head>
-    <title>Refetch Tags</title>
+    <title>{{ __('Refetch Tags') }}</title>
 
     <meta name="viewport" content="width=device-width, initial-scale=1">
 
@@ -23,21 +23,21 @@
     <main class="options-shell">
         <div class="options-container">
             <header class="options-header">
-                <h1>Refetch Tags</h1>
+                <h1>{{ __('Refetch Tags') }}</h1>
             </header>
 
             <livewire:options-refetch-progress :run="$run" />
 
             @if ($run->hasReviewResults())
                 <section class="panel options-panel">
-                    <h2>Review</h2>
+                    <h2>{{ __('Review') }}</h2>
                     <div class="summary-grid">
-                        <div>New JP <strong>{{ $summary['added_japanese'] }}</strong></div>
-                        <div>New EN <strong>{{ $summary['added_english'] }}</strong></div>
-                        <div>Stale JP <strong>{{ $summary['stale_japanese'] }}</strong></div>
-                        <div>Stale EN <strong>{{ $summary['stale_english'] }}</strong></div>
-                        <div>Custom -> Fetched <strong>{{ $summary['custom_to_fetched'] }}</strong></div>
-                        <div>Skipped <strong>{{ $summary['skipped'] }}</strong></div>
+                        <div>{{ __('New JP') }} <strong>{{ $summary['added_japanese'] }}</strong></div>
+                        <div>{{ __('New EN') }} <strong>{{ $summary['added_english'] }}</strong></div>
+                        <div>{{ __('Stale JP') }} <strong>{{ $summary['stale_japanese'] }}</strong></div>
+                        <div>{{ __('Stale EN') }} <strong>{{ $summary['stale_english'] }}</strong></div>
+                        <div>{{ __('Custom->Fetched') }} <strong>{{ $summary['custom_to_fetched'] }}</strong></div>
+                        <div>{{ __('Skipped') }} <strong>{{ $summary['skipped'] }}</strong></div>
                     </div>
 
                     @if ($errors->any())
@@ -51,42 +51,47 @@
                             @csrf
                             <div class="review-actions">
                                 <label>
-                                    New JP
+                                    {{ __('New JP') }}
                                     <select name="global_added_japanese_action">
-                                        <option value="{{ $addAction }}" selected>Add as fetched</option>
-                                        <option value="{{ $ignoreAction }}">Ignore</option>
+                                        <option value="{{ $addAction }}" selected>{{ __('Add as fetched') }}
+                                        </option>
+                                        <option value="{{ $ignoreAction }}">{{ __('Ignore') }}</option>
                                     </select>
                                 </label>
                                 <label>
-                                    New EN
+                                    {{ __('New EN') }}
                                     <select name="global_added_english_action">
-                                        <option value="{{ $addAction }}" selected>Add as fetched</option>
-                                        <option value="{{ $ignoreAction }}">Ignore</option>
+                                        <option value="{{ $addAction }}" selected>{{ __('Add as fetched') }}
+                                        </option>
+                                        <option value="{{ $ignoreAction }}">{{ __('Ignore') }}</option>
                                     </select>
                                 </label>
                                 <label>
-                                    Stale JP
+                                    {{ __('Stale JP') }}
                                     <select name="global_japanese_action">
-                                        <option value="{{ $moveAction }}" selected>Move to custom tags</option>
-                                        <option value="{{ $removeAction }}">Remove</option>
+                                        <option value="{{ $moveAction }}" selected>{{ __('Move to custom tags') }}
+                                        </option>
+                                        <option value="{{ $removeAction }}">{{ __('Remove') }}</option>
                                     </select>
                                 </label>
                                 <label>
-                                    Stale EN
+                                    {{ __('Stale EN') }}
                                     <select name="global_english_action">
-                                        <option value="{{ $moveAction }}" selected>Move to custom tags</option>
-                                        <option value="{{ $removeAction }}">Remove</option>
+                                        <option value="{{ $moveAction }}" selected>{{ __('Move to custom tags') }}
+                                        </option>
+                                        <option value="{{ $removeAction }}">{{ __('Remove') }}</option>
                                     </select>
                                 </label>
                                 <label>
-                                    Custom -> Fetched
+                                    {{ __('Custom->Fetched') }}
                                     <select name="global_custom_to_fetched_action">
-                                        <option value="{{ $promoteCustomAction }}" selected>Promote to fetched</option>
-                                        <option value="{{ $keepCustomAction }}">Keep custom</option>
+                                        <option value="{{ $promoteCustomAction }}" selected>
+                                            {{ __('Promote to fetched') }}</option>
+                                        <option value="{{ $keepCustomAction }}">{{ __('Keep custom') }}</option>
                                     </select>
                                 </label>
                                 <button type="submit" class="tag tag--gradient tag--lg is-clickable">
-                                    Apply Changes
+                                    {{ __('Apply Changes') }}
                                 </button>
                             </div>
 
@@ -97,9 +102,9 @@
                     @else
                         <div class="notice">
                             @if ($run->isApplied())
-                                This refetch run was applied.
+                                {{ __('This refetch run was applied.') }}
                             @else
-                                A newer refetch run exists. This run is read-only.
+                                {{ __('A newer refetch run exists. This run is read-only.') }}
                             @endif
                         </div>
                         <x-options.refetch-results :run="$run" :move-action="$moveAction" :remove-action="$removeAction"
@@ -112,7 +117,8 @@
         </div>
 
         <div class="option-actions option-actions--footer">
-            <a class="tag tag--soft tag--md is-clickable" href="{{ route('options.index') }}">Back to Options</a>
+            <a class="tag tag--soft tag--md is-clickable"
+                href="{{ route('options.index') }}">{{ __('Back to Options') }}</a>
         </div>
     </main>
 

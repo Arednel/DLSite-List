@@ -2,23 +2,39 @@
 
 ## Scope
 Current automated coverage includes Laravel PHPUnit and Python `unittest` tests:
+- Language settings and requests cover English defaults, invalid-value fallback, persistence, Save/Reset redirects, destination-locale notices, and Laravel's active request locale.
+- Localization behavior covers catalog integrity, representative visible and accessible UI copy, dynamic document language, locale-aware months and pluralization, stable backed values, and current-language fetched tags across Index, Edit, and Tag Library.
+- Error behavior covers all recognized Refetch and Quick Add errors, raw persisted/logged values, and verbatim pass-through for unknown external errors.
 - `tests/Feature/AutocompleteControllerTest.php`
   - covers database-backed tag and series suggestion endpoints, optional tag background/font color payloads and group-over-tag color precedence, language-agnostic tag results, word-prefix and non-ASCII matching, local popularity ordering, first-word ordering, separate tag/series ordering settings, result limits, and autocomplete asset/data-attribute rendering on Index/Create/Edit
 - `tests/Unit/Support/AutocompleteMatcherTest.php`
   - covers autocomplete PHP match ranking and usage-order comparison behavior
 - `tests/Feature/ProductControllerTest.php`
-  - covers index filtering/sorting, English/custom-visible genre search and tag filters, creator/circle/Japanese-description/English-description filters, create/edit pages including default Quick Add, Custom Quick Add, Edit field orders, selected Cherry/Black form theme classes, and controller-provided form theme classes, hidden optional Create layout rows with locked required fields preserved, visible Create metadata/creator/split-description rows, hidden Create metadata preservation/ignoring, DLSite hidden scraped description-language preservation, Custom Create hidden description-language nulling, hidden Age Category in Edit, optional fetched English tag editing, optional Edit readonly tag inline background/font colors, separately ordered and editable custom/fetched EN tag rows, Tag Library page/component mounting, index-only return navigation with visible-work anchors, visibility-filter return redirects including metadata filters, maker ID-only circle-filter cleanup, visible/hidden-description general search return policy, custom-sort return page calculation, a full visible-update return workflow, Laravel previous URL create back links, malformed create back-link input, create-mode back-link preservation including `modal=1`, Create Go Back preservation after scraper validation errors, filtered delete page fallback including hidden-description search override page clamping, custom create/upload flow, modal create/update/delete completion responses with calculated redirect URLs, unchanged redirects for standalone requests, editable custom tag source behavior, DLSite store with one fetched tag in both JP/EN buckets, DLSite contributor sync, automatic Series from `title_name`, index image selection, enum-backed product field validation, metadata update flow, map-driven editable update payload behavior, duplicate English description cleanup against submitted or stored Japanese descriptions, hidden/read-only Edit field preservation for split descriptions, tags, metadata, and listening fields, and logged destroy cleanup failures
-  - covers the DLSite-only Quick Add fetching status markup and asset, Custom Quick Add exclusion, green Cherry/Black theme values, submit-event reveal behavior, and browser-history reset behavior
+  - Index queries and display: filtering/sorting, current-language fetched/custom genre search and tag filters, creator/circle/Japanese-description/English-description filters, and index image selection
+  - Form rendering and layouts: default Quick Add, Custom Quick Add, Edit field orders, selected Cherry/Black form theme classes, controller-provided form theme classes, hidden optional Create layout rows with locked required fields preserved, visible Create metadata/creator/split-description rows, and hidden Age Category in Edit
+  - Hidden-field rules: hidden Create metadata preservation/ignoring, DLSite hidden scraped description-language preservation, Custom Create hidden description-language nulling, and hidden/read-only Edit field preservation for split descriptions, tags, metadata, and listening fields
+  - Tag behavior: editable and readonly current-locale fetched-tag rows, fetched-bucket validation and updates, preservation of other fetched/custom buckets, optional Edit readonly tag colors, separately ordered custom/fetched rows, editable custom tag source behavior, and Tag Library page/component mounting
+  - Index return navigation: visible-work anchors, visibility-filter redirects including metadata filters, maker ID-only circle-filter cleanup, visible/hidden-description general search return policy, custom-sort return page calculation, a full visible-update return workflow, and filtered delete page fallback including hidden-description search override page clamping
+  - Create navigation and completion: Laravel previous URL create back links, malformed create back-link input, create-mode back-link preservation including `modal=1`, Create Go Back preservation after scraper validation errors, custom create/upload flow, modal create/update/delete completion responses with calculated redirect URLs, and unchanged redirects for standalone requests
+  - Product persistence and updates: DLSite storage with one fetched tag in both JP/EN buckets, DLSite contributor sync, automatic Series from `title_name`, enum-backed product field validation, metadata update flow, map-driven editable update payload behavior, duplicate English description cleanup against submitted or stored Japanese descriptions, and logged destroy cleanup failures
+  - Quick Add client behavior: DLSite-only fetching status markup and asset, Custom Quick Add exclusion, green Cherry/Black theme values, submit-event reveal behavior, browser-history reset behavior, and exact three-message recognized-scraper translation versus verbatim unknown errors
 - `tests/Feature/TagLibraryManagerTest.php`
-  - covers the Livewire Tag Library manager, including English/custom-visible and zero-pivot tag listing, JP-only attached tag exclusion, collapsed default state, saved expanded default state, search-open behavior, empty tag creation with title-key and order normalization, duplicate handling, modal-confirmed empty tag deletion, protection when a tag gains a pivot before deletion is confirmed, tag group create/rename/delete behavior, Add group placement inside the Tag Groups section, persisted Index group-ordering switch behavior, pivot-backed multi-group tag membership, duplicate membership prevention, remove-one-membership behavior, group/tag ordering actions, independent group/tag Index hidden settings, tag/group background and font color save/clear/validation, #000000 placeholder coverage, independent background/font rendering, group-over-tag render precedence from separately ordered group background/font values, and Blade color-logic cleanup, session-only tag edit mode, shared switch-style Edit Tags, Hide Tag on Index, and Hide Group on Index toggle markup, tag settings modal hydration, dropdown-style group search, searchable group assignment plaques, staged group plaque save/cancel behavior, compact in-chip hidden-tag status indicators for directly hidden tags and tags assigned to any hidden group, circular delete controls, All Tags filters for visibility, group status, specific group, and empty/used state, and group-title tie-break ordering in the grouped All Tags list
+  - Tag listing and locale behavior: current-language fetched/custom and zero-pivot tag listing, other-language exclusion, and locale-aware group members/counts/links/usage
+  - Display state: collapsed default state, saved expanded default state, and search-open behavior
+  - Empty-tag lifecycle: creation with title-key and order normalization, duplicate handling, modal-confirmed deletion, and protection when a tag gains a pivot before deletion is confirmed
+  - Tag groups and membership: group create/rename/delete behavior, Add group placement inside the Tag Groups section, persisted Index group-ordering switch behavior, pivot-backed multi-group membership, duplicate membership prevention, remove-one-membership behavior, and group/tag ordering actions
+  - Index visibility and colors: independent group/tag hidden settings, background and font color save/clear/validation, `#000000` placeholder coverage, independent background/font rendering, group-over-tag precedence from separately ordered values, and Blade color-logic cleanup
+  - Editing controls: session-only tag edit mode, shared switch-style Edit Tags, Hide Tag on Index, and Hide Group on Index toggle markup, tag settings modal hydration, and circular delete controls
+  - Group assignment UI: dropdown-style group search, searchable group assignment plaques, and staged group plaque save/cancel behavior
+  - Status and filtering: compact in-chip hidden-tag indicators for directly hidden tags and tags assigned to any hidden group, All Tags filters for visibility, group status, specific group, and empty/used state, and group-title tie-break ordering in the grouped All Tags list
 - `tests/Feature/ReturnTargetProductTest.php`
-  - covers product-aware return URLs for unlimited pagination, first-page omission, saved-page redirect fast paths, full-query visibility fast paths, unchanged-visibility fallback cleanup, and multi-filter visible-work cleanup
+  - covers product-aware return URLs for unlimited pagination, first-page omission, saved-page redirect fast paths, full-query visibility fast paths, unchanged-visibility fallback cleanup, multi-filter visible-work cleanup, and retaining only current-language fetched-tag filters
 - `tests/Feature/ProductIndexLivewireTest.php`
   - Pagination and state: Livewire-owned pagination defaults, fixed/custom/unlimited page sizes, SQL-backed scalar/search/date/Added to the site Date pagination, built-in pagination links with the progress-menu scroll target, page reset behavior, and query-string initialization
   - Settings and hydration: one batched Index option lookup including normalized modal and DLSite-link settings, narrowed result columns including non-hydrated sort-only fields and visible-field hydration, conditional hidden-age hydration without revealing the Age column, and Index table width CSS
   - DLSite and modal links: default Maniax links, enabled All Ages Home links, one reused external URL per product row, modal host metadata, real standalone Quick Add/Edit `href` values, and one-shot same-Index modal Quick Add positioning after reload
   - Fields and search: language-aware description matching in general search, independent Japanese/English Description columns, configurable field order/visibility including locked Title and hideable Image, optional hidden-by-default notes/listening columns, and tag general-search behavior when the Tags column is enabled or hidden
-  - Tags: separate Custom Tags/Fetched EN Tags rendering inside one Index Tags column, prepared tag-link query preservation/replacement, default plain and optional grouped tag-chip ordering, optional tag-background/font colors with group-over-tag precedence, uncolored tag plain-link rendering, hidden-group anti-join skipping when no hidden groups exist, group-title tie-breaks, normalized tag/group order fallback, multi-group tag de-duplication through visible groups, direct tag hiding, and any-hidden-group tag hiding including mixed visible/hidden group memberships
+  - Tags: separate Custom Tags/current-language Fetched Tags rendering inside one Index Tags column, locale-aware search/filter/link behavior, generic runtime bucket controls, prepared tag-link query preservation/replacement, default plain and optional grouped tag-chip ordering, optional tag-background/font colors with group-over-tag precedence, uncolored tag plain-link rendering, hidden-group anti-join skipping when no hidden groups exist, group-title tie-breaks, normalized tag/group order fallback, multi-group tag de-duplication through visible groups, direct tag hiding, and any-hidden-group tag hiding including mixed visible/hidden group memberships
   - Sorting and filter UI: nullable scalar sort ordering, RJ/header sorting including optional listening and contributor columns, advanced primary/secondary sorting, configurable Advanced Filter sort dropdown visibility that does not disable valid URL/header sorting, Livewire-bound Filter modal controls, default and configurable Filter modal order/visibility for fixed and date-range widgets, restored filter defaults, the external Alpine advanced-filter component, and local client-side modal opening/closing without Livewire entanglement or native form reset
 - `tests/Unit/Enums/ProductIndexSortFieldTest.php`
   - covers Index sort field SQL column metadata, default hidden sort values, and Advanced Filter sort dropdown layout normalization
@@ -35,13 +51,13 @@ Current automated coverage includes Laravel PHPUnit and Python `unittest` tests:
 - `tests/Feature/TagLibraryDisplaySettingsTest.php`
   - covers the Options Tag Library collapsed/expanded display default, Index group-ordering setting, and tag color surface toggles, including hydration, persistence, modal-confirmed reset-to-default behavior, global reset refresh, and stored option state
 - `tests/Feature/ProductMetadataSettingsTest.php`
-  - covers metadata-related Options components, including automatic Series persistence/reset/refresh behavior, DLSite link setting hydration/boolean validation/save/reset/global refresh/tooltip behavior, product form theme persistence/validation/reset/refresh behavior, work-form modal hydration, persistence, completion-action validation, per-setting/global reset, tooltips, and immediate browser update events, Index table width fixed/custom/unlimited validation and reset behavior, Product field layout visibility/editability/order persistence across Index/Edit/Filter/Quick Add/Custom Quick Add surfaces, Index tag bucket visibility controls, separate Edit Custom Tags/Fetched EN Tags rows, unchanged Filter Tags controls, Field Layouts section order/labels, field-row movement with field-keyed state preservation, invalid layout movement handling, reset-to-default confirmation behavior, Reset All Options behavior, General and Field Layouts tab component mounting, and light rendered smoke coverage for core user-visible controls
+  - covers metadata-related Options components, including persistence, validation, individual/global reset behavior, tooltips, product form settings, Index table width, field layout visibility/editability/order across each surface, generic fetched-bucket controls, current-locale labels, label-free layout storage, and originating-tab reload behavior
 - `tests/Feature/ProductGenreMigrationTest.php`
   - covers migration of legacy product genre JSON into `genres` + `genre_product`, language row backfill into `genre_product_languages`, removal of old `genres.type` / `genres.language`, same product/tag attachments with both JP and EN language rows, legacy migration compatibility when `genres.title_key` exists, and index visibility migration backfill from legacy `genres.group_id` into `genre_group_genre`
 - `tests/Feature/ProductMetadataMigrationTest.php`
   - covers metadata backfill from stored DLSite JSON, duplicate English description collapse, missing/invalid JSON skip behavior, and the rule that Series is not backfilled
 - `tests/Feature/OptionsControllerTest.php`
-  - covers the General/Field Layouts/Refetch page tabs, invalid tab fallback, modal host settings and Quick Add standalone links on Options/Refetch pages, latest-refetch link, Refetch Tags request validation, queue batch creation, selected/all work scopes including numeric RJ-desc queued order, progress JSON including cancellation metadata, cancel route behavior, tags-only job results, cancelled-before-fetch skips, during-fetch cancellation, relationship-backed tag diff ordering, case-insensitive/kana-sensitive tag identity, skipped errors/custom-only works, review rendering/change indicators, optional refetch review tag background/font colors and removal of Blade-side color lookup logic, newest-run-only apply controls, partial cancelled run apply, new-tag add/ignore behavior, stale-language move/remove behavior, JP-only to JP+EN and EN-only transitions, and custom-to-fetched promote/keep choices
+  - covers the General/Field Layouts/Refetch page tabs, decorative UI Language globe icon, invalid tab fallback, modal host settings and Quick Add standalone links on Options/Refetch pages, latest-refetch link, Refetch Tags request validation, queue batch creation, selected/all work scopes including numeric RJ-desc queued order, progress JSON including cancellation metadata, cancel route behavior, tags-only job results, cancelled-before-fetch skips, during-fetch cancellation, relationship-backed tag diff ordering, case-insensitive/kana-sensitive tag identity, skipped errors/custom-only works, review rendering/change indicators, optional refetch review tag background/font colors and removal of Blade-side color lookup logic, newest-run-only apply controls, partial cancelled run apply, new-tag add/ignore behavior, stale-language move/remove behavior, JP-only to JP+EN and EN-only transitions, and custom-to-fetched promote/keep choices
 - `tests/Feature/OptionsRefetchProgressTest.php`
   - covers the Livewire refetch progress panel polling while a run is running/cancelling, showing the cancel action only while running, and redirecting once review results are ready
 - `tests/Feature/OptionsWorkSearchTest.php`
@@ -52,11 +68,11 @@ Current automated coverage includes Laravel PHPUnit and Python `unittest` tests:
 - `tests/Unit/Support/ProductIndexFiltersTest.php`
   - covers query normalization, metadata text and date range filter round trips, defaults, configurable sort option maps, explicit input keys, visibility filter group coverage, and query export helpers
 - `tests/Unit/Support/ProductFieldLayoutTest.php`
-  - covers enum-owned surface field order/availability metadata, surface-specific field layout normalization, default visibility/order including Filter modal defaults, ignored legacy `description` layout rows, no legacy mapping for old tag edit flags, Index tag bucket defaults/normalization, separate Edit Custom Tags/Fetched EN Tags rows, locked Index/Edit/Quick Add/Custom Quick Add required rows, hidden-by-default optional Quick Add metadata/creator/Japanese-description/English-description rows, Edit Age Category hidden by default, invalid field ids, duplicate field ids, editable flag behavior, and prepared Index/Edit/Filter/Create field metadata used by Blade components
+  - covers surface field availability/defaults, current-locale fetched labels, invalid/duplicate row normalization, generic fetched keys, separate Edit Custom/Fetched rows, locked required rows, editability, and prepared layout metadata
 - `tests/Unit/Support/DLSite/DLSiteWorkDataTest.php`
   - covers shared DLSite metadata extraction for descriptions, creator roles, maker/circle values, duplicate English fallback behavior, fallback product ids, and missing product id errors
 - `tests/Unit/Models/OptionMetadataSettingsTest.php`
-  - covers field layout option persistence/fallbacks for Index/Edit/Filter/Create layouts, Index sort dropdown layout option persistence/fallbacks, automatic Series option normalization, age-appropriate DLSite link defaults/persistence/individual and global reset/batched hydration, product form theme normalization/Black default reset, work-form modal defaults/persistence/invalid-action fallback/reset, Index table width normalization, and batched ProductIndex settings normalization/fallbacks
+  - covers global UI language default/normalization/persistence/reset, field layout option persistence/fallbacks for Index/Edit/Filter/Create layouts, Index sort dropdown layout option persistence/fallbacks, automatic Series option normalization, age-appropriate DLSite link defaults/persistence/individual and global reset/batched hydration, product form theme normalization/Black default reset, work-form modal defaults/persistence/invalid-action fallback/reset, Index table width normalization, and batched ProductIndex settings normalization/fallbacks
 - `tests/Unit/Models/ProductDLSiteUrlTest.php`
   - covers the no-age-access disabled Maniax path plus enabled Home mapping for exact All Ages and Maniax fallback for R15, R18, null, and malformed legacy ages
 - `tests/Unit/Support/DLSite/DLSitePythonRunnerTest.php`
@@ -68,13 +84,13 @@ Current automated coverage includes Laravel PHPUnit and Python `unittest` tests:
 - `tests/Unit/Support/GenreSyncPayloadTest.php`
   - covers shared `genre_product.source` sync payload creation, deduplication, fetched-over-custom precedence, and fetched language map creation
 - `tests/Unit/Support/ProductGenreSyncTest.php`
-  - covers syncing one product/tag attachment with multiple fetched language rows, preserving fetched language rows when custom tags are updated, replacing editable English fetched rows, and fetched-over-custom precedence
+  - covers syncing one product/tag attachment with multiple fetched language rows, replacing only the selected English or Japanese bucket, preserving other fetched languages and unsubmitted custom tags, and fetched-over-custom precedence across languages
 - `tests/Unit/Support/ProductContributorSyncTest.php`
   - covers case-folded contributor identity, circle maker id persistence, role-specific contributor replacement, and same-contributor/different-role pivot isolation
 - `tests/Unit/Models/GenreTest.php`
   - covers title-key identity, including case-insensitive tag reuse, preserved display casing, and distinct Hiragana/Katakana variants
 - `tests/Unit/Support/VisibleGenreAttachmentTest.php`
-  - covers the shared English/custom-visible genre attachment query helper for custom, fetched EN, JP-only hidden, and same-title JP+EN cases
+  - covers current-locale defaults, explicit language overrides, always-visible custom attachments, fetched-source gating, and one-row visibility for shared JP+EN attachments
 - `tests/Unit/Support/TagRefetch/DLSiteTagFetcherTest.php`
   - covers Process-faked tag fetch output parsing, failed-process error messages, and invalid JSON handling
 - `tests/Unit/Support/ReturnTargetTest.php`
@@ -117,13 +133,19 @@ Product metadata settings tests set the field layouts, automatic Series, and Ind
 Work-form modal tests store both modal options through `App\Models\Option`, render all supported host pages, and assert option normalization, standalone link URLs, modal metadata, Livewire save/reset events, modal completion responses, and the same-Index pending-redirect asset contract without requiring a browser. The shared completion response assertion also covers its dedicated stylesheet, semantic fallback card, and `_top` Continue link.
 Age-appropriate DLSite link tests store `options.dlsite_age_appropriate_links_enabled` through `App\Models\Option`; query-log assertions verify hidden `age_category` remains unselected while disabled and is hydrated only when enabled.
 
+## Manual UI Language and Locale-Aware Tag Checks
+- Save and reset `English` / `日本語` in Options. Confirm the full reload, destination-locale notice, global scope, and originating tab for Reset All.
+- Check representative Index, Create/Edit, Options, Tag Library, Refetch, and completion surfaces in both languages. Confirm dynamic `<html lang>`, localized months, accessible copy, desktop menu border/hover, and the mobile drawer.
+- Confirm recognized Refetch and Quick Add errors localize while persisted/logged and unknown external errors remain unchanged.
+- With EN-only, JP-only, shared, empty, and custom tags, verify Index display/search/filter/links, Edit, Tag Library counts/filters, one-row shared tags, and language-independent autocomplete.
+
 ## Manual DLSite Link Checks
 - With the option disabled and the Age column hidden, confirm All Ages, R15, and R18 image/title links all open Maniax.
 - Enable General -> DLSite Links, keep the Age column hidden, and confirm All Ages image/title links open DLSite Home while R15 and R18 links open Maniax.
 - Confirm the Image, Japanese title, and optional English title links for the same work share one destination and still open in a new tab.
 
 ## Manual Quick Add Fetch Status Checks
-- In standalone and modal DLSite Quick Add, confirm top Submit, bottom Submit, and Enter reveal green “Work is being fetched…” text beneath the RJ field.
+- In standalone and modal DLSite Quick Add, confirm top Submit, bottom Submit, and Enter reveal the localized green fetching-status text beneath the RJ field.
 - Confirm an empty required RJ field does not reveal the message and both Submit buttons remain enabled while the message is visible.
 - Confirm Laravel validation and scraper errors reload Quick Add with the green message hidden and the existing red error visible.
 - Confirm Custom Quick Add never renders the fetching message and browser Back restores DLSite Quick Add with the message hidden.
@@ -159,28 +181,5 @@ The Docker test service is one-off and does not run during the normal app startu
   - `python -m unittest discover -s python/tests -v`
 - Run all tests inside Docker:
   - `docker compose --env-file docker/.env.docker --profile test run --rm --build tests`
-- Run a filtered subset:
-  - `php artisan test --filter=ProductControllerTest`
-  - `node --check public/scripts/dlsite-create-status.js`
-  - `node --check public/scripts/work-form-modal.js`
-  - `php artisan test --filter=ProductIndexLivewireTest`
-  - `php artisan test --filter=ProductMetadataMigrationTest`
-  - `php artisan test --filter=ProductMetadataSettingsTest`
-  - `php artisan test --filter=IndexPaginationSettingsTest`
-  - `php artisan test --filter=AutocompleteSettingsTest`
-  - `php artisan test --filter=OptionMetadataSettingsTest`
-  - `php artisan test --filter=OptionsControllerTest`
-  - `php artisan test --filter=OptionsRefetchProgressTest`
-  - `php artisan test --filter=OptionsWorkSearchTest`
-  - `php artisan test --filter=ProductFieldLayoutTest`
-  - `php artisan test --filter=ProductContributorSyncTest`
-  - `php artisan test --filter=DLSiteWorkDataTest`
-  - `php artisan test --filter=DLSite`
-  - `php artisan test --filter=GenreTest`
-  - `php artisan test --filter=GenreSyncPayloadTest`
-  - `php artisan test --filter=ProductGenreSyncTest`
-  - `php artisan test --filter=VisibleGenreAttachmentTest`
-  - `php artisan test --filter=PerformanceSmokeTest`
-  - `php artisan test tests\Feature\PerformanceSmokeTest.php --do-not-fail-on-phpunit-warning`
-- Run a filtered subset inside Docker:
-  - `docker compose --env-file docker/.env.docker --profile test run --rm --build tests php artisan test --filter=ProductControllerTest`
+- Run a focused subset with PHPUnit's filter option:
+  - `php artisan test --filter=<TestClassOrMethod>`

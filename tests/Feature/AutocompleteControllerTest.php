@@ -197,7 +197,7 @@ class AutocompleteControllerTest extends TestCase
             ->assertJsonPath('1.count', 3);
     }
 
-    public function test_autocomplete_assets_and_field_attributes_render_on_index_create_and_edit(): void
+    public function test_autocomplete_assets_and_field_attributes_render_on_index_and_create(): void
     {
         $this->get('/')
             ->assertOk()
@@ -218,9 +218,12 @@ class AutocompleteControllerTest extends TestCase
             ->assertSee('data-autocomplete-source="tags"', false)
             ->assertSee('id="series"', false)
             ->assertSee('data-autocomplete-source="series"', false);
+    }
 
+    public function test_autocomplete_assets_and_generic_fetched_field_attributes_render_on_edit(): void
+    {
         Option::setEditFieldLayout(array_map(
-            fn(array $row): array => $row['field'] === ProductField::FetchedEnglishTags->value
+            fn(array $row): array => $row['field'] === ProductField::FetchedTags->value
                 ? [...$row, 'editable' => true]
                 : $row,
             Option::editFieldLayout()
@@ -232,7 +235,7 @@ class AutocompleteControllerTest extends TestCase
             ->assertOk()
             ->assertSee('css/autocomplete.css', false)
             ->assertSee('scripts/autocomplete-text.js', false)
-            ->assertSee('id="genre_fetched_english"', false)
+            ->assertSee('id="genre_fetched"', false)
             ->assertSee('data-autocomplete-source="tags"', false)
             ->assertSee('data-autocomplete-mode="csv"', false);
     }

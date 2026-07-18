@@ -8,6 +8,7 @@ use App\Enums\ProductPriority;
 use App\Enums\ProductProgress;
 use App\Enums\ProductReListenValue;
 use App\Enums\ProductScore;
+use App\Enums\UiLanguage;
 use App\Livewire\TagLibraryManager;
 use App\Models\Genre;
 use App\Models\Option;
@@ -22,6 +23,7 @@ use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Process;
 use Illuminate\Support\Facades\Storage;
 use Mockery;
+use PHPUnit\Framework\Attributes\DataProvider;
 use Tests\TestCase;
 
 class ProductControllerTest extends TestCase
@@ -168,37 +170,37 @@ class ProductControllerTest extends TestCase
         ]);
         $this->attachGenres($noise, [$noiseGenre, $noiseCustomGenre]);
 
-        $this->get('/?search=' . strtolower($target->id))
+        $this->get('/?search='.strtolower($target->id))
             ->assertOk()
             ->assertSee($target->work_name)
             ->assertDontSee($noise->work_name);
 
-        $this->get('/?search=' . strtolower($jpToken))
+        $this->get('/?search='.strtolower($jpToken))
             ->assertOk()
             ->assertSee($target->work_name)
             ->assertDontSee($noise->work_name);
 
-        $this->get('/?search=' . strtolower($enToken))
+        $this->get('/?search='.strtolower($enToken))
             ->assertOk()
             ->assertSee($target->work_name_english)
             ->assertDontSee($noise->work_name_english);
 
-        $this->get('/?search=' . strtolower($seriesToken))
+        $this->get('/?search='.strtolower($seriesToken))
             ->assertOk()
             ->assertSee($target->series)
             ->assertDontSee($noise->series);
 
-        $this->get('/?search=' . strtolower($genreToken))
+        $this->get('/?search='.strtolower($genreToken))
             ->assertOk()
             ->assertSee($target->work_name)
             ->assertDontSee($noise->work_name);
 
-        $this->get('/?search=' . strtolower($customToken))
+        $this->get('/?search='.strtolower($customToken))
             ->assertOk()
             ->assertSee($target->work_name)
             ->assertDontSee($noise->work_name);
 
-        $this->get('/?search=' . strtolower($hiddenJapaneseGenre->title))
+        $this->get('/?search='.strtolower($hiddenJapaneseGenre->title))
             ->assertOk()
             ->assertDontSee($hiddenJapanese->work_name);
     }
@@ -255,12 +257,12 @@ class ProductControllerTest extends TestCase
             'work_name' => 'GENRE_ID_NOISE_TOKEN',
         ]);
 
-        $this->get('/?genre=' . $sharedGenre->getKey())
+        $this->get('/?genre='.$sharedGenre->getKey())
             ->assertOk()
             ->assertSee($matching->work_name)
             ->assertDontSee($noise->work_name);
 
-        $this->get('/?genre=' . $hiddenJapaneseGenre->getKey())
+        $this->get('/?genre='.$hiddenJapaneseGenre->getKey())
             ->assertOk()
             ->assertDontSee($hiddenJapanese->work_name);
     }
@@ -593,7 +595,7 @@ class ProductControllerTest extends TestCase
             ->assertSee('href="/create"', false)
             ->assertDontSee('hero__back', false);
 
-        $this->get('/?genre=' . $sharedLanguageGenre->getKey())
+        $this->get('/?genre='.$sharedLanguageGenre->getKey())
             ->assertOk()
             ->assertSee($firstProduct->work_name)
             ->assertDontSee($japaneseOnlyProduct->work_name);
@@ -891,6 +893,37 @@ class ProductControllerTest extends TestCase
             ->assertDontSee('href="http://localhost/create"', false);
     }
 
+    public function test_create_translates_only_recognized_scraper_errors_using_the_current_locale(): void
+    {
+        Option::setUiLanguage(UiLanguage::Japanese);
+
+        foreach (
+            [
+                'GeoBlocked DLSite work' => '地域制限によりアクセスできないDLSite作品',
+                'Deleted or Non-existing DLSite work' => '削除済み、または存在しないDLSite作品',
+                'Non-existing DLSite work' => '存在しないDLSite作品',
+            ] as $stderr => $localized
+        ) {
+            Process::fake([
+                '*' => Process::result(errorOutput: $stderr, exitCode: 2),
+            ])->preventStrayProcesses();
+
+            $this->from('/create')
+                ->post('/store', ['id' => 'RJ000000405'])
+                ->assertSessionHasErrors(['id' => $localized]);
+        }
+
+        foreach (['Pending', 'validation', 'Unexpected scraper detail'] as $stderr) {
+            Process::fake([
+                '*' => Process::result(errorOutput: $stderr, exitCode: 2),
+            ])->preventStrayProcesses();
+
+            $this->from('/create')
+                ->post('/store', ['id' => 'RJ000000405'])
+                ->assertSessionHasErrors(['id' => $stderr]);
+        }
+    }
+
     public function test_create_go_back_uses_laravel_previous_url_for_external_referrer(): void
     {
         $this->withHeader('referer', 'https://example.com/tags')
@@ -906,22 +939,22 @@ class ProductControllerTest extends TestCase
         $response->assertOk();
 
         foreach (ProductProgress::options() as $value => $label) {
-            $response->assertSee('value="' . e($value) . '"', false);
+            $response->assertSee('value="'.e($value).'"', false);
             $response->assertSee($label);
         }
 
         foreach (ProductScore::options() as $value => $label) {
-            $response->assertSee('value="' . e($value) . '"', false);
+            $response->assertSee('value="'.e($value).'"', false);
             $response->assertSee($label);
         }
 
         foreach (ProductPriority::options() as $value => $label) {
-            $response->assertSee('value="' . e($value) . '"', false);
+            $response->assertSee('value="'.e($value).'"', false);
             $response->assertSee($label);
         }
 
         foreach (ProductReListenValue::options() as $value => $label) {
-            $response->assertSee('value="' . e($value) . '"', false);
+            $response->assertSee('value="'.e($value).'"', false);
             $response->assertSee($label);
         }
     }
@@ -978,7 +1011,7 @@ class ProductControllerTest extends TestCase
             ->assertDontSee('name="return_route"', false)
             ->assertSee('name="return_query[progress]"', false)
             ->assertSee('name="return_fragment"', false)
-            ->assertSee('href="/?progress=Listening#' . $product->id . '"', false)
+            ->assertSee('href="/?progress=Listening#'.$product->id.'"', false)
             ->assertDontSee('name="redirect"', false);
     }
 
@@ -1205,8 +1238,8 @@ class ProductControllerTest extends TestCase
 
         $this->get("/edit/{$product->id}?return_query[progress]=Listening")
             ->assertOk()
-            ->assertSee('name="return_fragment" value="' . $product->id . '"', false)
-            ->assertSee('href="/?progress=Listening#' . $product->id . '"', false);
+            ->assertSee('name="return_fragment" value="'.$product->id.'"', false)
+            ->assertSee('href="/?progress=Listening#'.$product->id.'"', false);
     }
 
     public function test_edit_prefills_comma_custom_tags_as_quoted_csv(): void
@@ -1225,20 +1258,38 @@ class ProductControllerTest extends TestCase
             ->assertSee('"Junior / Senior (at work, school, etc)", Office Lady');
     }
 
-    public function test_edit_keeps_fetched_english_tags_readonly_when_option_disabled(): void
-    {
-        $englishGenre = $this->createGenre('READONLY_FETCHED_EN_TOKEN', Genre::TYPE_AUTO_GENERATED_ENGLISH);
-        $product = Product::factory()->create([
-            'work_name' => 'READONLY_FETCHED_EDIT_TOKEN',
-        ]);
-        $this->attachGenres($product, [$englishGenre]);
+    #[DataProvider('fetchedTagRenderingProvider')]
+    public function test_edit_renders_only_the_current_language_fetched_tags(
+        UiLanguage $uiLanguage,
+        bool $editable,
+        string $expectedLabel,
+        string $expectedFetchedLanguage,
+    ): void {
+        Option::setUiLanguage($uiLanguage);
+        $this->setTagEditLayout(visible: true, customEditable: true, fetchedEditable: $editable);
 
-        $this->get("/edit/{$product->id}")
+        $englishGenre = $this->createGenre('CURRENT_FETCHED_EN_TOKEN', Genre::TYPE_AUTO_GENERATED_ENGLISH);
+        $japaneseGenre = $this->createGenre('CURRENT_FETCHED_JP_TOKEN', Genre::TYPE_AUTO_GENERATED_JAPANESE);
+        $product = Product::factory()->create();
+        $this->attachGenres($product, [$englishGenre, $japaneseGenre]);
+
+        $visibleGenre = $expectedFetchedLanguage === Genre::LANGUAGE_ENGLISH ? $englishGenre : $japaneseGenre;
+        $hiddenGenre = $expectedFetchedLanguage === Genre::LANGUAGE_ENGLISH ? $japaneseGenre : $englishGenre;
+        $response = $this->get("/edit/{$product->id}")
             ->assertOk()
-            ->assertSee('Fetched EN Tags')
-            ->assertSee('READONLY_FETCHED_EN_TOKEN')
-            ->assertSee('readonly', false)
-            ->assertDontSee('name="genre_fetched_english"', false);
+            ->assertSee($expectedLabel)
+            ->assertSee($visibleGenre->title)
+            ->assertDontSee($hiddenGenre->title);
+
+        if ($editable) {
+            $response
+                ->assertSee('name="genre_fetched"', false)
+                ->assertSee('name="genre_fetched_language" value="'.$expectedFetchedLanguage.'"', false);
+        } else {
+            $response
+                ->assertDontSee('name="genre_fetched"', false)
+                ->assertDontSee('name="genre_fetched_language"', false);
+        }
     }
 
     public function test_edit_readonly_tags_use_colors_only_when_surface_is_enabled(): void
@@ -1330,21 +1381,82 @@ class ProductControllerTest extends TestCase
             ->assertDontSee('readonly-tag-chip', false);
     }
 
-    public function test_edit_renders_editable_fetched_english_tags_when_edit_layout_enables_it(): void
+    public function test_update_rejects_a_fetched_language_that_no_longer_matches_the_ui_locale(): void
     {
-        $this->setTagEditLayout(visible: true, customEditable: true, fetchedEditable: true);
+        $this->setTagEditLayout(visible: true, customEditable: false, fetchedEditable: true);
+        [$product, $englishGenre, $japaneseGenre] = $this->createBilingualFetchedProduct('RENDERED_LANGUAGE');
 
-        $englishGenre = $this->createGenre('EDITABLE_FETCHED_EN_TOKEN', Genre::TYPE_AUTO_GENERATED_ENGLISH);
-        $product = Product::factory()->create([
-            'work_name' => 'EDITABLE_FETCHED_EDIT_TOKEN',
-        ]);
-        $this->attachGenres($product, [$englishGenre]);
+        $editUrl = "/edit/{$product->id}";
 
-        $this->get("/edit/{$product->id}")
+        $this->get($editUrl)
             ->assertOk()
-            ->assertSee('name="genre_fetched_english"', false)
-            ->assertSee('EDITABLE_FETCHED_EN_TOKEN')
-            ->assertDontSee('No fetched genres.');
+            ->assertSee('Fetched EN Tags')
+            ->assertSee('name="genre_fetched_language" value="en"', false)
+            ->assertSee($englishGenre->title)
+            ->assertDontSee($japaneseGenre->title);
+
+        Option::setUiLanguage(UiLanguage::Japanese);
+
+        $this->from($editUrl)
+            ->post("/update/{$product->id}", [
+                'work_name' => $product->work_name,
+                'genre_fetched' => 'RENDERED_LANGUAGE_REPLACEMENT_EN',
+                'genre_fetched_language' => Genre::LANGUAGE_ENGLISH,
+            ])
+            ->assertRedirect($editUrl)
+            ->assertSessionHasErrors(['genre_fetched_language']);
+
+        $this->get($editUrl)
+            ->assertOk()
+            ->assertSee('取得済みJPタグ')
+            ->assertSee('name="genre_fetched_language" value="jp"', false)
+            ->assertSee($japaneseGenre->title)
+            ->assertDontSee($englishGenre->title)
+            ->assertDontSee('RENDERED_LANGUAGE_REPLACEMENT_EN')
+            ->assertSee('The selected genre fetched language is invalid.');
+
+        $product->refresh()->load(['englishGenres', 'japaneseGenres']);
+
+        $this->assertSame([$englishGenre->title], $product->englishGenres->pluck('title')->all());
+        $this->assertSame([$japaneseGenre->title], $product->japaneseGenres->pluck('title')->all());
+        $this->assertDatabaseMissing('genres', [
+            'title' => 'RENDERED_LANGUAGE_REPLACEMENT_EN',
+        ]);
+    }
+
+    public function test_validation_retry_reloads_persisted_fetched_tags_instead_of_unsaved_input(): void
+    {
+        $this->setTagEditLayout(visible: true, customEditable: false, fetchedEditable: true);
+        [$product, $englishGenre, $japaneseGenre] = $this->createBilingualFetchedProduct('RETRY_LANGUAGE');
+
+        $editUrl = "/edit/{$product->id}";
+
+        $this->get($editUrl)
+            ->assertOk()
+            ->assertSee('Fetched EN Tags')
+            ->assertSee('name="genre_fetched_language" value="en"', false)
+            ->assertSee($englishGenre->title);
+
+        $this->from($editUrl)
+            ->post("/update/{$product->id}", [
+                'genre_fetched' => 'RETRY_LANGUAGE_TYPED_EN',
+                'genre_fetched_language' => Genre::LANGUAGE_ENGLISH,
+            ])
+            ->assertRedirect($editUrl)
+            ->assertSessionHasErrors(['work_name']);
+
+        $this->get($editUrl)
+            ->assertOk()
+            ->assertSee('Fetched EN Tags')
+            ->assertSee('name="genre_fetched_language" value="en"', false)
+            ->assertSee($englishGenre->title)
+            ->assertDontSee('RETRY_LANGUAGE_TYPED_EN')
+            ->assertDontSee($japaneseGenre->title);
+
+        $product->refresh()->load(['englishGenres', 'japaneseGenres']);
+
+        $this->assertSame([$englishGenre->title], $product->englishGenres->pluck('title')->all());
+        $this->assertSame([$japaneseGenre->title], $product->japaneseGenres->pluck('title')->all());
     }
 
     public function test_edit_renders_custom_and_fetched_tag_rows_in_layout_order(): void
@@ -1356,7 +1468,7 @@ class ProductControllerTest extends TestCase
                 'editable' => true,
             ],
             [
-                'field' => 'fetched_english_tags',
+                'field' => ProductField::FetchedTags->value,
                 'visible' => true,
                 'editable' => false,
             ],
@@ -1378,7 +1490,7 @@ class ProductControllerTest extends TestCase
                 'ORDER_FETCHED_EN_TAG_TOKEN',
             ])
             ->assertSee('name="genre_custom"', false)
-            ->assertDontSee('name="genre_fetched_english"', false);
+            ->assertDontSee('name="genre_fetched"', false);
     }
 
     public function test_update_syncs_only_visible_editable_tag_rows(): void
@@ -1390,7 +1502,7 @@ class ProductControllerTest extends TestCase
                 'editable' => true,
             ],
             [
-                'field' => 'fetched_english_tags',
+                'field' => ProductField::FetchedTags->value,
                 'visible' => true,
                 'editable' => true,
             ],
@@ -1406,7 +1518,8 @@ class ProductControllerTest extends TestCase
         $this->post("/update/{$product->id}", [
             'work_name' => $product->work_name,
             'genre_custom' => 'SPLIT_MALICIOUS_CUSTOM_TAG',
-            'genre_fetched_english' => 'SPLIT_NEW_FETCHED_EN_TAG',
+            'genre_fetched' => 'SPLIT_NEW_FETCHED_EN_TAG',
+            'genre_fetched_language' => Genre::LANGUAGE_ENGLISH,
         ])->assertSessionHasNoErrors();
 
         $product->refresh()->load(['englishGenres', 'customGenres']);
@@ -1418,7 +1531,33 @@ class ProductControllerTest extends TestCase
         ]);
     }
 
-    public function test_update_ignores_fetched_english_input_when_option_disabled(): void
+    #[DataProvider('invalidFetchedLanguageProvider')]
+    public function test_update_rejects_missing_or_invalid_fetched_language(?string $submittedLanguage): void
+    {
+        $this->setTagEditLayout(visible: true, customEditable: false, fetchedEditable: true);
+        [$product, $englishGenre, $japaneseGenre] = $this->createBilingualFetchedProduct('REJECTED_LANGUAGE');
+        $payload = [
+            'work_name' => $product->work_name,
+            'genre_fetched' => 'REJECTED_LANGUAGE_REPLACEMENT',
+        ];
+
+        if ($submittedLanguage !== null) {
+            $payload['genre_fetched_language'] = $submittedLanguage;
+        }
+
+        $this->from("/edit/{$product->id}")
+            ->post("/update/{$product->id}", $payload)
+            ->assertRedirect("/edit/{$product->id}")
+            ->assertSessionHasErrors(['genre_fetched_language']);
+
+        $product->refresh()->load(['englishGenres', 'japaneseGenres']);
+
+        $this->assertSame([$englishGenre->title], $product->englishGenres->pluck('title')->all());
+        $this->assertSame([$japaneseGenre->title], $product->japaneseGenres->pluck('title')->all());
+        $this->assertDatabaseMissing('genres', ['title' => 'REJECTED_LANGUAGE_REPLACEMENT']);
+    }
+
+    public function test_update_ignores_fetched_input_when_option_disabled(): void
     {
         $englishGenre = $this->createGenre('UNCHANGED_FETCHED_EN_TOKEN', Genre::TYPE_AUTO_GENERATED_ENGLISH);
         $product = Product::factory()->create([
@@ -1428,7 +1567,8 @@ class ProductControllerTest extends TestCase
 
         $this->post("/update/{$product->id}", [
             'work_name' => $product->work_name,
-            'genre_fetched_english' => 'MALICIOUS_FETCHED_EN_TOKEN',
+            'genre_fetched' => 'MALICIOUS_FETCHED_EN_TOKEN',
+            'genre_fetched_language' => Genre::LANGUAGE_ENGLISH,
         ])->assertSessionHasNoErrors();
 
         $product->refresh()->load('englishGenres');
@@ -1438,7 +1578,7 @@ class ProductControllerTest extends TestCase
         ]);
     }
 
-    public function test_update_can_replace_fetched_english_tags_when_edit_layout_enables_it(): void
+    public function test_update_can_replace_english_fetched_tags_through_the_generic_input(): void
     {
         $this->setTagEditLayout(visible: true, customEditable: true, fetchedEditable: true);
 
@@ -1447,7 +1587,7 @@ class ProductControllerTest extends TestCase
         ]);
         $oldEnglishGenre = Genre::query()->create(['title' => 'Old Editable EN']);
         $keptEnglishGenre = Genre::query()->create(['title' => 'Kept Editable EN']);
-        Genre::query()->create(['title' => 'New Editable EN']);
+        Genre::query()->create(['title' => 'New, Editable EN']);
 
         app(ProductGenreSync::class)->sync($product, [
             Genre::LANGUAGE_ENGLISH => [
@@ -1458,13 +1598,14 @@ class ProductControllerTest extends TestCase
 
         $this->post("/update/{$product->id}", [
             'work_name' => $product->work_name,
-            'genre_fetched_english' => 'Kept Editable EN, New Editable EN',
+            'genre_fetched' => 'Kept Editable EN, "New, Editable EN"',
+            'genre_fetched_language' => Genre::LANGUAGE_ENGLISH,
             'genre_custom' => 'Custom Editable Tag',
         ])->assertSessionHasNoErrors();
 
         $product->refresh()->load(['englishGenres', 'customGenres']);
         $this->assertEqualsCanonicalizing(
-            ['Kept Editable EN', 'New Editable EN'],
+            ['Kept Editable EN', 'New, Editable EN'],
             $product->englishGenres->pluck('title')->all()
         );
         $this->assertSame(['Custom Editable Tag'], $product->customGenres->pluck('title')->all());
@@ -1474,37 +1615,45 @@ class ProductControllerTest extends TestCase
         ]);
     }
 
-    public function test_update_preserves_japanese_fetched_tags_when_editing_fetched_english_tags(): void
+    public function test_japanese_update_preserves_english_fetched_and_custom_tags(): void
     {
-        $this->setTagEditLayout(visible: true, customEditable: true, fetchedEditable: true);
+        Option::setUiLanguage(UiLanguage::Japanese);
+        $this->setTagEditLayout(visible: true, customEditable: false, fetchedEditable: true);
 
         $product = Product::factory()->create([
-            'work_name' => 'PRESERVE_JP_FETCHED_EDIT_TOKEN',
+            'work_name' => 'PRESERVE_EN_FETCHED_EDIT_TOKEN',
         ]);
-        $japaneseGenre = Genre::query()->create(['title' => 'Hidden JP Editable']);
-        $oldEnglishGenre = Genre::query()->create(['title' => 'Old Visible EN']);
-        Genre::query()->create(['title' => 'Replacement Visible EN']);
+        $englishGenre = Genre::query()->create(['title' => 'Hidden EN Preserved']);
+        $oldJapaneseGenre = Genre::query()->create(['title' => 'Old Visible JP']);
+        $customGenre = Genre::query()->create(['title' => 'Custom Preserved']);
+        Genre::query()->create(['title' => 'Replacement Visible JP']);
 
         app(ProductGenreSync::class)->sync($product, [
-            Genre::LANGUAGE_JAPANESE => [$japaneseGenre->getKey()],
-            Genre::LANGUAGE_ENGLISH => [$oldEnglishGenre->getKey()],
-        ], []);
+            Genre::LANGUAGE_ENGLISH => [$englishGenre->getKey()],
+            Genre::LANGUAGE_JAPANESE => [$oldJapaneseGenre->getKey()],
+        ], [$customGenre->getKey()]);
 
         $this->post("/update/{$product->id}", [
             'work_name' => $product->work_name,
-            'genre_fetched_english' => 'Replacement Visible EN',
+            'genre_fetched' => 'Replacement Visible JP',
+            'genre_fetched_language' => Genre::LANGUAGE_JAPANESE,
+            'genre_custom' => 'MALICIOUS_CUSTOM_REPLACEMENT',
         ])->assertSessionHasNoErrors();
 
-        $product->refresh()->load(['japaneseGenres', 'englishGenres']);
-        $this->assertSame(['Hidden JP Editable'], $product->japaneseGenres->pluck('title')->all());
-        $this->assertSame(['Replacement Visible EN'], $product->englishGenres->pluck('title')->all());
+        $product->refresh()->load(['japaneseGenres', 'englishGenres', 'customGenres']);
+        $this->assertSame(['Replacement Visible JP'], $product->japaneseGenres->pluck('title')->all());
+        $this->assertSame(['Hidden EN Preserved'], $product->englishGenres->pluck('title')->all());
+        $this->assertSame(['Custom Preserved'], $product->customGenres->pluck('title')->all());
         $this->assertDatabaseMissing('genre_product', [
             'product_id' => $product->getKey(),
-            'genre_id' => $oldEnglishGenre->getKey(),
+            'genre_id' => $oldJapaneseGenre->getKey(),
+        ]);
+        $this->assertDatabaseMissing('genres', [
+            'title' => 'MALICIOUS_CUSTOM_REPLACEMENT',
         ]);
     }
 
-    public function test_update_with_custom_tag_editing_only_preserves_fetched_english_tags(): void
+    public function test_update_with_custom_tag_editing_only_preserves_all_fetched_tags(): void
     {
         $this->setTagEditLayout(visible: true, customEditable: true, fetchedEditable: false);
 
@@ -1518,7 +1667,8 @@ class ProductControllerTest extends TestCase
         $this->post("/update/{$product->id}", [
             'work_name' => $product->work_name,
             'genre_custom' => 'CUSTOM_ONLY_NEW_CUSTOM',
-            'genre_fetched_english' => 'CUSTOM_ONLY_MALICIOUS_FETCHED',
+            'genre_fetched' => 'CUSTOM_ONLY_MALICIOUS_FETCHED',
+            'genre_fetched_language' => Genre::LANGUAGE_ENGLISH,
         ])->assertSessionHasNoErrors();
 
         $product->refresh()->load(['englishGenres', 'customGenres']);
@@ -1543,7 +1693,8 @@ class ProductControllerTest extends TestCase
 
         $this->post("/update/{$product->id}", [
             'work_name' => $product->work_name,
-            'genre_fetched_english' => 'FETCHED_ONLY_NEW_FETCHED_EN',
+            'genre_fetched' => 'FETCHED_ONLY_NEW_FETCHED_EN',
+            'genre_fetched_language' => Genre::LANGUAGE_ENGLISH,
             'genre_custom' => 'FETCHED_ONLY_MALICIOUS_CUSTOM',
         ])->assertSessionHasNoErrors();
 
@@ -1569,7 +1720,8 @@ class ProductControllerTest extends TestCase
 
         $this->post("/update/{$product->id}", [
             'work_name' => $product->work_name,
-            'genre_fetched_english' => 'HIDDEN_TAGS_MALICIOUS_FETCHED',
+            'genre_fetched' => 'HIDDEN_TAGS_MALICIOUS_FETCHED',
+            'genre_fetched_language' => Genre::LANGUAGE_ENGLISH,
             'genre_custom' => 'HIDDEN_TAGS_MALICIOUS_CUSTOM',
         ])->assertSessionHasNoErrors();
 
@@ -1610,7 +1762,7 @@ class ProductControllerTest extends TestCase
     public function test_store_extracts_rj_from_url_before_validation(): void
     {
         $existing = Product::factory()->create();
-        $urlInput = 'https://www.dlsite.com/maniax/work/=/product_id/' . strtolower($existing->id) . '.html';
+        $urlInput = 'https://www.dlsite.com/maniax/work/=/product_id/'.strtolower($existing->id).'.html';
 
         $response = $this->from('/create')->post('/store', [
             'id' => $urlInput,
@@ -1979,7 +2131,7 @@ class ProductControllerTest extends TestCase
         ]);
 
         $response->assertSessionHasNoErrors();
-        $response->assertRedirect('/#' . $workId);
+        $response->assertRedirect('/#'.$workId);
 
         Storage::disk('public')->assertExists("Works/{$workId}/cover.png");
         Storage::disk('public')->assertExists("Works/{$workId}/sample_1.jpg");
@@ -2007,7 +2159,7 @@ class ProductControllerTest extends TestCase
 
         $this->get('/')
             ->assertOk()
-            ->assertSee('src="storage/Works/' . $workId . '/cover.png"', false)
+            ->assertSee('src="storage/Works/'.$workId.'/cover.png"', false)
             ->assertDontSee('images/No Image.png', false);
     }
 
@@ -2176,8 +2328,12 @@ class ProductControllerTest extends TestCase
             ->assertViewIs('WorkFormCompleted')
             ->assertViewHas('redirectUrl', "/?progress=Listening#{$workId}")
             ->assertSee('css/work-form-completed.css', false)
+            ->assertSee('<html lang="en">', false)
+            ->assertSee('<title>Work saved</title>', false)
             ->assertSee('class="work-form-completed-page"', false)
             ->assertSee('Work change completed')
+            ->assertSee('Your change was saved successfully. You can continue if this window does not close automatically.')
+            ->assertSee('>Continue</a>', false)
             ->assertSee('target="_top"', false)
             ->assertSee('work-form-completed', false);
         $this->assertDatabaseHas('products', ['id' => $workId]);
@@ -3158,12 +3314,12 @@ class ProductControllerTest extends TestCase
             'page' => '2',
         ];
 
-        $this->get('/?' . http_build_query($returnQuery))
+        $this->get('/?'.http_build_query($returnQuery))
             ->assertOk()
             ->assertSee($product->work_name)
             ->assertDontSee('WORKFLOW_LISTENING_SCORE_ONE');
 
-        $this->get("/edit/{$product->id}?" . http_build_query([
+        $this->get("/edit/{$product->id}?".http_build_query([
             'return_query' => $returnQuery,
             'return_fragment' => $product->id,
         ]))
@@ -3539,7 +3695,7 @@ class ProductControllerTest extends TestCase
 
     private function uniqueToken(string $prefix): string
     {
-        return $prefix . '_' . random_int(100000, 999999);
+        return $prefix.'_'.random_int(100000, 999999);
     }
 
     private function expectedPythonExecutable(): string
@@ -3562,6 +3718,20 @@ class ProductControllerTest extends TestCase
         $genre->setAttribute('type', $type);
 
         return $genre;
+    }
+
+    public static function fetchedTagRenderingProvider(): iterable
+    {
+        yield 'English readonly' => [UiLanguage::English, false, 'Fetched EN Tags', Genre::LANGUAGE_ENGLISH];
+        yield 'Japanese readonly' => [UiLanguage::Japanese, false, '取得済みJPタグ', Genre::LANGUAGE_JAPANESE];
+        yield 'English editable' => [UiLanguage::English, true, 'Fetched EN Tags', Genre::LANGUAGE_ENGLISH];
+        yield 'Japanese editable' => [UiLanguage::Japanese, true, '取得済みJPタグ', Genre::LANGUAGE_JAPANESE];
+    }
+
+    public static function invalidFetchedLanguageProvider(): iterable
+    {
+        yield 'missing' => [null];
+        yield 'unsupported' => ['unsupported'];
     }
 
     private function attachGenres(Product $product, array $genres): void
@@ -3593,7 +3763,7 @@ class ProductControllerTest extends TestCase
                 $row['editable'] = $customEditable;
             }
 
-            if ($row['field'] === ProductField::FetchedEnglishTags->value) {
+            if ($row['field'] === ProductField::FetchedTags->value) {
                 $row['visible'] = $visible;
                 $row['editable'] = $fetchedEditable;
             }
@@ -3601,6 +3771,29 @@ class ProductControllerTest extends TestCase
         unset($row);
 
         Option::setEditFieldLayout($layout);
+    }
+
+    /**
+     * @return array{Product, Genre, Genre}
+     */
+    private function createBilingualFetchedProduct(string $prefix): array
+    {
+        $product = Product::factory()->create([
+            'work_name' => "{$prefix}_WORK",
+        ]);
+        $englishGenre = Genre::query()->create([
+            'title' => "{$prefix}_OLD_EN",
+        ]);
+        $japaneseGenre = Genre::query()->create([
+            'title' => "{$prefix}_OLD_JP",
+        ]);
+
+        app(ProductGenreSync::class)->sync($product, [
+            Genre::LANGUAGE_ENGLISH => [$englishGenre->getKey()],
+            Genre::LANGUAGE_JAPANESE => [$japaneseGenre->getKey()],
+        ], []);
+
+        return [$product, $englishGenre, $japaneseGenre];
     }
 
     private function customStorePayload(string $workId, array $overrides = []): array

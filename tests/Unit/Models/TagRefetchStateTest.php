@@ -2,10 +2,12 @@
 
 namespace Tests\Unit\Models;
 
+use App\Enums\UiLanguage;
 use App\Models\TagRefetchRun;
 use App\Models\TagRefetchWorkResult;
 use Illuminate\Database\Eloquent\Collection as EloquentCollection;
-use PHPUnit\Framework\TestCase;
+use Illuminate\Support\Facades\App;
+use Tests\TestCase;
 
 class TagRefetchStateTest extends TestCase
 {
@@ -62,6 +64,24 @@ class TagRefetchStateTest extends TestCase
         $this->assertTrue($skipped->isSkipped());
         $this->assertFalse($skipped->isPending());
         $this->assertFalse($skipped->isFetched());
+    }
+
+    public function test_apply_unavailable_messages_follow_the_active_locale(): void
+    {
+        App::setLocale(UiLanguage::Japanese->value);
+
+        $cancelling = new TagRefetchRun;
+        $cancelling->setRawAttributes([
+            'status' => TagRefetchRun::STATUS_CANCELLING,
+            'cancelled_at' => '2026-05-26 00:00:00',
+        ], true);
+        $running = new TagRefetchRun(['status' => TagRefetchRun::STATUS_RUNNING]);
+
+        $this->assertSame('この再取得処理はまだキャンセル中です。', $cancelling->applyUnavailableMessage());
+        $this->assertSame('この再取得処理はまだ適用できません。', $running->applyUnavailableMessage());
+
+        $this->assertSame(TagRefetchRun::STATUS_CANCELLING, $cancelling->status);
+        $this->assertSame(TagRefetchRun::STATUS_RUNNING, $running->status);
     }
 
     public function test_work_result_change_helpers_describe_tag_buckets(): void

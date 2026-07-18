@@ -88,11 +88,11 @@ class TagLibraryDisplaySettings extends Component
     public function colorSurfaceLabels(): array
     {
         return [
-            Option::TAG_COLOR_SURFACE_INDEX => 'Index',
-            Option::TAG_COLOR_SURFACE_TAG_LIBRARY => 'Tag Library',
-            Option::TAG_COLOR_SURFACE_AUTOCOMPLETE => 'Autocomplete suggestions',
-            Option::TAG_COLOR_SURFACE_EDIT_READONLY => 'Edit readonly tags',
-            Option::TAG_COLOR_SURFACE_REFETCH => 'Refetch review tags',
+            Option::TAG_COLOR_SURFACE_INDEX => __('Index'),
+            Option::TAG_COLOR_SURFACE_TAG_LIBRARY => __('Tag Library'),
+            Option::TAG_COLOR_SURFACE_AUTOCOMPLETE => __('Autocomplete suggestions'),
+            Option::TAG_COLOR_SURFACE_EDIT_READONLY => __('Edit readonly tags'),
+            Option::TAG_COLOR_SURFACE_REFETCH => __('Refetch review tags'),
         ];
     }
 }

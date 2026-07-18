@@ -9,23 +9,24 @@
     <button type="button" class="advanced-options-button {{ $filterActive ? 'is-active' : '' }}" data-index-filter-open
         aria-controls="advanced-options-modal" x-bind:aria-expanded="filtersOpen.toString()" x-on:click="openFilters()">
         <i class="fa-solid fa-sliders"></i>
-        Filter
+        {{ __('Filter') }}
     </button>
 
     <div id="advanced-options-modal" class="advanced-options-modal" data-index-filter-modal x-cloak x-show="filtersOpen"
         x-bind:aria-hidden="(!filtersOpen).toString()" x-on:keydown.escape.window="closeFilters()">
-        <button type="button" class="advanced-options-backdrop" data-index-filter-close aria-label="Close filters"
-            x-on:click="closeFilters()"></button>
+        <button type="button" class="advanced-options-backdrop" data-index-filter-close
+            aria-label="{{ __('Close filters') }}" x-on:click="closeFilters()"></button>
         <div class="advanced-options-panel" data-index-filter-panel role="dialog" aria-modal="true"
             aria-labelledby="advanced-options-title">
-            <button type="button" class="advanced-options-close" data-index-filter-close aria-label="Close filters"
-                x-on:click="closeFilters()">
+            <button type="button" class="advanced-options-close" data-index-filter-close
+                aria-label="{{ __('Close filters') }}" x-on:click="closeFilters()">
                 <i class="fa-solid fa-xmark"></i>
             </button>
 
             <form wire:submit.prevent="applyFilters" x-on:submit="closeFilters()">
                 <h2 id="advanced-options-title" class="advanced-options-header">
-                    Filter <span class="description">Apply one or more filters to the current list.</span>
+                    {{ __('Filter') }} <span
+                        class="description">{{ __('Apply one or more filters to the current list.') }}</span>
                 </h2>
 
                 @foreach ($filterFields as $field)
@@ -34,14 +35,14 @@
 
                 @if ($hasCurrentTagFilter)
                     <div class="filter-widget current-tag">
-                        <span class="widget-header">Tag</span>
-                        <span class="filter-static-value">Current tag filter stays applied.</span>
+                        <span class="widget-header">{{ __('Tag') }}</span>
+                        <span class="filter-static-value">{{ __('Current tag filter stays applied.') }}</span>
                     </div>
                 @endif
 
                 <h2 class="advanced-options-header sort-heading">
-                    Sort <span class="description">Choose one or two columns to be sorted in ascending or descending
-                        order.</span>
+                    {{ __('Sort') }} <span
+                        class="description">{{ __('Choose one or two columns to be sorted in ascending or descending order.') }}</span>
                 </h2>
 
                 <x-index.filter-select id="sort_first_field" name="sort_first_field" label="Primary"
@@ -63,8 +64,8 @@
 
                 <div class="advanced-options-actions">
                     <button type="button" class="btn-clear" wire:click="clearFilters"
-                        x-on:click="closeFilters()">Clear</button>
-                    <button type="submit" class="btn-apply">Apply</button>
+                        x-on:click="closeFilters()">{{ __('Clear') }}</button>
+                    <button type="submit" class="btn-apply">{{ __('Apply') }}</button>
                 </div>
             </form>
         </div>

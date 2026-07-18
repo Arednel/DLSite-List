@@ -4,6 +4,7 @@ namespace Tests\Feature;
 
 use App\Enums\AutocompleteOrder;
 use App\Enums\ProductField;
+use App\Enums\UiLanguage;
 use App\Livewire\AutocompleteSettings;
 use App\Livewire\AutoSeriesSettings;
 use App\Livewire\DlsiteLinkSettings;
@@ -14,8 +15,10 @@ use App\Livewire\ProductFieldLayoutSettings;
 use App\Livewire\ProductFormModalSettings;
 use App\Livewire\ProductFormThemeSettings;
 use App\Livewire\TagLibraryDisplaySettings;
+use App\Livewire\UiLanguageSettings;
 use App\Models\Option;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\App;
 use Illuminate\Support\Facades\DB;
 use Livewire\Livewire;
 use PHPUnit\Framework\Attributes\DataProvider;
@@ -27,18 +30,16 @@ class ProductMetadataSettingsTest extends TestCase
 
     public function test_auto_series_setting_hydrates_from_option_and_saves_changes(): void
     {
+        App::setLocale(UiLanguage::Japanese->value);
         Option::setAutoSeriesFromTitleName(false);
 
         Livewire::test(AutoSeriesSettings::class)
             ->assertSet('enabled', false)
-            ->assertSet('saved', false)
-            ->assertSet('notice', '')
             ->set('enabled', true)
             ->call('save')
             ->assertHasNoErrors()
             ->assertSet('enabled', true)
-            ->assertSet('saved', true)
-            ->assertSet('notice', 'Auto-series setting saved.');
+            ->assertSee('シリーズ自動設定を保存しました。');
 
         $this->assertTrue(Option::autoSeriesFromTitleName());
     }
@@ -405,7 +406,7 @@ class ProductMetadataSettingsTest extends TestCase
             ->set('editFields.voice_actor.editable', true)
             ->set('editFields.notes.visible', false)
             ->set('editFields.tags.visible', true)
-            ->set('editFields.fetched_english_tags.editable', true)
+            ->set('editFields.fetched_tags.editable', true)
             ->set('quickAddFields.notes.visible', false)
             ->set('customQuickAddFields.sample_images.visible', false)
             ->call('save')
@@ -418,7 +419,7 @@ class ProductMetadataSettingsTest extends TestCase
         $this->assertTrue($this->layoutRow(Option::editFieldLayout(), ProductField::VoiceActor)['visible']);
         $this->assertTrue($this->layoutRow(Option::editFieldLayout(), ProductField::VoiceActor)['editable']);
         $this->assertFalse($this->layoutRow(Option::editFieldLayout(), ProductField::Notes)['visible']);
-        $this->assertTrue(collect(Option::editFieldLayout())->firstWhere('field', 'fetched_english_tags')['editable']);
+        $this->assertTrue($this->layoutRow(Option::editFieldLayout(), ProductField::FetchedTags)['editable']);
         $this->assertFalse($this->layoutRow(Option::quickAddFieldLayout(), ProductField::Notes)['visible']);
         $this->assertFalse($this->layoutRow(Option::customQuickAddFieldLayout(), ProductField::SampleImages)['visible']);
     }
@@ -427,46 +428,55 @@ class ProductMetadataSettingsTest extends TestCase
     {
         $component = Livewire::test(ProductFieldLayoutSettings::class)
             ->assertSet('indexFields.tags.custom_visible', true)
-            ->assertSet('indexFields.tags.fetched_english_visible', true)
+            ->assertSet('indexFields.tags.fetched_visible', true)
             ->assertSet('editFields.tags.label', 'Custom Tags')
             ->assertSet('editFields.tags.visible', true)
             ->assertSet('editFields.tags.editable', true)
-            ->assertSet('editFields.fetched_english_tags.label', 'Fetched EN Tags')
-            ->assertSet('editFields.fetched_english_tags.visible', true)
-            ->assertSet('editFields.fetched_english_tags.editable', false)
+            ->assertSet('editFields.fetched_tags.label', 'Fetched EN Tags')
+            ->assertSet('editFields.fetched_tags.visible', true)
+            ->assertSet('editFields.fetched_tags.editable', false)
             ->assertSet('quickAddFields.tags.label', 'Custom Tags')
             ->assertSet('customQuickAddFields.tags.label', 'Custom Tags')
             ->set('indexFields.tags.custom_visible', false)
-            ->set('indexFields.tags.fetched_english_visible', true)
+            ->set('indexFields.tags.fetched_visible', true)
             ->set('editFields.tags.visible', false)
             ->set('editFields.tags.editable', true)
-            ->set('editFields.fetched_english_tags.visible', true)
-            ->set('editFields.fetched_english_tags.editable', true)
+            ->set('editFields.fetched_tags.visible', true)
+            ->set('editFields.fetched_tags.editable', true)
             ->call('save')
             ->assertHasNoErrors()
             ->assertSet('saved', true);
 
         $indexTags = $this->layoutRow(Option::indexFieldLayout(), ProductField::Tags);
         $editCustomTags = $this->layoutRow(Option::editFieldLayout(), ProductField::Tags);
-        $editFetchedEnglishTags = collect(Option::editFieldLayout())->firstWhere('field', 'fetched_english_tags');
+        $editFetchedTags = $this->layoutRow(Option::editFieldLayout(), ProductField::FetchedTags);
         $filterTags = $this->layoutRow(Option::filterFieldLayout(), ProductField::Tags);
 
         $this->assertFalse($indexTags['custom_visible']);
-        $this->assertTrue($indexTags['fetched_english_visible']);
+        $this->assertTrue($indexTags['fetched_visible']);
         $this->assertTrue($indexTags['visible']);
         $this->assertFalse($editCustomTags['visible']);
         $this->assertFalse($editCustomTags['editable']);
-        $this->assertIsArray($editFetchedEnglishTags);
-        $this->assertTrue($editFetchedEnglishTags['visible']);
-        $this->assertTrue($editFetchedEnglishTags['editable']);
+        $this->assertTrue($editFetchedTags['visible']);
+        $this->assertTrue($editFetchedTags['editable']);
         $this->assertArrayNotHasKey('custom_visible', $filterTags);
-        $this->assertArrayNotHasKey('fetched_english_visible', $filterTags);
+        $this->assertArrayNotHasKey('fetched_visible', $filterTags);
 
         $filterStateTags = $component->get('filterFields')['tags'];
 
         $this->assertSame('Tags', $filterStateTags['label']);
         $this->assertArrayNotHasKey('custom_visible', $filterStateTags);
-        $this->assertArrayNotHasKey('fetched_english_visible', $filterStateTags);
+        $this->assertArrayNotHasKey('fetched_visible', $filterStateTags);
+    }
+
+    public function test_field_layout_component_uses_the_current_ui_language_for_fetched_tag_labels(): void
+    {
+        App::setLocale(UiLanguage::Japanese->value);
+
+        Livewire::test(ProductFieldLayoutSettings::class)
+            ->assertSet('editFields.fetched_tags.label', '取得済みJPタグ')
+            ->assertSee('取得済みJPタグ')
+            ->assertDontSee('Fetched EN Tags');
     }
 
     public function test_field_layout_component_saves_custom_order_for_each_layout_surface(): void
@@ -577,6 +587,8 @@ class ProductMetadataSettingsTest extends TestCase
     {
         Livewire::test(ProductFieldLayoutSettings::class)
             ->set('indexFields.score.visible', false)
+            ->set('indexFields.tags.fetched_visible', false)
+            ->set('editFields.fetched_tags.editable', true)
             ->call('save')
             ->assertSet('saved', true)
             ->call('askResetToDefault')
@@ -588,6 +600,8 @@ class ProductMetadataSettingsTest extends TestCase
             ->assertSet('notice', 'Field layouts reset to default.');
 
         $this->assertTrue($this->layoutRow(Option::indexFieldLayout(), ProductField::Score)['visible']);
+        $this->assertTrue($this->layoutRow(Option::indexFieldLayout(), ProductField::Tags)['fetched_visible']);
+        $this->assertFalse($this->layoutRow(Option::editFieldLayout(), ProductField::FetchedTags)['editable']);
         $this->assertSame(ProductField::Image->value, Option::indexFieldLayout()[0]['field']);
     }
 
@@ -628,7 +642,7 @@ class ProductMetadataSettingsTest extends TestCase
                 'editable' => true,
             ],
             [
-                'field' => 'fetched_english_tags',
+                'field' => ProductField::FetchedTags->value,
                 'visible' => true,
                 'editable' => true,
             ],
@@ -647,12 +661,13 @@ class ProductMetadataSettingsTest extends TestCase
         Option::setTagLibraryTagsExpandedByDefault(true);
         Option::setTagAutocompleteOrder(AutocompleteOrder::FirstWord);
         Option::setSeriesAutocompleteOrder(AutocompleteOrder::FirstWord);
+        Option::setUiLanguage(UiLanguage::Japanese);
         Option::query()->create([
             'key' => 'unrelated_option',
             'value' => 'keep-me',
         ]);
 
-        Livewire::test(OptionsResetDefaults::class)
+        Livewire::test(OptionsResetDefaults::class, ['activeTab' => 'general'])
             ->call('askResetToDefault')
             ->assertSet('confirmingResetToDefault', true)
             ->call('cancelResetToDefault')
@@ -661,13 +676,16 @@ class ProductMetadataSettingsTest extends TestCase
         $this->assertSame(250, Option::indexPerPage());
         $this->assertSame('72vw', Option::productIndexSettings()->tableWidthCss);
 
-        Livewire::test(OptionsResetDefaults::class)
+        Livewire::test(OptionsResetDefaults::class, ['activeTab' => 'general'])
             ->call('askResetToDefault')
             ->call('resetAll')
-            ->assertDispatched('options-defaults-reset')
-            ->assertSet('confirmingResetToDefault', false)
-            ->assertSet('saved', true)
-            ->assertSet('notice', 'All Options settings reset to defaults.');
+            ->assertRedirectToRoute('options.index', ['tab' => 'general']);
+
+        $this->assertSame('All Options settings reset to defaults.', session('options_reset_notice'));
+
+        $this->get(route('options.index', ['tab' => 'general']))
+            ->assertOk()
+            ->assertSee('All Options settings reset to defaults.');
 
         $this->assertSame(Option::DEFAULT_INDEX_PER_PAGE, Option::indexPerPage());
         $this->assertSame('1024px', Option::productIndexSettings()->tableWidthCss);
@@ -682,10 +700,11 @@ class ProductMetadataSettingsTest extends TestCase
         $this->assertFalse(Option::tagLibraryTagsExpandedByDefault());
         $this->assertSame(AutocompleteOrder::Usage, Option::tagAutocompleteOrder());
         $this->assertSame(AutocompleteOrder::Usage, Option::seriesAutocompleteOrder());
+        $this->assertSame(UiLanguage::English, Option::uiLanguage());
         $this->assertSame(ProductField::Image->value, Option::indexFieldLayout()[0]['field']);
         $this->assertTrue(Option::indexFieldLayout()[0]['visible']);
         $this->assertTrue($this->layoutRow(Option::indexFieldLayout(), ProductField::Title)['visibility_locked']);
-        $this->assertFalse(collect(Option::editFieldLayout())->firstWhere('field', 'fetched_english_tags')['editable']);
+        $this->assertFalse($this->layoutRow(Option::editFieldLayout(), ProductField::FetchedTags)['editable']);
         $this->assertTrue($this->layoutRow(Option::quickAddFieldLayout(), ProductField::RjCode)['visibility_locked']);
         $this->assertTrue($this->layoutRow(Option::quickAddFieldLayout(), ProductField::Notes)['visible']);
         $this->assertTrue($this->layoutRow(Option::customQuickAddFieldLayout(), ProductField::SampleImages)['visible']);
@@ -693,10 +712,27 @@ class ProductMetadataSettingsTest extends TestCase
         $this->assertSame(['unrelated_option'], Option::query()->pluck('key')->all());
     }
 
+    public function test_global_reset_redirects_back_to_the_active_field_layouts_tab(): void
+    {
+        Option::setIndexPerPage(25);
+
+        Livewire::test(OptionsResetDefaults::class, ['activeTab' => 'field-layouts'])
+            ->assertSet('activeTab', 'field-layouts')
+            ->call('askResetToDefault')
+            ->call('resetAll')
+            ->assertRedirectToRoute('options.index', ['tab' => 'field-layouts']);
+
+        $this->assertSame(Option::DEFAULT_INDEX_PER_PAGE, Option::indexPerPage());
+        $this->get(route('options.index', ['tab' => 'field-layouts']))
+            ->assertOk()
+            ->assertSee('All Options settings reset to defaults.');
+    }
+
     public function test_general_options_page_mounts_non_layout_settings_components(): void
     {
         $this->get('/options')
             ->assertOk()
+            ->assertSeeLivewire(UiLanguageSettings::class)
             ->assertSeeLivewire(IndexPaginationSettings::class)
             ->assertSeeLivewire(IndexTableWidthSettings::class)
             ->assertDontSeeLivewire(ProductFieldLayoutSettings::class)
@@ -713,6 +749,7 @@ class ProductMetadataSettingsTest extends TestCase
     {
         $this->get('/options?tab=field-layouts')
             ->assertOk()
+            ->assertDontSeeLivewire(UiLanguageSettings::class)
             ->assertDontSeeLivewire(IndexPaginationSettings::class)
             ->assertDontSeeLivewire(IndexTableWidthSettings::class)
             ->assertSeeLivewire(ProductFieldLayoutSettings::class)
@@ -753,6 +790,7 @@ class ProductMetadataSettingsTest extends TestCase
             ->assertSee('wire:sort:ignore', false)
             ->assertSee('wire:model.live="indexFields.image.visible"', false)
             ->assertSee('wire:model.live="indexFields.tags.custom_visible"', false)
+            ->assertSee('wire:model.live="indexFields.tags.fetched_visible"', false)
             ->assertSee('wire:model.live="editFields.title.editable"', false);
     }
 

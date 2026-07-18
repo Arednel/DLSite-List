@@ -13,11 +13,11 @@ enum ProductContributorRole: string
     public function label(): string
     {
         return match ($this) {
-            self::Circle => 'Circle',
-            self::Scenario => 'Scenario Author',
-            self::VoiceActor => 'Voice Actor',
-            self::Illustration => 'Illustration Author',
-            self::Author => 'Author',
+            self::Circle => __('Circle'),
+            self::Scenario => __('Scenario Author'),
+            self::VoiceActor => __('Voice Actor'),
+            self::Illustration => __('Illustration Author'),
+            self::Author => __('Author'),
         };
     }
 

@@ -1,8 +1,9 @@
 <div>
     <form wire:submit.prevent="save" class="option-form">
-        <x-options.switch wire:model.live="enabled"
-            help="When enabled, All Ages works open on DLSite Home; R15 and R18 use Maniax. When disabled, all works use Maniax.">
-            Use age-appropriate DLSite work links
+        <x-options.switch wire:model.live="enabled" :help="__(
+            'When enabled, All Ages works open on DLSite Home; R15 and R18 use Maniax. When disabled, all works use Maniax.',
+        )">
+            {{ __('Use age-appropriate DLSite work links') }}
         </x-options.switch>
 
         @error('enabled')
@@ -10,13 +11,14 @@
         @enderror
 
         <div class="option-actions option-actions--inline">
-            <button type="submit" class="tag tag--soft tag--lg is-clickable">Save DLSite link setting</button>
+            <button type="submit"
+                class="tag tag--soft tag--lg is-clickable">{{ __('Save DLSite link setting') }}</button>
             @if ($saved)
-                <span class="saved-notice">{{ $notice }}</span>
+                <span class="saved-notice">{{ __($notice) }}</span>
             @endif
             <button type="button" class="tag tag--soft tag--lg is-clickable option-reset-button"
                 wire:click="askResetToDefault">
-                Reset to default
+                {{ __('Reset to default') }}
             </button>
         </div>
 

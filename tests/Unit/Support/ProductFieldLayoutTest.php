@@ -3,11 +3,26 @@
 namespace Tests\Unit\Support;
 
 use App\Enums\ProductField;
+use App\Enums\UiLanguage;
 use App\Support\ProductFieldLayout;
-use PHPUnit\Framework\TestCase;
+use Illuminate\Support\Facades\App;
+use Tests\TestCase;
 
 class ProductFieldLayoutTest extends TestCase
 {
+    public function test_fetched_tag_field_uses_a_generic_key_and_the_current_ui_language_label(): void
+    {
+        $this->assertSame('fetched_tags', ProductField::FetchedTags->value);
+
+        App::setLocale(UiLanguage::English->value);
+
+        $this->assertSame('Fetched EN Tags', ProductField::FetchedTags->label());
+
+        App::setLocale(UiLanguage::Japanese->value);
+
+        $this->assertSame('取得済みJPタグ', ProductField::FetchedTags->label());
+    }
+
     public function test_product_field_exposes_surface_field_order(): void
     {
         $expectedOrders = [
@@ -38,7 +53,7 @@ class ProductFieldLayoutTest extends TestCase
                 ProductField::Score,
                 ProductField::Series,
                 ProductField::Title,
-                ProductField::FetchedEnglishTags,
+                ProductField::FetchedTags,
                 ProductField::Tags,
                 ProductField::Notes,
                 ProductField::StartDate,
@@ -203,7 +218,7 @@ class ProductFieldLayoutTest extends TestCase
             ProductField::Score->value,
             ProductField::Series->value,
             ProductField::Title->value,
-            ProductField::FetchedEnglishTags->value,
+            ProductField::FetchedTags->value,
             ProductField::Tags->value,
             ProductField::Notes->value,
             ProductField::StartDate->value,
@@ -226,7 +241,7 @@ class ProductFieldLayoutTest extends TestCase
             ProductField::Score->value,
             ProductField::Series->value,
             ProductField::Title->value,
-            ProductField::FetchedEnglishTags->value,
+            ProductField::FetchedTags->value,
             ProductField::Tags->value,
             ProductField::Notes->value,
             ProductField::StartDate->value,
@@ -287,12 +302,12 @@ class ProductFieldLayoutTest extends TestCase
     {
         $layout = ProductFieldLayout::normalize(null, ProductFieldLayout::SURFACE_EDIT);
         $tagsRow = collect($layout)->firstWhere('field', ProductField::Tags->value);
-        $fetchedEnglishTagsRow = collect($layout)->firstWhere('field', 'fetched_english_tags');
+        $fetchedTagsRow = collect($layout)->firstWhere('field', ProductField::FetchedTags->value);
 
         $this->assertTrue($tagsRow['visible']);
         $this->assertTrue($tagsRow['editable']);
-        $this->assertTrue($fetchedEnglishTagsRow['visible']);
-        $this->assertFalse($fetchedEnglishTagsRow['editable']);
+        $this->assertTrue($fetchedTagsRow['visible']);
+        $this->assertFalse($fetchedTagsRow['editable']);
         $this->assertFalse(ProductFieldLayout::fetchedTagsEditable($layout));
     }
 
@@ -521,7 +536,7 @@ class ProductFieldLayoutTest extends TestCase
             ],
             [
                 'field' => ProductField::Tags->value,
-                'label' => 'Tags',
+                'label' => 'Custom Tags',
                 'editable' => false,
                 'contributor_role' => null,
             ],

@@ -8,7 +8,7 @@ use App\Enums\ProductIndexTagMatch;
 use App\Enums\ProductPriority;
 use App\Enums\ProductProgress;
 use App\Support\ProductIndexFilters;
-use PHPUnit\Framework\TestCase;
+use Tests\TestCase;
 
 class ProductIndexFiltersTest extends TestCase
 {

@@ -800,6 +800,10 @@ body.options-page {
     margin-top: 0;
 }
 
+.options-page .options-section-icon {
+    margin-inline-end: 8px;
+}
+
 .options-page .field-layout-section h3 {
     display: flex;
     align-items: center;

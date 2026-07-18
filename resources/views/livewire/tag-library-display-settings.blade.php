@@ -1,19 +1,20 @@
 <div>
     <form wire:submit.prevent="save" class="option-form">
-        <x-options.switch wire:model.live="expandedByDefault"
-            help="When enabled, Tag Library opens with the All Tags list expanded instead of collapsed.">
-            Open Tag Library with all tags shown
+        <x-options.switch wire:model.live="expandedByDefault" :help="__('When enabled, Tag Library opens with the All Tags list expanded instead of collapsed.')">
+            {{ __('Open Tag Library with all tags shown') }}
         </x-options.switch>
 
-        <x-options.switch wire:model.live="indexGroupOrderingEnabled"
-            help="When enabled, Index tag chips use saved group order, saved tag order inside groups, then ungrouped tags alphabetically.">
-            Enable group ordering on Index
+        <x-options.switch wire:model.live="indexGroupOrderingEnabled" :help="__(
+            'When enabled, Index tag chips use saved group order, saved tag order inside groups, then ungrouped tags alphabetically.',
+        )">
+            {{ __('Enable group ordering on Index') }}
         </x-options.switch>
 
         <fieldset class="option-fieldset">
             <legend>
-                Tag color surfaces
-                <i class="fa-solid fa-circle-question" title="Choose where saved tag and tag group colors are shown."></i>
+                {{ __('Tag color surfaces') }}
+                <i class="fa-solid fa-circle-question"
+                    title="{{ __('Choose where saved tag and tag group colors are shown.') }}"></i>
             </legend>
 
             @foreach ($colorSurfaceLabels as $surface => $label)
@@ -24,13 +25,14 @@
         </fieldset>
 
         <div class="option-actions option-actions--inline">
-            <button type="submit" class="tag tag--soft tag--lg is-clickable">Save Tag Library settings</button>
+            <button type="submit"
+                class="tag tag--soft tag--lg is-clickable">{{ __('Save Tag Library settings') }}</button>
             @if ($saved)
-                <span class="saved-notice">{{ $notice }}</span>
+                <span class="saved-notice">{{ __($notice) }}</span>
             @endif
             <button type="button" class="tag tag--soft tag--lg is-clickable option-reset-button"
                 wire:click="askResetToDefault">
-                Reset to default
+                {{ __('Reset to default') }}
             </button>
         </div>
 

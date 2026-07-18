@@ -18,15 +18,15 @@
                         <span class="readonly-tag-separator">, </span>
                     @endunless
                 @empty
-                    <span class="readonly-tag-empty">{{ $empty }}</span>
+                    <span class="readonly-tag-empty">{{ __($empty) }}</span>
                 @endforelse
             </div>
         @else
-            <textarea class="form-textarea form-field-long" rows="3" cols="65" readonly>{{ collect($genres)->pluck('title')->implode(', ') ?: $empty }}</textarea>
+            <textarea class="form-textarea form-field-long" rows="3" cols="65" readonly>{{ collect($genres)->pluck('title')->implode(', ') ?: __($empty) }}</textarea>
         @endif
 
         @if ($help)
-            <div class="field-helper">{{ $help }}</div>
+            <div class="field-helper">{{ __($help) }}</div>
         @endif
     </td>
     <td class="form-table-cell form-table-cell--long-spacer" aria-hidden="true"></td>

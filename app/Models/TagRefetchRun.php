@@ -50,6 +50,17 @@ class TagRefetchRun extends Model
         return $this->status === self::STATUS_RUNNING;
     }
 
+    public function statusLabel(): string
+    {
+        return match ($this->status) {
+            self::STATUS_RUNNING => __('Running'),
+            self::STATUS_CANCELLING => __('Cancelling'),
+            self::STATUS_REVIEW => __('Review'),
+            self::STATUS_APPLIED => __('Applied'),
+            default => (string) $this->status,
+        };
+    }
+
     public function isReview(): bool
     {
         return $this->status === self::STATUS_REVIEW;
@@ -97,14 +108,14 @@ class TagRefetchRun extends Model
     public function applyUnavailableMessage(): string
     {
         if ($this->isCancelling()) {
-            return 'This refetch run is still cancelling.';
+            return __('This refetch run is still cancelling.');
         }
 
         if (! $this->isReview()) {
-            return 'This refetch run is not ready to apply.';
+            return __('This refetch run is not ready to apply.');
         }
 
-        return 'Only the newest refetch run can be applied.';
+        return __('Only the newest refetch run can be applied.');
     }
 
     /**

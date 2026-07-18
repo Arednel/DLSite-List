@@ -4,12 +4,15 @@ namespace App\Models;
 
 use App\Enums\AutocompleteOrder;
 use App\Enums\ProductIndexSortField;
+use App\Enums\UiLanguage;
 use App\Support\ProductFieldLayout;
 use App\Support\ProductIndexSettings;
 use Illuminate\Database\Eloquent\Model;
 
 class Option extends Model
 {
+    public const UI_LANGUAGE = 'ui_language';
+
     public const INDEX_PER_PAGE = 'index_per_page';
 
     public const INDEX_SEARCH_HIDDEN_DESCRIPTIONS_ENABLED = 'index_search_hidden_descriptions_enabled';
@@ -125,6 +128,7 @@ class Option extends Model
     ];
 
     private const RESETTABLE_OPTIONS = [
+        self::UI_LANGUAGE,
         self::INDEX_PER_PAGE,
         self::INDEX_SEARCH_HIDDEN_DESCRIPTIONS_ENABLED,
         self::TAG_AUTOCOMPLETE_ORDER,
@@ -150,6 +154,25 @@ class Option extends Model
         'key',
         'value',
     ];
+
+    public static function uiLanguage(): UiLanguage
+    {
+        return UiLanguage::tryFrom((string) self::valueFor(self::UI_LANGUAGE)) ?? UiLanguage::English;
+    }
+
+    public static function setUiLanguage(UiLanguage|string $language): void
+    {
+        $normalized = $language instanceof UiLanguage
+            ? $language
+            : (UiLanguage::tryFrom($language) ?? UiLanguage::English);
+
+        self::setValue(self::UI_LANGUAGE, $normalized->value);
+    }
+
+    public static function resetUiLanguageToDefault(): void
+    {
+        self::forget(self::UI_LANGUAGE);
+    }
 
     public static function indexPerPage(): int|string
     {
@@ -292,7 +315,10 @@ class Option extends Model
      */
     public static function productFormModalCompletionOptions(): array
     {
-        return self::PRODUCT_FORM_MODAL_COMPLETION_OPTIONS;
+        return array_map(
+            fn(string $label): string => (string) __($label),
+            self::PRODUCT_FORM_MODAL_COMPLETION_OPTIONS,
+        );
     }
 
     public static function resetProductFormModalSettingsToDefault(): void

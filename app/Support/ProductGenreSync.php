@@ -2,6 +2,7 @@
 
 namespace App\Support;
 
+use App\Enums\UiLanguage;
 use App\Models\Genre;
 use App\Models\Product;
 use Illuminate\Support\Facades\DB;
@@ -30,30 +31,36 @@ final class ProductGenreSync
      */
     public function syncCustom(Product $product, array $customGenreIds): bool
     {
-        return $this->syncEditableTagBuckets($product, null, $customGenreIds);
+        return $this->syncEditableTagBuckets(
+            $product,
+            UiLanguage::current()->fetchedTagLanguage(),
+            null,
+            $customGenreIds,
+        );
     }
 
     /**
-     * @param  list<int|string>|null  $englishFetchedGenreIds
+     * @param  list<int|string>|null  $fetchedGenreIds
      * @param  list<int|string>|null  $customGenreIds
      */
     public function syncEditableTagBuckets(
         Product $product,
-        ?array $englishFetchedGenreIds,
+        string $fetchedLanguage,
+        ?array $fetchedGenreIds,
         ?array $customGenreIds,
     ): bool {
         $fetchedGenreIdsByLanguage = $this->currentFetchedGenreIdsByLanguage($product);
-        $currentEnglishGenreIds = $this->normalizeGenreIds(
-            $fetchedGenreIdsByLanguage[Genre::LANGUAGE_ENGLISH] ?? []
+        $currentFetchedGenreIds = $this->normalizeGenreIds(
+            $fetchedGenreIdsByLanguage[$fetchedLanguage] ?? []
         );
         $currentCustomGenreIds = $this->currentCustomGenreIds($product);
 
-        if ($englishFetchedGenreIds !== null) {
-            $fetchedGenreIdsByLanguage[Genre::LANGUAGE_ENGLISH] = $this->normalizeGenreIds($englishFetchedGenreIds);
+        if ($fetchedGenreIds !== null) {
+            $fetchedGenreIdsByLanguage[$fetchedLanguage] = $this->normalizeGenreIds($fetchedGenreIds);
         }
 
-        $newEnglishGenreIds = $this->normalizeGenreIds(
-            $fetchedGenreIdsByLanguage[Genre::LANGUAGE_ENGLISH] ?? []
+        $newFetchedGenreIds = $this->normalizeGenreIds(
+            $fetchedGenreIdsByLanguage[$fetchedLanguage] ?? []
         );
         $effectiveCustomGenreIds = $this->customGenreIdsWithoutFetched(
             $customGenreIds ?? $currentCustomGenreIds,
@@ -62,7 +69,7 @@ final class ProductGenreSync
 
         $this->sync($product, $fetchedGenreIdsByLanguage, $effectiveCustomGenreIds);
 
-        return $currentEnglishGenreIds !== $newEnglishGenreIds
+        return $currentFetchedGenreIds !== $newFetchedGenreIds
             || $currentCustomGenreIds !== $effectiveCustomGenreIds;
     }
 

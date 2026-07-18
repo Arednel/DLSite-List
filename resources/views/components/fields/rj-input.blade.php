@@ -4,7 +4,7 @@
 ])
 
 <tr>
-    <td width="130" class="form-table-cell" valign="top">RJ Code or Link</td>
+    <td width="130" class="form-table-cell" valign="top">{{ __('RJ Code or Link') }}</td>
     <td class="form-table-cell">
         <strong>
             <input id="id" name="id" class="form-control" size="65" required
@@ -15,7 +15,7 @@
         @endif
         @if ($showDlsiteFetchStatus)
             <div class="dlsite-fetch-status" data-dlsite-fetch-status role="status" aria-live="polite" hidden>
-                Work is being fetched…
+                {{ __('Work is being fetched…') }}
             </div>
         @endif
     </td>

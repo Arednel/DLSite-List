@@ -8,9 +8,9 @@ use App\Enums\ProductIndexSortField;
 use App\Enums\ProductIndexTagMatch;
 use App\Models\GenreGroup;
 use App\Models\Option;
+use App\Support\ProductFieldLayout;
 use App\Support\ProductIndexFilters;
 use App\Support\ProductIndexResults;
-use App\Support\ProductFieldLayout;
 use App\Support\TagColor;
 use Illuminate\Database\Eloquent\Collection as EloquentCollection;
 use Illuminate\Pagination\LengthAwarePaginator;
@@ -140,8 +140,8 @@ class ProductIndex extends Component
 
         $visibleProductIds = $visibleProducts->modelKeys();
 
-        $visibleTagBuckets = ProductFieldLayout::indexTagBucketVisibility($settings->indexFieldLayout);
-        $tagsColumnVisible = $visibleTagBuckets['custom'] || $visibleTagBuckets['fetched_english'];
+        $visibleTagBuckets = ProductFieldLayout::visibleIndexTagBuckets($settings->indexFieldLayout);
+        $tagsColumnVisible = $visibleTagBuckets['custom'] || $visibleTagBuckets['fetched'];
         $indexTagColorsEnabled = $tagsColumnVisible
             && $visibleProductIds !== []
             && ($settings->tagColorSurfaces[Option::TAG_COLOR_SURFACE_INDEX] ?? false)
@@ -182,6 +182,7 @@ class ProductIndex extends Component
             'filterActive' => $filterQuery !== [],
             'hasCurrentTagFilter' => $filters->genre !== '',
             'progressHeading' => $filters->progressHeading(),
+            'activeProgress' => $filters->progress?->value,
             'allProgressQuery' => $filters->toQueryWithout(['progress', 'genre']),
             'isUnlimited' => $isUnlimited,
             'totalProducts' => $products instanceof LengthAwarePaginator ? $products->total() : $products->count(),

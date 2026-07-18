@@ -1,6 +1,6 @@
 <!DOCTYPE html>
 
-<html lang="en">
+<html lang="{{ app()->getLocale() }}">
 
 <head>
     <title>DLSite List</title>
@@ -33,7 +33,8 @@
     <script
         src="{{ asset('scripts/index-advanced-filters.js') }}?v={{ filemtime(public_path('scripts/index-advanced-filters.js')) }}"
         defer></script>
-    <script src="{{ asset('scripts/autocomplete-text.js') }}?v={{ filemtime(public_path('scripts/autocomplete-text.js')) }}"
+    <script
+        src="{{ asset('scripts/autocomplete-text.js') }}?v={{ filemtime(public_path('scripts/autocomplete-text.js')) }}"
         defer></script>
     @livewireScripts
 </body>

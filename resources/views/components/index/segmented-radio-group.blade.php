@@ -1,15 +1,9 @@
-@props([
-    'name',
-    'options' => [],
-    'wrapperClass' => 'tag-match-toggle',
-    'optionClass' => 'tag-match-option',
-])
+@props(['name', 'options'])
 
-<div class="{{ $wrapperClass }}">
+<div class="tag-match-toggle">
     @foreach ($options as $optionValue => $label)
-        <label class="{{ $optionClass }}">
-            <input type="radio" name="{{ $name }}" value="{{ $optionValue }}"
-                {{ $attributes }}>
+        <label class="tag-match-option">
+            <input type="radio" name="{{ $name }}" value="{{ $optionValue }}" {{ $attributes }}>
             <span>{{ $label }}</span>
         </label>
     @endforeach

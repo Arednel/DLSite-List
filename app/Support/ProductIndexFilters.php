@@ -186,7 +186,7 @@ final readonly class ProductIndexFilters
 
     public function progressHeading(): string
     {
-        return $this->progress?->value ?? 'All ASMR';
+        return $this->progress?->label() ?? __('All ASMR');
     }
 
     public function hasActiveFilters(): bool

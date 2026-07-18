@@ -8,9 +8,9 @@
     @endforeach
 
     <div>
-        <label class="field-label" for="work-search">Select works</label>
-        <input id="work-search" class="option-control" type="search" placeholder="Search by RJ ID or title..."
-            wire:model.live.debounce.250ms="search">
+        <label class="field-label" for="work-search">{{ __('Select works') }}</label>
+        <input id="work-search" class="option-control" type="search"
+            placeholder="{{ __('Search by RJ ID or title...') }}" wire:model.live.debounce.250ms="search">
     </div>
 
     <div class="work-checklist">
@@ -27,7 +27,7 @@
             </label>
         @empty
             <p class="empty-state">
-                {{ trim($search) === '' ? 'No works available for tag refetch.' : 'No works match this search.' }}
+                {{ trim($search) === '' ? __('No works available for tag refetch.') : __('No works match this search.') }}
             </p>
         @endforelse
     </div>
@@ -35,7 +35,7 @@
     @if ($hasAnyProducts)
         <div class="option-actions">
             <button type="submit" class="tag tag--gradient tag--lg is-clickable">
-                Refetch selected works
+                {{ __('Refetch selected works') }}
             </button>
         </div>
     @endif

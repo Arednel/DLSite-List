@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use App\Enums\UiLanguage;
 use App\Livewire\TagLibraryManager;
 use App\Models\Genre;
 use App\Models\GenreGroup;
@@ -9,6 +10,7 @@ use App\Models\Option;
 use App\Models\Product;
 use App\Support\ProductGenreSync;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\App;
 use Illuminate\Support\Facades\DB;
 use Livewire\Livewire;
 use Tests\TestCase;
@@ -40,9 +42,72 @@ class TagLibraryManagerTest extends TestCase
             ->assertSee('tag-library-tag-count">2</span>', false)
             ->assertSee('tag-library-tag-count tag-library-tag-count--empty">0</span>', false)
             ->assertDontSee('Library Japanese Tag')
-            ->assertSee('genre=' . $englishGenre->getKey(), false)
-            ->assertSee('genre=' . $customGenre->getKey(), false)
-            ->assertSee('genre=' . $emptyGenre->getKey(), false);
+            ->assertSee('genre='.$englishGenre->getKey(), false)
+            ->assertSee('genre='.$customGenre->getKey(), false)
+            ->assertSee('genre='.$emptyGenre->getKey(), false);
+    }
+
+    public function test_lists_groups_counts_links_and_usage_use_the_current_fetched_language(): void
+    {
+        $group = GenreGroup::query()->create([
+            'title' => 'Locale Library Group',
+            'description' => null,
+            'order' => 1,
+        ]);
+        $wrongLocaleOnlyGroup = GenreGroup::query()->create([
+            'title' => 'Locale Library Wrong Only Group',
+            'description' => null,
+            'order' => 2,
+        ]);
+        $customGenre = Genre::resolveByTitle('Locale Library Custom Tag');
+        $englishGenre = Genre::resolveByTitle('Locale Library English Tag');
+        $japaneseGenre = Genre::resolveByTitle('Locale Library Japanese Tag');
+        $sharedGenre = Genre::resolveByTitle('Locale Library Shared Tag');
+        $emptyGenre = Genre::resolveByTitle('Locale Library Empty Tag');
+
+        foreach ([$customGenre, $englishGenre, $japaneseGenre, $sharedGenre, $emptyGenre] as $order => $genre) {
+            $this->attachTagToGroup($group, $genre, $order + 1);
+        }
+        $this->attachTagToGroup($wrongLocaleOnlyGroup, $japaneseGenre, 1);
+
+        $customProduct = Product::factory()->create();
+        $japaneseProduct = Product::factory()->create();
+        $sharedProduct = Product::factory()->create();
+
+        app(ProductGenreSync::class)->syncCustom($customProduct, [$customGenre->getKey()]);
+        foreach (range(1, 2) as $_) {
+            app(ProductGenreSync::class)->sync(Product::factory()->create(), [
+                Genre::LANGUAGE_ENGLISH => [$englishGenre->getKey()],
+            ], []);
+        }
+        app(ProductGenreSync::class)->sync($japaneseProduct, [
+            Genre::LANGUAGE_JAPANESE => [$japaneseGenre->getKey()],
+        ], []);
+        app(ProductGenreSync::class)->sync($sharedProduct, [
+            Genre::LANGUAGE_ENGLISH => [$sharedGenre->getKey()],
+            Genre::LANGUAGE_JAPANESE => [$sharedGenre->getKey()],
+        ], []);
+
+        $this->assertTagLibraryUsesFetchedLanguage(
+            UiLanguage::English,
+            $group,
+            $customGenre,
+            $englishGenre,
+            $japaneseGenre,
+            $sharedGenre,
+            $emptyGenre,
+            2,
+        );
+        $this->assertTagLibraryUsesFetchedLanguage(
+            UiLanguage::Japanese,
+            $group,
+            $customGenre,
+            $japaneseGenre,
+            $englishGenre,
+            $sharedGenre,
+            $emptyGenre,
+            1,
+        );
     }
 
     public function test_all_tags_starts_collapsed_and_search_opens_matching_results(): void
@@ -136,7 +201,7 @@ class TagLibraryManagerTest extends TestCase
             ->call('toggleAllTags')
             ->call('askDeleteTag', $emptyGenre->getKey())
             ->assertSet('confirmingDeleteTagId', $emptyGenre->getKey())
-            ->assertSee('Delete empty tag "Delete Cancel Empty Tag"?', false)
+            ->assertSee('Delete empty tag "Delete Cancel Empty Tag"?')
             ->call('cancelDeleteTag')
             ->assertSet('confirmingDeleteTagId', null)
             ->assertSee('Delete Cancel Empty Tag');
@@ -300,7 +365,7 @@ class TagLibraryManagerTest extends TestCase
             ->set("groupTextColors.{$group->getKey()}", '#445566')
             ->call('askDeleteGroup', $group->getKey())
             ->assertSet('confirmingDeleteGroupId', $group->getKey())
-            ->assertSee('Delete group "Delete Group"?', false)
+            ->assertSee('Delete group "Delete Group"?')
             ->call('deleteGroup')
             ->assertSee('Tag group deleted.');
 
@@ -429,9 +494,9 @@ class TagLibraryManagerTest extends TestCase
         $html = Livewire::test(TagLibraryManager::class)->html();
 
         $this->assertStringContainsString('class="tag-library-check tag-library-switch"', $html);
-        $this->assertStringContainsString('wire:model.live="groupHidden.' . $group->getKey() . '"', $html);
+        $this->assertStringContainsString('wire:model.live="groupHidden.'.$group->getKey().'"', $html);
         $this->assertStringContainsString(
-            'wire:change="saveGroupHidden(' . $group->getKey() . ')" role="switch"',
+            'wire:change="saveGroupHidden('.$group->getKey().')" role="switch"',
             $html,
         );
         $this->assertStringContainsString('class="tag-library-switch-track"', $html);
@@ -447,11 +512,11 @@ class TagLibraryManagerTest extends TestCase
         Livewire::test(TagLibraryManager::class)
             ->call('toggleAllTags')
             ->assertSet('tagEditMode', false)
-            ->assertSee('genre=' . $genre->getKey(), false)
-            ->assertDontSee('wire:click="openTagSettings(' . $genre->getKey() . ')"', false)
+            ->assertSee('genre='.$genre->getKey(), false)
+            ->assertDontSee('wire:click="openTagSettings('.$genre->getKey().')"', false)
             ->set('tagEditMode', true)
-            ->assertSee('wire:click="openTagSettings(' . $genre->getKey() . ')"', false)
-            ->assertDontSee('href="' . route('index', ['age_category' => '', 'progress' => '', 'genre' => $genre->getKey()]) . '"', false);
+            ->assertSee('wire:click="openTagSettings('.$genre->getKey().')"', false)
+            ->assertDontSee('href="'.route('index', ['age_category' => '', 'progress' => '', 'genre' => $genre->getKey()]).'"', false);
     }
 
     public function test_tag_edit_mode_toggle_renders_as_accessible_switch(): void
@@ -512,9 +577,9 @@ class TagLibraryManagerTest extends TestCase
             'class="tag-library-switch-input"',
             $html,
         );
-        $this->assertStringContainsString('wire:model.live="tagHidden.' . $genre->getKey() . '"', $html);
+        $this->assertStringContainsString('wire:model.live="tagHidden.'.$genre->getKey().'"', $html);
         $this->assertStringContainsString(
-            'wire:change="saveTagHidden(' . $genre->getKey() . ')" role="switch"',
+            'wire:change="saveTagHidden('.$genre->getKey().')" role="switch"',
             $html,
         );
         $this->assertStringContainsString(
@@ -556,23 +621,23 @@ class TagLibraryManagerTest extends TestCase
             ->assertSee('Search tag groups')
             ->assertSee('class="tag-library-modal-group-plaque"', false)
             ->assertSee('Selected Plaque Group')
-            ->assertSee('wire:click="removeEditingTagGroup(' . $selectedGroup->getKey() . ')"', false)
-            ->assertDontSee('wire:click="addEditingTagGroup(' . $matchingGroup->getKey() . ')"', false)
-            ->assertDontSee('wire:click="addEditingTagGroup(' . $otherGroup->getKey() . ')"', false)
+            ->assertSee('wire:click="removeEditingTagGroup('.$selectedGroup->getKey().')"', false)
+            ->assertDontSee('wire:click="addEditingTagGroup('.$matchingGroup->getKey().')"', false)
+            ->assertDontSee('wire:click="addEditingTagGroup('.$otherGroup->getKey().')"', false)
             ->set('editingTagGroupSearch', 'searchable')
             ->assertSee('class="tag-library-modal-group-dropdown"', false)
-            ->assertSee('wire:click="addEditingTagGroup(' . $matchingGroup->getKey() . ')"', false)
-            ->assertDontSee('wire:click="addEditingTagGroup(' . $otherGroup->getKey() . ')"', false)
+            ->assertSee('wire:click="addEditingTagGroup('.$matchingGroup->getKey().')"', false)
+            ->assertDontSee('wire:click="addEditingTagGroup('.$otherGroup->getKey().')"', false)
             ->call('addEditingTagGroup', $matchingGroup->getKey())
             ->assertSet('editingTagGroupIds', [$selectedGroup->getKey(), $matchingGroup->getKey()])
             ->assertSet('editingTagGroupSearch', '')
             ->assertSee('Searchable Plaque Group')
-            ->assertSee('wire:click="removeEditingTagGroup(' . $matchingGroup->getKey() . ')"', false)
+            ->assertSee('wire:click="removeEditingTagGroup('.$matchingGroup->getKey().')"', false)
             ->call('addEditingTagGroup', $matchingGroup->getKey())
             ->assertSet('editingTagGroupIds', [$selectedGroup->getKey(), $matchingGroup->getKey()])
             ->call('removeEditingTagGroup', $selectedGroup->getKey())
             ->assertSet('editingTagGroupIds', [$matchingGroup->getKey()])
-            ->assertDontSee('wire:click="removeEditingTagGroup(' . $selectedGroup->getKey() . ')"', false);
+            ->assertDontSee('wire:click="removeEditingTagGroup('.$selectedGroup->getKey().')"', false);
     }
 
     public function test_tag_settings_group_search_empty_states_render_below_search(): void
@@ -590,7 +655,7 @@ class TagLibraryManagerTest extends TestCase
 
         $this->assertStringContainsString('Search tag groups', $blankHtml);
         $this->assertStringContainsString('No groups assigned.', $blankHtml);
-        $this->assertStringNotContainsString('wire:click="addEditingTagGroup(' . $matchingGroup->getKey() . ')"', $blankHtml);
+        $this->assertStringNotContainsString('wire:click="addEditingTagGroup('.$matchingGroup->getKey().')"', $blankHtml);
         $this->assertLessThan(
             strpos($blankHtml, 'No groups assigned.'),
             strpos($blankHtml, 'Search tag groups'),
@@ -887,7 +952,8 @@ class TagLibraryManagerTest extends TestCase
         Livewire::test(TagLibraryManager::class)
             ->call('toggleAllTags')
             ->assertSee('aria-label="Hidden tag"', false)
-            ->assertSee('class="tag-library-tag-status" aria-label="Hidden tag" title="Hidden tag"', false)
+            ->assertSee('class="tag-library-tag-status"', false)
+            ->assertSee('title="Hidden tag"', false)
             ->assertDontSee('aria-label="Ungrouped tag"', false)
             ->assertDontSee('aria-label="Hidden by group"', false)
             ->assertDontSee('>Ungrouped</span>', false)
@@ -910,11 +976,13 @@ class TagLibraryManagerTest extends TestCase
             $html,
         );
         $this->assertStringContainsString(
-            '<span class="tag-library-tag-status" aria-label="Hidden tag" title="Hidden tag">',
+            '<span class="tag-library-tag-status"',
             $html,
         );
+        $this->assertStringContainsString('aria-label="Hidden tag"', $html);
+        $this->assertStringContainsString('title="Hidden tag"', $html);
         $hiddenTitlePosition = strpos($html, '<span class="tag-library-tag-title">Inline Hidden Tag</span>');
-        $hiddenStatusPosition = strpos($html, '<span class="tag-library-tag-status" aria-label="Hidden tag" title="Hidden tag">');
+        $hiddenStatusPosition = strpos($html, '<span class="tag-library-tag-status"');
         $hiddenCountPosition = strpos($html, '<span class="tag-library-tag-count tag-library-tag-count--empty">0</span>', $hiddenStatusPosition);
 
         $this->assertIsInt($hiddenTitlePosition);
@@ -955,7 +1023,7 @@ class TagLibraryManagerTest extends TestCase
             ->html();
 
         $tagTitlePosition = strpos($html, '<span class="tag-library-tag-title">Mixed Group Hidden Indicator Tag</span>');
-        $tagStatusPosition = strpos($html, '<span class="tag-library-tag-status" aria-label="Hidden tag" title="Hidden tag">', $tagTitlePosition);
+        $tagStatusPosition = strpos($html, '<span class="tag-library-tag-status"', $tagTitlePosition);
         $tagCountPosition = strpos($html, '<span class="tag-library-tag-count tag-library-tag-count--empty">0</span>', $tagStatusPosition);
 
         $this->assertIsInt($tagTitlePosition);
@@ -974,7 +1042,7 @@ class TagLibraryManagerTest extends TestCase
             ->assertSee('class="tag-library-tag-shell tag-library-tag-shell--deletable"', false)
             ->assertSee('class="tag-library-delete-button"', false)
             ->assertDontSee('tag-library-delete-button--attached', false)
-            ->assertSee('wire:click="askDeleteTag(' . $empty->getKey() . ')"', false);
+            ->assertSee('wire:click="askDeleteTag('.$empty->getKey().')"', false);
     }
 
     public function test_all_tags_filters_visibility_group_status_specific_group_and_usage(): void
@@ -1013,7 +1081,7 @@ class TagLibraryManagerTest extends TestCase
         $this->attachTagToGroup($visibleGroup, $used, 3);
         app(ProductGenreSync::class)->syncCustom($product, [$used->getKey()]);
 
-        $component = fn() => Livewire::test(TagLibraryManager::class)->call('toggleAllTags');
+        $component = fn () => Livewire::test(TagLibraryManager::class)->call('toggleAllTags');
 
         $component()
             ->set('visibilityFilter', 'visible')
@@ -1094,6 +1162,57 @@ class TagLibraryManagerTest extends TestCase
             ]);
     }
 
+    private function assertTagLibraryUsesFetchedLanguage(
+        UiLanguage $language,
+        GenreGroup $group,
+        Genre $customGenre,
+        Genre $currentGenre,
+        Genre $otherGenre,
+        Genre $sharedGenre,
+        Genre $emptyGenre,
+        int $currentCount,
+    ): void {
+        App::setLocale($language->value);
+
+        $visibleGenres = [$customGenre, $currentGenre, $sharedGenre, $emptyGenre];
+        $groups = Livewire::test(TagLibraryManager::class)
+            ->assertSee($group->title)
+            ->assertDontSee($otherGenre->title);
+
+        foreach ($visibleGenres as $genre) {
+            $groups->assertSee($genre->title);
+        }
+
+        $sharedGroupRowKey = 'wire:key="tag-group-'.$group->getKey().'-tag-'.$sharedGenre->getKey().'"';
+
+        $this->assertSame(1, substr_count($groups->html(), $sharedGroupRowKey));
+
+        $allTags = Livewire::test(TagLibraryManager::class)
+            ->call('toggleAllTags')
+            ->assertDontSee($otherGenre->title)
+            ->assertSee('genre='.$currentGenre->getKey().'"', false)
+            ->assertDontSee('genre='.$otherGenre->getKey().'"', false);
+
+        foreach ($visibleGenres as $genre) {
+            $allTags->assertSee($genre->title);
+        }
+
+        $this->assertTagLibraryCount($allTags->html(), $currentGenre->title, $currentCount);
+        $this->assertTagLibraryCount($allTags->html(), $emptyGenre->title, 0);
+
+        Livewire::test(TagLibraryManager::class)
+            ->call('toggleAllTags')
+            ->set('usageFilter', 'used')
+            ->assertSee('tag-library-tag-title">'.$currentGenre->title, false)
+            ->assertDontSee('tag-library-tag-title">'.$emptyGenre->title, false);
+
+        Livewire::test(TagLibraryManager::class)
+            ->call('toggleAllTags')
+            ->set('usageFilter', 'empty')
+            ->assertSee('tag-library-tag-title">'.$emptyGenre->title, false)
+            ->assertDontSee('tag-library-tag-title">'.$currentGenre->title, false);
+    }
+
     private function createGenre(string $title, string $type): Genre
     {
         $genre = Genre::query()->create([
@@ -1143,5 +1262,15 @@ class TagLibraryManagerTest extends TestCase
             ->where('genre_group_id', $group->getKey())
             ->where('genre_id', $genre->getKey())
             ->value('order');
+    }
+
+    private function assertTagLibraryCount(string $html, string $title, int $count): void
+    {
+        $this->assertMatchesRegularExpression(
+            '/<span class="tag-library-tag-title">'.preg_quote($title, '/')
+                .'<\/span>.*?<span class="tag-library-tag-count(?: tag-library-tag-count--empty)?">'
+                .$count.'<\/span>/s',
+            $html,
+        );
     }
 }

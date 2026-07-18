@@ -9,7 +9,7 @@
         'custom_quick_add' => ['heading' => 'Custom Quick Add Form Fields', 'order' => 'customQuickAddOrder', 'fields' => 'customQuickAddFields', 'sort' => false],
     ] as $layoutProperty => $layoutConfig)
             <section class="field-layout-section">
-                <h3>{{ $layoutConfig['heading'] }}</h3>
+                <h3>{{ __($layoutConfig['heading']) }}</h3>
 
                 <div class="field-layout-list" wire:sort="reorderLayout">
                     @foreach ($this->layoutRows($layoutConfig['order'], $layoutConfig['fields']) as $rowIndex => $row)
@@ -18,16 +18,16 @@
                             wire:sort:item="{{ $layoutConfig['order'] }}|{{ $row['field'] }}">
                             <div class="field-layout-order">
                                 <button type="button" class="field-layout-drag-handle" wire:sort:handle
-                                    aria-label="Drag {{ $row['label'] }}">
+                                    aria-label="{{ __('Drag :field', ['field' => $row['label']]) }}">
                                     <i class="fa-solid fa-arrows-up-down" aria-hidden="true"></i>
                                 </button>
                                 <div class="field-layout-buttons" wire:sort:ignore>
                                     <button type="button"
                                         wire:click.stop="move('{{ $layoutConfig['order'] }}', {{ $rowIndex }}, -1)"
-                                        @disabled($rowIndex === 0)>Up</button>
+                                        @disabled($rowIndex === 0)>{{ __('Up') }}</button>
                                     <button type="button"
                                         wire:click.stop="move('{{ $layoutConfig['order'] }}', {{ $rowIndex }}, 1)"
-                                        @disabled($rowIndex === count($this->{$layoutConfig['order']}) - 1)>Down</button>
+                                        @disabled($rowIndex === count($this->{$layoutConfig['order']}) - 1)>{{ __('Down') }}</button>
                                 </div>
                             </div>
 
@@ -40,13 +40,13 @@
                                     <x-options.switch
                                         wire:model.live="{{ $layoutConfig['fields'] }}.{{ $row['field'] }}.custom_visible"
                                         wrapper-class="field-layout-check field-layout-check--edit field-layout-switch">
-                                        Custom Tags
+                                        {{ __('Custom Tags') }}
                                     </x-options.switch>
 
                                     <x-options.switch
-                                        wire:model.live="{{ $layoutConfig['fields'] }}.{{ $row['field'] }}.fetched_english_visible"
+                                        wire:model.live="{{ $layoutConfig['fields'] }}.{{ $row['field'] }}.fetched_visible"
                                         wrapper-class="field-layout-check field-layout-check--edit field-layout-switch">
-                                        Fetched EN Tags
+                                        {{ __('Fetched Language Tags') }}
                                     </x-options.switch>
                                 </div>
                             @else
@@ -61,7 +61,7 @@
                                         @endif
                                     </span>
                                     @if ($row['visibility_locked'] ?? false)
-                                        <span class="field-layout-lock-note">Required</span>
+                                        <span class="field-layout-lock-note">{{ __('Required') }}</span>
                                     @endif
                                 </x-options.switch>
                             @endif
@@ -71,7 +71,7 @@
                                     wire:model.live="{{ $layoutConfig['fields'] }}.{{ $row['field'] }}.editable"
                                     wrapper-class="field-layout-check field-layout-check--edit field-layout-switch"
                                     :sort-ignore="true" :disabled="!($row['visible'] ?? false)">
-                                    Editable
+                                    {{ __('Editable') }}
                                 </x-options.switch>
                             @endif
                         </div>
@@ -81,13 +81,13 @@
         @endforeach
 
         <div class="option-actions option-actions--inline">
-            <button type="submit" class="tag tag--soft tag--lg is-clickable">Save field layouts</button>
+            <button type="submit" class="tag tag--soft tag--lg is-clickable">{{ __('Save field layouts') }}</button>
             @if ($saved)
-                <span class="saved-notice">{{ $notice }}</span>
+                <span class="saved-notice">{{ __($notice) }}</span>
             @endif
             <button type="button" class="tag tag--soft tag--lg is-clickable option-reset-button"
                 wire:click="askResetToDefault">
-                Reset to default
+                {{ __('Reset to default') }}
             </button>
         </div>
 

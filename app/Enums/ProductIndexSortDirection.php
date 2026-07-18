@@ -14,8 +14,8 @@ enum ProductIndexSortDirection: string
     public function label(): string
     {
         return match ($this) {
-            self::Asc => 'Asc',
-            self::Desc => 'Desc',
+            self::Asc => __('Asc'),
+            self::Desc => __('Desc'),
         };
     }
 }

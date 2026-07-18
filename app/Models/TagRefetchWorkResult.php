@@ -74,6 +74,31 @@ class TagRefetchWorkResult extends Model
         return $this->status === self::STATUS_PENDING;
     }
 
+    public function statusLabel(): string
+    {
+        return match ($this->status) {
+            self::STATUS_PENDING => __('Pending'),
+            self::STATUS_FETCHED => __('Fetched'),
+            self::STATUS_SKIPPED => __('Skipped'),
+            default => (string) $this->status,
+        };
+    }
+
+    public function displayError(): ?string
+    {
+        return match ($this->error) {
+            'Refetch was cancelled before this work was fetched.',
+            'Product no longer exists.',
+            'Custom-only work is skipped.',
+            'DLSite tag fetch failed.',
+            'DLSite tag fetch returned invalid JSON.',
+            'GeoBlocked DLSite work',
+            'Deleted or Non-existing DLSite work',
+            'Non-existing DLSite work' => __($this->error),
+            default => $this->error,
+        };
+    }
+
     public function isFetched(): bool
     {
         return $this->status === self::STATUS_FETCHED;

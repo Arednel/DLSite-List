@@ -156,13 +156,21 @@ a {
 .progress-menu-container .progress-menu .progress-button {
     position: relative;
     display: table-cell;
-    padding: 12px 0;
     margin: 0;
     font-family: "Verdana", "lucida grande", tahoma, verdana, arial, sans-serif;
     text-align: center;
     vertical-align: middle;
     font-size: 1.6em;
     color: #CCB3B3;
+}
+
+.progress-menu-container .progress-menu .progress-button {
+    padding: 12px 0;
+}
+
+/* Japanese language specific reduced padding */
+.progress-menu-container .progress-menu .progress-button:lang(ja) {
+    padding: 9px 0;
 }
 
 .progress-menu-container .progress-menu .progress-button:hover {

@@ -14,8 +14,8 @@ enum AutocompleteOrder: string
     public function label(): string
     {
         return match ($this) {
-            self::Usage => 'Most used first',
-            self::FirstWord => 'First word first',
+            self::Usage => __('Most used first'),
+            self::FirstWord => __('First word first'),
         };
     }
 }

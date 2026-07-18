@@ -1,9 +1,9 @@
 <!DOCTYPE html>
 
-<html lang="en">
+<html lang="{{ app()->getLocale() }}">
 
 <head>
-    <title>Tag Library</title>
+    <title>{{ __('Tag Library') }}</title>
 
     <meta name="viewport" content="width=device-width, initial-scale=1">
 
@@ -29,7 +29,7 @@
             <div class="list-block tag-library-block">
                 <div class="list-unit tag-library-unit">
                     <div class="list-status-title">
-                        <span class="progress-heading">Tag Library</span>
+                        <span class="progress-heading">{{ __('Tag Library') }}</span>
                     </div>
 
                     <livewire:tag-library-manager />

@@ -14,8 +14,8 @@ enum ProductIndexTagMatch: string
     public function label(): string
     {
         return match ($this) {
-            self::All => 'All tags',
-            self::Any => 'Any tag',
+            self::All => __('All tags'),
+            self::Any => __('Any tag'),
         };
     }
 }

@@ -1,10 +1,10 @@
 @props(['id', 'name', 'label', 'options' => [], 'placeholder' => null, 'groupClass' => 'filter-widget'])
 
 <div class="{{ $groupClass }}">
-    <label class="widget-header" for="{{ $id }}">{{ $label }}</label>
+    <label class="widget-header" for="{{ $id }}">{{ __($label) }}</label>
     <select id="{{ $id }}" name="{{ $name }}" {{ $attributes }}>
         @if ($placeholder !== null)
-            <option value="">{{ $placeholder }}</option>
+            <option value="">{{ __($placeholder) }}</option>
         @endif
 
         @foreach ($options as $optionValue => $optionLabel)

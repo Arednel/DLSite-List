@@ -17,11 +17,11 @@ enum ProductReListenValue: string
     public function label(): string
     {
         return match ($this) {
-            self::VeryLow => 'Very Low',
-            self::Low => 'Low',
-            self::Medium => 'Medium',
-            self::High => 'High',
-            self::VeryHigh => 'Very High',
+            self::VeryLow => __('Very Low'),
+            self::Low => __('Low'),
+            self::Medium => __('Medium'),
+            self::High => __('High'),
+            self::VeryHigh => __('Very High'),
         };
     }
 }

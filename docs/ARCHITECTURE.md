@@ -34,6 +34,9 @@
 - Model: `app/Models/Product.php`
 - Contributor model: `app/Models/Contributor.php`
 - App option model: `app/Models/Option.php`
+- UI language enum and request middleware:
+  - `app/Enums/UiLanguage.php`
+  - `app/Http/Middleware/SetUiLocale.php`
 - Refetch models:
   - `app/Models/TagRefetchRun.php`
   - `app/Models/TagRefetchWorkResult.php`
@@ -64,6 +67,7 @@
   - `app/Support/Autocomplete/SeriesAutocompleteSearch.php`
 - Livewire components:
   - `app/Livewire/ProductIndex.php`
+  - `app/Livewire/UiLanguageSettings.php`
   - `app/Livewire/IndexPaginationSettings.php`
   - `app/Livewire/AutocompleteSettings.php`
   - `app/Livewire/ProductFieldLayoutSettings.php`
@@ -82,6 +86,11 @@
 
 Shared UI note:
 - `resources/views/components/list-menu-float.blade.php` is reused by Index, Options, Tag Library, and Refetch pages
+- App-owned UI copy uses Laravel JSON source strings from `lang/en.json` and `lang/ja.json`.
+- `SetUiLocale` runs for web requests and applies the global `ui_language` option. Page shells use `app()->getLocale()` for `<html lang>`, and invalid or missing values fall back to English.
+- Blade translates fixed copy. Enums, models, layouts, and option providers return localized display labels that Blade renders directly; backed values, routes, stored data, API values, and user content remain unchanged.
+- Create/Edit month selectors use Carbon `translatedFormat('M')`, producing English abbreviations or Japanese numbered months from the same numeric option values. `PartialDateFormatter` localizes only its Year/Month/Day labels.
+- App-authored validation messages are translated at their PHP source. Generic Laravel/vendor validation messages remain unchanged.
 - desktop keeps the floating hover menu
 - mobile uses a toggle button that opens the same menu as a left-side drawer
 - the shared navigation also owns the native `<dialog>` work-form host; tightly namespaced shell styles stay in `list-menu-float.css`, while the same-origin iframe keeps Create/Edit `edit.css`, the Edit delete dialog, and host-page CSS isolated from one another
@@ -174,13 +183,11 @@ It stores a `role` value for the product-specific relationship:
 
 Current language values are `jp` and `en`, but the column is a string so future language codes can be added without changing the global genre row. Custom pivot rows do not have language rows. A fetched tag can have both `jp` and `en` rows for the same product, so titles like `ASMR` and `VTuber` remain a single `genres` row while still recording that DLSite returned the tag in both languages.
 
-Current English/custom UI surfaces show:
-- custom pivot rows
-- fetched pivot rows with an `en` language row
+`UiLanguage` maps UI `en` to stored fetched-tag language `en` and UI `ja` to `jp`. `VisibleGenreAttachment` includes custom tags plus fetched tags for the selected language. Shared `en`/`jp` attachments render once.
 
-JP-only fetched tags stay attached and stored, but are hidden from the current Index/Edit/Tag Library UI until a Japanese tag UI exists.
+The same rule applies to Index display/search/filter/return-target checks, Edit fetched tags, and Tag Library lists, groups, counts, usage state, and Index links. Other-language tags remain stored, and empty tags remain available in Tag Library.
 
-Tag Library extends that visibility rule by also showing empty `genres` rows with zero `genre_product` pivots. These empty tags can be created manually from `/tags`, searched immediately, linked to Index filters, and deleted only while they still have no product pivots. Attached JP-only fetched tags remain hidden. The General Options tab controls whether the full tag list starts collapsed or expanded when `/tags` opens and whether Index tag chips use saved group order.
+Tag Library extends that visibility rule by also showing empty `genres` rows with zero `genre_product` pivots. These empty tags can be created manually from `/tags`, searched immediately, linked to Index filters, and deleted only while they still have no product pivots. The General Options tab controls whether the full tag list starts collapsed or expanded when `/tags` opens and whether Index tag chips use saved group order.
 
 The `/tags` Livewire manager also owns tag groups, group/tag order, and Index visibility:
 - the Tag Groups section contains the group creation form so group creation stays with group management
@@ -195,7 +202,7 @@ The `/tags` Livewire manager also owns tag groups, group/tag order, and Index vi
 - the tag settings modal updates tag-level Index visibility and group memberships in one save, preserving existing pivot orders and appending newly selected memberships to the end of their groups
 - Edit Tags, Hide Tag on Index, and Hide Group on Index use shared `tag-library-switch-*` CSS/markup classes around native Livewire-bound checkboxes
 - tags hidden directly or assigned to any hidden group render a compact accessible red status indicator inside the All Tags chip, while group names and group-hidden state remain in filters, group management, and the tag settings modal
-- tag and group order values are normalized before rendering, so Tag Library and Index use normal ordered queries; Tag Library counts and visibility filters use Eloquent relationship helpers and counts for total pivots and English/custom-visible products
+- tag and group order values are normalized before rendering, so Tag Library and Index use normal ordered queries; Tag Library counts and visibility filters use Eloquent relationship helpers and counts for total pivots and current-language/custom-visible products
 
 `tag_refetch_runs` stores each Options -> Refetch Tags batch:
 - batch id and status
@@ -218,6 +225,7 @@ Queue tables:
 - `job_batches` stores Laravel batch metadata
 
 `options` stores app-level settings as scalar string values:
+- `ui_language` stores the application-wide UI locale as `en` or `ja`; missing and invalid values fall back to `en`
 - `index_per_page` controls Index pagination, defaults to `100`, accepts fixed choices (`10`, `25`, `50`, `100`, `250`, `500`, `1000`) or any positive integer, and can be set to `unlimited`
 - `index_search_hidden_descriptions_enabled` controls whether general Index search can match both description languages when their Index columns are hidden, and defaults to disabled
 - `tag_autocomplete_order` controls tag suggestion ordering, defaults to `usage`, and can be set to `first_word`
@@ -248,7 +256,7 @@ Migration note:
 - `2026_05_30_000002_backfill_product_metadata_from_storage.php` reads matching `storage/app/Works/{RJ}.json` files to backfill maker/circle, descriptions, and contributor pivots; missing or invalid JSON is skipped and `series` is not backfilled
 
 Runtime note:
-- `ProductIndex` shows English + custom genres through one lightweight grouped query from `genre_product` + `genres` + `genre_groups` for the current page only when the Tags column is visible, loads contributor pivots only when visible contributor columns need them, and passes those grouped results directly to Blade keyed by product id
+- `ProductIndex` shows current-language fetched + custom genres through one lightweight grouped query from `genre_product` + `genres` + `genre_groups` for the current page only when the Tags column is visible, loads contributor pivots only when visible contributor columns need them, and passes those grouped results directly to Blade keyed by product id
 - `Product::dlsiteWorkUrl()` returns the existing Maniax URL immediately while age-appropriate links are disabled. When enabled, only exact `ALL_AGES` values use DLSite Home; R15, R18, null, and malformed values fall back to Maniax
 - `ProductIndex` keeps its single batched Options read and narrow product select for DLSite links. It adds `age_category` to hydration only while age-appropriate links are enabled, even when the Age column is hidden, then calculates one URL per row for the image, Japanese title, and optional English title anchors without changing column visibility
 - `ProductContributorSync` syncs contributor pivots through `Product::contributorsForRole()` and Laravel's role-scoped many-to-many `syncWithPivotValues()` so replacing one creator role does not detach the same contributor from another role
@@ -256,7 +264,7 @@ Runtime note:
 - `products.start_date` and `products.end_date` JSON remain the editable/display source of truth; their `*_sort` columns store `YYYYMMDD` integers with missing month/day as `00`
 - `ProductIndex` keeps its filter/sort state in the URL through Livewire's `queryString()` config, then normalizes that state into `app/Support/ProductIndexFilters.php`
 - `app/Support/ProductIndexFilters.php` provides the normalized filter query used by progress tabs, preserved search state, tag links, explicit Livewire query-string keys, and the visibility-affecting filter groups used by return redirects
-- Index genre links, tag filters, genre-backed search, edit tag loading, and Tag Library use `VisibleGenreAttachment` for the same visible-tag rule as rendered tags: custom source or fetched `en` language row
+- Index genre links, tag filters, genre-backed search, return-target visibility checks, edit tag loading, and Tag Library use `VisibleGenreAttachment` for the same rule as rendered tags: custom source or the current UI language's fetched tag row
 - Index tag chips exclude tags hidden by their own `genres.hidden_on_index` flag or assigned to any hidden group. The raw Index query first checks whether any hidden groups exist and skips the hidden-group anti-join when none do, so libraries without hidden groups keep the cheaper tag query path. By default tags sort alphabetically by title; when group ordering is enabled they render each remaining grouped tag once through its first visible group membership, then render ungrouped tags after grouped tags.
 - Index tag-chip color resolution is query-based for performance: when Index colors are disabled or no tag/group colors are configured, the color columns are not selected and the group-color lookup is skipped. When enabled and at least one color exists, the query resolves tag background/font colors plus the first ordered group background/font colors. Effective color decoration is cached per unique genre id for the current page, and uncolored tags render as plain links without the colored-chip class/style path.
 - opening and closing the advanced filter modal is local Alpine state registered in `public/scripts/index-advanced-filters.js`, not Livewire state, so showing the modal does not rerun the Index query or reset draft filter values
@@ -266,7 +274,7 @@ Runtime note:
 - Index pagination uses Livewire/Laravel paginator links with the project pagination view and Livewire's scroll target data to return to `#progress-menu`, keeping progress tabs, search, and Filter visible after page changes
 - switching progress tabs keeps the rest of the index request state, but intentionally drops the current `genre` filter
 - clicking a series link opens the index with only the exact `series` filter applied
-- `/autocomplete/tags` returns all stored genre titles, including JP/EN/custom tags
+- `/autocomplete/tags` remains language-agnostic and returns all stored genre titles, including JP/EN/custom tags, regardless of the selected UI language
 - `/autocomplete/series` returns distinct non-empty series values
 - autocomplete matching uses word-prefix behavior for Latin-style text and substring matching for non-ASCII input so Japanese tag text can be found naturally
 - autocomplete search is split into small tag and series search helpers that share the same matcher/ranking logic
@@ -281,13 +289,14 @@ Runtime note:
 - when Follow redirect returns modal Quick Add to the same Index path and query, the host stores the exact target for one reload; `pageshow` consumes it and moves to the newly rendered work row, while stale, malformed, unavailable-storage, and unmatched targets remain non-blocking
 - `WorkFormCompleted.blade.php` loads the dedicated, tightly scoped `work-form-completed.css` fallback styling; its responsive Cherry/Options confirmation card and top-level Continue link remain usable if parent messaging does not complete
 - the modal host accepts messages only from its iframe and the same origin, closes from its header button, Escape, or backdrop clicks, clears the iframe when closed, and restores focus to the opening link
-- Create pages read Quick Add or Custom Quick Add field layouts from Options and render only the visible rows, while keeping required RJ/custom title/age/cover rows visible even if stored option JSON tries to hide them. Hidden Create layout fields are ignored on submit; DLSite Create keeps scraped metadata for hidden age/circle/creator/Japanese-description/English-description rows and always preserves scraped fetched JP/EN tags, while visible Custom Tags can add submitted custom tags. Custom Quick Add saves visible custom metadata and Custom Tags directly because it has no scraper fallback, so hidden custom description language rows save `null` and hidden Custom Tags are ignored
+- Create pages read Quick Add or Custom Quick Add field layouts from Options and render only the visible rows, while keeping required RJ/custom title/age/cover rows visible even if stored option JSON tries to hide them. Hidden Create layout fields are ignored on submit; DLSite Quick Add still fetches and stores both JP and EN tag buckets, while visible Custom Tags can add submitted custom tags. Custom Quick Add saves visible custom metadata and Custom Tags directly because it has no scraper fallback, so hidden custom description language rows save `null` and hidden Custom Tags are ignored
 - create/store resolves scraped/custom titles into `genres` rows and syncs the pivot
 - DLSite create parses scraped JSON through `DLSiteWorkData`, collapses duplicate English title/description values to `null`, syncs contributor roles, and fills an empty Series from `japanese.title_name` only when `auto_series_from_title_name` is enabled
-- edit loads the fetched English/custom genre rows independently, while keeping fetched non-custom Japanese genres attached automatically
+- Edit loads custom tags plus the fetched bucket selected by the current UI language. Fetched-tag titles use the current-locale `Fetched Language Tags` translation.
 - update reads user-added genres from the form, stores them as `genre_product.source = custom`, and can reuse an existing fetched genre row while keeping it editable for that product
-- Index Table Fields keeps one `tags` order row and one Tags column, but stores separate Custom Tags and Fetched EN Tags visibility flags; the Index tag cell renders only enabled buckets, and general Index search searches tags only when that Tags column is enabled
-- the Edit Form field layout uses separate `tags` and `fetched_english_tags` rows for Custom Tags and Fetched EN Tags; update only syncs tag buckets whose row is visible and editable, preserves disabled/hidden buckets, preserves hidden `jp` fetched rows, and still keeps fetched-over-custom precedence
+- generic tag-facing APIs are `ProductField::FetchedTags` / `fetched_tags`, Edit input `genre_fetched`, Index layout `fetched_visible`, and runtime bucket `fetched`. Runtime labels follow the active locale, and saved layouts contain field ids plus behavioral flags rather than localized labels or notes.
+- Index Table Fields keeps one `tags` order row and one Tags column, but stores separate Custom Tags and generic Fetched Tags visibility flags; the Index tag cell renders only enabled buckets, and general Index search searches tags only when that Tags column is enabled
+- the Edit Form field layout uses separate `tags` and `fetched_tags` rows. Fetched-tag updates replace the selected current-language bucket while preserving other fetched languages and unsubmitted custom tags.
 - Edit Work reads the edit field layout from Options; hidden or read-only metadata/listening fields are not cleared during save because the update request only applies submitted/editable field groups, including nested `add[...]` date/re-listen/priority inputs
 - `ProductController` builds the editable product update payload from a field-to-column map keyed by `ProductField`, maps Japanese and English description layout rows independently to `products.description` and `products.description_english`, and keeps special cases such as duplicate English descriptions and contributor/tag syncing outside the map
 - custom create stores user-uploaded covers/samples in `storage/app/public/Works/{RJ}`, saves the uploaded cover public path in `products.work_image`, and attaches custom tags through the same genre resolver used by update
@@ -302,17 +311,18 @@ Runtime note:
 - the Refetch tab links to the latest refetch run when at least one run exists
 - the General tab includes an Index Pagination setting powered by Livewire and persisted in `options.index_per_page`; changing the mode can reveal the custom-value input immediately, but the setting is only persisted when Save is submitted
 - the General tab includes Livewire autocomplete ordering settings persisted in `options.tag_autocomplete_order` and `options.series_autocomplete_order`
-- the General tab includes Livewire settings for automatic Series from DLSite `title_name`, DLSite link behavior, Add/Edit form page theme, work-form modal behavior, and Index table width
+- the General tab includes the global `English` / `日本語` UI Language setting plus Livewire settings for automatic Series from DLSite `title_name`, DLSite link behavior, Add/Edit form page theme, work-form modal behavior, and Index table width. Saving or individually resetting UI Language redirects for a full General-tab reload and restores its flash notice.
 - `DlsiteLinkSettings` persists the default-off age-appropriate link switch, validates it as a boolean, shows the Home/Maniax mapping in question-mark help, and participates in individual/global resets
 - `ProductFormModalSettings` persists the default-off master switch and `redirect`/`refresh`/`close` completion action, validates the action, provides question-mark help for every control, participates in individual/global resets, and dispatches a browser event after save/reset so the Options page's modal host updates immediately
-- the Field Layouts tab includes Index Table Custom Tags/Fetched EN Tags visibility toggles inside one Tags row, keeps Index Filter Fields and Index Sort Menu unsplit, and uses separate Edit Form rows for Custom Tags and Fetched EN Tags
+- the Field Layouts tab includes Index Table Custom Tags/current-language Fetched Tags visibility toggles inside one Tags row, keeps Index Filter Fields and Index Sort Menu unsplit, and uses separate Edit Form rows for Custom Tags and current-language Fetched Tags
 - the Field Layouts tab orders its Livewire settings as Index Table Fields, Index Filter Fields, Index Sort Menu, Edit Form Fields, Quick Add Form Fields, and Custom Quick Add Form Fields; field layout rows use Livewire `wire:sort` drag handles plus Up/Down buttons, keep checkbox state in field-keyed maps while editing, and are persisted only when Save is submitted
-- Options Livewire settings components share saved notice, validation-reset, and reset-confirmation state through `ConfirmsOptionReset`
-- the General and Field Layouts tabs include right-aligned, body-teleported, modal-confirmed reset actions for each visible setting group plus a global `Reset All Options` action; modal confirm buttons use a destructive red style, modals close from Cancel/Escape/backdrop clicks, global reset adds a 3-second client-side countdown before its confirm button unlocks, and global reset restores visible General and Field Layouts settings while leaving product/refetch data and unrelated option rows alone
+- Options and Tag Library Livewire components keep transient notice keys untranslated and translate them once in Blade. UI Language and Reset All render their flashed notice keys after redirect, under the destination locale.
+- the General and Field Layouts tabs include right-aligned, body-teleported, modal-confirmed reset actions for each visible setting group plus a global `Reset All Options` action; modal confirm buttons use a destructive red style, modals close from Cancel/Escape/backdrop clicks, global reset adds a 3-second client-side countdown before its confirm button unlocks, restores UI Language to English with the other visible settings, and reloads the tab that initiated the reset with a flash notice while leaving product/refetch data and unrelated option rows alone
 - the selected-work search on the Refetch tab is rendered by Livewire and uses Laravel query helpers for the ID/title match
 - the Refetch tab work list and queued all/selected refetch ids use numeric RJ descending order, matching the Index default order
 - custom-only works are skipped during refetch because they do not have DLSite metadata to fetch from
 - applying a refetch run attaches new fetched tags with `genre_product.source = fetched` and one language row per fetched bucket, unless the review form ignores new JP/EN tags globally or for that work
+- Refetch fetches, reviews, and stores both languages through its explicitly bilingual `fetched_japanese_tags`, `fetched_english_tags`, `custom_to_fetched_japanese_tags`, and `custom_to_fetched_english_tags` fields
 - Refetch review colors are resolved once per review page from existing stored genres by `title_key` when the refetch color surface is enabled; fetched tags that do not yet exist in `genres` render with the default style, and the Blade view receives prepared tag rows instead of doing color lookups itself
 - stale fetched JP/EN actions remove only that language row when another fetched language remains; the tag moves to `genre_product.source = custom` only when no fetched language rows remain and the selected stale action is move-to-custom
 - custom tags that DLSite now returns as fetched are promoted to fetched by default; the review form has global and per-work controls to keep those tags custom instead
@@ -331,7 +341,7 @@ Runtime note:
 - Custom create does not run the scraper and does not create or read scraped JSON.
 - `DLSiteTagFetcher` runs `python/DLSiteTagFetcher.py` through `DLSitePythonRunner` for the Refetch Tags queue job.
 - `python/DLSiteTagFetcher.py` fetches tags only, returns `japanese.genre` and `english.genre` JSON through stdout, and does not write files.
-- Known DLSite fetch errors are stored as skipped work results and are shown on the review page.
+- Persisted and logged errors remain raw. Refetch and Quick Add translate only their fixed, app-recognized errors at display boundaries; unknown Python, API, and exception text is shown verbatim.
 
 ## Logging
 
@@ -346,6 +356,7 @@ Runtime note:
 - `BaseProductRequest` normalizes the create/edit `add[...]` fields in `prepareForValidation()`, then runs date-part and date-order checks through the form request `after()` hook.
 - `BaseProductRequest` validates progress, score, priority, and re-listen value against the matching product enums so form input cannot drift from the UI option sets.
 - `StoreCustomProductRequest` keeps RJ-format and uniqueness validation, requires Japanese title, age category, and cover image, and validates cover/sample uploads as images up to 20 MB each.
+- form requests translate only their repository-authored RJ/date/refetch messages through JSON keys; generic Laravel/vendor validation remains outside the localization boundary
 - `StartTagRefetchRequest` validates all/selected refetch scope and resolves the product ids before the controller creates a run.
 - `ApplyTagRefetchRequest` validates new-tag, stale-tag, and custom-to-fetched actions, then blocks applying any run except the newest review run.
 - Custom tags are comma-separated and parsed with CSV rules:

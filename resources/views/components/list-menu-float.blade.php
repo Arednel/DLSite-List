@@ -5,7 +5,7 @@
 ])
 
 <div class="list-menu-float-shell" data-list-menu-shell>
-    <button class="mobile-menu-toggle" type="button" aria-label="Open navigation menu" aria-expanded="false"
+    <button class="mobile-menu-toggle" type="button" aria-label="{{ __('Open navigation menu') }}" aria-expanded="false"
         aria-controls="list-menu-float" data-list-menu-toggle>
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
             <line x1="3" y1="6" x2="21" y2="6" />
@@ -14,12 +14,12 @@
         </svg>
     </button>
 
-    <button class="list-menu-float-overlay" type="button" aria-label="Close navigation menu"
+    <button class="list-menu-float-overlay" type="button" aria-label="{{ __('Close navigation menu') }}"
         data-list-menu-overlay></button>
 
     <div class="list-menu-float" id="list-menu-float" data-list-menu aria-hidden="true">
         <a class="list-menu-link quick-add" href="{{ $quickAddUrl }}" data-work-form-modal-link
-            data-work-form-modal-title="Quick Add">
+            data-work-form-modal-title="{{ __('Quick Add') }}">
             <svg class="menu-icon icon-quick-add" width="22px" height="20px" viewBox="0 0 22 20">
                 <g>
                     <path
@@ -30,7 +30,7 @@
                     </path>
                 </g>
             </svg>
-            <span class="menu-label">Quick Add</span>
+            <span class="menu-label">{{ __('Quick Add') }}</span>
         </a>
         <a class="list-menu-link all-works" href="{{ route('index') }}">
             <svg class="menu-icon icon-all-works" width="26px" height="26px" viewBox="8 25 144 94">
@@ -49,7 +49,7 @@
                     <ellipse cx="120" cy="31.5" rx="20" ry="11.5" />
                 </g>
             </svg>
-            <span class="menu-label">All Works</span>
+            <span class="menu-label">{{ __('All Works') }}</span>
         </a>
         <a class="list-menu-link all-ages-filter" href="{{ route('index', ['age_category' => 'ALL_AGES']) }}">
             <svg class="menu-icon icon-all-ages" width="22px" height="20px" viewBox="0 0 22 20">
@@ -62,7 +62,7 @@
                     </path>
                 </g>
             </svg>
-            <span class="menu-label">All Ages</span>
+            <span class="menu-label">{{ __('All Ages') }}</span>
         </a>
         <a class="list-menu-link r15-filter" href="{{ route('index', ['age_category' => 'R15']) }}">
             <svg class="menu-icon icon-r15" width="22px" height="20px" viewBox="0 0 512 512">
@@ -95,27 +95,28 @@
                         d="M464 142C454 142 444 146 437 154L171 438C159 451 160 470 173 482L413 700C426 712 445 712 458 699L716 421C726 410 731 395 730 380L714 164C713 152 704 143 692 143L464 142ZM616 203a43 43 0 1 0 0 86a43 43 0 1 0 0-86Z" />
                 </g>
             </svg>
-            <span class="menu-label">Tag Library</span>
+            <span class="menu-label">{{ __('Tag Library') }}</span>
         </a>
         <a class="list-menu-link options-link" href="{{ route('options.index') }}">
             <svg class="menu-icon icon-options" width="22px" height="22px" viewBox="150 140 960 960">
                 <path
                     d="M567 144 C552 144 542 153 539 166 L514 266 L445 293 L352 241 C338 242 329 248 320 257 L259 327 C253 341 252 354 254 363 L300 449 L266 515 L164 543 C160 557 159 570 159 586 L159 680 C164 694 170 702 179 708 L276 734 L301 800 L252 897 C254 912 263 925 273 936 L334 989 C346 997 357 1000 371 997 L456 948 L522 980 L538 1063 C543 1077 550 1084 556 1085 L687 1088 C701 1084 710 1075 713 1067 L737 974 L806 947 L902 998 C916 997 928 991 939 981 L993 912 C1000 899 1002 888 1000 881 L953 790 L985 725 L1088 696 C1092 683 1094 667 1094 650 L1094 562 C1091 549 1083 538 1074 530 L978 507 L952 437 L1001 343 C1000 331 994 319 985 310 L917 249 C904 242 893 240 881 243 L797 292 L729 257 L700 149 C686 145 673 144 657 144 Z M627 486 A134 134 0 1 1 627 754 A134 134 0 1 1 627 486 Z" />
             </svg>
-            <span class="menu-label">Options</span>
+            <span class="menu-label">{{ __('Options') }}</span>
         </a>
     </div>
 </div>
 
 <dialog class="work-form-modal" data-work-form-modal data-enabled="{{ $productFormModalEnabled ? 'true' : 'false' }}"
-    data-completion-action="{{ $productFormModalCompletionAction }}" aria-label="Work form">
+    data-completion-action="{{ $productFormModalCompletionAction }}"
+    data-work-form-default-title="{{ __('Work form') }}" aria-label="{{ __('Work form') }}">
     <div class="work-form-modal__surface">
         <div class="work-form-modal__header">
-            <span class="work-form-modal__title" data-work-form-modal-title>Work form</span>
+            <span class="work-form-modal__title" data-work-form-modal-title>{{ __('Work form') }}</span>
             <button type="button" class="work-form-modal__close" data-work-form-modal-close
-                aria-label="Close modal">&times;</button>
+                aria-label="{{ __('Close modal') }}">&times;</button>
         </div>
-        <iframe class="work-form-modal__frame" data-work-form-modal-frame title="Work form"></iframe>
+        <iframe class="work-form-modal__frame" data-work-form-modal-frame title="{{ __('Work form') }}"></iframe>
     </div>
 </dialog>
 

@@ -114,7 +114,9 @@
 
         var frame = dialog.querySelector('[data-work-form-modal-frame]');
         var title = dialog.querySelector('[data-work-form-modal-title]');
-        var modalTitle = link.dataset.workFormModalTitle || link.textContent.trim() || 'Work form';
+        var modalTitle = link.dataset.workFormModalTitle
+            || link.textContent.trim()
+            || dialog.dataset.workFormDefaultTitle;
 
         if (!frame) {
             return;

@@ -7,6 +7,7 @@ use App\Enums\ProductContributorRole;
 use App\Enums\ProductField;
 use App\Enums\ProductPriority;
 use App\Enums\ProductReListenValue;
+use App\Enums\UiLanguage;
 use App\Http\Requests\BaseProductRequest;
 use App\Http\Requests\StoreCustomProductRequest;
 use App\Http\Requests\StoreProductRequest;
@@ -25,8 +26,8 @@ use App\Support\ReturnTarget;
 use App\Support\TagColor;
 use App\Support\TagInput;
 use App\Support\VisibleGenreAttachment;
-use Illuminate\Http\Request;
 use Illuminate\Http\RedirectResponse;
+use Illuminate\Http\Request;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Collection;
@@ -267,28 +268,31 @@ class ProductController extends Controller
      */
     public function edit(Request $request, Product $product)
     {
-        $editGenres = $this->loadEditGenresForProduct($product->getKey());
+        $fetchedLanguage = UiLanguage::current()->fetchedTagLanguage();
+        $editGenres = $this->loadEditGenresForProduct($product->getKey(), $fetchedLanguage);
         $showReadonlyGenreColors = Option::tagColorSurfaceEnabled(Option::TAG_COLOR_SURFACE_EDIT_READONLY);
         $genreColorPairs = $showReadonlyGenreColors
             ? TagColor::effectiveColorPairsForGenreIds($editGenres->flatMap(fn(Collection $genres): Collection => $genres)->pluck('id'))
             : collect();
-        $englishGenres = $this->editGenreDisplayRows(
-            $editGenres->get(Genre::LANGUAGE_ENGLISH, collect()),
+        $fetchedGenres = $this->editGenreDisplayRows(
+            $editGenres->get(Genre::PIVOT_SOURCE_FETCHED, collect()),
             $genreColorPairs,
         );
         $customGenres = $this->editGenreDisplayRows(
             $editGenres->get(Genre::PIVOT_SOURCE_CUSTOM, collect()),
             $genreColorPairs,
         );
+        $persistedFetchedInput = TagInput::format($fetchedGenres->pluck('title'));
         $returnTarget = ReturnTarget::fromRequest($request, $product->getKey());
 
         return view('Edit', [
             'product' => $product,
             'isModal' => $request->boolean('modal'),
             'productFormThemeClass' => $this->productFormThemeClass(),
-            'englishGenres' => $englishGenres,
+            'fetchedGenres' => $fetchedGenres,
             'customGenres' => $customGenres,
-            'genreFetchedEnglishInput' => TagInput::format($englishGenres->pluck('title')),
+            'genreFetchedInput' => $persistedFetchedInput !== '' ? $persistedFetchedInput . ', ' : '',
+            'genreFetchedLanguage' => $fetchedLanguage,
             'genreCustomInput' => TagInput::format($customGenres->pluck('title')),
             'showReadonlyGenreColors' => $showReadonlyGenreColors,
             'editFields' => ProductFieldLayout::editFields(Option::editFieldLayout()),
@@ -378,7 +382,12 @@ class ProductController extends Controller
             // Show error on the previos page
             if ($result->exitCode() === 2 && $stderr !== '') {
                 throw ValidationException::withMessages([
-                    'id' => $stderr,
+                    'id' => match ($stderr) {
+                        'GeoBlocked DLSite work',
+                        'Deleted or Non-existing DLSite work',
+                        'Non-existing DLSite work' => __($stderr),
+                        default => $stderr,
+                    },
                 ]);
             }
 
@@ -910,13 +919,13 @@ class ProductController extends Controller
         ];
     }
 
-    private function loadEditGenresForProduct(string $productId): Collection
+    private function loadEditGenresForProduct(string $productId, string $fetchedLanguage): Collection
     {
         // Edit separates readonly fetched genres from user-editable custom entries by pivot source.
         return DB::table('genre_product')
             ->join('genres', 'genres.id', '=', 'genre_product.genre_id')
             ->where('genre_product.product_id', $productId)
-            ->where(VisibleGenreAttachment::query())
+            ->where(VisibleGenreAttachment::query($fetchedLanguage))
             ->orderBy('genres.title')
             ->get([
                 'genres.id',
@@ -925,7 +934,7 @@ class ProductController extends Controller
             ])
             ->groupBy(fn(object $genre): string => $genre->source === Genre::PIVOT_SOURCE_CUSTOM
                 ? Genre::PIVOT_SOURCE_CUSTOM
-                : Genre::LANGUAGE_ENGLISH);
+                : Genre::PIVOT_SOURCE_FETCHED);
     }
 
     private function editGenreDisplayRows(Collection $genres, Collection $colorPairs): Collection
@@ -957,7 +966,8 @@ class ProductController extends Controller
         array $editFieldLayout,
     ): bool {
         $customGenreIds = null;
-        $englishFetchedGenreIds = null;
+        $fetchedGenreIds = null;
+        $fetchedLanguage = Genre::LANGUAGE_ENGLISH;
 
         if (
             ProductFieldLayout::editable($editFieldLayout, ProductField::Tags)
@@ -968,18 +978,20 @@ class ProductController extends Controller
 
         if (
             ProductFieldLayout::fetchedTagsEditable($editFieldLayout)
-            && $request->wasSubmitted('genre_fetched_english')
+            && $request->wasSubmitted('genre_fetched')
         ) {
-            $englishFetchedGenreIds = Genre::resolveIdsFromTitles($data['genre_fetched_english'] ?? []);
+            $fetchedGenreIds = Genre::resolveIdsFromTitles($data['genre_fetched'] ?? []);
+            $fetchedLanguage = $data['genre_fetched_language'];
         }
 
-        if ($customGenreIds === null && $englishFetchedGenreIds === null) {
+        if ($customGenreIds === null && $fetchedGenreIds === null) {
             return false;
         }
 
         return $this->genreSync->syncEditableTagBuckets(
             $product,
-            $englishFetchedGenreIds,
+            $fetchedLanguage,
+            $fetchedGenreIds,
             $customGenreIds,
         );
     }

@@ -14,6 +14,10 @@ enum ProductProgress: string
 
     public function label(): string
     {
-        return $this->value;
+        return match ($this) {
+            self::Listening => __('Listening'),
+            self::Completed => __('Completed'),
+            self::PlanToListen => __('Plan to Listen'),
+        };
     }
 }

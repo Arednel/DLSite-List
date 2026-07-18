@@ -3,6 +3,7 @@
 namespace App\Http\Requests;
 
 use App\Enums\ProductField;
+use App\Enums\UiLanguage;
 use App\Models\Option;
 use App\Support\ProductFieldLayout;
 use Illuminate\Validation\Rule;
@@ -33,7 +34,11 @@ class UpdateProductRequest extends BaseProductRequest
                 'nullable',
                 'string',
             ],
-            'genre_fetched_english' => ['nullable', 'array'],
+            'genre_fetched' => ['nullable', 'array'],
+            'genre_fetched_language' => [
+                Rule::requiredIf(fn(): bool => $this->wasSubmitted('genre_fetched')),
+                Rule::in([UiLanguage::current()->fetchedTagLanguage()]),
+            ],
         ], $this->commonRules());
     }
 
@@ -42,7 +47,7 @@ class UpdateProductRequest extends BaseProductRequest
         parent::prepareForValidation();
 
         $this->merge([
-            'genre_fetched_english' => $this->normalizeGenreList($this->input('genre_fetched_english')),
+            'genre_fetched' => $this->normalizeGenreList($this->input('genre_fetched')),
         ]);
     }
 }

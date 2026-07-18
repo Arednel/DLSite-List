@@ -2,6 +2,7 @@
 
 namespace App\Livewire;
 
+use App\Enums\UiLanguage;
 use App\Models\Genre;
 use App\Models\GenreGroup;
 use App\Models\Option;
@@ -98,8 +99,8 @@ class TagLibraryManager extends Component
     protected function messages(): array
     {
         return [
-            'newTagTitle.required' => 'Enter a tag title.',
-            'newTagTitle.max' => 'Tag titles may not be greater than 255 characters.',
+            'newTagTitle.required' => __('Enter a tag title.'),
+            'newTagTitle.max' => __('Tag titles may not be greater than 255 characters.'),
         ];
     }
 
@@ -124,6 +125,7 @@ class TagLibraryManager extends Component
             'editingTag' => $this->editingTag(),
             'editingSelectedGroupOptions' => $this->editingSelectedGroupOptions($groups),
             'editingAvailableGroupOptions' => $this->editingAvailableGroupOptions($groups),
+            'fetchedLanguageCode' => UiLanguage::current()->fetchedTagCode(),
         ]);
     }
 
@@ -263,11 +265,11 @@ class TagLibraryManager extends Component
 
     public function createGroup(): void
     {
-        $title = $this->validatedTitle($this->newGroupTitle, 'newGroupTitle', 'group title', 255);
+        $title = $this->validatedTitle($this->newGroupTitle, 'newGroupTitle', __('group title'), 255);
 
         if ($this->groupTitleExists($title)) {
             throw ValidationException::withMessages([
-                'newGroupTitle' => 'Tag group title already exists.',
+                'newGroupTitle' => __('Tag group title already exists.'),
             ]);
         }
 
@@ -295,7 +297,7 @@ class TagLibraryManager extends Component
         $title = $this->validatedTitle(
             $this->groupTitles[$groupId] ?? '',
             "groupTitles.{$groupId}",
-            'group title',
+            __('group title'),
             255,
         );
 
@@ -367,7 +369,7 @@ class TagLibraryManager extends Component
         $title = $this->validatedTitle(
             $this->groupTagInputs[$groupId] ?? '',
             "groupTagInputs.{$groupId}",
-            'tag title',
+            __('tag title'),
             255,
         );
 
@@ -890,7 +892,12 @@ class TagLibraryManager extends Component
     {
         return $this->orderedGroups()
             ->load(['genres' => function ($query): void {
-                $query->withCount('products');
+                $query
+                    ->withCount('visibleProducts as products_count')
+                    ->where(function (Builder $query): void {
+                        $query->whereHas('visibleProducts')
+                            ->orWhereDoesntHave('products');
+                    });
             }]);
     }
 
@@ -1000,7 +1007,7 @@ class TagLibraryManager extends Component
         $validator = Validator::make(
             ['title' => $title],
             ['title' => ['required', 'string', 'max:' . $max]],
-            ['title.required' => 'Enter a ' . $label . '.'],
+            ['title.required' => __('Enter a :label.', ['label' => $label])],
             ['title' => $label],
         );
 
@@ -1023,7 +1030,7 @@ class TagLibraryManager extends Component
 
         if (! TagColor::isValid($color)) {
             throw ValidationException::withMessages([
-                $field => 'Use a hex color like #ff6699.',
+                $field => __('Use a hex color like #ff6699.'),
             ]);
         }
 

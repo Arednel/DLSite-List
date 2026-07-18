@@ -8,9 +8,9 @@
 ])
 
 <tr>
-    <td class="form-table-cell">Start Date</td>
+    <td class="form-table-cell">{{ __('Start Date') }}</td>
     <td class="form-table-cell">
-        Month:
+        {{ __('Month') }}:
         <select id="add_start_date_month" name="add[start_date][month]" class="form-control">
             <option value=""></option>
             @foreach ($monthLabels as $value => $label)
@@ -18,7 +18,7 @@
                     {{ $label }}</option>
             @endforeach
         </select>
-        Day:
+        {{ __('Day') }}:
         <select id="add_start_date_day" name="add[start_date][day]" class="form-control">
             <option value=""></option>
             @foreach ($days as $day)
@@ -26,7 +26,7 @@
                     {{ $day }}</option>
             @endforeach
         </select>
-        Year:
+        {{ __('Year') }}:
         <select id="add_start_date_year" name="add[start_date][year]" class="form-control">
             <option value=""></option>
             @foreach ($years as $year)
@@ -35,7 +35,7 @@
             @endforeach
         </select>
         <small>
-            <a href="javascript:void(0);" id="start_date_insert_today">Insert Today</a>
+            <a href="javascript:void(0);" id="start_date_insert_today">{{ __('Insert Today') }}</a>
         </small>
         @if ($errors->has('add.start_date'))
             <div class="text-error">

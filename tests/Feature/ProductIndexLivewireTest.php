@@ -5,6 +5,7 @@ namespace Tests\Feature;
 use App\Enums\ProductContributorRole;
 use App\Enums\ProductField;
 use App\Enums\ProductIndexSortField;
+use App\Enums\UiLanguage;
 use App\Livewire\ProductIndex;
 use App\Models\Genre;
 use App\Models\GenreGroup;
@@ -16,6 +17,7 @@ use App\Support\ProductIndexFilters;
 use App\Support\ProductIndexResults;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\App;
 use Illuminate\Support\Facades\DB;
 use Livewire\Livewire;
 use ReflectionMethod;
@@ -698,46 +700,140 @@ class ProductIndexLivewireTest extends TestCase
             'description' => null,
             'order' => null,
         ]);
+        $japaneseGenre = Genre::query()->create([
+            'title' => 'SPLIT_INDEX_FETCHED_JP_TAG',
+            'description' => null,
+            'order' => null,
+        ]);
+        $sharedGenre = Genre::query()->create([
+            'title' => 'SPLIT_INDEX_FETCHED_SHARED_TAG',
+            'description' => null,
+            'order' => null,
+        ]);
 
         app(ProductGenreSync::class)->sync($product, [
-            Genre::LANGUAGE_ENGLISH => [$englishGenre->getKey()],
+            Genre::LANGUAGE_ENGLISH => [$englishGenre->getKey(), $sharedGenre->getKey()],
+            Genre::LANGUAGE_JAPANESE => [$japaneseGenre->getKey(), $sharedGenre->getKey()],
         ], [$customGenre->getKey()]);
 
         Option::setIndexFieldLayout([
             [
                 'field' => ProductField::Tags->value,
                 'custom_visible' => true,
-                'fetched_english_visible' => false,
+                'fetched_visible' => true,
+            ],
+        ]);
+
+        $component = Livewire::test(ProductIndex::class)
+            ->assertSee('SPLIT_INDEX_CUSTOM_TAG')
+            ->assertSee('SPLIT_INDEX_FETCHED_EN_TAG')
+            ->assertSee('SPLIT_INDEX_FETCHED_SHARED_TAG')
+            ->assertDontSee('SPLIT_INDEX_FETCHED_JP_TAG');
+
+        $this->assertSame(1, substr_count($component->html(), 'SPLIT_INDEX_FETCHED_SHARED_TAG'));
+
+        Option::setIndexFieldLayout([
+            [
+                'field' => ProductField::Tags->value,
+                'custom_visible' => true,
+                'fetched_visible' => false,
             ],
         ]);
 
         Livewire::test(ProductIndex::class)
             ->assertSee('SPLIT_INDEX_CUSTOM_TAG')
-            ->assertDontSee('SPLIT_INDEX_FETCHED_EN_TAG');
+            ->assertDontSee('SPLIT_INDEX_FETCHED_EN_TAG')
+            ->assertDontSee('SPLIT_INDEX_FETCHED_SHARED_TAG');
 
         Option::setIndexFieldLayout([
             [
                 'field' => ProductField::Tags->value,
                 'custom_visible' => false,
-                'fetched_english_visible' => true,
+                'fetched_visible' => true,
             ],
         ]);
 
         Livewire::test(ProductIndex::class)
             ->assertDontSee('SPLIT_INDEX_CUSTOM_TAG')
-            ->assertSee('SPLIT_INDEX_FETCHED_EN_TAG');
+            ->assertSee('SPLIT_INDEX_FETCHED_EN_TAG')
+            ->assertSee('SPLIT_INDEX_FETCHED_SHARED_TAG')
+            ->assertDontSee('SPLIT_INDEX_FETCHED_JP_TAG');
 
         Option::setIndexFieldLayout([
             [
                 'field' => ProductField::Tags->value,
                 'custom_visible' => false,
-                'fetched_english_visible' => false,
+                'fetched_visible' => false,
             ],
         ]);
 
         Livewire::test(ProductIndex::class)
             ->assertDontSee('SPLIT_INDEX_CUSTOM_TAG')
             ->assertDontSee('SPLIT_INDEX_FETCHED_EN_TAG');
+    }
+
+    public function test_japanese_index_tags_use_custom_and_current_fetched_buckets(): void
+    {
+        App::setLocale(UiLanguage::Japanese->value);
+
+        $product = $this->createProduct(1, [
+            'work_name' => 'SPLIT_JA_INDEX_TAG_WORK',
+        ]);
+        $customGenre = Genre::query()->create([
+            'title' => 'SPLIT_JA_INDEX_CUSTOM_TAG',
+            'description' => null,
+            'order' => null,
+        ]);
+        $englishGenre = Genre::query()->create([
+            'title' => 'SPLIT_JA_INDEX_FETCHED_EN_TAG',
+            'description' => null,
+            'order' => null,
+        ]);
+        $japaneseGenre = Genre::query()->create([
+            'title' => 'SPLIT_JA_INDEX_FETCHED_JP_TAG',
+            'description' => null,
+            'order' => null,
+        ]);
+        $sharedGenre = Genre::query()->create([
+            'title' => 'SPLIT_JA_INDEX_FETCHED_SHARED_TAG',
+            'description' => null,
+            'order' => null,
+        ]);
+
+        app(ProductGenreSync::class)->sync($product, [
+            Genre::LANGUAGE_ENGLISH => [$englishGenre->getKey(), $sharedGenre->getKey()],
+            Genre::LANGUAGE_JAPANESE => [$japaneseGenre->getKey(), $sharedGenre->getKey()],
+        ], [$customGenre->getKey()]);
+
+        Option::setIndexFieldLayout([
+            [
+                'field' => ProductField::Tags->value,
+                'custom_visible' => true,
+                'fetched_visible' => true,
+            ],
+        ]);
+
+        $component = Livewire::test(ProductIndex::class)
+            ->assertSee('SPLIT_JA_INDEX_CUSTOM_TAG')
+            ->assertSee('SPLIT_JA_INDEX_FETCHED_JP_TAG')
+            ->assertSee('SPLIT_JA_INDEX_FETCHED_SHARED_TAG')
+            ->assertDontSee('SPLIT_JA_INDEX_FETCHED_EN_TAG');
+
+        $this->assertSame(1, substr_count($component->html(), 'SPLIT_JA_INDEX_FETCHED_SHARED_TAG'));
+
+        Option::setIndexFieldLayout([
+            [
+                'field' => ProductField::Tags->value,
+                'custom_visible' => false,
+                'fetched_visible' => true,
+            ],
+        ]);
+
+        Livewire::test(ProductIndex::class)
+            ->assertDontSee('SPLIT_JA_INDEX_CUSTOM_TAG')
+            ->assertSee('SPLIT_JA_INDEX_FETCHED_JP_TAG')
+            ->assertSee('SPLIT_JA_INDEX_FETCHED_SHARED_TAG')
+            ->assertDontSee('SPLIT_JA_INDEX_FETCHED_EN_TAG');
     }
 
     public function test_general_search_uses_both_tag_buckets_when_any_index_tag_bucket_is_visible(): void
@@ -768,7 +864,7 @@ class ProductIndexLivewireTest extends TestCase
             [
                 'field' => ProductField::Tags->value,
                 'custom_visible' => true,
-                'fetched_english_visible' => false,
+                'fetched_visible' => false,
             ],
         ]);
 
@@ -782,7 +878,7 @@ class ProductIndexLivewireTest extends TestCase
             [
                 'field' => ProductField::Tags->value,
                 'custom_visible' => false,
-                'fetched_english_visible' => false,
+                'fetched_visible' => false,
             ],
         ]);
 
@@ -791,6 +887,61 @@ class ProductIndexLivewireTest extends TestCase
             ->call('applySearch')
             ->assertDontSee('SPLIT_SEARCH_CUSTOM_WORK')
             ->assertDontSee('SPLIT_SEARCH_FETCHED_WORK');
+    }
+
+    public function test_index_search_filters_and_tag_links_use_the_current_fetched_language(): void
+    {
+        Option::setIndexFieldLayout([
+            [
+                'field' => ProductField::Tags->value,
+                'custom_visible' => true,
+                'fetched_visible' => true,
+            ],
+        ]);
+
+        $customProduct = $this->createProduct(1, ['work_name' => 'LOCALE_CUSTOM_WORK']);
+        $englishProduct = $this->createProduct(2, ['work_name' => 'LOCALE_EN_WORK']);
+        $japaneseProduct = $this->createProduct(3, ['work_name' => 'LOCALE_JP_WORK']);
+        $sharedProduct = $this->createProduct(4, ['work_name' => 'LOCALE_SHARED_WORK']);
+        $customGenre = Genre::resolveByTitle('LOCALE_CUSTOM_TAG');
+        $englishGenre = Genre::resolveByTitle('LOCALE_EN_TAG');
+        $japaneseGenre = Genre::resolveByTitle('LOCALE_JP_TAG');
+        $sharedGenre = Genre::resolveByTitle('LOCALE_SHARED_TAG');
+
+        app(ProductGenreSync::class)->syncCustom($customProduct, [$customGenre->getKey()]);
+        app(ProductGenreSync::class)->sync($englishProduct, [
+            Genre::LANGUAGE_ENGLISH => [$englishGenre->getKey()],
+        ], []);
+        app(ProductGenreSync::class)->sync($japaneseProduct, [
+            Genre::LANGUAGE_JAPANESE => [$japaneseGenre->getKey()],
+        ], []);
+        app(ProductGenreSync::class)->sync($sharedProduct, [
+            Genre::LANGUAGE_ENGLISH => [$sharedGenre->getKey()],
+            Genre::LANGUAGE_JAPANESE => [$sharedGenre->getKey()],
+        ], []);
+
+        $this->assertIndexUsesFetchedLanguage(
+            UiLanguage::English,
+            $customGenre,
+            $englishGenre,
+            $japaneseGenre,
+            $sharedGenre,
+            'LOCALE_EN_TAG',
+            'LOCALE_JP_TAG',
+            'LOCALE_EN_WORK',
+            'LOCALE_JP_WORK',
+        );
+        $this->assertIndexUsesFetchedLanguage(
+            UiLanguage::Japanese,
+            $customGenre,
+            $japaneseGenre,
+            $englishGenre,
+            $sharedGenre,
+            'LOCALE_JP_TAG',
+            'LOCALE_EN_TAG',
+            'LOCALE_JP_WORK',
+            'LOCALE_EN_WORK',
+        );
     }
 
     public function test_index_tag_links_use_prepared_base_url_and_replace_current_genre_filter(): void
@@ -1515,6 +1666,7 @@ class ProductIndexLivewireTest extends TestCase
             ->assertSee('data-work-form-modal', false)
             ->assertSee('data-enabled="true"', false)
             ->assertSee('data-completion-action="refresh"', false)
+            ->assertSee('data-work-form-default-title="Work form"', false)
             ->assertSee('href="/create?return_query%5Bprogress%5D=Listening"', false)
             ->assertDontSee('href="/create?modal=1', false)
             ->assertSee('href="/edit/' . $product->id . '?', false)
@@ -1870,6 +2022,61 @@ class ProductIndexLivewireTest extends TestCase
             ->assertSet('sort_first_direction', 'desc')
             ->assertSeeInOrder(['SORT_HIGH', 'SORT_LOW'])
             ->assertDontSee('value="' . ProductIndexSortField::Score->value . '"', false);
+    }
+
+    private function assertIndexUsesFetchedLanguage(
+        UiLanguage $language,
+        Genre $customGenre,
+        Genre $currentGenre,
+        Genre $otherGenre,
+        Genre $sharedGenre,
+        string $currentTag,
+        string $otherTag,
+        string $currentWork,
+        string $otherWork,
+    ): void {
+        App::setLocale($language->value);
+
+        Livewire::test(ProductIndex::class)
+            ->set('searchInput', $currentTag)
+            ->call('applySearch')
+            ->assertSee($currentWork)
+            ->assertDontSee($otherWork);
+
+        Livewire::test(ProductIndex::class)
+            ->set('searchInput', $otherTag)
+            ->call('applySearch')
+            ->assertDontSee($otherWork);
+
+        Livewire::withQueryParams(['tags' => $currentTag])
+            ->test(ProductIndex::class)
+            ->assertSee($currentWork)
+            ->assertDontSee($otherWork);
+
+        Livewire::withQueryParams(['tags' => $otherTag])
+            ->test(ProductIndex::class)
+            ->assertDontSee($otherWork);
+
+        Livewire::withQueryParams(['genre' => $currentGenre->getKey()])
+            ->test(ProductIndex::class)
+            ->assertSee($currentWork)
+            ->assertDontSee($otherWork);
+
+        Livewire::withQueryParams(['genre' => $otherGenre->getKey()])
+            ->test(ProductIndex::class)
+            ->assertDontSee($otherWork);
+
+        Livewire::withQueryParams([]);
+        $html = Livewire::test(ProductIndex::class)->html();
+
+        foreach ([$customGenre, $currentGenre, $sharedGenre] as $genre) {
+            $this->assertStringContainsString('href="/?genre=' . $genre->getKey() . '"', $html);
+        }
+
+        $otherLink = 'href="/?genre=' . $otherGenre->getKey() . '"';
+
+        $this->assertStringNotContainsString($otherLink, $html);
+        $this->assertSame(1, substr_count($html, 'href="/?genre=' . $sharedGenre->getKey() . '"'));
     }
 
     private function createProduct(int $number, array $attributes = []): Product

@@ -1,9 +1,9 @@
 <!DOCTYPE html>
 
-<html lang="en">
+<html lang="{{ app()->getLocale() }}">
 
 <head>
-    <title>Options</title>
+    <title>{{ __('Options') }}</title>
 
     <meta name="viewport" content="width=device-width, initial-scale=1">
 
@@ -24,7 +24,7 @@
     <main class="options-shell">
         <div class="options-container">
             <header class="options-header">
-                <h1>Options</h1>
+                <h1>{{ __('Options') }}</h1>
             </header>
 
             @php
@@ -34,117 +34,126 @@
                     : 'general';
             @endphp
 
-            <nav class="options-tabs options-tab-list" aria-label="Options sections" role="tablist">
+            <nav class="options-tabs options-tab-list" aria-label="{{ __('Options sections') }}" role="tablist">
                 <a class="options-tab {{ $activeTab === 'general' ? 'is-active' : '' }}"
                     href="{{ route('options.index', ['tab' => 'general'], false) }}" role="tab"
-                    aria-controls="general-tab-panel" aria-selected="{{ $activeTab === 'general' ? 'true' : 'false' }}">
-                    General
+                    aria-controls="general-tab-panel"
+                    aria-selected="{{ $activeTab === 'general' ? 'true' : 'false' }}">
+                    {{ __('General') }}
                 </a>
                 <a class="options-tab {{ $activeTab === 'field-layouts' ? 'is-active' : '' }}"
                     href="{{ route('options.index', ['tab' => 'field-layouts'], false) }}" role="tab"
                     aria-controls="field-layouts-tab-panel"
                     aria-selected="{{ $activeTab === 'field-layouts' ? 'true' : 'false' }}">
-                    Field Layouts
+                    {{ __('Field Layouts') }}
                 </a>
                 <a class="options-tab {{ $activeTab === 'refetch' ? 'is-active' : '' }}"
                     href="{{ route('options.index', ['tab' => 'refetch'], false) }}" role="tab"
                     aria-controls="refetch-tab-panel"
                     aria-selected="{{ $activeTab === 'refetch' ? 'true' : 'false' }}">
-                    Refetch
+                    {{ __('Refetch') }}
                 </a>
             </nav>
 
             @if ($activeTab === 'general')
                 <section id="general-tab-panel" class="panel options-panel" role="tabpanel">
-                    <h2>Index Pagination</h2>
+                    <h2>
+                        <i class="fa-solid fa-globe options-section-icon" aria-hidden="true"></i>
+                        {{ __('UI Language') }}
+                    </h2>
                     <p class="option-description">
-                        Choose how many works are shown on each Index page.
+                        {{ __('Choose which language the application interface uses.') }}
+                    </p>
+
+                    <livewire:ui-language-settings />
+
+                    <h2>{{ __('Index Pagination') }}</h2>
+                    <p class="option-description">
+                        {{ __('Choose how many works are shown on each Index page.') }}
                     </p>
 
                     <livewire:index-pagination-settings />
 
-                    <h2>Index Search</h2>
+                    <h2>{{ __('Index Search') }}</h2>
                     <p class="option-description">
-                        Choose whether general Index search can match hidden description text.
+                        {{ __('Choose whether general Index search can match hidden description text.') }}
                     </p>
 
                     <livewire:index-search-settings />
 
-                    <h2>Index Table Width</h2>
+                    <h2>{{ __('Index Table Width') }}</h2>
                     <p class="option-description">
-                        Choose how wide the Index table can be before horizontal scrolling is used.
+                        {{ __('Choose how wide the Index table can be before horizontal scrolling is used.') }}
                     </p>
 
                     <livewire:index-table-width-settings />
 
-                    <h2>Series Metadata</h2>
+                    <h2>{{ __('Series Metadata') }}</h2>
                     <p class="option-description">
-                        Choose whether DLSite Create fills Series from the fetched title name when Series is empty.
+                        {{ __('Choose whether DLSite Create fills Series from the fetched title name when Series is empty.') }}
                     </p>
 
                     <livewire:auto-series-settings />
 
-                    <h2>DLSite Links</h2>
+                    <h2>{{ __('DLSite Links') }}</h2>
                     <p class="option-description">
-                        Choose whether Index work links use the DLSite section appropriate for the saved age category.
+                        {{ __('Choose whether Index work links use the DLSite section appropriate for the saved age category.') }}
                     </p>
 
                     <livewire:dlsite-link-settings />
 
-                    <h2>Form Page Theme</h2>
+                    <h2>{{ __('Form Page Theme') }}</h2>
                     <p class="option-description">
-                        Choose the visual theme for Add Work, Add Custom Work, and Edit Work pages.
+                        {{ __('Choose the visual theme for Add Work, Add Custom Work, and Edit Work pages.') }}
                     </p>
 
                     <livewire:product-form-theme-settings />
 
-                    <h2>Work Form Modals</h2>
+                    <h2>{{ __('Work Form Modals') }}</h2>
                     <p class="option-description">
-                        Choose whether Quick Add and Edit Work open over the current page and what happens after a
-                        successful change.
+                        {{ __('Choose whether Quick Add and Edit Work open over the current page and what happens after a successful change.') }}
                     </p>
 
                     <livewire:product-form-modal-settings />
 
-                    <h2>Autocomplete</h2>
+                    <h2>{{ __('Autocomplete') }}</h2>
                     <p class="option-description">
-                        Choose how tag and series suggestions are ordered in autocomplete dropdowns.
+                        {{ __('Choose how tag and series suggestions are ordered in autocomplete dropdowns.') }}
                     </p>
 
                     <livewire:autocomplete-settings />
 
-                    <h2>Tag Library</h2>
+                    <h2>{{ __('Tag Library') }}</h2>
                     <p class="option-description">
-                        Configure Tag Library startup behavior and whether saved tag-group order affects Index tag
-                        chips.
+                        {{ __('Configure Tag Library startup behavior and whether saved tag-group order affects Index tag chips.') }}
                     </p>
 
                     <livewire:tag-library-display-settings />
 
-                    <livewire:options-reset-defaults />
+                    <livewire:options-reset-defaults :active-tab="$activeTab" />
                 </section>
             @endif
 
             @if ($activeTab === 'field-layouts')
                 <section id="field-layouts-tab-panel" class="panel options-panel" role="tabpanel">
-                    <h2>Field Layouts</h2>
+                    <h2>{{ __('Field Layouts') }}</h2>
                     <p class="option-description">
-                        Choose which product fields are visible, editable, and how configurable columns are ordered.
+                        {{ __('Choose which product fields are visible, editable, and how configurable columns are ordered.') }}
                     </p>
 
                     <livewire:product-field-layout-settings />
 
-                    <livewire:options-reset-defaults />
+                    <livewire:options-reset-defaults :active-tab="$activeTab" />
                 </section>
             @endif
 
             @if ($activeTab === 'refetch')
                 <section id="refetch-tab-panel" class="panel options-panel" role="tabpanel">
-                    <h2>Refetch Tags</h2>
+                    <h2>{{ __('Refetch Tags') }}</h2>
                     <p class="option-description">
-                        Fetch the latest DLsite genre tags for all works or for only selected works.
+                        {{ __('Fetch the latest DLsite genre tags for all works or for only selected works.') }}
                         <br>
-                        After that you can review new and stale tags before applying the changes.
+                        {{ __('After that you can review new and stale tags before applying the changes.') }}
                     </p>
 
                     @if ($errors->any())
@@ -159,14 +168,14 @@
                             <input type="hidden" name="scope" value="all">
                             <input type="hidden" name="tab" value="refetch">
                             <button type="submit" class="tag tag--gradient tag--lg is-clickable">
-                                Refetch all works
+                                {{ __('Refetch all works') }}
                             </button>
                         </form>
 
                         @if ($latestRefetchRun)
                             <a class="tag tag--soft tag--lg is-clickable"
                                 href="{{ route('options.refetch-tags.show', $latestRefetchRun) }}">
-                                Go to latest refetch
+                                {{ __('Go to latest refetch') }}
                             </a>
                         @endif
                     </div>

@@ -1,9 +1,9 @@
 <!DOCTYPE html>
 
-<html lang="en" class="{{ $productFormThemeClass }}">
+<html lang="{{ app()->getLocale() }}" class="{{ $productFormThemeClass }}">
 
 <head>
-    <title>Add</title>
+    <title>{{ __('Add') }}</title>
 
     <meta name="viewport" content="width=device-width, initial-scale=1">
 
@@ -19,7 +19,7 @@
         <div class="wrapper">
             <div id="contentWrapper">
                 <div>
-                    <h1 class="form-page-title">{{ $isCustomCreate ? 'Add Custom Work' : 'Add Work' }}</h1>
+                    <h1 class="form-page-title">{{ $isCustomCreate ? __('Add Custom Work') : __('Add Work') }}</h1>
                 </div>
 
                 <div id="content">
@@ -28,17 +28,17 @@
                             <tr>
                                 <td>
                                     <div class="dialog-title dialog-header">
-                                        {{ $isCustomCreate ? 'Add Custom Work' : 'Add Work' }}
+                                        {{ $isCustomCreate ? __('Add Custom Work') : __('Add Work') }}
                                     </div>
                                     <div class="dialog-body">
                                         <div class="create-mode-switch">
                                             <a href="{{ route('products.create', $returnParameters, false) }}"
                                                 class="form-button ignore-visited-link {{ !$isCustomCreate ? 'is-active' : '' }}">
-                                                DLSite Create
+                                                {{ __('DLSite Create') }}
                                             </a>
                                             <a href="{{ route('products.create.custom', $returnParameters, false) }}"
                                                 class="form-button margin-left-8 ignore-visited-link {{ $isCustomCreate ? 'is-active' : '' }}">
-                                                Custom Create
+                                                {{ __('Custom Create') }}
                                             </a>
                                         </div>
                                         <form name="edit_work" method="post" id="main-form"
@@ -56,7 +56,8 @@
                                             @endforeach
                                             <div id="top-submit-buttons"
                                                 class="margin-top-8 margin-bottom-8 dialog-submit-row">
-                                                <input type="submit" class="form-button submit-button" value="Submit">
+                                                <input type="submit" class="form-button submit-button"
+                                                    value="{{ __('Submit') }}">
                                             </div>
                                             <table class="form-fields-table" cellpadding="5" cellspacing="0"
                                                 width="100%">
@@ -69,18 +70,19 @@
                                                 </tbody>
                                             </table>
                                             <div class="margin-top-8 margin-bottom-8 dialog-submit-row">
-                                                <input type="submit" class="form-button submit-button" value="Submit">
+                                                <input type="submit" class="form-button submit-button"
+                                                    value="{{ __('Submit') }}">
                                             </div>
                                         </form>
 
                                         <div class="dialog-actions dialog-actions-right">
                                             @if ($isModal)
                                                 <button type="button" class="form-button margin-left-8"
-                                                    data-work-form-modal-cancel>Close</button>
+                                                    data-work-form-modal-cancel>{{ __('Close') }}</button>
                                             @else
                                                 <a href="{{ $returnUrl }}"
                                                     class="form-button margin-left-8 ignore-visited-link">
-                                                    Go back
+                                                    {{ __('Go back') }}
                                                 </a>
                                             @endif
                                         </div>

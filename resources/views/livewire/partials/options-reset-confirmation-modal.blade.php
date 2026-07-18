@@ -28,13 +28,13 @@
             }" x-init="startDelay()"
             wire:keydown.escape.window="{{ $cancelAction }}">
             <div class="options-modal-card">
-                <h3 id="{{ $modalId }}-title">Are you sure?</h3>
-                <p>{{ $message }}</p>
+                <h3 id="{{ $modalId }}-title">{{ __('Are you sure?') }}</h3>
+                <p>{{ __($message) }}</p>
 
                 <div class="option-actions option-actions--modal">
                     <button type="button" class="tag tag--soft tag--lg is-clickable options-modal-cancel"
                         wire:click="{{ $cancelAction }}">
-                        Cancel
+                        {{ __('Cancel') }}
                     </button>
                     <button type="button"
                         class="tag tag--soft tag--lg is-clickable options-modal-confirm options-modal-confirm--danger"
@@ -42,11 +42,11 @@
                         data-options-reset-delay="{{ $this->resetConfirmDelaySeconds() }}"
                         @if ($this->resetConfirmDelaySeconds() > 0) disabled x-bind:disabled="!ready" @endif>
                         @if ($this->resetConfirmDelaySeconds() > 0)
-                            <span x-show="!ready">{{ $confirmLabel }} (<span
+                            <span x-show="!ready">{{ __($confirmLabel) }} (<span
                                     x-text="remaining">{{ $this->resetConfirmDelaySeconds() }}</span>)</span>
-                            <span x-show="ready" x-cloak>{{ $confirmLabel }}</span>
+                            <span x-show="ready" x-cloak>{{ __($confirmLabel) }}</span>
                         @else
-                            {{ $confirmLabel }}
+                            {{ __($confirmLabel) }}
                         @endif
                     </button>
                 </div>

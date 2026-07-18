@@ -35,9 +35,9 @@ class StoreProductRequest extends BaseProductRequest
     public function messages(): array
     {
         return [
-            'id.required' => 'Please enter an RJ code or a DLSite link that contains it.',
-            'id.regex' => 'Could not find an RJ code (format: RJ + numbers) in your input.',
-            'id.unique' => 'This RJ work is already in the database',
+            'id.required' => __('Please enter an RJ code or a DLSite link that contains it.'),
+            'id.regex' => __('Could not find an RJ code (format: RJ + numbers) in your input.'),
+            'id.unique' => __('This RJ work is already in the database'),
         ];
     }
 

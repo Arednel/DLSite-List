@@ -24,7 +24,7 @@ enum ProductField: string
     case DescriptionJapanese = 'description_japanese';
     case DescriptionEnglish = 'description_english';
     case Tags = 'tags';
-    case FetchedEnglishTags = 'fetched_english_tags';
+    case FetchedTags = 'fetched_tags';
     case Notes = 'notes';
     case StartDate = 'start_date';
     case FinishDate = 'end_date';
@@ -37,31 +37,31 @@ enum ProductField: string
     public function label(): string
     {
         return match ($this) {
-            self::RjCode => 'RJ Code',
-            self::Title => 'Title',
-            self::Image => 'Image',
-            self::SampleImages => 'Sample Images',
-            self::Score => 'Score',
-            self::Series => 'Series',
-            self::AgeCategory => 'Age',
-            self::Progress => 'Progress',
-            self::Circle => 'Circle',
-            self::Scenario => 'Scenario Author',
-            self::Illustration => 'Illustration Author',
-            self::VoiceActor => 'Voice Actor',
-            self::Author => 'Author',
-            self::DescriptionJapanese => 'Japanese Description',
-            self::DescriptionEnglish => 'English Description',
-            self::Tags => 'Tags',
-            self::FetchedEnglishTags => 'Fetched EN Tags',
-            self::Notes => 'Notes',
-            self::StartDate => 'Start Date',
-            self::FinishDate => 'Finish Date',
-            self::TotalTimesReListened => 'Total Times Re-listened',
-            self::ReListenValue => 'Re-listen Value',
-            self::Priority => 'Priority',
-            self::CreatedAt => 'Added to the site Date',
-            self::UpdatedAt => 'Updated Date',
+            self::RjCode => __('RJ Code'),
+            self::Title => __('Title'),
+            self::Image => __('Image'),
+            self::SampleImages => __('Sample Images'),
+            self::Score => __('Score'),
+            self::Series => __('Series'),
+            self::AgeCategory => __('Age'),
+            self::Progress => __('Progress'),
+            self::Circle => __('Circle'),
+            self::Scenario => __('Scenario Author'),
+            self::Illustration => __('Illustration Author'),
+            self::VoiceActor => __('Voice Actor'),
+            self::Author => __('Author'),
+            self::DescriptionJapanese => __('Japanese Description'),
+            self::DescriptionEnglish => __('English Description'),
+            self::Tags => __('Tags'),
+            self::FetchedTags => __('Fetched Language Tags'),
+            self::Notes => __('Notes'),
+            self::StartDate => __('Start Date'),
+            self::FinishDate => __('Finish Date'),
+            self::TotalTimesReListened => __('Total Times Re-listened'),
+            self::ReListenValue => __('Re-listen Value'),
+            self::Priority => __('Priority'),
+            self::CreatedAt => __('Added to the site Date'),
+            self::UpdatedAt => __('Updated Date'),
         };
     }
 
@@ -143,7 +143,7 @@ enum ProductField: string
     public function layoutNote(string $surface): ?string
     {
         return match ([$surface, $this]) {
-            ['index', self::Notes] => 'Notes are already shown inside Title; enable this for a separate column.',
+            ['index', self::Notes] => __('Notes are already shown inside Title; enable this for a separate column.'),
             default => null,
         };
     }
@@ -166,7 +166,7 @@ enum ProductField: string
                     self::Score,
                     self::Series,
                     self::Title,
-                    self::FetchedEnglishTags,
+                    self::FetchedTags,
                     self::Tags,
                     self::Notes,
                     self::StartDate,

@@ -4,6 +4,7 @@ namespace Tests\Unit\Models;
 
 use App\Enums\ProductField;
 use App\Enums\ProductIndexSortField;
+use App\Enums\UiLanguage;
 use App\Models\Option;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
@@ -12,6 +13,37 @@ use Tests\TestCase;
 class OptionMetadataSettingsTest extends TestCase
 {
     use RefreshDatabase;
+
+    public function test_ui_language_defaults_to_english_and_normalizes_saved_values(): void
+    {
+        $this->assertSame(UiLanguage::English, Option::uiLanguage());
+
+        Option::setUiLanguage(UiLanguage::Japanese);
+
+        $this->assertSame(UiLanguage::Japanese, Option::uiLanguage());
+        $this->assertDatabaseHas('options', [
+            'key' => Option::UI_LANGUAGE,
+            'value' => UiLanguage::Japanese->value,
+        ]);
+
+        Option::setUiLanguage('unsupported');
+
+        $this->assertSame(UiLanguage::English, Option::uiLanguage());
+        $this->assertDatabaseHas('options', [
+            'key' => Option::UI_LANGUAGE,
+            'value' => UiLanguage::English->value,
+        ]);
+    }
+
+    public function test_ui_language_can_be_reset_to_english_by_removing_its_option(): void
+    {
+        Option::setUiLanguage(UiLanguage::Japanese);
+
+        Option::resetUiLanguageToDefault();
+
+        $this->assertSame(UiLanguage::English, Option::uiLanguage());
+        $this->assertDatabaseMissing('options', ['key' => Option::UI_LANGUAGE]);
+    }
 
     public function test_auto_series_defaults_to_enabled_and_can_be_saved(): void
     {

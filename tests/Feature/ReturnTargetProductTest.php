@@ -2,11 +2,15 @@
 
 namespace Tests\Feature;
 
+use App\Enums\UiLanguage;
+use App\Models\Genre;
 use App\Models\Option;
 use App\Models\Product;
+use App\Support\ProductGenreSync;
 use App\Support\ReturnTarget;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\App;
 use Illuminate\Support\Facades\DB;
 use Tests\TestCase;
 
@@ -140,5 +144,40 @@ class ReturnTargetProductTest extends TestCase
         ]))->forProduct($product, perPage: 2);
 
         $this->assertSame('/?progress=Listening&sort_first_field=score&sort_first_direction=asc#RJ000000001', $target->toUrl());
+    }
+
+    public function test_for_product_keeps_current_language_genre_filters_and_drops_other_language_filters(): void
+    {
+        $product = Product::factory()->create(['id' => 'RJ000000001']);
+        $customGenre = Genre::resolveByTitle('Return Target Custom Tag');
+        $englishGenre = Genre::resolveByTitle('Return Target English Tag');
+        $japaneseGenre = Genre::resolveByTitle('Return Target Japanese Tag');
+        $sharedGenre = Genre::resolveByTitle('Return Target Shared Tag');
+
+        app(ProductGenreSync::class)->sync($product, [
+            Genre::LANGUAGE_ENGLISH => [$englishGenre->getKey(), $sharedGenre->getKey()],
+            Genre::LANGUAGE_JAPANESE => [$japaneseGenre->getKey(), $sharedGenre->getKey()],
+        ], [$customGenre->getKey()]);
+
+        $targetForGenre = function (Genre $genre) use ($product): string {
+            return ReturnTarget::fromRequest(Request::create('/update/RJ000000001', 'POST', [
+                'return_query' => ['genre' => (string) $genre->getKey()],
+            ]))->forProduct($product, perPage: Option::INDEX_PER_PAGE_UNLIMITED)->toUrl();
+        };
+        $keptUrl = fn(Genre $genre): string => '/?genre=' . $genre->getKey() . '#RJ000000001';
+
+        App::setLocale(UiLanguage::English->value);
+
+        $this->assertSame($keptUrl($customGenre), $targetForGenre($customGenre));
+        $this->assertSame($keptUrl($englishGenre), $targetForGenre($englishGenre));
+        $this->assertSame($keptUrl($sharedGenre), $targetForGenre($sharedGenre));
+        $this->assertSame('/#RJ000000001', $targetForGenre($japaneseGenre));
+
+        App::setLocale(UiLanguage::Japanese->value);
+
+        $this->assertSame($keptUrl($customGenre), $targetForGenre($customGenre));
+        $this->assertSame($keptUrl($japaneseGenre), $targetForGenre($japaneseGenre));
+        $this->assertSame($keptUrl($sharedGenre), $targetForGenre($sharedGenre));
+        $this->assertSame('/#RJ000000001', $targetForGenre($englishGenre));
     }
 }

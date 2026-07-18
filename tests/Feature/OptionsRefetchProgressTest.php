@@ -21,7 +21,7 @@ class OptionsRefetchProgressTest extends TestCase
 
         Livewire::test(OptionsRefetchProgress::class, ['run' => $run])
             ->assertSee('wire:poll.1s="refreshProgress"', false)
-            ->assertSee('0 / 1 works processed')
+            ->assertSee('0 / 1 work processed')
             ->assertSee('Cancel Refetch');
 
         $run->forceFill([
@@ -43,7 +43,7 @@ class OptionsRefetchProgressTest extends TestCase
 
         Livewire::test(OptionsRefetchProgress::class, ['run' => $run])
             ->assertDontSee('wire:poll.1s="refreshProgress"', false)
-            ->assertSee('1 / 1 works processed');
+            ->assertSee('1 / 1 work processed');
     }
 
     public function test_progress_component_redirects_when_run_completes_during_poll(): void

@@ -1,12 +1,13 @@
 <div>
     <form wire:submit.prevent="save" class="option-form">
-        <x-options.switch wire:model.live="enabled"
-            help="When enabled, an ordinary left-click opens Quick Add or Edit Work in a modal. Middle-click and modified clicks continue to open the normal page.">
-            Open Quick Add and Edit Work in modal windows
+        <x-options.switch wire:model.live="enabled" :help="__(
+            'When enabled, an ordinary left-click opens Quick Add or Edit Work in a modal. Middle-click and modified clicks continue to open the normal page.',
+        )">
+            {{ __('Open Quick Add and Edit Work in modal windows') }}
         </x-options.switch>
 
         <fieldset class="option-subsetting">
-            <legend>After a successful Quick Add, Edit, or Delete</legend>
+            <legend>{{ __('After a successful Quick Add, Edit, or Delete') }}</legend>
             <div class="option-radio-grid">
                 @foreach ($completionOptions as $value => $label)
                     <label class="option-radio">
@@ -26,13 +27,13 @@
         @enderror
 
         <div class="option-actions option-actions--inline">
-            <button type="submit" class="tag tag--soft tag--lg is-clickable">Save modal settings</button>
+            <button type="submit" class="tag tag--soft tag--lg is-clickable">{{ __('Save modal settings') }}</button>
             @if ($saved)
-                <span class="saved-notice">{{ $notice }}</span>
+                <span class="saved-notice">{{ __($notice) }}</span>
             @endif
             <button type="button" class="tag tag--soft tag--lg is-clickable option-reset-button"
                 wire:click="askResetToDefault">
-                Reset to default
+                {{ __('Reset to default') }}
             </button>
         </div>
 

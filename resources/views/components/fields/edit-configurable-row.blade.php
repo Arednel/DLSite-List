@@ -3,9 +3,10 @@
     'product',
     'ageCategoryOptions',
     'contributorInputs',
-    'englishGenres',
+    'fetchedGenres',
     'customGenres',
-    'genreFetchedEnglishInput',
+    'genreFetchedInput',
+    'genreFetchedLanguage',
     'genreCustomInput',
     'readonlyFieldValues' => [],
     'monthLabels' => [],
@@ -20,8 +21,8 @@
             <x-fields.title-japanese :value="$product->work_name" required />
             <x-fields.title-english :value="$product->work_name_english" />
         @else
-            <x-fields.readonly-text label="Title Japanese" :value="$product->work_name" />
-            <x-fields.readonly-text label="Title English" :value="$product->work_name_english" />
+            <x-fields.readonly-text :label="__('Title Japanese')" :value="$product->work_name" />
+            <x-fields.readonly-text :label="__('Title English')" :value="$product->work_name_english" />
         @endif
     @break
 
@@ -29,7 +30,7 @@
         @if ($field['editable'])
             <x-fields.score-select :value="$product->score" />
         @else
-            <x-fields.readonly-text label="Score" :value="$product->score" :long="false" />
+            <x-fields.readonly-text :label="__('Score')" :value="$product->score" :long="false" />
         @endif
     @break
 
@@ -37,7 +38,7 @@
         @if ($field['editable'])
             <x-fields.series-field :value="$product->series" />
         @else
-            <x-fields.readonly-text label="Series" :value="$product->series" />
+            <x-fields.readonly-text :label="__('Series')" :value="$product->series" />
         @endif
     @break
 
@@ -45,7 +46,7 @@
         @if ($field['editable'])
             <x-fields.age-category :options="$ageCategoryOptions" :value="$product->age_category" />
         @else
-            <x-fields.readonly-text label="Age" :value="$product->age_category === 'ALL_AGES' ? 'All Ages' : $product->age_category" :long="false" />
+            <x-fields.readonly-text :label="__('Age')" :value="$product->age_category === 'ALL_AGES' ? __('All Ages') : $product->age_category" :long="false" />
         @endif
     @break
 
@@ -53,24 +54,24 @@
         @if ($field['editable'])
             <x-fields.status-select :value="$product->progress" />
         @else
-            <x-fields.readonly-text label="Progress" :value="$product->progress" :long="false" />
+            <x-fields.readonly-text :label="__('Progress')" :value="$product->progress ? __($product->progress) : null" :long="false" />
         @endif
     @break
 
     @case('circle')
         @if ($field['editable'])
             <tr>
-                <td width="130" class="form-table-cell">Circle</td>
+                <td width="130" class="form-table-cell">{{ __('Circle') }}</td>
                 <td class="form-table-cell">
                     <input id="circle" name="circle" class="form-control form-field-long"
-                        value="{{ old('circle', $product->circle) }}" placeholder="Circle name">
+                        value="{{ old('circle', $product->circle) }}" placeholder="{{ __('Circle name') }}">
                     <input id="maker_id" name="maker_id" class="form-control margin-top-8"
-                        value="{{ old('maker_id', $product->maker_id) }}" placeholder="Maker ID">
+                        value="{{ old('maker_id', $product->maker_id) }}" placeholder="{{ __('Maker ID') }}">
                 </td>
                 <td class="form-table-cell form-table-cell--long-spacer" aria-hidden="true"></td>
             </tr>
         @else
-            <x-fields.readonly-text label="Circle" :value="$product->circle
+            <x-fields.readonly-text :label="__('Circle')" :value="$product->circle
                 ? trim($product->circle . ' ' . ($product->maker_id ? '(' . $product->maker_id . ')' : ''))
                 : null" />
         @endif
@@ -98,30 +99,30 @@
     @case('description_japanese')
         @if ($field['editable'])
             <tr>
-                <td width="130" class="form-table-cell">Japanese Description</td>
+                <td width="130" class="form-table-cell">{{ __('Japanese Description') }}</td>
                 <td class="form-table-cell">
                     <textarea id="description" name="description" class="form-control form-field-long" rows="4" cols="65"
-                        placeholder="Japanese description">{{ old('description', $product->description) }}</textarea>
+                        placeholder="{{ __('Japanese description') }}">{{ old('description', $product->description) }}</textarea>
                 </td>
                 <td class="form-table-cell form-table-cell--long-spacer" aria-hidden="true"></td>
             </tr>
         @else
-            <x-fields.readonly-text label="Japanese Description" :value="$readonlyFieldValues['description_japanese'] ?? null" rows="5" />
+            <x-fields.readonly-text :label="__('Japanese Description')" :value="$readonlyFieldValues['description_japanese'] ?? null" rows="5" />
         @endif
     @break
 
     @case('description_english')
         @if ($field['editable'])
             <tr>
-                <td width="130" class="form-table-cell">English Description</td>
+                <td width="130" class="form-table-cell">{{ __('English Description') }}</td>
                 <td class="form-table-cell">
                     <textarea id="description_english" name="description_english" class="form-control form-field-long" rows="4"
-                        cols="65" placeholder="English description">{{ old('description_english', $product->description_english) }}</textarea>
+                        cols="65" placeholder="{{ __('English description') }}">{{ old('description_english', $product->description_english) }}</textarea>
                 </td>
                 <td class="form-table-cell form-table-cell--long-spacer" aria-hidden="true"></td>
             </tr>
         @else
-            <x-fields.readonly-text label="English Description" :value="$readonlyFieldValues['description_english'] ?? null" rows="5" />
+            <x-fields.readonly-text :label="__('English Description')" :value="$readonlyFieldValues['description_english'] ?? null" rows="5" />
         @endif
     @break
 
@@ -129,15 +130,15 @@
         @if ($field['editable'])
             <x-fields.genre-custom :value="$genreCustomInput" />
         @else
-            <x-fields.genre-readonly label="Custom Tags" :genres="$customGenres" empty="No custom tags." :show-color-chips="$showReadonlyGenreColors" />
+            <x-fields.genre-readonly :label="__('Custom Tags')" :genres="$customGenres" empty="No custom tags." :show-color-chips="$showReadonlyGenreColors" />
         @endif
     @break
 
-    @case('fetched_english_tags')
+    @case('fetched_tags')
         @if ($field['editable'])
-            <x-fields.genre-fetched-editable :value="$genreFetchedEnglishInput" />
+            <x-fields.genre-fetched-editable :value="$genreFetchedInput" :language="$genreFetchedLanguage" />
         @else
-            <x-fields.genre-readonly label="Fetched EN Tags" :genres="$englishGenres" :show-color-chips="$showReadonlyGenreColors" />
+            <x-fields.genre-readonly :label="__('Fetched Language Tags')" :genres="$fetchedGenres" :show-color-chips="$showReadonlyGenreColors" />
         @endif
     @break
 
@@ -145,7 +146,7 @@
         @if ($field['editable'])
             <x-fields.notes :value="$product->notes" />
         @else
-            <x-fields.readonly-text label="Notes" :value="$readonlyFieldValues['notes'] ?? null" rows="5" />
+            <x-fields.readonly-text :label="__('Notes')" :value="$readonlyFieldValues['notes'] ?? null" rows="5" />
         @endif
     @break
 
@@ -154,7 +155,7 @@
             <x-fields.start-date :month-labels="$monthLabels" :days="$days" :years="$years" :month-value="data_get($product->start_date, 'month')" :day-value="data_get($product->start_date, 'day')"
                 :year-value="data_get($product->start_date, 'year')" />
         @else
-            <x-fields.readonly-text label="Start Date" :value="$readonlyFieldValues['start_date'] ?? null" :long="false" />
+            <x-fields.readonly-text :label="__('Start Date')" :value="$readonlyFieldValues['start_date'] ?? null" :long="false" />
         @endif
     @break
 
@@ -163,7 +164,7 @@
             <x-fields.finish-date :month-labels="$monthLabels" :days="$days" :years="$years" :month-value="data_get($product->end_date, 'month')" :day-value="data_get($product->end_date, 'day')"
                 :year-value="data_get($product->end_date, 'year')" />
         @else
-            <x-fields.readonly-text label="Finish Date" :value="$readonlyFieldValues['end_date'] ?? null" :long="false" />
+            <x-fields.readonly-text :label="__('Finish Date')" :value="$readonlyFieldValues['end_date'] ?? null" :long="false" />
         @endif
     @break
 
@@ -171,7 +172,7 @@
         @if ($field['editable'])
             <x-fields.num-re-listen-times :value="$product->num_re_listen_times" />
         @else
-            <x-fields.readonly-text label="Total Times Re-listened" :value="$readonlyFieldValues['num_re_listen_times'] ?? null" :long="false" />
+            <x-fields.readonly-text :label="__('Total Times Re-listened')" :value="$readonlyFieldValues['num_re_listen_times'] ?? null" :long="false" />
         @endif
     @break
 
@@ -179,7 +180,7 @@
         @if ($field['editable'])
             <x-fields.re-listen-value :value="$product->re_listen_value" />
         @else
-            <x-fields.readonly-text label="Re-listen Value" :value="$readonlyFieldValues['re_listen_value'] ?? null" :long="false" />
+            <x-fields.readonly-text :label="__('Re-listen Value')" :value="$readonlyFieldValues['re_listen_value'] ?? null" :long="false" />
         @endif
     @break
 
@@ -187,7 +188,7 @@
         @if ($field['editable'])
             <x-fields.priority :value="$product->priority" />
         @else
-            <x-fields.readonly-text label="Priority" :value="$readonlyFieldValues['priority'] ?? null" :long="false" />
+            <x-fields.readonly-text :label="__('Priority')" :value="$readonlyFieldValues['priority'] ?? null" :long="false" />
         @endif
     @break
 

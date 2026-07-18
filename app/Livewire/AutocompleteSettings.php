@@ -2,8 +2,8 @@
 
 namespace App\Livewire;
 
-use App\Livewire\Concerns\ConfirmsOptionReset;
 use App\Enums\AutocompleteOrder;
+use App\Livewire\Concerns\ConfirmsOptionReset;
 use App\Models\Option;
 use Illuminate\Validation\Rule;
 use Illuminate\View\View;
