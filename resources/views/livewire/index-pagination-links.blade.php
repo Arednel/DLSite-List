@@ -1,11 +1,3 @@
-@php
-    $scrollSelector = $scrollTo === false ? null : $scrollTo ?? 'body';
-    $scrollIntoViewJsSnippet =
-        $scrollSelector === null
-            ? ''
-            : "(\$el.closest('{$scrollSelector}') || document.querySelector('{$scrollSelector}'))?.scrollIntoView()";
-@endphp
-
 <nav class="index-pagination" role="navigation" aria-label="{{ __('Pagination Navigation') }}">
     <div class="index-pagination__summary">
         {{ __('Showing :first-:last of :total', [
@@ -23,7 +15,7 @@
                 </button>
             @else
                 <button type="button" wire:click="previousPage('{{ $paginator->getPageName() }}')"
-                    @if ($scrollIntoViewJsSnippet !== '') x-on:click="{{ $scrollIntoViewJsSnippet }}" @endif
+                    x-on:click="document.getElementById('progress-menu')?.scrollIntoView()"
                     wire:loading.attr="disabled">
                     {{ __('Previous') }}
                 </button>
@@ -43,7 +35,7 @@
                         @else
                             <button type="button" wire:key="index-page-{{ $page }}"
                                 wire:click="gotoPage({{ $page }}, '{{ $paginator->getPageName() }}')"
-                                @if ($scrollIntoViewJsSnippet !== '') x-on:click="{{ $scrollIntoViewJsSnippet }}" @endif
+                                x-on:click="document.getElementById('progress-menu')?.scrollIntoView()"
                                 wire:loading.attr="disabled"
                                 aria-label="{{ __('Go to page :page', ['page' => $page]) }}">
                                 {{ $page }}
@@ -55,7 +47,7 @@
 
             @if ($paginator->hasMorePages())
                 <button type="button" wire:click="nextPage('{{ $paginator->getPageName() }}')"
-                    @if ($scrollIntoViewJsSnippet !== '') x-on:click="{{ $scrollIntoViewJsSnippet }}" @endif
+                    x-on:click="document.getElementById('progress-menu')?.scrollIntoView()"
                     wire:loading.attr="disabled">
                     {{ __('Next') }}
                 </button>

@@ -374,6 +374,10 @@ a {
     font-weight: bold
 }
 
+.user-note-text {
+    white-space: pre-line;
+}
+
 .list-table .list-table-data .data.score .product-link {
     font-size: 1.1em;
     font-weight: bold

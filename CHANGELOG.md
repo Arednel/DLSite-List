@@ -2,6 +2,10 @@
 
 ## Development
 
+* 2026-07-25 -- 1.7.3 Product Index Performance & View Cleanup
+  * Improved Product Index rendering performance by preparing row data and links before Blade
+  * Simplified Options and pagination views
+
 * 2026-07-18 -- 1.7.2 Form Fixes & Performance Suite
   * Fixed Quick add/Edit spacing and non-editable tags fields 
   * Moved Performance Smoke tests into separate Test Suite

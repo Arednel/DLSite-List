@@ -11,8 +11,8 @@ use App\Models\Option;
 use App\Support\ProductFieldLayout;
 use App\Support\ProductIndexFilters;
 use App\Support\ProductIndexResults;
+use App\Support\ProductIndexRowBuilder;
 use App\Support\TagColor;
-use Illuminate\Database\Eloquent\Collection as EloquentCollection;
 use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\View\View;
 use Livewire\Attributes\Computed;
@@ -132,10 +132,9 @@ class ProductIndex extends Component
 
         $isUnlimited = $settings->perPage === Option::INDEX_PER_PAGE_UNLIMITED;
 
-        // The index view needs a plain Eloquent collection for IDs and related display data,
-        // even when the main product list is paginated.
+        // Normalize the current page to a collection for grouped lookups and row building.
         $visibleProducts = $products instanceof LengthAwarePaginator
-            ? new EloquentCollection($products->items())
+            ? $products->getCollection()
             : $products;
 
         $visibleProductIds = $visibleProducts->modelKeys();
@@ -158,23 +157,25 @@ class ProductIndex extends Component
             )
             : collect();
 
-        $hasContributorColumns = collect($settings->indexColumns)
-            ->whereNotNull('contributor_role')
-            ->isNotEmpty();
-
-        $productContributors = $hasContributorColumns
-            ? $productIndexResults->loadContributors($visibleProductIds, $settings->visibleIndexFields)
-            : collect();
+        $productContributors = $productIndexResults->loadContributors(
+            $visibleProductIds,
+            $settings->visibleIndexFields,
+        );
         $productDisplayValues = $productIndexResults->displayValues($visibleProducts, $settings->visibleIndexFields);
 
         $currentQuery = $this->queryWithCurrentPage($filterQuery, $isUnlimited);
         $tagLinkQuery = $filters->toQueryWithout('genre');
+        $productRows = app(ProductIndexRowBuilder::class)->build(
+            $visibleProducts,
+            $productContributors,
+            $settings->dlsiteAgeAppropriateLinksEnabled,
+            $currentQuery,
+        );
 
         return view('livewire.product-index', [
             'products' => $products,
-            'visibleProducts' => $visibleProducts,
+            'productRows' => $productRows,
             'productGenres' => $productGenres,
-            'productContributors' => $productContributors,
             'productDisplayValues' => $productDisplayValues,
             'filterOptions' => ProductIndexFilters::optionSets($settings->indexSortFieldOptions),
             'indexColumns' => $settings->indexColumns,
@@ -186,15 +187,13 @@ class ProductIndex extends Component
             'allProgressQuery' => $filters->toQueryWithout(['progress', 'genre']),
             'isUnlimited' => $isUnlimited,
             'totalProducts' => $products instanceof LengthAwarePaginator ? $products->total() : $products->count(),
-            'currentQuery' => $currentQuery,
-            'tagHrefBase' => route('index', $tagLinkQuery, false),
-            'tagHrefSeparator' => $tagLinkQuery === [] ? '?' : '&',
+            'tagHrefPrefix' => route('index', $tagLinkQuery, false)
+                . ($tagLinkQuery === [] ? '?' : '&'),
             'quickAddUrl' => route('products.create', [
                 'return_query' => $currentQuery,
             ], false),
             'productFormModalEnabled' => $settings->productFormModalEnabled,
             'productFormModalCompletionAction' => $settings->productFormModalCompletionAction,
-            'dlsiteAgeAppropriateLinksEnabled' => $settings->dlsiteAgeAppropriateLinksEnabled,
             'sortIcons' => $this->sortIcons,
             'tableWidthCss' => $settings->tableWidthCss,
         ]);

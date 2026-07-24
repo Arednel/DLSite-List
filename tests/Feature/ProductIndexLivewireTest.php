@@ -1846,7 +1846,7 @@ class ProductIndexLivewireTest extends TestCase
 
         Livewire::test(ProductIndex::class)
             ->assertSee('id="progress-menu"', false)
-            ->assertSee('#progress-menu', false)
+            ->assertSee("document.getElementById('progress-menu')?.scrollIntoView()", false)
             ->assertSee('x-on:click=', false)
             ->assertSee("wire:click=\"nextPage('page')\"", false)
             ->assertSee('wire:click="gotoPage(', false);

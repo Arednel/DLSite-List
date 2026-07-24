@@ -27,13 +27,6 @@
                 <h1>{{ __('Options') }}</h1>
             </header>
 
-            @php
-                $activeTab = old('tab', request('tab', 'general'));
-                $activeTab = in_array($activeTab, ['general', 'field-layouts', 'refetch'], true)
-                    ? $activeTab
-                    : 'general';
-            @endphp
-
             <nav class="options-tabs options-tab-list" aria-label="{{ __('Options sections') }}" role="tablist">
                 <a class="options-tab {{ $activeTab === 'general' ? 'is-active' : '' }}"
                     href="{{ route('options.index', ['tab' => 'general'], false) }}" role="tab"

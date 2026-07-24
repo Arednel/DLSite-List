@@ -88,8 +88,7 @@
                     </tbody>
 
                     <tbody class="list-item">
-                        @forelse ($visibleProducts as $product)
-                            @php($dlsiteWorkUrl = $product->dlsiteWorkUrl($dlsiteAgeAppropriateLinksEnabled))
+                        @forelse ($productRows as $product)
                             <tr class="list-table-data" id="{{ $product->id }}"
                                 wire:key="product-{{ $product->id }}">
                                 <td @class([
@@ -111,28 +110,26 @@
                                     ]) data-label="{{ $column['label'] }}">
                                         @switch($column['field'])
                                             @case('image')
-                                                <a href="{{ $dlsiteWorkUrl }}" class="product-link" target="_blank">
-                                                    <img src="{{ $product->work_image }}" class="image"></a>
+                                                <a href="{{ $product->dlsiteWorkUrl }}" class="product-link" target="_blank">
+                                                    <img src="{{ $product->workImage }}" class="image"></a>
                                             @break
 
                                             @case('title')
-                                                <a href="{{ $dlsiteWorkUrl }}" class="product-link"
+                                                <a href="{{ $product->dlsiteWorkUrl }}" class="product-link"
                                                     target="_blank">{{ $product->id }} -
-                                                    {{ $product->work_name }}</a>
+                                                    {{ $product->workName }}</a>
                                                 <div class="notes">
                                                     <div class="note-text">
-                                                        @if ($product->work_name != $product->work_name_english && $product->work_name_english)
-                                                            <a href="{{ $dlsiteWorkUrl }}" class="product-link"
+                                                        @if ($product->workName != $product->workNameEnglish && $product->workNameEnglish)
+                                                            <a href="{{ $product->dlsiteWorkUrl }}" class="product-link"
                                                                 target="_blank">
-                                                                {{ $product->id }} - {{ $product->work_name_english }}</a>
+                                                                {{ $product->id }} - {{ $product->workNameEnglish }}</a>
                                                         @endif
                                                     </div>
                                                 </div>
 
                                                 <div class="notes">
-                                                    <div class="note-text">
-                                                        {!! nl2br(e($product->notes)) !!}
-                                                    </div>
+                                                    <div class="user-note-text">{{ $product->notes }}</div>
                                                 </div>
                                             @break
 
@@ -142,10 +139,10 @@
 
                                             @case('series')
                                                 <span class="cell-value">
-                                                    @if ($product->series == null)
+                                                    @if ($product->seriesUrl === null)
                                                         -
                                                     @else
-                                                        <a href="{{ route('index', ['series' => $product->series], false) }}">
+                                                        <a href="{{ $product->seriesUrl }}">
                                                             {{ $product->series }}
                                                         </a>
                                                     @endif
@@ -153,7 +150,7 @@
                                             @break
 
                                             @case('age_category')
-                                                {{ $filterOptions['age_categories'][$product->age_category] ?? ($product->age_category ?? '-') }}
+                                                {{ $filterOptions['age_categories'][$product->ageCategory] ?? ($product->ageCategory ?? '-') }}
                                             @break
 
                                             @case('progress')
@@ -164,45 +161,43 @@
 
                                             @case('notes')
                                                 <div class="notes">
-                                                    <div class="note-text">
-                                                        {!! nl2br(e($product->notes ?: '-')) !!}
-                                                    </div>
+                                                    <div class="user-note-text">{{ $product->notes ?: '-' }}</div>
                                                 </div>
                                             @break
 
                                             @case('start_date')
-                                                {{ $productDisplayValues[$product->getKey()][$column['field']] ?? '-' }}
+                                                {{ $productDisplayValues[$product->id][$column['field']] ?? '-' }}
                                             @break
 
                                             @case('end_date')
-                                                {{ $productDisplayValues[$product->getKey()][$column['field']] ?? '-' }}
+                                                {{ $productDisplayValues[$product->id][$column['field']] ?? '-' }}
                                             @break
 
                                             @case('num_re_listen_times')
-                                                {{ $productDisplayValues[$product->getKey()][$column['field']] ?? '-' }}
+                                                {{ $productDisplayValues[$product->id][$column['field']] ?? '-' }}
                                             @break
 
                                             @case('re_listen_value')
-                                                {{ $productDisplayValues[$product->getKey()][$column['field']] ?? '-' }}
+                                                {{ $productDisplayValues[$product->id][$column['field']] ?? '-' }}
                                             @break
 
                                             @case('priority')
-                                                {{ $productDisplayValues[$product->getKey()][$column['field']] ?? '-' }}
+                                                {{ $productDisplayValues[$product->id][$column['field']] ?? '-' }}
                                             @break
 
                                             @case('circle')
-                                                @forelse (($productContributors[$product->getKey()] ?? [])[$column['contributor_role']] ?? [] as $contributor)
-                                                    <a href="{{ route('index', ['circle' => $contributor->name], false) }}">
+                                                @forelse ($product->contributors[$column['contributor_role']] ?? [] as $contributor)
+                                                    <a href="{{ $contributor->indexUrl }}">
                                                         {{ $contributor->name }}</a>
-                                                    @if ($contributor->maker_id)
-                                                        <span class="metadata-note">({{ $contributor->maker_id }})</span>
+                                                    @if ($contributor->makerId)
+                                                        <span class="metadata-note">({{ $contributor->makerId }})</span>
                                                     @endif{{ !$loop->last ? ',' : '' }}
                                                 @empty
                                                     @if ($product->circle)
-                                                        <a href="{{ route('index', ['circle' => $product->circle], false) }}">
+                                                        <a href="{{ $product->circleUrl }}">
                                                             {{ $product->circle }}</a>
-                                                        @if ($product->maker_id)
-                                                            <span class="metadata-note">({{ $product->maker_id }})</span>
+                                                        @if ($product->makerId)
+                                                            <span class="metadata-note">({{ $product->makerId }})</span>
                                                         @endif
                                                     @else
                                                         -
@@ -215,9 +210,8 @@
 
                                                 @case('voice_actor')
                                                 @case('author')
-                                                    @forelse (($productContributors[$product->getKey()] ?? [])[$column['contributor_role']] ?? [] as $contributor)
-                                                        <a
-                                                            href="{{ route('index', [$column['field'] => $contributor->name], false) }}">
+                                                    @forelse ($product->contributors[$column['contributor_role']] ?? [] as $contributor)
+                                                        <a href="{{ $contributor->indexUrl }}">
                                                             {{ $contributor->name }}</a>{{ !$loop->last ? ',' : '' }}
                                                     @empty
                                                         -
@@ -236,8 +230,8 @@
 
                                                 @case('description_english')
                                                     <div class="description-cell">
-                                                        @if ($product->description_english)
-                                                            <div>{{ $product->description_english }}</div>
+                                                        @if ($product->descriptionEnglish)
+                                                            <div>{{ $product->descriptionEnglish }}</div>
                                                         @else
                                                             -
                                                         @endif
@@ -246,7 +240,7 @@
 
                                                 @case('tags')
                                                     <div class="tags">
-                                                        @foreach ($productGenres[$product->getKey()] ?? [] as $genre)
+                                                        @foreach ($productGenres[$product->id] ?? [] as $genre)
                                                             @if (($genre->has_background_color ?? false) || ($genre->has_font_color ?? false))
                                                                 <a @class([
                                                                     'index-tag-chip',
@@ -256,11 +250,11 @@
                                                                         ($genre->has_font_color ?? false) === true,
                                                                 ])
                                                                     @if (filled($genre->color_style ?? null)) style="{{ $genre->color_style }}" @endif
-                                                                    href="{{ $tagHrefBase }}{{ $tagHrefSeparator }}genre={{ $genre->id }}">
+                                                                    href="{{ $tagHrefPrefix }}genre={{ $genre->id }}">
                                                                     {{ $genre->title }}</a>{{ !$loop->last ? ',' : '' }}
                                                             @else
                                                                 <a
-                                                                    href="{{ $tagHrefBase }}{{ $tagHrefSeparator }}genre={{ $genre->id }}">{{ $genre->title }}</a>{{ !$loop->last ? ',' : '' }}
+                                                                    href="{{ $tagHrefPrefix }}genre={{ $genre->id }}">{{ $genre->title }}</a>{{ !$loop->last ? ',' : '' }}
                                                             @endif
                                                         @endforeach
                                                     </div>
@@ -271,16 +265,8 @@
                                     <td class="data actions" data-label="{{ __('Actions') }}">
                                         <div class="row-actions">
                                             <span class="edit-action">
-                                                <a href="{{ route(
-                                                    'products.edit',
-                                                    [
-                                                        'product' => $product,
-                                                        'return_query' => $currentQuery,
-                                                        'return_fragment' => $product->id,
-                                                    ],
-                                                    false,
-                                                ) }}"
-                                                    class="product-edit-link" data-work-form-modal-link
+                                                <a href="{{ $product->editUrl }}" class="product-edit-link"
+                                                    data-work-form-modal-link
                                                     data-work-form-modal-title="{{ __('Edit Work') }}">{{ __('Edit') }}</a>
                                             </span>
                                         </div>
@@ -297,7 +283,7 @@
                         </table>
 
                         @if (!$isUnlimited && $products->total() > 0)
-                            {{ $products->links('livewire.index-pagination-links', data: ['scrollTo' => '#progress-menu']) }}
+                            {{ $products->links('livewire.index-pagination-links') }}
                         @elseif ($isUnlimited)
                             <div class="index-pagination">
                                 <div class="index-pagination__summary">

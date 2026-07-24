@@ -13,11 +13,18 @@ use App\Support\TagColor;
 use App\Support\TagRefetch\TagRefetchService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Bus;
 use Illuminate\View\View;
 
 class OptionsController extends Controller
 {
+    private const TABS = [
+        'general',
+        'field-layouts',
+        'refetch',
+    ];
+
     private const REFETCH_TAG_FIELDS = [
         'fetched_japanese_tags',
         'fetched_english_tags',
@@ -29,9 +36,10 @@ class OptionsController extends Controller
         'custom_to_fetched_english_tags',
     ];
 
-    public function index(): View
+    public function index(Request $request): View
     {
         return view('Options', [
+            'activeTab' => $this->activeTab($request),
             'latestRefetchRun' => TagRefetchRun::query()
                 ->latest('id')
                 ->first(['id']),
@@ -75,6 +83,15 @@ class OptionsController extends Controller
             'keepCustomAction' => TagRefetchWorkResult::CUSTOM_TO_FETCHED_ACTION_KEEP_CUSTOM,
             ...$this->productFormModalSettings(),
         ]);
+    }
+
+    private function activeTab(Request $request): string
+    {
+        $activeTab = $request->old('tab', $request->query('tab', 'general'));
+
+        return is_string($activeTab) && in_array($activeTab, self::TABS, true)
+            ? $activeTab
+            : 'general';
     }
 
     /**
