@@ -2,6 +2,12 @@
 
 ## Development
 
+* 2026-07-26 -- 1.7.4 Code Cleanup
+  * Set specific Livewire version to v4.3.3
+  * Simplified Product Index filter state
+  * Simplified Tag Library validation and group membership handling
+  * Font Awesome version fixe
+
 * 2026-07-25 -- 1.7.3 Product Index Performance & View Cleanup
   * Improved Product Index rendering performance by preparing row data and links before Blade
   * Simplified Options and pagination views

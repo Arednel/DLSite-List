@@ -262,6 +262,11 @@ class TagLibraryManagerTest extends TestCase
         ]);
 
         Livewire::test(TagLibraryManager::class)
+            ->set('newGroupTitle', ' Existing Group ')
+            ->call('createGroup')
+            ->assertHasErrors(['newGroupTitle' => 'Tag group title already exists.']);
+
+        Livewire::test(TagLibraryManager::class)
             ->set('newGroupTitle', '  New Group  ')
             ->call('createGroup')
             ->assertSet('newGroupTitle', '')
@@ -277,6 +282,7 @@ class TagLibraryManagerTest extends TestCase
             ->assertSee('Tag group renamed.')
             ->set("groupTitles.{$group->getKey()}", 'Existing Group')
             ->call('renameGroup', $group->getKey())
+            ->assertHasNoErrors("groupTitles.{$group->getKey()}")
             ->assertSee('Tag group title already exists.');
 
         $this->assertDatabaseHas('genre_groups', [
@@ -285,6 +291,7 @@ class TagLibraryManagerTest extends TestCase
         ]);
         $this->assertNotNull(GenreGroup::query()->findOrFail($group->getKey())->order);
         $this->assertDatabaseHas('genre_groups', ['id' => $existing->getKey()]);
+        $this->assertSame(1, GenreGroup::query()->where('title', 'Existing Group')->count());
     }
 
     public function test_add_group_form_renders_inside_tag_groups_section(): void

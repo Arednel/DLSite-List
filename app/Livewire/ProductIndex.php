@@ -15,7 +15,6 @@ use App\Support\ProductIndexRowBuilder;
 use App\Support\TagColor;
 use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\View\View;
-use Livewire\Attributes\Computed;
 use Livewire\Component;
 use Livewire\WithPagination;
 
@@ -112,8 +111,8 @@ class ProductIndex extends Component
     {
         $productIndexResults = app(ProductIndexResults::class);
 
-        $filters = $this->filters;
-        $filterQuery = $this->filterQuery;
+        $filters = $this->currentFilters();
+        $filterQuery = $filters->toQuery();
         $settings = Option::productIndexSettings();
 
         $hydratedIndexFields = $settings->visibleIndexFields;
@@ -194,7 +193,7 @@ class ProductIndex extends Component
             ], false),
             'productFormModalEnabled' => $settings->productFormModalEnabled,
             'productFormModalCompletionAction' => $settings->productFormModalCompletionAction,
-            'sortIcons' => $this->sortIcons,
+            'sortIcons' => $this->sortIcons($filters),
             'tableWidthCss' => $settings->tableWidthCss,
         ]);
     }
@@ -248,32 +247,16 @@ class ProductIndex extends Component
         $this->resetPage();
     }
 
-    #[Computed]
-    public function filters(): ProductIndexFilters
-    {
-        return $this->currentFilters();
-    }
-
     /**
      * @return array<string, string>
      */
-    #[Computed]
-    public function filterQuery(): array
-    {
-        return $this->filters->toQuery();
-    }
-
-    /**
-     * @return array<string, string>
-     */
-    #[Computed]
-    public function sortIcons(): array
+    private function sortIcons(ProductIndexFilters $filters): array
     {
         $icons = [];
 
         foreach (ProductIndexSortField::cases() as $field) {
-            $icons[$field->value] = $this->filters->primarySort?->field === $field
-                ? ($this->filters->primarySort->direction === ProductIndexSortDirection::Asc ? '↑' : '↓')
+            $icons[$field->value] = $filters->primarySort?->field === $field
+                ? ($filters->primarySort->direction === ProductIndexSortDirection::Asc ? '↑' : '↓')
                 : '⇅';
         }
 
@@ -315,8 +298,6 @@ class ProductIndex extends Component
 
     private function syncDraftFromCurrent(): void
     {
-        $this->forgetComputedFilterState();
-
         $draft = $this->currentFilters()->toInput();
 
         $draft['tag_match'] = $draft['tag_match'] !== ''
@@ -335,10 +316,5 @@ class ProductIndex extends Component
     private function currentFilters(): ProductIndexFilters
     {
         return ProductIndexFilters::fromQuery($this->currentInput());
-    }
-
-    private function forgetComputedFilterState(): void
-    {
-        unset($this->filters, $this->filterQuery, $this->sortIcons);
     }
 }

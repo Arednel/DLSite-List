@@ -11,6 +11,7 @@ use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Validator;
+use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
 use Illuminate\View\View;
 use Livewire\Component;
@@ -200,25 +201,12 @@ class TagLibraryManager extends Component
         );
         $title = $validated['newTagTitle'];
 
-        $existing = Genre::query()
-            ->where('title_key', Genre::titleKey($title))
-            ->first();
-
-        if ($existing) {
-            $this->newTagTitle = '';
-            $this->search = $existing->title;
-            $this->showAllTags = true;
-            $this->setNotice('Tag already exists.');
-
-            return;
-        }
-
-        Genre::resolveByTitle($title);
+        $genre = Genre::resolveByTitle($title);
 
         $this->newTagTitle = '';
-        $this->search = '';
+        $this->search = $genre->wasRecentlyCreated ? '' : $genre->title;
         $this->showAllTags = true;
-        $this->setNotice('Tag created.');
+        $this->setNotice($genre->wasRecentlyCreated ? 'Tag created.' : 'Tag already exists.');
     }
 
     public function askDeleteTag(int $genreId): void
@@ -267,20 +255,13 @@ class TagLibraryManager extends Component
     {
         $title = $this->validatedTitle($this->newGroupTitle, 'newGroupTitle', __('group title'), 255);
 
-        if ($this->groupTitleExists($title)) {
-            throw ValidationException::withMessages([
-                'newGroupTitle' => __('Tag group title already exists.'),
-            ]);
-        }
+        Validator::make(
+            ['newGroupTitle' => $title],
+            ['newGroupTitle' => [Rule::unique(GenreGroup::class, 'title')]],
+            ['newGroupTitle.unique' => __('Tag group title already exists.')],
+        )->validate();
 
-        GenreGroup::query()->create([
-            'title' => $title,
-            'description' => null,
-            'order' => $this->nextGroupOrder(),
-            'hidden_on_index' => false,
-            'color' => null,
-            'text_color' => null,
-        ]);
+        GenreGroup::query()->create(['title' => $title]);
 
         $this->newGroupTitle = '';
         $this->setNotice('Tag group created.');
@@ -301,7 +282,10 @@ class TagLibraryManager extends Component
             255,
         );
 
-        if ($this->groupTitleExists($title, $groupId)) {
+        if (Validator::make(
+            ['title' => $title],
+            ['title' => [Rule::unique(GenreGroup::class, 'title')->ignore($group)]],
+        )->fails()) {
             $this->setNotice('Tag group title already exists.');
             $this->groupTitles[$groupId] = $group->title;
 
@@ -335,17 +319,7 @@ class TagLibraryManager extends Component
         $groupId = $this->confirmingDeleteGroupId;
         $this->confirmingDeleteGroupId = null;
 
-        DB::transaction(function () use ($groupId): void {
-            $group = GenreGroup::query()->lockForUpdate()->find($groupId);
-
-            if (! $group) {
-                return;
-            }
-
-            $group->genres()->detach();
-
-            $group->delete();
-        });
+        GenreGroup::destroy($groupId);
 
         unset(
             $this->groupTitles[$groupId],
@@ -385,8 +359,6 @@ class TagLibraryManager extends Component
 
         $group->genres()->attach($genre->getKey(), [
             'order' => $this->nextGroupTagOrder($group->getKey()),
-            'created_at' => now(),
-            'updated_at' => now(),
         ]);
 
         $this->groupTagInputs[$groupId] = '';
@@ -561,22 +533,16 @@ class TagLibraryManager extends Component
             $currentGroupIds = $genre->groups()
                 ->pluck('genre_groups.id')
                 ->map(fn($groupId): int => (int) $groupId);
-            $targetGroupIds = collect($targetGroupIds);
 
-            $removeGroupIds = $currentGroupIds->diff($targetGroupIds)->values()->all();
-            $addGroupIds = $targetGroupIds->diff($currentGroupIds)->values()->all();
+            $groupPivots = collect($targetGroupIds)
+                ->mapWithKeys(fn(int $groupId): array => [
+                    $groupId => $currentGroupIds->contains($groupId)
+                        ? []
+                        : ['order' => $this->nextGroupTagOrder($groupId)],
+                ])
+                ->all();
 
-            if ($removeGroupIds !== []) {
-                $genre->groups()->detach($removeGroupIds);
-            }
-
-            foreach ($addGroupIds as $groupId) {
-                $genre->groups()->attach($groupId, [
-                    'order' => $this->nextGroupTagOrder($groupId),
-                    'created_at' => now(),
-                    'updated_at' => now(),
-                ]);
-            }
+            $genre->groups()->sync($groupPivots);
 
             $saved = true;
         });
@@ -1035,19 +1001,6 @@ class TagLibraryManager extends Component
         }
 
         return TagColor::normalize($color);
-    }
-
-    private function groupTitleExists(string $title, ?int $exceptGroupId = null): bool
-    {
-        return GenreGroup::query()
-            ->where('title', $title)
-            ->when($exceptGroupId !== null, fn($query) => $query->whereKeyNot($exceptGroupId))
-            ->exists();
-    }
-
-    private function nextGroupOrder(): int
-    {
-        return (int) GenreGroup::query()->max('order') + 1;
     }
 
     private function nextGroupTagOrder(int $groupId): int
