@@ -40,6 +40,12 @@
                     aria-selected="{{ $activeTab === 'field-layouts' ? 'true' : 'false' }}">
                     {{ __('Field Layouts') }}
                 </a>
+                <a class="options-tab {{ $activeTab === 'authentication' ? 'is-active' : '' }}"
+                    href="{{ route('options.index', ['tab' => 'authentication'], false) }}" role="tab"
+                    aria-controls="authentication-tab-panel"
+                    aria-selected="{{ $activeTab === 'authentication' ? 'true' : 'false' }}">
+                    {{ __('Authentication') }}
+                </a>
                 <a class="options-tab {{ $activeTab === 'refetch' ? 'is-active' : '' }}"
                     href="{{ route('options.index', ['tab' => 'refetch'], false) }}" role="tab"
                     aria-controls="refetch-tab-panel"
@@ -137,6 +143,20 @@
                     <livewire:product-field-layout-settings />
 
                     <livewire:options-reset-defaults :active-tab="$activeTab" />
+                </section>
+            @endif
+
+            @if ($activeTab === 'authentication')
+                <section id="authentication-tab-panel" class="panel options-panel" role="tabpanel">
+                    <h2>
+                        <i class="fa-solid fa-shield-halved options-section-icon" aria-hidden="true"></i>
+                        {{ __('Administrator Authentication') }}
+                    </h2>
+                    <p class="option-description">
+                        {{ __('Protect the application with username and password.') }}
+                    </p>
+
+                    <livewire:authentication-settings />
                 </section>
             @endif
 

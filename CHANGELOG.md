@@ -2,6 +2,9 @@
 
 ## Development
 
+* 2026-07-27 -- 1.7.5 Optional Authentication
+  * Added turned off by default authentication
+
 * 2026-07-26 -- 1.7.4 Code Cleanup
   * Set specific Livewire version to v4.3.3
   * Simplified Product Index filter state

@@ -27,6 +27,12 @@ class Option extends Model
 
     public const PRODUCT_FORM_THEME = 'product_form_theme';
 
+    public const USER_AUTHENTICATION_ENABLED = 'user_authentication_enabled';
+
+    public const AUTHENTICATION_PAGE_THEME = 'authentication_page_theme';
+
+    public const ADMIN_PASSWORD_RESET_CONSUMED = 'admin_password_reset_consumed';
+
     public const PRODUCT_FORM_MODAL_ENABLED = 'product_form_modal_enabled';
 
     public const PRODUCT_FORM_MODAL_COMPLETION_ACTION = 'product_form_modal_completion_action';
@@ -75,6 +81,10 @@ class Option extends Model
 
     public const PRODUCT_FORM_THEME_BLACK = 'black';
 
+    public const AUTHENTICATION_PAGE_THEME_CHERRY = 'cherry';
+
+    public const AUTHENTICATION_PAGE_THEME_BLACK = 'black';
+
     public const PRODUCT_FORM_MODAL_COMPLETION_REDIRECT = 'redirect';
 
     public const PRODUCT_FORM_MODAL_COMPLETION_REFRESH = 'refresh';
@@ -103,6 +113,11 @@ class Option extends Model
     public const PRODUCT_FORM_THEME_OPTIONS = [
         self::PRODUCT_FORM_THEME_CHERRY => 'Cherry',
         self::PRODUCT_FORM_THEME_BLACK => 'Black',
+    ];
+
+    public const AUTHENTICATION_PAGE_THEME_OPTIONS = [
+        self::AUTHENTICATION_PAGE_THEME_CHERRY => 'Cherry',
+        self::AUTHENTICATION_PAGE_THEME_BLACK => 'Black',
     ];
 
     public const PRODUCT_FORM_MODAL_COMPLETION_OPTIONS = [
@@ -275,6 +290,55 @@ class Option extends Model
     public static function resetProductFormThemeToDefault(): void
     {
         self::forget(self::PRODUCT_FORM_THEME);
+    }
+
+    public static function userAuthenticationEnabled(): bool
+    {
+        return self::booleanValueFor(self::USER_AUTHENTICATION_ENABLED, false);
+    }
+
+    public static function setUserAuthenticationEnabled(bool $enabled): void
+    {
+        self::setBooleanValue(self::USER_AUTHENTICATION_ENABLED, $enabled);
+    }
+
+    public static function authenticationPageTheme(): string
+    {
+        return self::normalizeAuthenticationPageTheme(
+            self::valueFor(self::AUTHENTICATION_PAGE_THEME),
+        );
+    }
+
+    public static function setAuthenticationPageTheme(string $theme): void
+    {
+        self::setValue(
+            self::AUTHENTICATION_PAGE_THEME,
+            self::normalizeAuthenticationPageTheme($theme),
+        );
+    }
+
+    /**
+     * @return array<string, string>
+     */
+    public static function authenticationPageThemeOptions(): array
+    {
+        return self::AUTHENTICATION_PAGE_THEME_OPTIONS;
+    }
+
+    public static function adminPasswordResetConsumed(): bool
+    {
+        return self::booleanValueFor(self::ADMIN_PASSWORD_RESET_CONSUMED, false);
+    }
+
+    public static function setAdminPasswordResetConsumed(bool $consumed): void
+    {
+        if (! $consumed) {
+            self::forget(self::ADMIN_PASSWORD_RESET_CONSUMED);
+
+            return;
+        }
+
+        self::setBooleanValue(self::ADMIN_PASSWORD_RESET_CONSUMED, true);
     }
 
     /**
@@ -665,6 +729,13 @@ class Option extends Model
         return array_key_exists((string) $theme, self::PRODUCT_FORM_THEME_OPTIONS)
             ? (string) $theme
             : self::PRODUCT_FORM_THEME_BLACK;
+    }
+
+    private static function normalizeAuthenticationPageTheme(?string $theme): string
+    {
+        return array_key_exists((string) $theme, self::AUTHENTICATION_PAGE_THEME_OPTIONS)
+            ? (string) $theme
+            : self::AUTHENTICATION_PAGE_THEME_CHERRY;
     }
 
     private static function normalizeProductFormModalCompletionAction(?string $action): string

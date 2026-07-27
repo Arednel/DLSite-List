@@ -64,6 +64,14 @@ Current automated coverage includes Laravel PHPUnit and Python `unittest` tests:
   - covers the Livewire refetch progress panel polling while a run is running/cancelling, showing the cancel action only while running, and redirecting once review results are ready
 - `tests/Feature/OptionsWorkSearchTest.php`
   - covers the Livewire selected-work search, numeric RJ-desc visible order, and selected product preservation when filtered results change
+- `tests/Feature/AuthenticationTest.php`
+  - covers default-off access without recovery-state queries, setup and single-account creation, exact-case usernames, protected routes/mutations/Livewire updates, public help, generic login failures, five-attempt per-IP throttling and expiry, intended redirects, logout, both authentication themes, and the 180-day remember cookie
+- `tests/Feature/AuthenticationSettingsTest.php`
+  - covers the separate non-resettable Authentication tab, guest-hidden authenticated controls, enable/setup and enable/login redirects, theme persistence, global-reset exclusion, confirmed password replacement, remember-token rotation, and logout after change
+- `tests/Feature/AdminRecoveryTest.php`
+  - covers the environment flag being ignored while authentication is off, forced one-time recovery while enabled, atomic rollback when recovery-marker persistence fails, consumed-state blocking, flag removal/restart state clearing, and unsupported multiple-user recovery
+- `tests/Feature/AdminCommandTest.php`
+  - covers masked console password reset, zero/multiple-user refusal, full user-table reset confirmation, and reset cancellation
 - `tests/Performance/PerformanceSmokeTest.php`
   - defaults to 500 works, 500 tags, 10000 tag pivot rows, and contributor rows for every Index contributor role, then reports average response times for default/full-column paginated and unlimited Index paths without configured colors, the same four Index paths with unique tag background/font colors, filtered/search/tag Index paths, Options tabs, common/recalculated/filter-cleanup update redirects, and delete page clamp redirects
   - performance smoke timings emit PHPUnit warning issues above 500ms and stronger warning text above 1000ms; use `--do-not-fail-on-phpunit-warning` when you want the command to exit successfully while still showing those warnings
@@ -134,6 +142,18 @@ Autocomplete settings tests set `options.tag_autocomplete_order` and `options.se
 Product metadata settings tests set the field layouts, automatic Series, and Index table width options through `App\Models\Option` so UI behavior can be verified without changing environment config. Field layout tests update Livewire component state and movement actions directly, then assert persisted layout order and checkbox/editability state remains attached to field ids after row movement.
 Work-form modal tests store both modal options through `App\Models\Option`, render all supported host pages, and assert option normalization, standalone link URLs, modal metadata, Livewire save/reset events, modal completion responses, and the same-Index pending-redirect asset contract without requiring a browser. The shared completion response assertion also covers its dedicated stylesheet, semantic fallback card, and `_top` Continue link.
 Age-appropriate DLSite link tests store `options.dlsite_age_appropriate_links_enabled` through `App\Models\Option`; query-log assertions verify hidden `age_category` remains unselected while disabled and is hydrated only when enabled.
+
+## Manual Authentication Checks
+
+- With no user rows, confirm the application remains public by default. Enable `Options -> Authentication` and confirm the next page is administrator setup.
+- Create the administrator, log out, and confirm Index, Options, Tag Library, create/edit actions, autocomplete, Refetch, and Livewire interactions redirect to login.
+- Create a mixed-case username, confirm a differently cased login receives the generic credentials error and counts as a failed attempt, then confirm the exact username casing succeeds.
+- Fail login five times from one IP, confirm the next attempt is blocked, then confirm access returns after five minutes. Check another IP remains independent.
+- Sign in once without Remember me and once with it; confirm the remembered login survives a normal browser restart and is documented as 180 days.
+- Check login, setup, forgot-password help, and environment recovery in both Cherry and Black themes and both UI languages.
+- Change the password from the Authentication tab, accept the browser confirmation, and confirm the browser is logged out and the new password works.
+- Run `php artisan admin:reset-password`, then `php artisan admin:reset`; confirm the first changes credentials and the second clears all user rows and returns enabled authentication to setup.
+- In a trusted local environment only, enable `ADMIN_PASSWORD_RESET=true`, restart, complete one reset, and confirm all pages remain blocked by the removal message. Remove the variable, restart/recreate the app process, and confirm normal login resumes.
 
 ## Manual UI Language and Locale-Aware Tag Checks
 - Save and reset `English` / `日本語` in Options. Confirm the full reload, destination-locale notice, global scope, and originating tab for Reset All.

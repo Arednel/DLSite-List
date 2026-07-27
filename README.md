@@ -17,6 +17,7 @@ docker compose --env-file docker/.env.docker up --build -d
 ### 2) After startup
 - DLSite List available at: `http://localhost:8080`
 - phpMyAdmin available at: `http://localhost:8888` (uncomment in compose.yaml, disabled for security)
+- Authentication is disabled by default. To add username and password, open `Options -> Authentication` and `Require administrator login`.
 
 ## Manual installation process
 

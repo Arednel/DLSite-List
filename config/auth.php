@@ -2,6 +2,8 @@
 
 return [
 
+    'admin_password_reset' => env('ADMIN_PASSWORD_RESET', false),
+
     /*
     |--------------------------------------------------------------------------
     | Authentication Defaults
@@ -39,6 +41,7 @@ return [
         'web' => [
             'driver' => 'session',
             'provider' => 'users',
+            'remember' => 259200, // In minutes, 180 days
         ],
     ],
 

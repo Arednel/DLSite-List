@@ -44,6 +44,69 @@ The app image copies `docker/.env.docker` to `.env` during build because some La
    - activate venv
    - `pip install -r python/requirements.txt`
 
+## Optional Administrator Authentication
+
+Administrator authentication is disabled by default. With it disabled, application pages and actions keep their existing public behavior.
+
+Open `Options -> Authentication` to:
+- enable or disable administrator login
+- choose the independent `Cherry` or `Black` authentication-page theme (`Cherry` is the default)
+- see whether an administrator account exists
+- change the password when the browser already has an authenticated session
+
+Authentication settings are deliberately separate from General and Field Layout settings. `Reset All Options` never changes the authentication switch or authentication-page theme.
+
+When authentication is enabled:
+- if the `users` table is empty, every application page redirects to `/admin/setup`
+- setup stores one username exactly as entered and accepts a confirmed password using the application-wide minimum of 8 characters
+- after an account exists, setup cannot create another account and guests are redirected to `/login`
+- application controllers, mutations, autocomplete endpoints, and Livewire update/upload requests require the administrator session
+- `/login`, `/admin/setup` when applicable, `/forgot-password`, and active recovery pages remain public
+- directly served public and `/storage` files are not placed behind Laravel session authentication
+
+Login usernames are case-sensitive and must exactly match the value entered during setup; passwords retain Laravel's case-sensitive hash verification. A casing mismatch uses the same generic credentials error and failed-attempt accounting as any other invalid login.
+
+Login allows five failed attempts per client IP during a five-minute window. The next attempt is blocked until that window expires; a successful login clears the IP's attempts. `Remember me` keeps the Laravel recaller cookie for 180 days through the `web` guard's `remember` configuration.
+
+The login, setup, password help, and recovery pages share the saved authentication theme. Logging out invalidates the current session. Changing or resetting the password rotates the remember token; the settings password form also logs out the current browser.
+
+### Console recovery
+
+Reset the password for the single administrator:
+
+```bash
+php artisan admin:reset-password
+```
+
+The command uses masked new-password and confirmation prompts. It refuses to choose an account if the table contains zero or multiple rows.
+
+Clear every user row and return to setup without changing authentication settings:
+
+```bash
+php artisan admin:reset
+```
+
+The command displays a destructive confirmation. If authentication remains enabled, the next web request opens administrator setup.
+
+### Trusted environment recovery
+
+`ADMIN_PASSWORD_RESET` defaults to `false`. Use it only when authentication is enabled, exactly one administrator exists, and interactive console recovery is unavailable:
+
+1. Set `ADMIN_PASSWORD_RESET=true` in the active `.env` or `docker/.env.docker`.
+2. Restart the local PHP/web process. For Docker, recreate the app container:
+
+   ```bash
+   docker compose --env-file docker/.env.docker up -d --force-recreate app
+   ```
+
+3. Open any application URL and enter a confirmed new password on the forced recovery page.
+4. Remove `ADMIN_PASSWORD_RESET` or set it back to `false`.
+5. Restart the PHP/web process or recreate the Docker app container again.
+
+This boolean switch temporarily exposes a password replacement form without login. Enable it only on a trusted local network. After one reset, DLSite List consumes the recovery request and blocks all normal pages with removal/restart instructions. It will not expose the form again or resume normal login until the active process observes the flag as false after restart.
+
+The `/forgot-password` help page contains the same recovery commands and restart warning. DLSite List does not provide email-based password reset.
+
 ## Database Settings
 Main DB settings are in:
 - `.env` for local/manual runtime
@@ -398,6 +461,7 @@ This width is applied to the Index list/table panel and the top cover image. The
 Options page tabs:
 - `General` is the default tab and contains UI Language, Index Pagination, Index Search, Index Table Width, Series Metadata, Add/Edit form theme and modal behavior, Autocomplete, Tag Library settings, and Reset All Options
 - `Field Layouts` is the second tab and contains Index Table Fields, Index Filter Fields, Index Sort Menu, Edit Form Fields, Quick Add Form Fields, Custom Quick Add Form Fields, and Reset All Options
+- `Authentication` contains the default-off administrator login switch, independent Cherry/Black authentication-page theme, account status, and authenticated password change
 - `Refetch` contains the tag refetch workflow
 
 Options reset behavior:
@@ -408,7 +472,7 @@ Options reset behavior:
 - reset confirmation modals close from Cancel, Escape, or clicking outside the modal card
 - the global reset confirmation button is disabled for 3 seconds and shows a countdown before it can be clicked
 - reset defaults are UI language `en`, pagination `100`, hidden-description search disabled, table width `default`, all five default field layouts, all default Index sort dropdown values, automatic Series enabled, product form theme `black`, work form modals disabled with completion action `redirect`, Tag Library collapsed, Index group ordering disabled, and autocomplete `usage`
-- global reset does not change products, tags, refetch runs, legacy hidden fallback keys, or unrelated future option rows
+- global reset does not change Authentication-tab settings, products, tags, refetch runs, legacy hidden fallback keys, or unrelated future option rows
 
 Index search defaults:
 - general Index search ignores Japanese and English descriptions while their Index columns are hidden

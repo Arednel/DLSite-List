@@ -11,7 +11,7 @@
 1. User opens list page (`GET /`).
 2. `ProductController@index` renders `resources/views/Index.blade.php`, then `app/Livewire/ProductIndex.php` owns list filters, sorting, pagination, and URL query state.
 3. `GET /tags` renders the self-contained Index-aligned tag library shell, then `app/Livewire/TagLibraryManager.php` owns tag search, empty tag creation/deletion, saved collapsed/expanded default state, and tag links back to the same index filter used on the list page.
-4. `GET /options` renders the General tab by default, `GET /options?tab=field-layouts` renders the Field Layouts tab, and `GET /options?tab=refetch` renders the Refetch Tags tab.
+4. `GET /options` renders the General tab by default; `field-layouts`, `authentication`, and `refetch` query values render the other Options tabs.
 5. User can create/edit/delete entries through forms.
 6. Store flow (`POST /store`) validates input, runs scraper, reads scraped JSON, and creates a `products` row.
 7. Custom store flow (`POST /store/custom`) validates manual input, skips scraper/network checks, stores the required local cover plus optional sample images, and creates a `products` row.
@@ -24,6 +24,7 @@
 - Controller: `app/Http/Controllers/ProductController.php`
 - Options controller: `app/Http/Controllers/OptionsController.php`
 - Autocomplete controller: `app/Http/Controllers/AutocompleteController.php`
+- Authentication controller: `app/Http/Controllers/AuthenticationController.php`
 - Requests:
   - `app/Http/Requests/StartTagRefetchRequest.php`
   - `app/Http/Requests/ApplyTagRefetchRequest.php`
@@ -37,6 +38,9 @@
 - UI language enum and request middleware:
   - `app/Enums/UiLanguage.php`
   - `app/Http/Middleware/SetUiLocale.php`
+- Optional authentication middleware:
+  - `app/Http/Middleware/RequireOptionalAuthentication.php`
+  - it runs in the `web` group after session/locale startup, so normal web routes and Livewire update/upload requests share one protection boundary
 - Refetch models:
   - `app/Models/TagRefetchRun.php`
   - `app/Models/TagRefetchWorkResult.php`
@@ -76,6 +80,7 @@
   - `app/Livewire/ProductFormModalSettings.php`
   - `app/Livewire/OptionsWorkSearch.php`
   - `app/Livewire/OptionsRefetchProgress.php`
+  - `app/Livewire/AuthenticationSettings.php`
 - Livewire shared settings concern:
   - `app/Livewire/Concerns/ConfirmsOptionReset.php`
 - Views: `resources/views/*.blade.php`
@@ -93,6 +98,7 @@ Shared UI note:
 - App-authored validation messages are translated at their PHP source. Generic Laravel/vendor validation messages remain unchanged.
 - desktop keeps the floating hover menu
 - mobile uses a toggle button that opens the same menu as a left-side drawer
+- authenticated sessions receive a POST logout action in the Authentication Options tab
 - the shared navigation also owns the native `<dialog>` work-form host; tightly namespaced shell styles stay in `list-menu-float.css`, while the same-origin iframe keeps Create/Edit `edit.css`, the Edit delete dialog, and host-page CSS isolated from one another
 - only unmodified primary clicks on marked Quick Add and Index Edit links are intercepted; their real `href` values remain standalone routes for middle-click, modified clicks, non-self targets, and browsers without native dialog support
 - `resources/views/Index.blade.php` hosts `ProductIndex` inside a sticky-footer page shell; the Livewire view keeps the desktop table on larger screens and switches to stacked cards on mobile so search/actions still fit
@@ -310,7 +316,7 @@ Runtime note:
 - running refetch runs can be cancelled from the progress page; cancellation changes the run from `running` to `cancelling`, cancels that run's Laravel batch, lets any already-started Python fetch finish, and moves the run to `review` after pending results become fetched or skipped
 - cancelled-before-fetch work results are stored as skipped results, while fetched results completed before or during cancellation remain reviewable and can be applied
 - the refetch progress panel is rendered by Livewire and polls every second while the run is active (`running` or `cancelling`)
-- the Options page has separate `General`, `Field Layouts`, and `Refetch` tabs; `OptionsController` normalizes the query or flashed old tab before rendering, and validation errors from refetch forms reopen the Refetch tab
+- the Options page has separate `General`, `Field Layouts`, `Authentication`, and `Refetch` tabs; `OptionsController` normalizes the query or flashed old tab before rendering, and validation errors from refetch forms reopen the Refetch tab
 - the Refetch tab links to the latest refetch run when at least one run exists
 - the General tab includes an Index Pagination setting powered by Livewire and persisted in `options.index_per_page`; changing the mode can reveal the custom-value input immediately, but the setting is only persisted when Save is submitted
 - the General tab includes Livewire autocomplete ordering settings persisted in `options.tag_autocomplete_order` and `options.series_autocomplete_order`
@@ -321,6 +327,17 @@ Runtime note:
 - the Field Layouts tab orders its Livewire settings as Index Table Fields, Index Filter Fields, Index Sort Menu, Edit Form Fields, Quick Add Form Fields, and Custom Quick Add Form Fields; field layout rows use Livewire `wire:sort` drag handles plus Up/Down buttons, keep checkbox state in field-keyed maps while editing, and are persisted only when Save is submitted
 - Options and Tag Library Livewire components keep transient notice keys untranslated and translate them once in Blade. UI Language and Reset All render their flashed notice keys after redirect, under the destination locale.
 - the General and Field Layouts tabs include right-aligned, body-teleported, modal-confirmed reset actions for each visible setting group plus a global `Reset All Options` action; modal confirm buttons use a destructive red style, modals close from Cancel/Escape/backdrop clicks, global reset adds a 3-second client-side countdown before its confirm button unlocks, restores UI Language to English with the other visible settings, and reloads the tab that initiated the reset with a flash notice while leaving product/refetch data and unrelated option rows alone
+
+## Optional Authentication Flow
+
+- `options.user_authentication_enabled` defaults to false; `options.authentication_page_theme` independently defaults to `cherry`. Neither key belongs to the global reset list.
+- The existing Laravel `web` session guard uses `users.username`, the model's built-in hashed password cast, and `remember_token`. Its guard configuration sets the remember duration to 180 days, and the application service provider defines the shared minimum-eight-character password rule.
+- `RequireOptionalAuthentication` returns immediately while authentication is disabled, without querying recovery-consumed state. When enabled, it clears inactive recovery state and chooses setup for an empty user table, environment recovery when active, login for guests, or the requested application route for an authenticated administrator.
+- Login uses Laravel `Auth::attemptWhen` to combine normal password verification with an exact, case-sensitive username comparison. Session regeneration, intended redirects, and an IP-only `RateLimiter` key with five failures and a 300-second decay remain in the same flow.
+- `AuthenticateSession` detects password-hash changes for active sessions. Every password replacement also rotates `remember_token`; the settings flow explicitly logs out its current browser.
+- The application creates at most one account through setup but deliberately adds no database uniqueness or one-row constraint. `admin:reset` can clear unsupported/manual extra rows; password-specific recovery refuses to select among multiple rows.
+- `ADMIN_PASSWORD_RESET=true` is considered only while normal authentication is enabled and a user exists. Middleware forces the dedicated recovery route, and the password replacement plus non-resettable consumed marker are committed atomically so a failed marker write cannot leave anonymous recovery reusable after changing the password.
+- Login, setup, help, and recovery use a shared Blade authentication layout and a small CSS-variable Cherry/Black stylesheet. No registration, email reset, password-token table, or authentication package is involved.
 - the selected-work search on the Refetch tab is rendered by Livewire and uses Laravel query helpers for the ID/title match
 - the Refetch tab work list and queued all/selected refetch ids use numeric RJ descending order, matching the Index default order
 - custom-only works are skipped during refetch because they do not have DLSite metadata to fetch from

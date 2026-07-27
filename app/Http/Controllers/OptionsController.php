@@ -22,6 +22,7 @@ class OptionsController extends Controller
     private const TABS = [
         'general',
         'field-layouts',
+        'authentication',
         'refetch',
     ];
 

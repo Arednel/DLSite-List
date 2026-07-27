@@ -316,6 +316,31 @@ body.options-page {
     font-weight: bold;
 }
 
+.options-page .authentication-settings,
+.options-page .authentication-settings-form,
+.options-page .authentication-password-section {
+    display: grid;
+    gap: 12px;
+}
+
+.options-page .authentication-password-section {
+    margin-top: 8px;
+    padding-bottom: 16px;
+    border-bottom: 1px solid rgba(var(--options-border-rgb), 0.72);
+}
+
+.options-page .authentication-account-status {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    padding: 10px 12px;
+    border: 1px solid rgba(var(--options-border-rgb), 0.72);
+    border-radius: var(--options-radius);
+    background-color: rgba(var(--options-surface-rgb), 0.76);
+    color: var(--options-text);
+    font-size: 12px;
+}
+
 .options-page .tag {
     display: inline-flex;
     align-items: center;
@@ -781,7 +806,8 @@ body.options-page {
     gap: 6px;
 }
 
-.options-page .options-panel>h2 {
+.options-page .options-panel>h2,
+.options-page .authentication-password-section>h2 {
     display: flex;
     align-items: center;
     min-height: 34px;
@@ -796,7 +822,8 @@ body.options-page {
     letter-spacing: 0;
 }
 
-.options-page .options-panel>h2:first-child {
+.options-page .options-panel>h2:first-child,
+.options-page .authentication-password-section>h2:first-child {
     margin-top: 0;
 }
 
