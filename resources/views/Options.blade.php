@@ -80,6 +80,13 @@
 
                     <livewire:index-search-settings />
 
+                    <h2>{{ __('Image Viewer') }}</h2>
+                    <p class="option-description">
+                        {{ __('Choose whether clicking a work cover opens saved images in the application or visits DLsite.') }}
+                    </p>
+
+                    <livewire:index-image-viewer-settings />
+
                     <h2>{{ __('Index Table Width') }}</h2>
                     <p class="option-description">
                         {{ __('Choose how wide the Index table can be before horizontal scrolling is used.') }}

@@ -215,6 +215,7 @@ Current settings:
 - `ui_language`: controls the global application UI language. Stored values are `en` and `ja`; missing or invalid values fall back to `en`
 - `index_per_page`: controls how many works the Index list renders per page
 - `index_search_hidden_descriptions_enabled`: controls whether general Index search can match Japanese and English descriptions when their Index columns are hidden
+- `index_image_viewer_enabled`: controls whether Index thumbnails open saved images while the Image column is visible. Defaults to `false`
 - `tag_autocomplete_order`: controls how tag autocomplete suggestions are ordered
 - `series_autocomplete_order`: controls how series autocomplete suggestions are ordered
 - `auto_series_from_title_name`: controls whether DLSite create fills an empty Series from `japanese.title_name`
@@ -280,6 +281,14 @@ DLSite age-appropriate link default:
 When disabled, every Index DLSite image/title link uses `https://www.dlsite.com/maniax/work/=/product_id/{RJ}.html` without loading or evaluating the product's age. When enabled, an exact stored `ALL_AGES` value uses DLSite Home; `R15`, `R18`, missing, and malformed legacy values use Maniax. The setting does not make the Index Age column visible; Index hydrates `age_category` separately only while the setting is enabled.
 
 The General -> DLSite Links switch includes a question-mark tooltip describing this mapping. Saving applies to the next Index render. Individual reset and Reset All Options restore the disabled default.
+
+Image Viewer default:
+
+- disabled
+
+When disabled, Index thumbnails use their configured DLSite destination. When enabled, Index thumbnails open the saved-image viewer. The viewer is available only while the Image field is visible under Field Layouts -> Index Table Fields; hiding that field does not change the saved setting.
+
+The General -> Image Viewer switch is stored in `options.index_image_viewer_enabled`. Saving applies on the next Index render. Individual reset and Reset All Options restore the disabled default.
 
 Product form theme default:
 - `black`
@@ -459,7 +468,7 @@ Index table width choices:
 This width is applied to the Index list/table panel and the top cover image. The top cover image keeps a capped desktop height, and product row thumbnails keep their fixed list size.
 
 Options page tabs:
-- `General` is the default tab and contains UI Language, Index Pagination, Index Search, Index Table Width, Series Metadata, Add/Edit form theme and modal behavior, Autocomplete, Tag Library settings, and Reset All Options
+- `General` is the default tab and contains UI Language, Index Pagination, Index Search, Image Viewer, Index Table Width, Series Metadata, Add/Edit form theme and modal behavior, Autocomplete, Tag Library settings, and Reset All Options
 - `Field Layouts` is the second tab and contains Index Table Fields, Index Filter Fields, Index Sort Menu, Edit Form Fields, Quick Add Form Fields, Custom Quick Add Form Fields, and Reset All Options
 - `Authentication` contains the default-off administrator login switch, independent Cherry/Black authentication-page theme, account status, and authenticated password change
 - `Refetch` contains the tag refetch workflow
@@ -471,7 +480,7 @@ Options reset behavior:
 - reset confirmation modals are teleported to the document body so they stay centered in the viewport instead of inside the Options panel
 - reset confirmation modals close from Cancel, Escape, or clicking outside the modal card
 - the global reset confirmation button is disabled for 3 seconds and shows a countdown before it can be clicked
-- reset defaults are UI language `en`, pagination `100`, hidden-description search disabled, table width `default`, all five default field layouts, all default Index sort dropdown values, automatic Series enabled, product form theme `black`, work form modals disabled with completion action `redirect`, Tag Library collapsed, Index group ordering disabled, and autocomplete `usage`
+- reset defaults are UI language `en`, pagination `100`, hidden-description search disabled, Image Viewer disabled, table width `default`, all five default field layouts, all default Index sort dropdown values, automatic Series enabled, product form theme `black`, work form modals disabled with completion action `redirect`, Tag Library collapsed, Index group ordering disabled, and autocomplete `usage`
 - global reset does not change Authentication-tab settings, products, tags, refetch runs, legacy hidden fallback keys, or unrelated future option rows
 
 Index search defaults:

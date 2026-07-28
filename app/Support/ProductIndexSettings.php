@@ -27,6 +27,7 @@ final readonly class ProductIndexSettings
         public array $tableWidth,
         public string $tableWidthCss,
         public bool $searchHiddenDescriptionsEnabled,
+        public bool $indexImageViewerEnabled,
         public bool $indexGroupOrderingEnabled,
         public array $tagColorSurfaces,
         public bool $productFormModalEnabled,

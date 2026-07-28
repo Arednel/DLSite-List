@@ -488,5 +488,22 @@
     "View password reset help": "View password reset help",
     "The provided credentials are incorrect.": "The provided credentials are incorrect.",
     "Too many login attempts. Try again in :seconds seconds.": "Too many login attempts. Try again in :seconds seconds.",
-    "Logout": "Logout"
+    "Logout": "Logout",
+    "Image Viewer": "Image Viewer",
+    "Choose whether clicking a work cover opens saved images in the application or visits DLsite.": "Choose whether clicking a work cover opens saved images in the application or visits DLsite.",
+    "When enabled, clicking an Index cover opens the saved cover and sample images without visiting DLsite.": "When enabled, clicking an Index cover opens the saved cover and sample images without visiting DLsite.",
+    "Open saved work images in the Image Viewer": "Open saved work images in the Image Viewer",
+    "Save image viewer setting": "Save image viewer setting",
+    "Image viewer setting saved.": "Image viewer setting saved.",
+    "Image viewer setting reset to default.": "Image viewer setting reset to default.",
+    "Reset this image viewer setting to its default?": "Reset this image viewer setting to its default?",
+    "View saved images for :title": "View saved images for :title",
+    "Work images": "Work images",
+    "Close image viewer": "Close image viewer",
+    "Previous image": "Previous image",
+    "Next image": "Next image",
+    "No image": "No image",
+    "Loading images...": "Loading images...",
+    "Image :current of :total for :title": "Image :current of :total for :title",
+    "View in full": "View in full"
 }

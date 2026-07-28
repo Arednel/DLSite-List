@@ -488,5 +488,22 @@
     "View password reset help": "パスワードリセットのヘルプを見る",
     "The provided credentials are incorrect.": "ユーザー名またはパスワードが正しくありません。",
     "Too many login attempts. Try again in :seconds seconds.": "ログイン試行回数が多すぎます。:seconds秒後に再試行してください。",
-    "Logout": "ログアウト"
+    "Logout": "ログアウト",
+    "Image Viewer": "画像ビューアー",
+    "Choose whether clicking a work cover opens saved images in the application or visits DLsite.": "作品のカバーをクリックしたときに、アプリ内で保存済み画像を開くか、DLsiteに移動するかを選択します。",
+    "When enabled, clicking an Index cover opens the saved cover and sample images without visiting DLsite.": "有効にすると、インデックスのカバーをクリックしたときにDLsiteへ移動せず、保存済みのカバー画像とサンプル画像を開きます。",
+    "Open saved work images in the Image Viewer": "保存済み作品画像を画像ビューアーで開く",
+    "Save image viewer setting": "画像ビューアー設定を保存",
+    "Image viewer setting saved.": "画像ビューアー設定を保存しました。",
+    "Image viewer setting reset to default.": "画像ビューアー設定を初期設定に戻しました。",
+    "Reset this image viewer setting to its default?": "この画像ビューアー設定を初期設定に戻しますか？",
+    "View saved images for :title": ":titleの保存済み画像を表示",
+    "Work images": "作品画像",
+    "Close image viewer": "画像ビューアーを閉じる",
+    "Previous image": "前の画像",
+    "Next image": "次の画像",
+    "No image": "画像がありません",
+    "Loading images...": "画像を読み込んでいます...",
+    "Image :current of :total for :title": ":titleの画像 :current / :total",
+    "View in full": "フルサイズで表示"
 }

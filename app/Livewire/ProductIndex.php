@@ -8,6 +8,7 @@ use App\Enums\ProductIndexSortField;
 use App\Enums\ProductIndexTagMatch;
 use App\Models\GenreGroup;
 use App\Models\Option;
+use App\Models\Product;
 use App\Support\ProductFieldLayout;
 use App\Support\ProductIndexFilters;
 use App\Support\ProductIndexResults;
@@ -15,6 +16,7 @@ use App\Support\ProductIndexRowBuilder;
 use App\Support\TagColor;
 use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\View\View;
+use Livewire\Attributes\Json;
 use Livewire\Component;
 use Livewire\WithPagination;
 
@@ -164,6 +166,8 @@ class ProductIndex extends Component
 
         $currentQuery = $this->queryWithCurrentPage($filterQuery, $isUnlimited);
         $tagLinkQuery = $filters->toQueryWithout('genre');
+        $imageViewerEnabled = $settings->indexImageViewerEnabled
+            && in_array(ProductField::Image->value, $settings->visibleIndexFields, true);
         $productRows = app(ProductIndexRowBuilder::class)->build(
             $visibleProducts,
             $productContributors,
@@ -193,8 +197,29 @@ class ProductIndex extends Component
             ], false),
             'productFormModalEnabled' => $settings->productFormModalEnabled,
             'productFormModalCompletionAction' => $settings->productFormModalCompletionAction,
+            'imageViewerEnabled' => $imageViewerEnabled,
             'sortIcons' => $this->sortIcons($filters),
             'tableWidthCss' => $settings->tableWidthCss,
+        ]);
+    }
+
+    /**
+     * @return list<string>
+     */
+    #[Json]
+    public function workImages(string $productId): array
+    {
+        abort_unless(Option::indexImageViewerEnabled(), 404);
+
+        $product = Product::query()->findOrFail($productId, [
+            'id',
+            'work_image',
+            'sample_images',
+        ]);
+
+        return array_map('asset', [
+            $product->work_image,
+            ...($product->sample_images ?? []),
         ]);
     }
 

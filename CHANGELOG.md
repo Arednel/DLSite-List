@@ -2,6 +2,11 @@
 
 ## Development
 
+* 2026-07-28 -- 1.7.6 Image Viewer
+  * Added lazy loading for Index images
+  * Normalized existing image references to local paths while retaining potential paths for missing downloads
+  * Added a default-off Image Viewer for saved cover and sample images
+
 * 2026-07-27 -- 1.7.5 Optional Authentication
   * Added turned off by default authentication
 

@@ -132,7 +132,10 @@ class ProductController extends Controller
             ? ($validated['notes'] ?? null)
             : null;
         $series = $this->dlsiteCreateSeriesValue($request, $validated, $visibleCreateFields, $workData);
-        $sample_images = $workData->sampleImages;
+        $sample_images = Collection::times(
+            count($workData->sampleImages),
+            fn(int $position): string => "storage/Works/{$dlsite_product_id}/sample_{$position}.jpg",
+        )->all();
         $contributorsByRole = $this->dlsiteCreateContributorsByRole(
             $validated,
             $visibleCreateFields,

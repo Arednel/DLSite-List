@@ -23,7 +23,7 @@ class DLSiteWorkDataTest extends TestCase
                 'author' => [],
                 'genre' => ['JP Tag'],
                 'description' => 'Same Description',
-                'sample_images' => ['sample_1.jpg'],
+                'sample_images' => ['sample_1.jpg', 'sample_2.jpg'],
                 'title_name' => 'Series Name',
             ],
             'english' => [
@@ -41,6 +41,7 @@ class DLSiteWorkDataTest extends TestCase
         $this->assertSame('Circle Name', $data->circle);
         $this->assertNull($data->englishDescription);
         $this->assertSame('Series Name', $data->autoSeries());
+        $this->assertSame(['sample_1.jpg', 'sample_2.jpg'], $data->sampleImages);
         $this->assertSame(['Writer'], $data->contributorsByRole[ProductContributorRole::Scenario->value]);
         $this->assertSame(['Voice One', 'Voice Two'], $data->contributorsByRole[ProductContributorRole::VoiceActor->value]);
         $this->assertSame(['Circle Name'], $data->contributorsByRole[ProductContributorRole::Circle->value]);

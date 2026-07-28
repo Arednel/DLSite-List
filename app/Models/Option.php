@@ -17,6 +17,8 @@ class Option extends Model
 
     public const INDEX_SEARCH_HIDDEN_DESCRIPTIONS_ENABLED = 'index_search_hidden_descriptions_enabled';
 
+    public const INDEX_IMAGE_VIEWER_ENABLED = 'index_image_viewer_enabled';
+
     public const TAG_AUTOCOMPLETE_ORDER = 'tag_autocomplete_order';
 
     public const SERIES_AUTOCOMPLETE_ORDER = 'series_autocomplete_order';
@@ -146,6 +148,7 @@ class Option extends Model
         self::UI_LANGUAGE,
         self::INDEX_PER_PAGE,
         self::INDEX_SEARCH_HIDDEN_DESCRIPTIONS_ENABLED,
+        self::INDEX_IMAGE_VIEWER_ENABLED,
         self::TAG_AUTOCOMPLETE_ORDER,
         self::SERIES_AUTOCOMPLETE_ORDER,
         self::AUTO_SERIES_FROM_TITLE_NAME,
@@ -220,6 +223,21 @@ class Option extends Model
     public static function resetIndexSearchHiddenDescriptionsEnabledToDefault(): void
     {
         self::forget(self::INDEX_SEARCH_HIDDEN_DESCRIPTIONS_ENABLED);
+    }
+
+    public static function indexImageViewerEnabled(): bool
+    {
+        return self::booleanValueFor(self::INDEX_IMAGE_VIEWER_ENABLED, false);
+    }
+
+    public static function setIndexImageViewerEnabled(bool $enabled): void
+    {
+        self::setBooleanValue(self::INDEX_IMAGE_VIEWER_ENABLED, $enabled);
+    }
+
+    public static function resetIndexImageViewerEnabledToDefault(): void
+    {
+        self::forget(self::INDEX_IMAGE_VIEWER_ENABLED);
     }
 
     public static function tagAutocompleteOrder(): AutocompleteOrder
@@ -585,6 +603,7 @@ class Option extends Model
             ->whereIn('key', [
                 self::INDEX_PER_PAGE,
                 self::INDEX_SEARCH_HIDDEN_DESCRIPTIONS_ENABLED,
+                self::INDEX_IMAGE_VIEWER_ENABLED,
                 self::INDEX_FIELD_LAYOUT,
                 self::FILTER_FIELD_LAYOUT,
                 self::INDEX_SORT_FIELD_LAYOUT,
@@ -624,6 +643,10 @@ class Option extends Model
             tableWidthCss: self::indexTableWidthCssFrom($tableWidth),
             searchHiddenDescriptionsEnabled: self::normalizeBoolean(
                 $values->get(self::INDEX_SEARCH_HIDDEN_DESCRIPTIONS_ENABLED),
+                false,
+            ),
+            indexImageViewerEnabled: self::normalizeBoolean(
+                $values->get(self::INDEX_IMAGE_VIEWER_ENABLED),
                 false,
             ),
             indexGroupOrderingEnabled: self::normalizeBoolean(

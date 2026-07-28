@@ -170,37 +170,37 @@ class ProductControllerTest extends TestCase
         ]);
         $this->attachGenres($noise, [$noiseGenre, $noiseCustomGenre]);
 
-        $this->get('/?search='.strtolower($target->id))
+        $this->get('/?search=' . strtolower($target->id))
             ->assertOk()
             ->assertSee($target->work_name)
             ->assertDontSee($noise->work_name);
 
-        $this->get('/?search='.strtolower($jpToken))
+        $this->get('/?search=' . strtolower($jpToken))
             ->assertOk()
             ->assertSee($target->work_name)
             ->assertDontSee($noise->work_name);
 
-        $this->get('/?search='.strtolower($enToken))
+        $this->get('/?search=' . strtolower($enToken))
             ->assertOk()
             ->assertSee($target->work_name_english)
             ->assertDontSee($noise->work_name_english);
 
-        $this->get('/?search='.strtolower($seriesToken))
+        $this->get('/?search=' . strtolower($seriesToken))
             ->assertOk()
             ->assertSee($target->series)
             ->assertDontSee($noise->series);
 
-        $this->get('/?search='.strtolower($genreToken))
+        $this->get('/?search=' . strtolower($genreToken))
             ->assertOk()
             ->assertSee($target->work_name)
             ->assertDontSee($noise->work_name);
 
-        $this->get('/?search='.strtolower($customToken))
+        $this->get('/?search=' . strtolower($customToken))
             ->assertOk()
             ->assertSee($target->work_name)
             ->assertDontSee($noise->work_name);
 
-        $this->get('/?search='.strtolower($hiddenJapaneseGenre->title))
+        $this->get('/?search=' . strtolower($hiddenJapaneseGenre->title))
             ->assertOk()
             ->assertDontSee($hiddenJapanese->work_name);
     }
@@ -257,12 +257,12 @@ class ProductControllerTest extends TestCase
             'work_name' => 'GENRE_ID_NOISE_TOKEN',
         ]);
 
-        $this->get('/?genre='.$sharedGenre->getKey())
+        $this->get('/?genre=' . $sharedGenre->getKey())
             ->assertOk()
             ->assertSee($matching->work_name)
             ->assertDontSee($noise->work_name);
 
-        $this->get('/?genre='.$hiddenJapaneseGenre->getKey())
+        $this->get('/?genre=' . $hiddenJapaneseGenre->getKey())
             ->assertOk()
             ->assertDontSee($hiddenJapanese->work_name);
     }
@@ -595,7 +595,7 @@ class ProductControllerTest extends TestCase
             ->assertSee('href="/create"', false)
             ->assertDontSee('hero__back', false);
 
-        $this->get('/?genre='.$sharedLanguageGenre->getKey())
+        $this->get('/?genre=' . $sharedLanguageGenre->getKey())
             ->assertOk()
             ->assertSee($firstProduct->work_name)
             ->assertDontSee($japaneseOnlyProduct->work_name);
@@ -939,22 +939,22 @@ class ProductControllerTest extends TestCase
         $response->assertOk();
 
         foreach (ProductProgress::options() as $value => $label) {
-            $response->assertSee('value="'.e($value).'"', false);
+            $response->assertSee('value="' . e($value) . '"', false);
             $response->assertSee($label);
         }
 
         foreach (ProductScore::options() as $value => $label) {
-            $response->assertSee('value="'.e($value).'"', false);
+            $response->assertSee('value="' . e($value) . '"', false);
             $response->assertSee($label);
         }
 
         foreach (ProductPriority::options() as $value => $label) {
-            $response->assertSee('value="'.e($value).'"', false);
+            $response->assertSee('value="' . e($value) . '"', false);
             $response->assertSee($label);
         }
 
         foreach (ProductReListenValue::options() as $value => $label) {
-            $response->assertSee('value="'.e($value).'"', false);
+            $response->assertSee('value="' . e($value) . '"', false);
             $response->assertSee($label);
         }
     }
@@ -1011,7 +1011,7 @@ class ProductControllerTest extends TestCase
             ->assertDontSee('name="return_route"', false)
             ->assertSee('name="return_query[progress]"', false)
             ->assertSee('name="return_fragment"', false)
-            ->assertSee('href="/?progress=Listening#'.$product->id.'"', false)
+            ->assertSee('href="/?progress=Listening#' . $product->id . '"', false)
             ->assertDontSee('name="redirect"', false);
     }
 
@@ -1238,8 +1238,8 @@ class ProductControllerTest extends TestCase
 
         $this->get("/edit/{$product->id}?return_query[progress]=Listening")
             ->assertOk()
-            ->assertSee('name="return_fragment" value="'.$product->id.'"', false)
-            ->assertSee('href="/?progress=Listening#'.$product->id.'"', false);
+            ->assertSee('name="return_fragment" value="' . $product->id . '"', false)
+            ->assertSee('href="/?progress=Listening#' . $product->id . '"', false);
     }
 
     public function test_edit_prefills_comma_custom_tags_as_quoted_csv(): void
@@ -1284,7 +1284,7 @@ class ProductControllerTest extends TestCase
         if ($editable) {
             $response
                 ->assertSee('name="genre_fetched"', false)
-                ->assertSee('name="genre_fetched_language" value="'.$expectedFetchedLanguage.'"', false);
+                ->assertSee('name="genre_fetched_language" value="' . $expectedFetchedLanguage . '"', false);
         } else {
             $response
                 ->assertDontSee('name="genre_fetched"', false)
@@ -1762,7 +1762,7 @@ class ProductControllerTest extends TestCase
     public function test_store_extracts_rj_from_url_before_validation(): void
     {
         $existing = Product::factory()->create();
-        $urlInput = 'https://www.dlsite.com/maniax/work/=/product_id/'.strtolower($existing->id).'.html';
+        $urlInput = 'https://www.dlsite.com/maniax/work/=/product_id/' . strtolower($existing->id) . '.html';
 
         $response = $this->from('/create')->post('/store', [
             'id' => $urlInput,
@@ -1790,7 +1790,10 @@ class ProductControllerTest extends TestCase
                 'work_name' => 'SCRAPED_JP_TITLE_TOKEN',
                 'age_category' => ['_name_' => 'R18'],
                 'circle' => 'SCRAPED_CIRCLE_TOKEN',
-                'sample_images' => [],
+                'sample_images' => [
+                    '//img.dlsite.jp/modpub/images2/work/doujin/RJ000000/RJ000000_img_smp1.jpg',
+                    '//img.dlsite.jp/modpub/images2/work/doujin/RJ000000/RJ000000_img_smp2.jpg',
+                ],
                 'genre' => ['Scraped JP Tag', 'ASMR'],
                 'scenario' => ['Scraped Scenario Author'],
                 'voice_actor' => ['Scraped Voice Actor'],
@@ -1831,6 +1834,10 @@ class ProductControllerTest extends TestCase
         $this->assertSame('SCRAPED_EN_TITLE_TOKEN', $product->work_name_english);
         $this->assertSame('SCRAPED_TITLE_NAME_SERIES', $product->series);
         $this->assertSame('Completed', $product->progress);
+        $this->assertSame([
+            "storage/Works/{$workId}/sample_1.jpg",
+            "storage/Works/{$workId}/sample_2.jpg",
+        ], $product->sample_images);
         $this->assertEqualsCanonicalizing(['ASMR', 'Scraped JP Tag'], $product->japaneseGenres->pluck('title')->all());
         $this->assertEqualsCanonicalizing(['ASMR', 'Scraped EN Tag'], $product->englishGenres->pluck('title')->all());
         $this->assertSame(['Scraped Custom Tag'], $product->customGenres->pluck('title')->all());
@@ -2131,7 +2138,7 @@ class ProductControllerTest extends TestCase
         ]);
 
         $response->assertSessionHasNoErrors();
-        $response->assertRedirect('/#'.$workId);
+        $response->assertRedirect('/#' . $workId);
 
         Storage::disk('public')->assertExists("Works/{$workId}/cover.png");
         Storage::disk('public')->assertExists("Works/{$workId}/sample_1.jpg");
@@ -2159,7 +2166,7 @@ class ProductControllerTest extends TestCase
 
         $this->get('/')
             ->assertOk()
-            ->assertSee('src="storage/Works/'.$workId.'/cover.png"', false)
+            ->assertSee('src="storage/Works/' . $workId . '/cover.png"', false)
             ->assertDontSee('images/No Image.png', false);
     }
 
@@ -3314,12 +3321,12 @@ class ProductControllerTest extends TestCase
             'page' => '2',
         ];
 
-        $this->get('/?'.http_build_query($returnQuery))
+        $this->get('/?' . http_build_query($returnQuery))
             ->assertOk()
             ->assertSee($product->work_name)
             ->assertDontSee('WORKFLOW_LISTENING_SCORE_ONE');
 
-        $this->get("/edit/{$product->id}?".http_build_query([
+        $this->get("/edit/{$product->id}?" . http_build_query([
             'return_query' => $returnQuery,
             'return_fragment' => $product->id,
         ]))
@@ -3695,7 +3702,7 @@ class ProductControllerTest extends TestCase
 
     private function uniqueToken(string $prefix): string
     {
-        return $prefix.'_'.random_int(100000, 999999);
+        return $prefix . '_' . random_int(100000, 999999);
     }
 
     private function expectedPythonExecutable(): string

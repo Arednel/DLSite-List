@@ -18,6 +18,7 @@ docker compose --env-file docker/.env.docker up --build -d
 - DLSite List available at: `http://localhost:8080`
 - phpMyAdmin available at: `http://localhost:8888` (uncomment in compose.yaml, disabled for security)
 - Authentication is disabled by default. To add username and password, open `Options -> Authentication` and `Require administrator login`.
+- The saved-work image viewer is disabled by default. Enable it under `Options -> General` to open local cover and sample images from Index thumbnails and open a loaded image at full size in a new tab.
 
 ## Manual installation process
 

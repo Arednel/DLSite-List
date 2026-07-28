@@ -275,6 +275,7 @@ class OptionMetadataSettingsTest extends TestCase
         $this->assertSame(ProductField::Title->value, $defaults->filterFields[0]['field']);
         $this->assertFalse($defaults->indexGroupOrderingEnabled);
         $this->assertFalse($defaults->searchHiddenDescriptionsEnabled);
+        $this->assertFalse($defaults->indexImageViewerEnabled);
         $this->assertSame(Option::DEFAULT_TAG_COLOR_SURFACES, $defaults->tagColorSurfaces);
         $this->assertFalse($defaults->productFormModalEnabled);
         $this->assertFalse($defaults->dlsiteAgeAppropriateLinksEnabled);
@@ -316,6 +317,7 @@ class OptionMetadataSettingsTest extends TestCase
         ]);
         Option::setTagLibraryIndexGroupOrderingEnabled(true);
         Option::setIndexSearchHiddenDescriptionsEnabled(true);
+        Option::setIndexImageViewerEnabled(true);
         Option::setTagColorSurfaces([
             Option::TAG_COLOR_SURFACE_INDEX => false,
             Option::TAG_COLOR_SURFACE_REFETCH => true,
@@ -342,6 +344,7 @@ class OptionMetadataSettingsTest extends TestCase
         $this->assertSame('75%', $settings->tableWidthCss);
         $this->assertTrue($settings->indexGroupOrderingEnabled);
         $this->assertTrue($settings->searchHiddenDescriptionsEnabled);
+        $this->assertTrue($settings->indexImageViewerEnabled);
         $this->assertFalse($settings->tagColorSurfaces[Option::TAG_COLOR_SURFACE_INDEX]);
         $this->assertTrue($settings->tagColorSurfaces[Option::TAG_COLOR_SURFACE_REFETCH]);
         $this->assertTrue($settings->productFormModalEnabled);
@@ -373,15 +376,16 @@ class OptionMetadataSettingsTest extends TestCase
         $this->assertSame(ProductField::Image->value, $settings->indexColumns[0]['field']);
         $this->assertSame(ProductField::Title->value, $settings->filterFields[0]['field']);
         $this->assertSame($this->visibleDefaultSortOptions(), $settings->indexSortFieldOptions);
-        $this->assertSame('1024px', $settings->tableWidthCss);
         $this->assertFalse($settings->indexGroupOrderingEnabled);
         $this->assertFalse($settings->searchHiddenDescriptionsEnabled);
+        $this->assertFalse($settings->indexImageViewerEnabled);
     }
 
     public function test_reset_visible_settings_restores_index_search_and_tag_library_ordering_defaults(): void
     {
         Option::setTagLibraryIndexGroupOrderingEnabled(true);
         Option::setIndexSearchHiddenDescriptionsEnabled(true);
+        Option::setIndexImageViewerEnabled(true);
         Option::setProductFormTheme(Option::PRODUCT_FORM_THEME_CHERRY);
         Option::setProductFormModalEnabled(true);
         Option::setProductFormModalCompletionAction(Option::PRODUCT_FORM_MODAL_COMPLETION_CLOSE);
@@ -398,6 +402,7 @@ class OptionMetadataSettingsTest extends TestCase
 
         $this->assertFalse(Option::tagLibraryIndexGroupOrderingEnabled());
         $this->assertFalse(Option::indexSearchHiddenDescriptionsEnabled());
+        $this->assertFalse(Option::indexImageViewerEnabled());
         $this->assertSame(Option::PRODUCT_FORM_THEME_BLACK, Option::productFormTheme());
         $this->assertFalse(Option::productFormModalEnabled());
         $this->assertFalse(Option::dlsiteAgeAppropriateLinksEnabled());

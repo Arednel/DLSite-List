@@ -1635,6 +1635,7 @@ class ProductIndexLivewireTest extends TestCase
             'custom' => '',
         ]);
         Option::setDlsiteAgeAppropriateLinksEnabled(true);
+        Option::setIndexImageViewerEnabled(true);
 
         $optionQueries = [];
         DB::listen(function ($query) use (&$optionQueries): void {
@@ -1647,6 +1648,7 @@ class ProductIndexLivewireTest extends TestCase
             ->assertSee('BATCHED_OPTION_DESCRIPTION')
             ->assertSee('id="filter_priority"', false)
             ->assertSee('--index-table-width: 1400px', false)
+            ->assertSee('index-image-viewer-trigger', false)
             ->assertSee('https://www.dlsite.com/home/work/', false);
 
         $this->assertCount(1, $optionQueries, implode("\n", $optionQueries));
