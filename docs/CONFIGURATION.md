@@ -312,6 +312,8 @@ The modal uses a same-origin iframe and adds `modal=1` only to that iframe reque
 
 The master switch and each completion choice include question-mark help text. Saving or resetting these Livewire settings updates modal behavior immediately on the Options page.
 
+Each Field Layout block can be saved independently. Saving one block leaves unsaved changes in the other blocks intact. The bottom Save field layouts button saves all six layouts together.
+
 Index field layout default order:
 - `image`
 - `title` locked visible

@@ -14,6 +14,15 @@ class ProductFieldLayoutSettings extends Component
 {
     use ConfirmsOptionReset;
 
+    private const LAYOUTS = [
+        'index',
+        'filter',
+        'sort',
+        'edit',
+        'quick_add',
+        'custom_quick_add',
+    ];
+
     private const ORDER_PROPERTIES = [
         'indexOrder',
         'editOrder',
@@ -56,6 +65,8 @@ class ProductFieldLayoutSettings extends Component
 
     public array $sortFields = [];
 
+    public string $savedLayout = '';
+
     public function mount(): void
     {
         $this->fillFromSettings();
@@ -68,16 +79,24 @@ class ProductFieldLayoutSettings extends Component
 
     public function save(): void
     {
-        Option::setIndexFieldLayout($this->layoutFromState($this->indexOrder, $this->indexFields));
-        Option::setEditFieldLayout($this->layoutFromState($this->editOrder, $this->editFields));
-        Option::setFilterFieldLayout($this->layoutFromState($this->filterOrder, $this->filterFields));
-        Option::setQuickAddFieldLayout($this->layoutFromState($this->quickAddOrder, $this->quickAddFields));
-        Option::setCustomQuickAddFieldLayout(
-            $this->layoutFromState($this->customQuickAddOrder, $this->customQuickAddFields),
-        );
-        Option::setIndexSortFieldLayout($this->sortLayoutFromState($this->sortOrder, $this->sortFields));
+        foreach (self::LAYOUTS as $layout) {
+            $this->persistLayout($layout);
+        }
+
         $this->fillFromSettings();
+        $this->savedLayout = 'all';
         $this->markSaved('Field layouts saved.');
+    }
+
+    public function saveLayout(string $layout): void
+    {
+        if (! $this->persistLayout($layout)) {
+            return;
+        }
+
+        $this->fillLayoutFromSettings($layout);
+        $this->savedLayout = $layout;
+        $this->markSaved('Field layout saved.');
     }
 
     public function resetToDefault(): void
@@ -85,6 +104,7 @@ class ProductFieldLayoutSettings extends Component
         Option::resetFieldLayoutsToDefault();
         Option::resetIndexSortFieldLayoutToDefault();
         $this->fillFromSettings();
+        $this->savedLayout = 'all';
         $this->completeResetWithNotice('Field layouts reset to default.');
     }
 
@@ -102,7 +122,7 @@ class ProductFieldLayoutSettings extends Component
 
         [$this->{$layout}[$index], $this->{$layout}[$target]] = [$this->{$layout}[$target], $this->{$layout}[$index]];
         $this->{$layout} = array_values($this->{$layout});
-        $this->clearSavedNotice();
+        $this->clearLayoutSavedNotice();
     }
 
     public function layoutRows(string $orderProperty, string $fieldsProperty): array
@@ -136,26 +156,21 @@ class ProductFieldLayoutSettings extends Component
 
     public function updated(): void
     {
-        $this->clearSavedNotice();
+        $this->clearLayoutSavedNotice();
     }
 
     #[On('options-defaults-reset')]
     public function refreshFromSettings(): void
     {
         $this->fillFromSettings();
-        $this->clearSavedNotice();
+        $this->clearLayoutSavedNotice();
     }
 
     private function fillFromSettings(): void
     {
-        [$this->indexOrder, $this->indexFields] = $this->stateFromLayout(Option::indexFieldLayout());
-        [$this->editOrder, $this->editFields] = $this->stateFromLayout(Option::editFieldLayout());
-        [$this->filterOrder, $this->filterFields] = $this->stateFromLayout(Option::filterFieldLayout());
-        [$this->quickAddOrder, $this->quickAddFields] = $this->stateFromLayout(Option::quickAddFieldLayout());
-        [$this->customQuickAddOrder, $this->customQuickAddFields] = $this->stateFromLayout(
-            Option::customQuickAddFieldLayout(),
-        );
-        [$this->sortOrder, $this->sortFields] = $this->stateFromSortLayout(Option::indexSortFieldLayout());
+        foreach (self::LAYOUTS as $layout) {
+            $this->fillLayoutFromSettings($layout);
+        }
     }
 
     public function reorderLayout(string $item, int $position): void
@@ -182,6 +197,70 @@ class ProductFieldLayoutSettings extends Component
         array_splice($rows, $position, 0, $movedRows);
 
         $this->{$layout} = array_values($rows);
+        $this->clearLayoutSavedNotice();
+    }
+
+    private function persistLayout(string $layout): bool
+    {
+        switch ($layout) {
+            case 'index':
+                Option::setIndexFieldLayout($this->layoutFromState($this->indexOrder, $this->indexFields));
+                break;
+            case 'filter':
+                Option::setFilterFieldLayout($this->layoutFromState($this->filterOrder, $this->filterFields));
+                break;
+            case 'sort':
+                Option::setIndexSortFieldLayout($this->sortLayoutFromState($this->sortOrder, $this->sortFields));
+                break;
+            case 'edit':
+                Option::setEditFieldLayout($this->layoutFromState($this->editOrder, $this->editFields));
+                break;
+            case 'quick_add':
+                Option::setQuickAddFieldLayout(
+                    $this->layoutFromState($this->quickAddOrder, $this->quickAddFields),
+                );
+                break;
+            case 'custom_quick_add':
+                Option::setCustomQuickAddFieldLayout(
+                    $this->layoutFromState($this->customQuickAddOrder, $this->customQuickAddFields),
+                );
+                break;
+            default:
+                return false;
+        }
+
+        return true;
+    }
+
+    private function fillLayoutFromSettings(string $layout): void
+    {
+        switch ($layout) {
+            case 'index':
+                [$this->indexOrder, $this->indexFields] = $this->stateFromLayout(Option::indexFieldLayout());
+                break;
+            case 'filter':
+                [$this->filterOrder, $this->filterFields] = $this->stateFromLayout(Option::filterFieldLayout());
+                break;
+            case 'sort':
+                [$this->sortOrder, $this->sortFields] = $this->stateFromSortLayout(Option::indexSortFieldLayout());
+                break;
+            case 'edit':
+                [$this->editOrder, $this->editFields] = $this->stateFromLayout(Option::editFieldLayout());
+                break;
+            case 'quick_add':
+                [$this->quickAddOrder, $this->quickAddFields] = $this->stateFromLayout(Option::quickAddFieldLayout());
+                break;
+            case 'custom_quick_add':
+                [$this->customQuickAddOrder, $this->customQuickAddFields] = $this->stateFromLayout(
+                    Option::customQuickAddFieldLayout(),
+                );
+                break;
+        }
+    }
+
+    private function clearLayoutSavedNotice(): void
+    {
+        $this->savedLayout = '';
         $this->clearSavedNotice();
     }
 

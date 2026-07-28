@@ -1,9 +1,7 @@
 <div>
     <form wire:submit.prevent="save" class="option-form">
-        <x-options.switch wire:model.live="enabled" :help="__(
-            'When enabled, clicking an Index cover opens the saved cover and sample images without visiting DLsite.',
-        )">
-            {{ __('Open saved work images in the Image Viewer') }}
+        <x-options.switch wire:model.live="enabled" :help="__('When enabled, clicking an Index cover opens the saved cover and sample images.')">
+            {{ __('Open cover and sample images in the Image Viewer') }}
         </x-options.switch>
 
         @error('enabled')

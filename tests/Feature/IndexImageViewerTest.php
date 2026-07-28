@@ -24,7 +24,7 @@ class IndexImageViewerTest extends TestCase
         $this->get(route('options.index'))
             ->assertOk()
             ->assertSee('Image Viewer')
-            ->assertSee('Open saved work images in the Image Viewer');
+            ->assertSee('Open cover and sample images in the Image Viewer');
 
         Livewire::test(IndexImageViewerSettings::class)
             ->assertSet('enabled', false)

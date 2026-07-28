@@ -57,7 +57,7 @@
             @if ($activeTab === 'general')
                 <section id="general-tab-panel" class="panel options-panel" role="tabpanel">
                     <h2>
-                        <i class="fa-solid fa-globe options-section-icon" aria-hidden="true"></i>
+                        <i class="fa-solid fa-globe fa-fw options-section-icon" aria-hidden="true"></i>
                         {{ __('UI Language') }}
                     </h2>
                     <p class="option-description">
@@ -66,70 +66,100 @@
 
                     <livewire:ui-language-settings />
 
-                    <h2>{{ __('Index Pagination') }}</h2>
+                    <h2>
+                        <i class="fa-solid fa-list-ol fa-fw options-section-icon" aria-hidden="true"></i>
+                        {{ __('Index Pagination') }}
+                    </h2>
                     <p class="option-description">
                         {{ __('Choose how many works are shown on each Index page.') }}
                     </p>
 
                     <livewire:index-pagination-settings />
 
-                    <h2>{{ __('Index Search') }}</h2>
+                    <h2>
+                        <i class="fa-solid fa-magnifying-glass fa-fw options-section-icon" aria-hidden="true"></i>
+                        {{ __('Index Search') }}
+                    </h2>
                     <p class="option-description">
                         {{ __('Choose whether general Index search can match hidden description text.') }}
                     </p>
 
                     <livewire:index-search-settings />
 
-                    <h2>{{ __('Image Viewer') }}</h2>
+                    <h2>
+                        <i class="fa-solid fa-images fa-fw options-section-icon" aria-hidden="true"></i>
+                        {{ __('Image Viewer') }}
+                    </h2>
                     <p class="option-description">
                         {{ __('Choose whether clicking a work cover opens saved images in the application or visits DLsite.') }}
                     </p>
 
                     <livewire:index-image-viewer-settings />
 
-                    <h2>{{ __('Index Table Width') }}</h2>
+                    <h2>
+                        <i class="fa-solid fa-arrows-left-right fa-fw options-section-icon" aria-hidden="true"></i>
+                        {{ __('Index Table Width') }}
+                    </h2>
                     <p class="option-description">
                         {{ __('Choose how wide the Index table can be before horizontal scrolling is used.') }}
                     </p>
 
                     <livewire:index-table-width-settings />
 
-                    <h2>{{ __('Series Metadata') }}</h2>
+                    <h2>
+                        <i class="fa-solid fa-layer-group fa-fw options-section-icon" aria-hidden="true"></i>
+                        {{ __('Series Metadata') }}
+                    </h2>
                     <p class="option-description">
                         {{ __('Choose whether DLSite Create fills Series from the fetched title name when Series is empty.') }}
                     </p>
 
                     <livewire:auto-series-settings />
 
-                    <h2>{{ __('DLSite Links') }}</h2>
+                    <h2>
+                        <i class="fa-solid fa-link fa-fw options-section-icon" aria-hidden="true"></i>
+                        {{ __('DLSite Links') }}
+                    </h2>
                     <p class="option-description">
                         {{ __('Choose whether Index work links use the DLSite section appropriate for the saved age category.') }}
                     </p>
 
                     <livewire:dlsite-link-settings />
 
-                    <h2>{{ __('Form Page Theme') }}</h2>
+                    <h2>
+                        <i class="fa-solid fa-palette fa-fw options-section-icon" aria-hidden="true"></i>
+                        {{ __('Form Page Theme') }}
+                    </h2>
                     <p class="option-description">
                         {{ __('Choose the visual theme for Add Work, Add Custom Work, and Edit Work pages.') }}
                     </p>
 
                     <livewire:product-form-theme-settings />
 
-                    <h2>{{ __('Work Form Modals') }}</h2>
+                    <h2>
+                        <i class="fa-solid fa-window-restore fa-fw options-section-icon" aria-hidden="true"></i>
+                        {{ __('Work Form Modals') }}
+                    </h2>
                     <p class="option-description">
                         {{ __('Choose whether Quick Add and Edit Work open over the current page and what happens after a successful change.') }}
                     </p>
 
                     <livewire:product-form-modal-settings />
 
-                    <h2>{{ __('Autocomplete') }}</h2>
+                    <h2>
+                        <i class="fa-solid fa-keyboard fa-fw options-section-icon" aria-hidden="true"></i>
+                        {{ __('Autocomplete') }}
+                    </h2>
                     <p class="option-description">
                         {{ __('Choose how tag and series suggestions are ordered in autocomplete dropdowns.') }}
                     </p>
 
                     <livewire:autocomplete-settings />
 
-                    <h2>{{ __('Tag Library') }}</h2>
+                    <h2>
+                        <i class="fa-solid fa-tags fa-fw options-section-icon" aria-hidden="true"></i>
+                        {{ __('Tag Library') }}
+                    </h2>
                     <p class="option-description">
                         {{ __('Configure Tag Library startup behavior and whether saved tag-group order affects Index tag chips.') }}
                     </p>
@@ -142,10 +172,14 @@
 
             @if ($activeTab === 'field-layouts')
                 <section id="field-layouts-tab-panel" class="panel options-panel" role="tabpanel">
-                    <h2>{{ __('Field Layouts') }}</h2>
-                    <p class="option-description">
-                        {{ __('Choose which product fields are visible, editable, and how configurable columns are ordered.') }}
-                    </p>
+                    <header class="options-panel-intro">
+                        <h2>
+                            {{ __('Field Layouts') }}
+                        </h2>
+                        <p class="option-description">
+                            {{ __('Choose which product fields are visible, editable, and how configurable columns are ordered.') }}
+                        </p>
+                    </header>
 
                     <livewire:product-field-layout-settings />
 
@@ -156,7 +190,7 @@
             @if ($activeTab === 'authentication')
                 <section id="authentication-tab-panel" class="panel options-panel" role="tabpanel">
                     <h2>
-                        <i class="fa-solid fa-shield-halved options-section-icon" aria-hidden="true"></i>
+                        <i class="fa-solid fa-shield-halved fa-fw options-section-icon" aria-hidden="true"></i>
                         {{ __('Administrator Authentication') }}
                     </h2>
                     <p class="option-description">
@@ -169,7 +203,10 @@
 
             @if ($activeTab === 'refetch')
                 <section id="refetch-tab-panel" class="panel options-panel" role="tabpanel">
-                    <h2>{{ __('Refetch Tags') }}</h2>
+                    <h2>
+                        <i class="fa-solid fa-arrows-rotate fa-fw options-section-icon" aria-hidden="true"></i>
+                        {{ __('Refetch Tags') }}
+                    </h2>
                     <p class="option-description">
                         {{ __('Fetch the latest DLsite genre tags for all works or for only selected works.') }}
                         <br>

@@ -42,7 +42,10 @@
 
     @auth('web')
         <div class="authentication-password-section">
-            <h2>{{ __('Change Administrator Password') }}</h2>
+            <h2>
+                <i class="fa-solid fa-key fa-fw options-section-icon" aria-hidden="true"></i>
+                {{ __('Change Administrator Password') }}
+            </h2>
             <p class="option-description">
                 {{ __('Changing the password signs out this browser and invalidates other sessions and remember-me cookies.') }}
             </p>

@@ -412,6 +412,7 @@ class ProductMetadataSettingsTest extends TestCase
             ->call('save')
             ->assertHasNoErrors()
             ->assertSet('saved', true)
+            ->assertSet('savedLayout', 'all')
             ->assertSet('notice', 'Field layouts saved.');
 
         $this->assertFalse($this->layoutRow(Option::indexFieldLayout(), ProductField::Score)['visible']);
@@ -422,6 +423,52 @@ class ProductMetadataSettingsTest extends TestCase
         $this->assertTrue($this->layoutRow(Option::editFieldLayout(), ProductField::FetchedTags)['editable']);
         $this->assertFalse($this->layoutRow(Option::quickAddFieldLayout(), ProductField::Notes)['visible']);
         $this->assertFalse($this->layoutRow(Option::customQuickAddFieldLayout(), ProductField::SampleImages)['visible']);
+    }
+
+    #[DataProvider('separateFieldLayoutSaveProvider')]
+    public function test_field_layout_component_saves_each_layout_separately(
+        string $layout,
+        string $stateProperty,
+        string $optionMethod,
+        string $field,
+    ): void {
+        $component = Livewire::test(ProductFieldLayoutSettings::class);
+        $currentVisibility = $component->get($stateProperty)[$field]['visible'];
+        $expectedVisibility = ! $currentVisibility;
+
+        $component
+            ->set("{$stateProperty}.{$field}.visible", $expectedVisibility)
+            ->call('saveLayout', $layout)
+            ->assertHasNoErrors()
+            ->assertSet('saved', true)
+            ->assertSet('savedLayout', $layout)
+            ->assertSet('notice', 'Field layout saved.');
+
+        $storedRow = collect(Option::{$optionMethod}())->firstWhere('field', $field);
+
+        $this->assertIsArray($storedRow);
+        $this->assertSame($expectedVisibility, $storedRow['visible']);
+    }
+
+    public function test_saving_one_field_layout_preserves_other_unsaved_layout_drafts(): void
+    {
+        $storedEditLayout = Option::editFieldLayout();
+        $component = Livewire::test(ProductFieldLayoutSettings::class);
+        $indexVisibility = ! $component->get('indexFields')['score']['visible'];
+        $editDraftVisibility = ! $component->get('editFields')['notes']['visible'];
+
+        $component
+            ->set('indexFields.score.visible', $indexVisibility)
+            ->set('editFields.notes.visible', $editDraftVisibility)
+            ->call('saveLayout', 'index')
+            ->assertSet('editFields.notes.visible', $editDraftVisibility)
+            ->assertSet('savedLayout', 'index');
+
+        $this->assertSame($indexVisibility, $this->layoutRow(
+            Option::indexFieldLayout(),
+            ProductField::Score,
+        )['visible']);
+        $this->assertSame($storedEditLayout, Option::editFieldLayout());
     }
 
     public function test_field_layout_component_saves_split_tag_bucket_controls_without_filter_split(): void
@@ -553,17 +600,22 @@ class ProductMetadataSettingsTest extends TestCase
             ->assertSet('indexFields', $originalFields);
     }
 
-    public function test_field_layout_component_ignores_invalid_layout_names_when_moving_or_reading_rows(): void
+    public function test_field_layout_component_ignores_invalid_layout_names_when_moving_reading_or_saving(): void
     {
         $component = Livewire::test(ProductFieldLayoutSettings::class);
         $originalOrder = $component->get('indexOrder');
+        $storedIndexLayout = Option::indexFieldLayout();
 
         $component
             ->call('move', 'notARealOrderProperty', 0, 1)
-            ->assertSet('indexOrder', $originalOrder);
+            ->assertSet('indexOrder', $originalOrder)
+            ->call('saveLayout', 'not-a-layout')
+            ->assertSet('saved', false)
+            ->assertSet('savedLayout', '');
 
         $this->assertSame([], $component->instance()->layoutRows('notARealOrderProperty', 'indexFields'));
         $this->assertSame([], $component->instance()->layoutRows('indexOrder', 'notARealFieldsProperty'));
+        $this->assertSame($storedIndexLayout, Option::indexFieldLayout());
     }
 
     public function test_field_layout_component_enforces_locked_visibility_when_saving(): void
@@ -764,7 +816,7 @@ class ProductMetadataSettingsTest extends TestCase
 
     public function test_field_layout_component_renders_core_user_controls(): void
     {
-        Livewire::test(ProductFieldLayoutSettings::class)
+        $component = Livewire::test(ProductFieldLayoutSettings::class)
             ->assertSeeInOrder([
                 'Index Table Fields',
                 'Index Filter Fields',
@@ -777,8 +829,21 @@ class ProductMetadataSettingsTest extends TestCase
             ->assertSee('Custom Tags')
             ->assertSee('Fetched EN Tags')
             ->assertSee('Editable')
+            ->assertSee('Save Index Table Fields')
+            ->assertSee('Save Index Filter Fields')
+            ->assertSee('Save Index Sort Menu')
+            ->assertSee('Save Edit Form Fields')
+            ->assertSee('Save Quick Add Form Fields')
+            ->assertSee('Save Custom Quick Add Form Fields')
             ->assertSee('Save field layouts')
             ->assertSee('Reset to default');
+
+        foreach (['index', 'filter', 'sort', 'edit', 'quick_add', 'custom_quick_add'] as $layout) {
+            $component->assertSee(
+                "wire:click.preserve-scroll=\"saveLayout('{$layout}')\"",
+                false,
+            );
+        }
     }
 
     public function test_field_layout_component_renders_switch_controls(): void
@@ -863,6 +928,21 @@ class ProductMetadataSettingsTest extends TestCase
         yield 'arbitrary text' => ['wide'];
         yield 'unsupported unit' => ['10vh'];
         yield 'missing unit' => ['1200'];
+    }
+
+    public static function separateFieldLayoutSaveProvider(): iterable
+    {
+        yield 'Index Table Fields' => ['index', 'indexFields', 'indexFieldLayout', 'score'];
+        yield 'Index Filter Fields' => ['filter', 'filterFields', 'filterFieldLayout', 'score'];
+        yield 'Index Sort Menu' => ['sort', 'sortFields', 'indexSortFieldLayout', 'updated_at'];
+        yield 'Edit Form Fields' => ['edit', 'editFields', 'editFieldLayout', 'notes'];
+        yield 'Quick Add Form Fields' => ['quick_add', 'quickAddFields', 'quickAddFieldLayout', 'notes'];
+        yield 'Custom Quick Add Form Fields' => [
+            'custom_quick_add',
+            'customQuickAddFields',
+            'customQuickAddFieldLayout',
+            'notes',
+        ];
     }
 
     /**

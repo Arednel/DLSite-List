@@ -2,6 +2,10 @@
 
 ## Development
 
+* 2026-07-28 -- 1.7.7 Settings UI Polish
+  * Added icons to Options setting headings
+  * Added separate Save actions for each Field Layout block
+
 * 2026-07-28 -- 1.7.6 Image Viewer
   * Added lazy loading for Index images
   * Normalized existing image references to local paths while retaining potential paths for missing downloads

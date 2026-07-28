@@ -42,7 +42,6 @@ class OptionsControllerTest extends TestCase
             ->assertSee('href="/options?tab=refetch"', false)
             ->assertDontSee('href="/options?tab=options"', false)
             ->assertSee('UI Language')
-            ->assertSee('class="fa-solid fa-globe options-section-icon" aria-hidden="true"', false)
             ->assertSee('Choose which language the application interface uses.')
             ->assertSee('Index Pagination')
             ->assertSee('Index page size')

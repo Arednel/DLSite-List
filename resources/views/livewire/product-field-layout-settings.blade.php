@@ -1,15 +1,18 @@
 <div>
     <form wire:submit.prevent="save" class="option-form option-form--wide">
         @foreach ([
-        'index' => ['heading' => 'Index Table Fields', 'order' => 'indexOrder', 'fields' => 'indexFields', 'sort' => false],
-        'filter' => ['heading' => 'Index Filter Fields', 'order' => 'filterOrder', 'fields' => 'filterFields', 'sort' => false],
-        'sort' => ['heading' => 'Index Sort Menu', 'order' => 'sortOrder', 'fields' => 'sortFields', 'sort' => true],
-        'edit' => ['heading' => 'Edit Form Fields', 'order' => 'editOrder', 'fields' => 'editFields', 'sort' => false],
-        'quick_add' => ['heading' => 'Quick Add Form Fields', 'order' => 'quickAddOrder', 'fields' => 'quickAddFields', 'sort' => false],
-        'custom_quick_add' => ['heading' => 'Custom Quick Add Form Fields', 'order' => 'customQuickAddOrder', 'fields' => 'customQuickAddFields', 'sort' => false],
+        'index' => ['heading' => 'Index Table Fields', 'icon' => 'table', 'order' => 'indexOrder', 'fields' => 'indexFields', 'sort' => false],
+        'filter' => ['heading' => 'Index Filter Fields', 'icon' => 'filter', 'order' => 'filterOrder', 'fields' => 'filterFields', 'sort' => false],
+        'sort' => ['heading' => 'Index Sort Menu', 'icon' => 'arrow-down-wide-short', 'order' => 'sortOrder', 'fields' => 'sortFields', 'sort' => true],
+        'edit' => ['heading' => 'Edit Form Fields', 'icon' => 'pen-to-square', 'order' => 'editOrder', 'fields' => 'editFields', 'sort' => false],
+        'quick_add' => ['heading' => 'Quick Add Form Fields', 'icon' => 'file-circle-plus', 'order' => 'quickAddOrder', 'fields' => 'quickAddFields', 'sort' => false],
+        'custom_quick_add' => ['heading' => 'Custom Quick Add Form Fields', 'icon' => 'file-pen', 'order' => 'customQuickAddOrder', 'fields' => 'customQuickAddFields', 'sort' => false],
     ] as $layoutProperty => $layoutConfig)
             <section class="field-layout-section">
-                <h3>{{ __($layoutConfig['heading']) }}</h3>
+                <h3>
+                    <i class="fa-solid fa-{{ $layoutConfig['icon'] }} fa-fw options-section-icon" aria-hidden="true"></i>
+                    {{ __($layoutConfig['heading']) }}
+                </h3>
 
                 <div class="field-layout-list" wire:sort="reorderLayout">
                     @foreach ($this->layoutRows($layoutConfig['order'], $layoutConfig['fields']) as $rowIndex => $row)
@@ -77,12 +80,23 @@
                         </div>
                     @endforeach
                 </div>
+
+                <div class="option-actions option-actions--inline">
+                    <button type="button" class="tag tag--soft tag--lg is-clickable"
+                        wire:click.preserve-scroll="saveLayout('{{ $layoutProperty }}')" wire:loading.attr="disabled"
+                        wire:target="saveLayout('{{ $layoutProperty }}')">
+                        {{ __('Save :layout', ['layout' => __($layoutConfig['heading'])]) }}
+                    </button>
+                    @if ($saved && $savedLayout === $layoutProperty)
+                        <span class="saved-notice">{{ __($notice) }}</span>
+                    @endif
+                </div>
             </section>
         @endforeach
 
         <div class="option-actions option-actions--inline">
             <button type="submit" class="tag tag--soft tag--lg is-clickable">{{ __('Save field layouts') }}</button>
-            @if ($saved)
+            @if ($saved && $savedLayout === 'all')
                 <span class="saved-notice">{{ __($notice) }}</span>
             @endif
             <button type="button" class="tag tag--soft tag--lg is-clickable option-reset-button"

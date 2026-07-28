@@ -827,6 +827,25 @@ body.options-page {
     margin-top: 0;
 }
 
+.options-page .options-panel-intro {
+    display: grid;
+    gap: 6px;
+    padding: 0 2px 0px;
+}
+
+.options-page .options-panel-intro h2 {
+    display: flex;
+    align-items: center;
+    margin: 0;
+    color: var(--options-text);
+    font: bold 18px Verdana;
+}
+
+.options-page .options-panel-intro .options-section-icon {
+    color: var(--options-accent);
+    font-size: 16px;
+}
+
 .options-page .options-section-icon {
     margin-inline-end: 8px;
 }
