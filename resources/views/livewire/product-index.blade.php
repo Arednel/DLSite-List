@@ -12,43 +12,55 @@
 
         <div id="progress-menu" class="progress-menu-container">
             <div class="progress-menu">
-                <a href="{{ route('index', $allProgressQuery, false) }}" @class([
-                    'progress-button',
-                    'progress-all',
-                    'on' => $activeProgress === null,
-                ])>
-                    {{ __('All ASMR') }}</a>
-                <a href="{{ route('index', array_merge($allProgressQuery, ['progress' => 'Listening']), false) }}"
-                    @class([
+                <div class="progress-links">
+                    <a href="{{ route('index', $allProgressQuery, false) }}" @class([
                         'progress-button',
-                        'progress-listening',
-                        'on' => $activeProgress === 'Listening',
+                        'progress-all',
+                        'on' => $activeProgress === null,
                     ])>
-                    {{ __('Currently Listening') }}</a>
-                <a href="{{ route('index', array_merge($allProgressQuery, ['progress' => 'Completed']), false) }}"
-                    @class([
-                        'progress-button',
-                        'progress-completed',
-                        'on' => $activeProgress === 'Completed',
-                    ])>
-                    {{ __('Completed') }}</a>
-                <a href="{{ route('index', array_merge($allProgressQuery, ['progress' => 'Plan to Listen']), false) }}"
-                    @class([
-                        'progress-button',
-                        'progress-plan-to-listen',
-                        'on' => $activeProgress === 'Plan to Listen',
-                    ])>
-                    {{ __('Plan to Listen') }}</a>
-
-                <div class="search-container">
-                    <form wire:submit.prevent="applySearch" class="search-form">
-                        <input type="text" name="search" wire:model="searchInput"
-                            placeholder="{{ __('Search...') }}" class="search-input">
-                        <button type="submit" class="search-button" aria-label="{{ __('Search') }}">
-                            <i class="fa-solid fa-magnifying-glass"></i>
-                        </button>
-                    </form>
+                        {{ __('All ASMR') }}</a>
+                    <a href="{{ route('index', array_merge($allProgressQuery, ['progress' => 'Listening']), false) }}"
+                        @class([
+                            'progress-button',
+                            'progress-listening',
+                            'on' => $activeProgress === 'Listening',
+                        ])>
+                        {{ __('Currently Listening') }}</a>
+                    <a href="{{ route('index', array_merge($allProgressQuery, ['progress' => 'Completed']), false) }}"
+                        @class([
+                            'progress-button',
+                            'progress-completed',
+                            'on' => $activeProgress === 'Completed',
+                        ])>
+                        {{ __('Completed') }}</a>
+                    @if ($optionalProductStatuses['on_hold'])
+                        <a href="{{ route('index', array_merge($allProgressQuery, ['progress' => 'On Hold']), false) }}"
+                            @class([
+                                'progress-button',
+                                'progress-on-hold',
+                                'on' => $activeProgress === 'On Hold',
+                            ])>
+                            {{ __('On Hold') }}</a>
+                    @endif
+                    @if ($optionalProductStatuses['dropped'])
+                        <a href="{{ route('index', array_merge($allProgressQuery, ['progress' => 'Dropped']), false) }}"
+                            @class([
+                                'progress-button',
+                                'progress-dropped',
+                                'on' => $activeProgress === 'Dropped',
+                            ])>
+                            {{ __('Dropped') }}</a>
+                    @endif
+                    <a href="{{ route('index', array_merge($allProgressQuery, ['progress' => 'Plan to Listen']), false) }}"
+                        @class([
+                            'progress-button',
+                            'progress-plan-to-listen',
+                            'on' => $activeProgress === 'Plan to Listen',
+                        ])>
+                        {{ __('Plan to Listen') }}</a>
                 </div>
+
+                <x-index.search class="search-container--desktop" data-index-search="desktop" />
             </div>
         </div>
 
@@ -58,6 +70,7 @@
                     <span class="progress-heading">
                         {{ $progressHeading }}
                     </span>
+                    <x-index.search class="search-container--mobile" data-index-search="mobile" />
                     <x-index.advanced-filters :filter-options="$filterOptions" :filter-active="$filterActive" :has-current-tag-filter="$hasCurrentTagFilter" :filter-fields="$filterFields" />
                 </div>
 
@@ -96,6 +109,8 @@
                                     'status',
                                     'progress-listening' => $product->progress === 'Listening',
                                     'progress-completed' => $product->progress === 'Completed',
+                                    'progress-on-hold' => $product->progress === 'On Hold',
+                                    'progress-dropped' => $product->progress === 'Dropped',
                                     'progress-plan-to-listen' => $product->progress === 'Plan to Listen',
                                 ])>
                                 </td>
@@ -169,7 +184,7 @@
 
                                             @case('progress')
                                                 <div class="progress">
-                                                    <span>{{ $filterOptions['progress'][$product->progress] ?? $product->progress }}</span>
+                                                    <span>{{ __($product->progress) }}</span>
                                                 </div>
                                             @break
 

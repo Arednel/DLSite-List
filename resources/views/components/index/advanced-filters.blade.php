@@ -5,11 +5,11 @@
     'filterFields' => [],
 ])
 
-<div x-data="indexAdvancedFilters()">
+<div class="advanced-options" x-data="indexAdvancedFilters()">
     <button type="button" class="advanced-options-button {{ $filterActive ? 'is-active' : '' }}" data-index-filter-open
         aria-controls="advanced-options-modal" x-bind:aria-expanded="filtersOpen.toString()" x-on:click="openFilters()">
         <i class="fa-solid fa-sliders"></i>
-        {{ __('Filter') }}
+        {{ __('Filters') }}
     </button>
 
     <div id="advanced-options-modal" class="advanced-options-modal" data-index-filter-modal x-cloak x-show="filtersOpen"

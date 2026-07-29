@@ -19,6 +19,8 @@ class Option extends Model
 
     public const INDEX_IMAGE_VIEWER_ENABLED = 'index_image_viewer_enabled';
 
+    public const OPTIONAL_PRODUCT_STATUSES = 'optional_product_statuses';
+
     public const TAG_AUTOCOMPLETE_ORDER = 'tag_autocomplete_order';
 
     public const SERIES_AUTOCOMPLETE_ORDER = 'series_autocomplete_order';
@@ -95,6 +97,11 @@ class Option extends Model
 
     public const DEFAULT_INDEX_PER_PAGE = 100;
 
+    public const DEFAULT_OPTIONAL_PRODUCT_STATUSES = [
+        'on_hold' => false,
+        'dropped' => false,
+    ];
+
     public const FIXED_INDEX_PER_PAGE_OPTIONS = [
         10,
         25,
@@ -149,6 +156,7 @@ class Option extends Model
         self::INDEX_PER_PAGE,
         self::INDEX_SEARCH_HIDDEN_DESCRIPTIONS_ENABLED,
         self::INDEX_IMAGE_VIEWER_ENABLED,
+        self::OPTIONAL_PRODUCT_STATUSES,
         self::TAG_AUTOCOMPLETE_ORDER,
         self::SERIES_AUTOCOMPLETE_ORDER,
         self::AUTO_SERIES_FROM_TITLE_NAME,
@@ -238,6 +246,28 @@ class Option extends Model
     public static function resetIndexImageViewerEnabledToDefault(): void
     {
         self::forget(self::INDEX_IMAGE_VIEWER_ENABLED);
+    }
+
+    /**
+     * @return array{on_hold: bool, dropped: bool}
+     */
+    public static function optionalProductStatuses(): array
+    {
+        return self::jsonFromValue(self::valueFor(self::OPTIONAL_PRODUCT_STATUSES))
+            ?? self::DEFAULT_OPTIONAL_PRODUCT_STATUSES;
+    }
+
+    public static function setOptionalProductStatuses(array $statuses): void
+    {
+        self::setValue(
+            self::OPTIONAL_PRODUCT_STATUSES,
+            json_encode($statuses, JSON_THROW_ON_ERROR),
+        );
+    }
+
+    public static function resetOptionalProductStatusesToDefault(): void
+    {
+        self::forget(self::OPTIONAL_PRODUCT_STATUSES);
     }
 
     public static function tagAutocompleteOrder(): AutocompleteOrder
@@ -604,6 +634,7 @@ class Option extends Model
                 self::INDEX_PER_PAGE,
                 self::INDEX_SEARCH_HIDDEN_DESCRIPTIONS_ENABLED,
                 self::INDEX_IMAGE_VIEWER_ENABLED,
+                self::OPTIONAL_PRODUCT_STATUSES,
                 self::INDEX_FIELD_LAYOUT,
                 self::FILTER_FIELD_LAYOUT,
                 self::INDEX_SORT_FIELD_LAYOUT,
@@ -649,6 +680,8 @@ class Option extends Model
                 $values->get(self::INDEX_IMAGE_VIEWER_ENABLED),
                 false,
             ),
+            optionalProductStatuses: self::jsonFromValue($values->get(self::OPTIONAL_PRODUCT_STATUSES))
+                ?? self::DEFAULT_OPTIONAL_PRODUCT_STATUSES,
             indexGroupOrderingEnabled: self::normalizeBoolean(
                 $values->get(self::TAG_LIBRARY_INDEX_GROUP_ORDERING_ENABLED),
                 false,

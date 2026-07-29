@@ -170,11 +170,13 @@ final readonly class ProductIndexFilters
     /**
      * @param  array<string, string>|null  $sortFields
      */
-    public static function optionSets(?array $sortFields = null): array
-    {
+    public static function optionSets(
+        ?array $sortFields = null,
+        ?array $progressOptions = null,
+    ): array {
         return [
             'age_categories' => ProductAgeCategory::options(),
-            'progress' => ProductProgress::options(),
+            'progress' => $progressOptions ?? ProductProgress::options(),
             'scores' => ProductScore::options(),
             'priorities' => ProductPriority::options(),
             're_listen_values' => ProductReListenValue::options(),

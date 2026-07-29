@@ -87,6 +87,16 @@
                     <livewire:index-search-settings />
 
                     <h2>
+                        <i class="fa-solid fa-list-check fa-fw options-section-icon" aria-hidden="true"></i>
+                        {{ __('Optional Statuses') }}
+                    </h2>
+                    <p class="option-description">
+                        {{ __('Choose whether On Hold and Dropped are shown in forms, Index status controls, and Advanced Filter.') }}
+                    </p>
+
+                    <livewire:optional-product-statuses-settings />
+
+                    <h2>
                         <i class="fa-solid fa-images fa-fw options-section-icon" aria-hidden="true"></i>
                         {{ __('Image Viewer') }}
                     </h2>

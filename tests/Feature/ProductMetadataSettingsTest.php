@@ -10,6 +10,7 @@ use App\Livewire\AutoSeriesSettings;
 use App\Livewire\DlsiteLinkSettings;
 use App\Livewire\IndexPaginationSettings;
 use App\Livewire\IndexTableWidthSettings;
+use App\Livewire\OptionalProductStatusesSettings;
 use App\Livewire\OptionsResetDefaults;
 use App\Livewire\ProductFieldLayoutSettings;
 use App\Livewire\ProductFormModalSettings;
@@ -88,6 +89,62 @@ class ProductMetadataSettingsTest extends TestCase
         $component
             ->call('refreshFromSettings')
             ->assertSet('enabled', true)
+            ->assertSet('saved', false)
+            ->assertSet('notice', '');
+    }
+
+    public function test_optional_product_status_setting_hydrates_and_saves_switches_independently(): void
+    {
+        Option::setOptionalProductStatuses([
+            'on_hold' => true,
+            'dropped' => false,
+        ]);
+
+        Livewire::test(OptionalProductStatusesSettings::class)
+            ->assertSet('onHoldEnabled', true)
+            ->assertSet('droppedEnabled', false)
+            ->assertSee('Enable On Hold status')
+            ->assertSee('Enable Dropped status')
+            ->set('onHoldEnabled', false)
+            ->set('droppedEnabled', true)
+            ->call('save')
+            ->assertHasNoErrors()
+            ->assertSet('onHoldEnabled', false)
+            ->assertSet('droppedEnabled', true)
+            ->assertSet('saved', true)
+            ->assertSet('notice', 'Optional status settings saved.');
+
+        $this->assertSame([
+            'on_hold' => false,
+            'dropped' => true,
+        ], Option::optionalProductStatuses());
+    }
+
+    public function test_optional_product_status_setting_resets_and_refreshes_after_global_reset(): void
+    {
+        Option::setOptionalProductStatuses([
+            'on_hold' => true,
+            'dropped' => true,
+        ]);
+
+        $component = Livewire::test(OptionalProductStatusesSettings::class)
+            ->call('askResetToDefault')
+            ->assertSet('confirmingResetToDefault', true)
+            ->call('resetToDefault')
+            ->assertSet('confirmingResetToDefault', false)
+            ->assertSet('onHoldEnabled', false)
+            ->assertSet('droppedEnabled', false)
+            ->assertSet('notice', 'Optional status settings reset to default.');
+
+        Option::setOptionalProductStatuses([
+            'on_hold' => true,
+            'dropped' => false,
+        ]);
+
+        $component
+            ->call('refreshFromSettings')
+            ->assertSet('onHoldEnabled', true)
+            ->assertSet('droppedEnabled', false)
             ->assertSet('saved', false)
             ->assertSet('notice', '');
     }
@@ -707,6 +764,10 @@ class ProductMetadataSettingsTest extends TestCase
         ]);
         Option::setAutoSeriesFromTitleName(false);
         Option::setDlsiteAgeAppropriateLinksEnabled(true);
+        Option::setOptionalProductStatuses([
+            'on_hold' => true,
+            'dropped' => true,
+        ]);
         Option::setProductFormTheme(Option::PRODUCT_FORM_THEME_CHERRY);
         Option::setProductFormModalEnabled(true);
         Option::setProductFormModalCompletionAction(Option::PRODUCT_FORM_MODAL_COMPLETION_CLOSE);
@@ -743,6 +804,7 @@ class ProductMetadataSettingsTest extends TestCase
         $this->assertSame('1024px', Option::productIndexSettings()->tableWidthCss);
         $this->assertTrue(Option::autoSeriesFromTitleName());
         $this->assertFalse(Option::dlsiteAgeAppropriateLinksEnabled());
+        $this->assertSame(Option::DEFAULT_OPTIONAL_PRODUCT_STATUSES, Option::optionalProductStatuses());
         $this->assertSame(Option::PRODUCT_FORM_THEME_BLACK, Option::productFormTheme());
         $this->assertFalse(Option::productFormModalEnabled());
         $this->assertSame(
@@ -787,6 +849,7 @@ class ProductMetadataSettingsTest extends TestCase
             ->assertSeeLivewire(UiLanguageSettings::class)
             ->assertSeeLivewire(IndexPaginationSettings::class)
             ->assertSeeLivewire(IndexTableWidthSettings::class)
+            ->assertSeeLivewire(OptionalProductStatusesSettings::class)
             ->assertDontSeeLivewire(ProductFieldLayoutSettings::class)
             ->assertSeeLivewire(AutoSeriesSettings::class)
             ->assertSeeLivewire(DlsiteLinkSettings::class)
@@ -804,6 +867,7 @@ class ProductMetadataSettingsTest extends TestCase
             ->assertDontSeeLivewire(UiLanguageSettings::class)
             ->assertDontSeeLivewire(IndexPaginationSettings::class)
             ->assertDontSeeLivewire(IndexTableWidthSettings::class)
+            ->assertDontSeeLivewire(OptionalProductStatusesSettings::class)
             ->assertSeeLivewire(ProductFieldLayoutSettings::class)
             ->assertDontSeeLivewire(AutoSeriesSettings::class)
             ->assertDontSeeLivewire(DlsiteLinkSettings::class)

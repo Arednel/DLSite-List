@@ -140,28 +140,43 @@ a {
  */
 .progress-menu-container {
     width: 100%;
-    height: 46px;
+    min-height: 46px;
     background-color: #FFFDF8 !important;
     border-bottom: #EE9898 1px solid;
     z-index: 1
 }
 
 .progress-menu-container .progress-menu {
-    display: table;
+    container-type: inline-size;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) fit-content(100%) minmax(0, 1fr);
+    align-items: flex-start;
+    width: min(var(--index-table-width, 1024px), calc(100vw - 50px));
+    max-width: 100%;
     margin: 0 auto;
-    border-collapse: separate;
-    border-spacing: 40px 0;
+}
+
+.progress-menu-container .progress-links {
+    grid-column: 2;
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 0 clamp(8px, 4cqi, 40px);
+    padding: 0px 5px;
+    max-width: calc(100cqi - min(160px, 40cqi));
 }
 
 .progress-menu-container .progress-menu .progress-button {
     position: relative;
-    display: table-cell;
+    display: inline-flex;
+    flex: 0 0 auto;
     margin: 0;
     font-family: "Verdana", "lucida grande", tahoma, verdana, arial, sans-serif;
     text-align: center;
     vertical-align: middle;
     font-size: 1.6em;
     color: #CCB3B3;
+    white-space: nowrap;
 }
 
 .progress-menu-container .progress-menu .progress-button {
@@ -461,6 +476,14 @@ a {
     background-color: #A7C6F3;
 }
 
+.list-table .list-table-data .data.status.progress-on-hold {
+    background-color: #FEE39E;
+}
+
+.list-table .list-table-data .data.status.progress-dropped {
+    background-color: #EE9898;
+}
+
 .list-table .list-table-data .data.title {
     padding-left: 8px;
     text-align: left;
@@ -494,19 +517,32 @@ th {
 }
 
 .search-container {
-    margin-left: auto;
     display: flex;
+    min-width: 0;
     align-items: center;
+}
+
+.search-container--desktop {
+    grid-column: 3;
+    justify-self: end;
+    width: min(180px, 100%);
     margin-top: 8px;
+}
+
+.search-container--mobile {
+    display: none;
 }
 
 .search-form {
     position: relative;
-    width: 160px;
+    width: 100%;
+    min-width: 0;
 }
 
 .search-input {
+    box-sizing: border-box;
     width: 100%;
+    min-width: 0;
     padding: 6px 35px 6px 10px;
     /* leave room for icon */
     border: 1px solid #ccc;
@@ -521,7 +557,7 @@ th {
 
 .search-button {
     position: absolute;
-    right: -40px;
+    right: 10px;
     top: 50%;
     transform: translateY(-50%);
     border: none;
@@ -1171,11 +1207,16 @@ body.image-viewer-open {
     }
 
     .progress-menu-container .progress-menu {
+        container-type: normal;
+        display: block;
+    }
+
+    .progress-menu-container .progress-links {
         display: flex;
         flex-wrap: wrap;
         justify-content: center;
         gap: 8px 14px;
-        border-spacing: 0;
+        max-width: 100%;
     }
 
     .progress-menu-container .progress-menu .progress-button {
@@ -1184,23 +1225,15 @@ body.image-viewer-open {
         padding: 8px 0;
     }
 
-    .search-container {
-        order: 99;
+    .search-container--desktop {
+        display: none;
+    }
+
+    .search-container--mobile {
+        display: flex;
+        min-width: 0;
         width: 100%;
-        margin: 8px 0 0;
-        justify-content: center;
-    }
-
-    .search-form {
-        width: min(100%, 280px);
-    }
-
-    .search-input {
-        width: 85%;
-    }
-
-    .search-button {
-        right: 10px;
+        margin: 0;
     }
 
     .list-block {
@@ -1211,19 +1244,30 @@ body.image-viewer-open {
     }
 
     .list-unit .list-status-title {
+        display: grid;
+        grid-template-columns: max-content minmax(0, 160px) max-content;
+        align-items: center;
+        justify-content: space-between;
+        gap: 8px;
         height: auto;
+        padding: 6px 10px;
         box-sizing: border-box;
     }
 
     .list-unit .list-status-title .progress-heading {
+        display: block;
+        width: auto;
+        max-width: none;
         height: auto;
-        padding: 12px 104px 12px 12px;
+        padding: 6px 0;
         font-size: 1.45em;
         text-align: left;
+        white-space: nowrap;
     }
 
     .advanced-options-button {
-        right: 10px;
+        position: static;
+        transform: none;
         padding: 6px 11px;
         font-size: 11px;
     }
@@ -1433,7 +1477,7 @@ body.image-viewer-open {
         padding: 14px 0 32px;
     }
 
-    .progress-menu-container .progress-menu {
+    .progress-menu-container .progress-links {
         gap: 6px 10px;
     }
 

@@ -6,6 +6,7 @@ use App\Enums\ProductField;
 use App\Enums\ProductIndexSortDirection;
 use App\Enums\ProductIndexSortField;
 use App\Enums\ProductIndexTagMatch;
+use App\Enums\ProductProgress;
 use App\Models\GenreGroup;
 use App\Models\Option;
 use App\Models\Product;
@@ -180,7 +181,11 @@ class ProductIndex extends Component
             'productRows' => $productRows,
             'productGenres' => $productGenres,
             'productDisplayValues' => $productDisplayValues,
-            'filterOptions' => ProductIndexFilters::optionSets($settings->indexSortFieldOptions),
+            'filterOptions' => ProductIndexFilters::optionSets(
+                $settings->indexSortFieldOptions,
+                ProductProgress::visibleOptions($settings->optionalProductStatuses),
+            ),
+            'optionalProductStatuses' => $settings->optionalProductStatuses,
             'indexColumns' => $settings->indexColumns,
             'filterFields' => $settings->filterFields,
             'filterActive' => $filterQuery !== [],

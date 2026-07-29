@@ -11,10 +11,10 @@ abstract class EnumSelectField extends Component
 
     public mixed $value;
 
-    public function __construct(mixed $value = null)
+    public function __construct(mixed $value = null, ?array $options = null)
     {
         $this->value = $value ?? $this->defaultValue();
-        $this->options = $this->resolveOptions();
+        $this->options = $options ?? $this->resolveOptions();
     }
 
     abstract public function render(): View;

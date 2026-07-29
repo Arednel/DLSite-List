@@ -31,9 +31,9 @@ Current automated coverage includes Laravel PHPUnit and Python `unittest` tests:
   - covers product-aware return URLs for unlimited pagination, first-page omission, saved-page redirect fast paths, full-query visibility fast paths, unchanged-visibility fallback cleanup, multi-filter visible-work cleanup, and retaining only current-language fetched-tag filters
 - `tests/Feature/ProductIndexLivewireTest.php`
   - Pagination and state: Livewire-owned pagination defaults, fixed/custom/unlimited page sizes, SQL-backed scalar/search/date/Added to the site Date pagination, built-in pagination links with the progress-menu scroll target, page reset behavior, and query-string initialization
-  - Settings and hydration: one batched Index option lookup including normalized image-viewer, modal, and DLSite-link settings, narrowed result columns including non-hydrated sort-only fields and visible-field hydration, conditional hidden-age hydration without revealing the Age column, and Index table width CSS
+  - Settings and hydration: one batched Index option lookup including image-viewer, optional-status, modal, and DLSite-link settings, narrowed result columns including non-hydrated sort-only fields and visible-field hydration, conditional hidden-age hydration without revealing the Age column, and Index table width CSS
   - DLSite, viewer, and modal links: default Maniax image links, enabled local image-viewer triggers with unchanged title links, enabled All Ages Home links, one reused external URL per product row, no trigger while the Image column is hidden, modal host metadata, real standalone Quick Add/Edit `href` values, and one-shot same-Index modal Quick Add positioning after reload
-  - Fields and search: language-aware description matching in general search, independent Japanese/English Description columns, configurable field order/visibility including locked Title and hideable Image, optional hidden-by-default notes/listening columns, and tag general-search behavior when the Tags column is enabled or hidden
+  - Fields and search: language-aware description matching in general search, responsive desktop/mobile Search placement around the progress controls, independent Japanese/English Description columns, configurable field order/visibility including locked Title and hideable Image, optional hidden-by-default notes/listening columns, and tag general-search behavior when the Tags column is enabled or hidden
   - Tags: separate Custom Tags/current-language Fetched Tags rendering inside one Index Tags column, locale-aware search/filter/link behavior, generic runtime bucket controls, prepared tag-link query preservation/replacement, default plain and optional grouped tag-chip ordering, optional tag-background/font colors with group-over-tag precedence, uncolored tag plain-link rendering, hidden-group anti-join skipping when no hidden groups exist, group-title tie-breaks, normalized tag/group order fallback, multi-group tag de-duplication through visible groups, direct tag hiding, and any-hidden-group tag hiding including mixed visible/hidden group memberships
   - Sorting and filter UI: nullable scalar sort ordering, RJ/header sorting including optional listening and contributor columns, advanced primary/secondary sorting, configurable Advanced Filter sort dropdown visibility that does not disable valid URL/header sorting, Livewire-bound Filter modal controls, default and configurable Filter modal order/visibility for fixed and date-range widgets, restored filter defaults, the external Alpine advanced-filter component, and local client-side modal opening/closing without Livewire entanglement or native form reset
 - `tests/Unit/Support/ProductIndexRowBuilderTest.php`
@@ -50,12 +50,14 @@ Current automated coverage includes Laravel PHPUnit and Python `unittest` tests:
   - covers the Options hidden-description search setting, including hydration, persistence, modal-confirmed reset-to-default behavior, and global reset refresh
 - `tests/Feature/IndexImageViewerTest.php`
   - covers the default-off General setting, persistence, individual/global reset, disabled remote image links, Livewire JSON action success/error returns, unchanged title links, cover-first ordering, retained missing paths, conditional dialog/script rendering, hidden Image-column behavior, and final-boundary migration cleanup
+- `tests/Feature/OptionalProductStatusesTest.php`
+  - covers every On Hold/Dropped switch combination across DLSite Quick Add, Custom Quick Add, Edit, Index navigation, and Advanced Filter; Edit's current-status exception; unconditional localized labels; and yellow/red row bars
 - `tests/Feature/AutocompleteSettingsTest.php`
   - covers the Options autocomplete ordering setting component, including default usage ordering, separate tag and series persistence, modal-confirmed reset-to-default behavior, invalid enum values, and Livewire dirty-state saved notice behavior
 - `tests/Feature/TagLibraryDisplaySettingsTest.php`
   - covers the Options Tag Library collapsed/expanded display default, Index group-ordering setting, and tag color surface toggles, including hydration, persistence, modal-confirmed reset-to-default behavior, global reset refresh, and stored option state
 - `tests/Feature/ProductMetadataSettingsTest.php`
-  - covers metadata-related Options components, including persistence, validation, individual/global reset behavior, tooltips, product form settings, Index table width, separate and save-all field layout persistence, preservation of unsaved drafts in other layout blocks, field layout visibility/editability/order across each surface, generic fetched-bucket controls, current-locale labels, label-free layout storage, and originating-tab reload behavior
+  - covers metadata-related Options components, including persistence, validation, individual/global reset behavior, independent optional-status switches, tooltips, product form settings, Index table width, separate and save-all field layout persistence, preservation of unsaved drafts in other layout blocks, field layout visibility/editability/order across each surface, generic fetched-bucket controls, current-locale labels, label-free layout storage, and originating-tab reload behavior
 - `tests/Feature/ProductGenreMigrationTest.php`
   - covers migration of legacy product genre JSON into `genres` + `genre_product`, language row backfill into `genre_product_languages`, removal of old `genres.type` / `genres.language`, same product/tag attachments with both JP and EN language rows, legacy migration compatibility when `genres.title_key` exists, and index visibility migration backfill from legacy `genres.group_id` into `genre_group_genre`
 - `tests/Feature/ProductMetadataMigrationTest.php`
@@ -84,7 +86,7 @@ Current automated coverage includes Laravel PHPUnit and Python `unittest` tests:
 - `tests/Unit/Support/DLSite/DLSiteWorkDataTest.php`
   - covers shared DLSite metadata extraction for descriptions, creator roles, maker/circle values, duplicate English fallback behavior, fallback product ids, and missing product id errors
 - `tests/Unit/Models/OptionMetadataSettingsTest.php`
-  - covers global UI language default/normalization/persistence/reset, field layout option persistence/fallbacks for Index/Edit/Filter/Create layouts, Index sort dropdown layout option persistence/fallbacks, automatic Series option normalization, age-appropriate DLSite link defaults/persistence/individual and global reset/batched hydration, product form theme normalization/Black default reset, work-form modal defaults/persistence/invalid-action fallback/reset, Index table width normalization, and batched ProductIndex settings normalization/fallbacks
+  - covers global UI language default/normalization/persistence/reset, optional-status defaults/persistence/reset/batched hydration, field layout option persistence/fallbacks for Index/Edit/Filter/Create layouts, Index sort dropdown layout option persistence/fallbacks, automatic Series option normalization, age-appropriate DLSite link defaults/persistence/individual and global reset/batched hydration, product form theme normalization/Black default reset, work-form modal defaults/persistence/invalid-action fallback/reset, Index table width normalization, and batched ProductIndex settings normalization/fallbacks
 - `tests/Unit/Models/ProductDLSiteUrlTest.php`
   - covers the no-age-access disabled Maniax path plus enabled Home mapping for exact All Ages and Maniax fallback for R15, R18, null, and malformed legacy ages
 - `tests/Unit/Support/DLSite/DLSitePythonRunnerTest.php`
@@ -145,6 +147,7 @@ Product metadata settings tests set the field layouts, automatic Series, and Ind
 Work-form modal tests store both modal options through `App\Models\Option`, render all supported host pages, and assert option normalization, standalone link URLs, modal metadata, Livewire save/reset events, modal completion responses, and the same-Index pending-redirect asset contract without requiring a browser. The shared completion response assertion also covers its dedicated stylesheet, semantic fallback card, and `_top` Continue link.
 Age-appropriate DLSite link tests store `options.dlsite_age_appropriate_links_enabled` through `App\Models\Option`; query-log assertions verify hidden `age_category` remains unselected while disabled and is hydrated only when enabled.
 Image-viewer tests store `options.index_image_viewer_enabled` through `App\Models\Option`; Livewire action assertions verify ordered browser URLs without requiring files to exist, conditional response assertions cover dialog/script inclusion, and migration tests own unsafe value cleanup.
+Optional-status tests store the two switches in `options.optional_product_statuses` and verify that they affect only rendered form, filter, and Index controls.
 
 ## Manual Authentication Checks
 
@@ -176,6 +179,12 @@ Image-viewer tests store `options.index_image_viewer_enabled` through `App\Model
 - Confirm a retained path for a missing download shows `No image` without removing its counter position, hides `View in full`, and leaves later valid images reachable.
 - Hide the Image Index column and confirm no viewer trigger renders.
 - With optional authentication enabled, confirm a guest Livewire image action redirects to login. Remember that a known `/storage` URL is still a public static asset.
+
+## Manual Optional Status Checks
+
+- With both switches disabled, confirm Quick Add, Custom Quick Add, Index status buttons, and Advanced Filter show only Listening, Completed, and Plan to Listen.
+- Enable each switch separately and then together. Confirm the Index buttons stay between Completed and Plan to Listen and each form/filter exposes only enabled optional values.
+- Disable both after saving one On Hold work and one Dropped work. Confirm All ASMR still shows their localized labels with yellow/red bars; Add, Advanced Filter, and the Index status tabs hide both choices; and Edit offers only the work's own current optional status.
 
 ## Manual Quick Add Fetch Status Checks
 - In standalone and modal DLSite Quick Add, confirm top Submit, bottom Submit, and Enter reveal the localized green fetching-status text beneath the RJ field.

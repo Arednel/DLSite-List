@@ -21,4 +21,9 @@ final class StatusSelect extends EnumSelectField
     {
         return ProductProgress::PlanToListen->value;
     }
+
+    protected function resolveOptions(): array
+    {
+        return ProductProgress::visibleOptions();
+    }
 }

@@ -2,6 +2,10 @@
 
 ## Development
 
+* 2026-07-29 -- 1.7.8 Optional Statuses & Index Polish
+  * Added optional On Hold and Dropped statuses across forms, navigation, and filters
+  * Refined responsive Index progress and Search/Filters layout
+
 * 2026-07-28 -- 1.7.7 Settings UI Polish
   * Added icons to Options setting headings
   * Added separate Save actions for each Field Layout block

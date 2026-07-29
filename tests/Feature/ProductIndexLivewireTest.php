@@ -1616,6 +1616,26 @@ class ProductIndexLivewireTest extends TestCase
             ->assertSee('WIDTH_VISIBLE_WORK');
     }
 
+    public function test_index_renders_responsive_search_controls_in_their_layout_regions(): void
+    {
+        $component = Livewire::test(ProductIndex::class)
+            ->assertSee('Filters')
+            ->assertSeeInOrder([
+                'class="progress-links"',
+                'data-index-search="desktop"',
+            ], false)
+            ->assertSeeInOrder([
+                'class="progress-heading"',
+                'data-index-search="mobile"',
+                'class="advanced-options"',
+            ], false);
+
+        $this->assertSame(2, substr_count(
+            $component->html(),
+            'wire:submit.prevent="applySearch"',
+        ));
+    }
+
     public function test_index_render_batches_option_settings_lookup(): void
     {
         $this->createProduct(1, [
@@ -1636,6 +1656,10 @@ class ProductIndexLivewireTest extends TestCase
         ]);
         Option::setDlsiteAgeAppropriateLinksEnabled(true);
         Option::setIndexImageViewerEnabled(true);
+        Option::setOptionalProductStatuses([
+            'on_hold' => true,
+            'dropped' => false,
+        ]);
 
         $optionQueries = [];
         DB::listen(function ($query) use (&$optionQueries): void {
@@ -1649,6 +1673,7 @@ class ProductIndexLivewireTest extends TestCase
             ->assertSee('id="filter_priority"', false)
             ->assertSee('--index-table-width: 1400px', false)
             ->assertSee('index-image-viewer-trigger', false)
+            ->assertSee('href="/?progress=On%20Hold"', false)
             ->assertSee('https://www.dlsite.com/home/work/', false);
 
         $this->assertCount(1, $optionQueries, implode("\n", $optionQueries));

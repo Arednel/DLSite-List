@@ -67,6 +67,29 @@ class OptionMetadataSettingsTest extends TestCase
         $this->assertFalse(Option::dlsiteAgeAppropriateLinksEnabled());
     }
 
+    public function test_optional_product_statuses_default_save_and_reset(): void
+    {
+        $this->assertSame([
+            'on_hold' => false,
+            'dropped' => false,
+        ], Option::optionalProductStatuses());
+
+        Option::setOptionalProductStatuses([
+            'on_hold' => true,
+            'dropped' => false,
+        ]);
+
+        $this->assertSame([
+            'on_hold' => true,
+            'dropped' => false,
+        ], Option::optionalProductStatuses());
+
+        Option::resetOptionalProductStatusesToDefault();
+
+        $this->assertSame(Option::DEFAULT_OPTIONAL_PRODUCT_STATUSES, Option::optionalProductStatuses());
+        $this->assertDatabaseMissing('options', ['key' => Option::OPTIONAL_PRODUCT_STATUSES]);
+    }
+
     public function test_tag_library_index_group_ordering_defaults_to_disabled_and_can_be_saved(): void
     {
         $this->assertFalse(Option::tagLibraryIndexGroupOrderingEnabled());
@@ -276,6 +299,7 @@ class OptionMetadataSettingsTest extends TestCase
         $this->assertFalse($defaults->indexGroupOrderingEnabled);
         $this->assertFalse($defaults->searchHiddenDescriptionsEnabled);
         $this->assertFalse($defaults->indexImageViewerEnabled);
+        $this->assertSame(Option::DEFAULT_OPTIONAL_PRODUCT_STATUSES, $defaults->optionalProductStatuses);
         $this->assertSame(Option::DEFAULT_TAG_COLOR_SURFACES, $defaults->tagColorSurfaces);
         $this->assertFalse($defaults->productFormModalEnabled);
         $this->assertFalse($defaults->dlsiteAgeAppropriateLinksEnabled);
@@ -318,6 +342,10 @@ class OptionMetadataSettingsTest extends TestCase
         Option::setTagLibraryIndexGroupOrderingEnabled(true);
         Option::setIndexSearchHiddenDescriptionsEnabled(true);
         Option::setIndexImageViewerEnabled(true);
+        Option::setOptionalProductStatuses([
+            'on_hold' => true,
+            'dropped' => false,
+        ]);
         Option::setTagColorSurfaces([
             Option::TAG_COLOR_SURFACE_INDEX => false,
             Option::TAG_COLOR_SURFACE_REFETCH => true,
@@ -345,6 +373,10 @@ class OptionMetadataSettingsTest extends TestCase
         $this->assertTrue($settings->indexGroupOrderingEnabled);
         $this->assertTrue($settings->searchHiddenDescriptionsEnabled);
         $this->assertTrue($settings->indexImageViewerEnabled);
+        $this->assertSame([
+            'on_hold' => true,
+            'dropped' => false,
+        ], $settings->optionalProductStatuses);
         $this->assertFalse($settings->tagColorSurfaces[Option::TAG_COLOR_SURFACE_INDEX]);
         $this->assertTrue($settings->tagColorSurfaces[Option::TAG_COLOR_SURFACE_REFETCH]);
         $this->assertTrue($settings->productFormModalEnabled);
@@ -386,6 +418,10 @@ class OptionMetadataSettingsTest extends TestCase
         Option::setTagLibraryIndexGroupOrderingEnabled(true);
         Option::setIndexSearchHiddenDescriptionsEnabled(true);
         Option::setIndexImageViewerEnabled(true);
+        Option::setOptionalProductStatuses([
+            'on_hold' => true,
+            'dropped' => true,
+        ]);
         Option::setProductFormTheme(Option::PRODUCT_FORM_THEME_CHERRY);
         Option::setProductFormModalEnabled(true);
         Option::setProductFormModalCompletionAction(Option::PRODUCT_FORM_MODAL_COMPLETION_CLOSE);
@@ -403,6 +439,7 @@ class OptionMetadataSettingsTest extends TestCase
         $this->assertFalse(Option::tagLibraryIndexGroupOrderingEnabled());
         $this->assertFalse(Option::indexSearchHiddenDescriptionsEnabled());
         $this->assertFalse(Option::indexImageViewerEnabled());
+        $this->assertSame(Option::DEFAULT_OPTIONAL_PRODUCT_STATUSES, Option::optionalProductStatuses());
         $this->assertSame(Option::PRODUCT_FORM_THEME_BLACK, Option::productFormTheme());
         $this->assertFalse(Option::productFormModalEnabled());
         $this->assertFalse(Option::dlsiteAgeAppropriateLinksEnabled());

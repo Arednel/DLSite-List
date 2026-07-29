@@ -938,7 +938,7 @@ class ProductControllerTest extends TestCase
 
         $response->assertOk();
 
-        foreach (ProductProgress::options() as $value => $label) {
+        foreach (ProductProgress::visibleOptions() as $value => $label) {
             $response->assertSee('value="' . e($value) . '"', false);
             $response->assertSee($label);
         }

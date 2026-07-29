@@ -25,15 +25,21 @@ class LocalizedDisplayProvidersTest extends TestCase
     {
         App::setLocale(UiLanguage::English->value);
         $this->assertSame('Plan to Listen', ProductProgress::PlanToListen->label());
+        $this->assertSame('On Hold', ProductProgress::OnHold->label());
+        $this->assertSame('Dropped', ProductProgress::Dropped->label());
         $this->assertSame('Fetched EN Tags', ProductField::FetchedTags->label());
         $this->assertSame('RJ / Title', ProductIndexSortField::RJ->label());
 
         App::setLocale(UiLanguage::Japanese->value);
         $this->assertSame('聴取予定', ProductProgress::PlanToListen->label());
+        $this->assertSame('保留', ProductProgress::OnHold->label());
+        $this->assertSame('中止', ProductProgress::Dropped->label());
         $this->assertSame('取得済みJPタグ', ProductField::FetchedTags->label());
         $this->assertSame('RJ / タイトル', ProductIndexSortField::RJ->label());
 
         $this->assertSame('Plan to Listen', ProductProgress::PlanToListen->value);
+        $this->assertSame('On Hold', ProductProgress::OnHold->value);
+        $this->assertSame('Dropped', ProductProgress::Dropped->value);
         $this->assertSame('fetched_tags', ProductField::FetchedTags->value);
         $this->assertSame('rj', ProductIndexSortField::RJ->value);
     }

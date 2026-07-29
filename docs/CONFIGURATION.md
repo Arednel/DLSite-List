@@ -216,6 +216,7 @@ Current settings:
 - `index_per_page`: controls how many works the Index list renders per page
 - `index_search_hidden_descriptions_enabled`: controls whether general Index search can match Japanese and English descriptions when their Index columns are hidden
 - `index_image_viewer_enabled`: controls whether Index thumbnails open saved images while the Image column is visible. Defaults to `false`
+- `optional_product_statuses`: JSON map controlling the optional On Hold and Dropped progress values. Defaults to `{"on_hold":false,"dropped":false}`
 - `tag_autocomplete_order`: controls how tag autocomplete suggestions are ordered
 - `series_autocomplete_order`: controls how series autocomplete suggestions are ordered
 - `auto_series_from_title_name`: controls whether DLSite create fills an empty Series from `japanese.title_name`
@@ -289,6 +290,17 @@ Image Viewer default:
 When disabled, Index thumbnails use their configured DLSite destination. When enabled, Index thumbnails open the saved-image viewer. The viewer is available only while the Image field is visible under Field Layouts -> Index Table Fields; hiding that field does not change the saved setting.
 
 The General -> Image Viewer switch is stored in `options.index_image_viewer_enabled`. Saving applies on the next Index render. Individual reset and Reset All Options restore the disabled default.
+
+Optional product status defaults:
+
+- On Hold: disabled
+- Dropped: disabled
+
+Both switches are independent and are saved together by General -> Optional Statuses. Enabling one makes it available in DLSite Quick Add, Custom Quick Add, Edit Work, the Index progress menu, and Advanced Filter. The order is All ASMR, Currently Listening, Completed, optional On Hold, optional Dropped, then Plan to Listen. New works still default to Plan to Listen.
+
+Disabling a status never rewrites products. A work already stored as On Hold or Dropped remains visible in All ASMR and matching filtered results. Add, Advanced Filter, and the Index status tabs hide disabled values; Edit also hides them except when the product currently has that status, allowing it to remain selected or be changed. The switches do not add request-validation rules. The saved Edit Field Layout still controls whether the Progress row is visible.
+
+Advanced Filter hides disabled optional choices.
 
 Product form theme default:
 - `black`
@@ -467,7 +479,7 @@ Index table width choices:
 - `full`: 100% of the available page width
 - custom CSS length or percentage, for example `1600px`, `90%`, `80vw`, `72rem`, or `64em`
 
-This width is applied to the Index list/table panel and the top cover image. The top cover image keeps a capped desktop height, and product row thumbnails keep their fixed list size.
+This width is applied to the Index list/table panel, top cover image, and progress menu. Progress links are centered independently of Index Search, keep their labels intact, and contract their spacing or wrap between complete links as needed. Desktop Search uses the free space to their right without crossing the rightmost link or the table/image boundary. At mobile widths, the full Search field moves between the selected progress heading and the Filters button and shrinks to avoid either control. The top cover image keeps a capped desktop height, and product row thumbnails keep their fixed list size.
 
 Options page tabs:
 - `General` is the default tab and contains UI Language, Index Pagination, Index Search, Image Viewer, Index Table Width, Series Metadata, Add/Edit form theme and modal behavior, Autocomplete, Tag Library settings, and Reset All Options
@@ -482,7 +494,7 @@ Options reset behavior:
 - reset confirmation modals are teleported to the document body so they stay centered in the viewport instead of inside the Options panel
 - reset confirmation modals close from Cancel, Escape, or clicking outside the modal card
 - the global reset confirmation button is disabled for 3 seconds and shows a countdown before it can be clicked
-- reset defaults are UI language `en`, pagination `100`, hidden-description search disabled, Image Viewer disabled, table width `default`, all five default field layouts, all default Index sort dropdown values, automatic Series enabled, product form theme `black`, work form modals disabled with completion action `redirect`, Tag Library collapsed, Index group ordering disabled, and autocomplete `usage`
+- reset defaults are UI language `en`, pagination `100`, hidden-description search disabled, Image Viewer disabled, On Hold/Dropped disabled, table width `default`, all five default field layouts, all default Index sort dropdown values, automatic Series enabled, product form theme `black`, work form modals disabled with completion action `redirect`, Tag Library collapsed, Index group ordering disabled, and autocomplete `usage`
 - global reset does not change Authentication-tab settings, products, tags, refetch runs, legacy hidden fallback keys, or unrelated future option rows
 
 Index search defaults:

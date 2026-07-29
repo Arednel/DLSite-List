@@ -5,6 +5,7 @@
     'monthLabels' => [],
     'days' => [],
     'years' => [],
+    'progressOptions' => null,
 ])
 
 @switch($field['field'])
@@ -13,7 +14,7 @@
     @break
 
     @case('progress')
-        <x-fields.status-select />
+        <x-fields.status-select :options="$progressOptions" />
     @break
 
     @case('score')

@@ -13,6 +13,7 @@
     'days' => [],
     'years' => [],
     'showReadonlyGenreColors' => false,
+    'progressOptions' => null,
 ])
 
 @switch($field['field'])
@@ -52,7 +53,7 @@
 
     @case('progress')
         @if ($field['editable'])
-            <x-fields.status-select :value="$product->progress" />
+            <x-fields.status-select :value="$product->progress" :options="$progressOptions" />
         @else
             <x-fields.readonly-text :label="__('Progress')" :value="$product->progress ? __($product->progress) : null" :long="false" />
         @endif

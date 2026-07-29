@@ -6,6 +6,7 @@ use App\Enums\ProductAgeCategory;
 use App\Enums\ProductContributorRole;
 use App\Enums\ProductField;
 use App\Enums\ProductPriority;
+use App\Enums\ProductProgress;
 use App\Enums\ProductReListenValue;
 use App\Enums\UiLanguage;
 use App\Http\Requests\BaseProductRequest;
@@ -301,6 +302,10 @@ class ProductController extends Controller
             'editFields' => ProductFieldLayout::editFields(Option::editFieldLayout()),
             'contributorInputs' => $this->formatContributorInputs($product),
             'readonlyFieldValues' => $this->readonlyFieldValues($product),
+            'progressOptions' => ProductProgress::visibleOptions(
+                Option::optionalProductStatuses(),
+                $product->progress,
+            ),
             'returnQuery' => $returnTarget->query,
             'returnFragment' => $returnTarget->fragment,
             'returnUrl' => $returnTarget->toUrl(),
@@ -683,6 +688,7 @@ class ProductController extends Controller
             'returnUrl' => $returnUrl,
             'returnParameters' => $returnParameters,
             'ageCategoryOptions' => ProductAgeCategory::options(),
+            'progressOptions' => ProductProgress::visibleOptions(Option::optionalProductStatuses()),
             ...$this->buildDateFieldOptions(),
         ]);
     }

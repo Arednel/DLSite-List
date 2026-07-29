@@ -65,7 +65,7 @@
                                                     @foreach ($quickAddFields as $field)
                                                         <x-fields.create-configurable-row :field="$field"
                                                             :is-custom-create="$isCustomCreate" :age-category-options="$ageCategoryOptions" :month-labels="$monthLabels"
-                                                            :days="$days" :years="$years" />
+                                                            :days="$days" :years="$years" :progress-options="$progressOptions" />
                                                     @endforeach
                                                 </tbody>
                                             </table>

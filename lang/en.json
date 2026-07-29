@@ -111,6 +111,7 @@
     "Nothing found for the current filters.": "Nothing found for the current filters.",
     "Showing all :count works": "Showing all :count works",
     "Filter": "Filter",
+    "Filters": "Filters",
     "Close filters": "Close filters",
     "Apply one or more filters to the current list.": "Apply one or more filters to the current list.",
     "Tag": "Tag",
@@ -507,5 +508,16 @@
     "No image": "No image",
     "Loading images...": "Loading images...",
     "Image :current of :total for :title": "Image :current of :total for :title",
-    "View in full": "View in full"
+    "View in full": "View in full",
+    "On Hold": "On Hold",
+    "Dropped": "Dropped",
+    "Optional Statuses": "Optional Statuses",
+    "Choose whether On Hold and Dropped are shown in forms, Index status controls, and Advanced Filter.": "Choose whether On Hold and Dropped are shown in forms, Index status controls, and Advanced Filter.",
+    "Enable On Hold status": "Enable On Hold status",
+    "Enable Dropped status": "Enable Dropped status",
+    "Disabling a status does not change works that already use it.": "Disabling a status does not change works that already use it.",
+    "Save optional statuses": "Save optional statuses",
+    "Optional status settings saved.": "Optional status settings saved.",
+    "Reset optional statuses to their defaults?": "Reset optional statuses to their defaults?",
+    "Optional status settings reset to default.": "Optional status settings reset to default."
 }

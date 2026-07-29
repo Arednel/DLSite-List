@@ -59,7 +59,7 @@
                                                             :fetched-genres="$fetchedGenres" :custom-genres="$customGenres" :genre-fetched-input="$genreFetchedInput"
                                                             :genre-fetched-language="$genreFetchedLanguage" :genre-custom-input="$genreCustomInput" :readonly-field-values="$readonlyFieldValues"
                                                             :month-labels="$monthLabels" :days="$days" :years="$years"
-                                                            :show-readonly-genre-colors="$showReadonlyGenreColors" />
+                                                            :show-readonly-genre-colors="$showReadonlyGenreColors" :progress-options="$progressOptions" />
                                                     @endforeach
                                                 </tbody>
                                             </table>

@@ -111,6 +111,7 @@
     "Nothing found for the current filters.": "現在の絞り込み条件に一致する作品はありません。",
     "Showing all :count works": "全:count件を表示",
     "Filter": "絞り込み",
+    "Filters": "絞り込み",
     "Close filters": "絞り込みを閉じる",
     "Apply one or more filters to the current list.": "一覧に適用する条件を選択してください。",
     "Tag": "タグ",
@@ -507,5 +508,16 @@
     "No image": "画像がありません",
     "Loading images...": "画像を読み込んでいます...",
     "Image :current of :total for :title": ":titleの画像 :current / :total",
-    "View in full": "フルサイズで表示"
+    "View in full": "フルサイズで表示",
+    "On Hold": "保留",
+    "Dropped": "中止",
+    "Optional Statuses": "任意ステータス",
+    "Choose whether On Hold and Dropped are shown in forms, Index status controls, and Advanced Filter.": "フォーム、インデックスのステータス操作、詳細フィルターに「保留」と「中止」を表示するかを選択します。",
+    "Enable On Hold status": "保留ステータスを有効にする",
+    "Enable Dropped status": "中止ステータスを有効にする",
+    "Disabling a status does not change works that already use it.": "ステータスを無効にしても、すでに使用している作品は変更されません。",
+    "Save optional statuses": "任意ステータス設定を保存",
+    "Optional status settings saved.": "任意ステータス設定を保存しました。",
+    "Reset optional statuses to their defaults?": "任意ステータス設定を初期値に戻しますか？",
+    "Optional status settings reset to default.": "任意ステータス設定を初期値に戻しました。"
 }

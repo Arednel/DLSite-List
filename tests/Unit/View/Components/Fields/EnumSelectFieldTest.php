@@ -16,10 +16,22 @@ class EnumSelectFieldTest extends TestCase
 {
     public function test_status_select_uses_enum_options_and_default_value(): void
     {
-        $component = new StatusSelect();
+        $component = new StatusSelect;
 
         $this->assertSame(ProductProgress::PlanToListen->value, $component->value);
-        $this->assertSame(ProductProgress::options(), $component->options);
+        $this->assertSame(ProductProgress::visibleOptions(), $component->options);
+    }
+
+    public function test_status_select_accepts_context_specific_enum_options(): void
+    {
+        $options = ProductProgress::visibleOptions([
+            'on_hold' => true,
+            'dropped' => false,
+        ]);
+
+        $component = new StatusSelect(options: $options);
+
+        $this->assertSame($options, $component->options);
     }
 
     public function test_numeric_select_components_use_matching_enum_options(): void
