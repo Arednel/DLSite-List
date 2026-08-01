@@ -3,9 +3,9 @@
 namespace Tests\Unit;
 
 use App\Enums\UiLanguage;
-use App\Models\TagRefetchRun;
-use App\Models\TagRefetchWorkResult;
-use App\Support\TagRefetch\TagRefetchService;
+use App\Models\RefetchRun;
+use App\Models\RefetchWorkResult;
+use App\Support\Refetch\RefetchService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\App;
 use Tests\TestCase;
@@ -27,13 +27,14 @@ class UserFacingDisplayStateTest extends TestCase
 
         foreach (
             [
-                TagRefetchRun::STATUS_RUNNING => '実行中',
-                TagRefetchRun::STATUS_CANCELLING => 'キャンセル中',
-                TagRefetchRun::STATUS_REVIEW => '確認',
-                TagRefetchRun::STATUS_APPLIED => '適用済み',
+                RefetchRun::STATUS_RUNNING => '実行中',
+                RefetchRun::STATUS_CANCELLING => 'キャンセル中',
+                RefetchRun::STATUS_REVIEW => '確認',
+                RefetchRun::STATUS_APPLIED => '適用済み',
+                RefetchRun::STATUS_REJECTED => '拒否済み',
             ] as $status => $label
         ) {
-            $run = new TagRefetchRun(['status' => $status]);
+            $run = new RefetchRun(['status' => $status]);
 
             $this->assertSame($label, $run->statusLabel());
             $this->assertSame($status, $run->status);
@@ -41,64 +42,61 @@ class UserFacingDisplayStateTest extends TestCase
 
         foreach (
             [
-                TagRefetchWorkResult::STATUS_PENDING => '待機中',
-                TagRefetchWorkResult::STATUS_FETCHED => '取得済み',
-                TagRefetchWorkResult::STATUS_SKIPPED => 'スキップ',
+                RefetchWorkResult::STATUS_PENDING => '待機中',
+                RefetchWorkResult::STATUS_FETCHED => '取得済み',
+                RefetchWorkResult::STATUS_FAILED => '失敗',
             ] as $status => $label
         ) {
-            $result = new TagRefetchWorkResult(['status' => $status]);
+            $result = new RefetchWorkResult(['status' => $status]);
 
             $this->assertSame($label, $result->statusLabel());
             $this->assertSame($status, $result->status);
         }
     }
 
-    public function test_only_allowlisted_errors_are_localized_while_other_errors_pass_through(): void
+    public function test_known_errors_are_localized_while_scraper_details_pass_through(): void
     {
         App::setLocale(UiLanguage::Japanese->value);
 
         $this->assertSame(
             'Refetch was cancelled before this work was fetched.',
-            TagRefetchService::CANCELLED_BEFORE_FETCH_MESSAGE,
+            RefetchService::CANCELLED_BEFORE_FETCH_MESSAGE,
         );
         foreach (
             [
-                'Refetch was cancelled before this work was fetched.' => 'この作品のタグを取得する前に再取得がキャンセルされました。',
+                'Refetch was cancelled before this work was fetched.' => 'この作品を取得する前に再取得がキャンセルされました。',
                 'Product no longer exists.' => '作品が削除されたため見つかりません。',
-                'Custom-only work is skipped.' => 'カスタム作品のためスキップしました。',
-                'DLSite tag fetch failed.' => 'DLSiteタグの取得に失敗しました。',
-                'DLSite tag fetch returned invalid JSON.' => 'DLSiteタグ取得の応答が不正なJSONでした。',
+                'DLSite work fetch failed.' => 'DLSite作品情報の取得に失敗しました。',
                 'GeoBlocked DLSite work' => '地域制限によりアクセスできないDLSite作品',
                 'Deleted or Non-existing DLSite work' => '削除済み、または存在しないDLSite作品',
                 'Non-existing DLSite work' => '存在しないDLSite作品',
             ] as $message => $localized
         ) {
-            $result = new TagRefetchWorkResult(['error' => $message]);
+            $result = new RefetchWorkResult(['error' => $message]);
 
             $this->assertSame($localized, $result->displayError());
             $this->assertSame($message, $result->error);
         }
 
-        foreach (['Pending', 'validation', 'Unexpected scraper detail'] as $message) {
-            $result = new TagRefetchWorkResult(['error' => $message]);
+        foreach (['validation', 'Unexpected scraper detail'] as $message) {
+            $result = new RefetchWorkResult(['error' => $message]);
 
             $this->assertSame($message, $result->displayError());
         }
 
-        $emptyResult = new TagRefetchWorkResult(['error' => null]);
+        $emptyResult = new RefetchWorkResult(['error' => null]);
 
         $this->assertNull($emptyResult->displayError());
     }
 
     public function test_persisted_canonical_error_uses_the_current_locale_without_changing_storage(): void
     {
-        $run = TagRefetchRun::query()->create([
-            'status' => TagRefetchRun::STATUS_REVIEW,
-            'selected_product_ids' => ['RJ000001'],
+        $run = RefetchRun::query()->create([
+            'status' => RefetchRun::STATUS_REVIEW,
         ]);
         $result = $run->results()->create([
             'product_id' => 'RJ000001',
-            'status' => TagRefetchWorkResult::STATUS_SKIPPED,
+            'status' => RefetchWorkResult::STATUS_FAILED,
             'error' => 'Product no longer exists.',
         ]);
 
@@ -107,7 +105,7 @@ class UserFacingDisplayStateTest extends TestCase
 
         App::setLocale(UiLanguage::Japanese->value);
         $this->assertSame('作品が削除されたため見つかりません。', $result->fresh()->displayError());
-        $this->assertDatabaseHas('tag_refetch_work_results', [
+        $this->assertDatabaseHas('refetch_work_results', [
             'id' => $result->getKey(),
             'error' => 'Product no longer exists.',
         ]);

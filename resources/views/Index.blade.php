@@ -19,6 +19,12 @@
 
 <body class="product-index-page">
     <main class="product-index-main">
+        @session('dlsite_image_warning')
+            <div class="image-warning-popup" role="alert" onclick="this.remove()">
+                <span>{{ $value }}</span>
+                <button type="button" class="image-warning-popup__close" aria-label="{{ __('Close') }}">&times;</button>
+            </div>
+        @endsession
         <livewire:product-index />
     </main>
 

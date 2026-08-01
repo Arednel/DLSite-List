@@ -13,7 +13,10 @@
     <link rel="stylesheet"
         href="{{ asset('css/list-menu-float.css') }}?v={{ filemtime(public_path('css/list-menu-float.css')) }}">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/7.0.1/css/all.min.css">
-    <x-title-tooltip-assets />
+    <link rel="stylesheet"
+        href="{{ asset('css/title-tooltips.css') }}?v={{ filemtime(public_path('css/title-tooltips.css')) }}">
+    <script src="{{ asset('scripts/title-tooltips.js') }}?v={{ filemtime(public_path('scripts/title-tooltips.js')) }}"
+        defer></script>
 
     @livewireStyles
 </head>
@@ -215,12 +218,12 @@
                 <section id="refetch-tab-panel" class="panel options-panel" role="tabpanel">
                     <h2>
                         <i class="fa-solid fa-arrows-rotate fa-fw options-section-icon" aria-hidden="true"></i>
-                        {{ __('Refetch Tags') }}
+                        {{ __('Refetch Works') }}
                     </h2>
                     <p class="option-description">
-                        {{ __('Fetch the latest DLsite genre tags for all works or for only selected works.') }}
+                        {{ __('Fetch complete current DLSite data for all works or only selected works.') }}
                         <br>
-                        {{ __('After that you can review new and stale tags before applying the changes.') }}
+                        {{ __('Review each metadata category before applying or ignoring changes.') }}
                     </p>
 
                     @if ($errors->any())
@@ -229,25 +232,52 @@
                         </div>
                     @endif
 
-                    <div class="option-actions option-actions--primary">
-                        <form method="POST" action="{{ route('options.refetch-tags.start') }}">
-                            @csrf
-                            <input type="hidden" name="scope" value="all">
-                            <input type="hidden" name="tab" value="refetch">
-                            <button type="submit" class="tag tag--gradient tag--lg is-clickable">
-                                {{ __('Refetch all works') }}
-                            </button>
-                        </form>
-
-                        @if ($latestRefetchRun)
+                    @if ($latestRefetchRunId)
+                        <div class="option-actions option-actions--primary">
                             <a class="tag tag--soft tag--lg is-clickable"
-                                href="{{ route('options.refetch-tags.show', $latestRefetchRun) }}">
+                                href="{{ route('options.refetch.show', $latestRefetchRunId) }}">
                                 {{ __('Go to latest refetch') }}
                             </a>
-                        @endif
-                    </div>
+                        </div>
+                    @endif
 
-                    <livewire:options-work-search />
+                    <div class="refetch-scope-grid">
+                        <section class="refetch-scope-card" aria-labelledby="refetch-all-heading">
+                            <header>
+                                <h3 id="refetch-all-heading">
+                                    <i class="fa-solid fa-layer-group fa-fw" aria-hidden="true"></i>
+                                    {{ __('Refetch All Works') }}
+                                </h3>
+                                <p>{{ __('Fetch every work in the library in one refetch run.') }}</p>
+                            </header>
+
+                            <form method="POST" action="{{ route('options.refetch.start') }}" class="stack">
+                                @csrf
+                                <input type="hidden" name="scope" value="all">
+                                <input type="hidden" name="tab" value="refetch">
+                                <x-options.switch name="check_images" value="1" :help="__(
+                                    'Downloads the current cover and sample images for every selected work and compares Cover and Sample Images separately. This makes the refetch slower. Downloads are staged for review and do not replace saved images unless that category is applied; failed image categories remain unavailable for overwrite.',
+                                )">
+                                    {{ __('Refetch Images') }}
+                                </x-options.switch>
+                                <button type="submit" class="tag tag--gradient tag--lg is-clickable">
+                                    {{ __('Refetch all works') }}
+                                </button>
+                            </form>
+                        </section>
+
+                        <section class="refetch-scope-card" aria-labelledby="refetch-selected-heading">
+                            <header>
+                                <h3 id="refetch-selected-heading">
+                                    <i class="fa-solid fa-list-check fa-fw" aria-hidden="true"></i>
+                                    {{ __('Refetch Selected Works') }}
+                                </h3>
+                                <p>{{ __('Search and choose only the works to include in this refetch run.') }}</p>
+                            </header>
+
+                            <livewire:options-work-search />
+                        </section>
+                    </div>
                 </section>
             @endif
         </div>

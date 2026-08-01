@@ -17,8 +17,9 @@ use App\Models\Contributor;
 use App\Models\Genre;
 use App\Models\Option;
 use App\Models\Product;
-use App\Support\DLSite\DLSitePythonRunner;
+use App\Support\DLSite\DLSiteFetchResult;
 use App\Support\DLSite\DLSiteWorkData;
+use App\Support\DLSite\DLSiteWorkFetcher;
 use App\Support\PartialDateFormatter;
 use App\Support\ProductContributorSync;
 use App\Support\ProductFieldLayout;
@@ -38,6 +39,7 @@ use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\URL;
 use Illuminate\Validation\ValidationException;
 use Illuminate\View\View;
+use RuntimeException;
 
 class ProductController extends Controller
 {
@@ -89,19 +91,16 @@ class ProductController extends Controller
     /**
      * Store a newly created resource in storage.
      */
-    public function store(StoreProductRequest $request, DLSitePythonRunner $pythonRunner)
+    public function store(StoreProductRequest $request, DLSiteWorkFetcher $workFetcher)
     {
         $validated = $request->validated();
 
         // Get RJ Code
         $workID = $validated['id'];
 
-        // Get work info from DLSite
-        $this->scrape($workID, $pythonRunner);
+        $fetchResult = $this->fetchDLSiteWork($workID, $workFetcher);
+        $workData = $fetchResult->workData;
 
-        // Get JSON info
-        $json = Storage::disk('local')->get("Works/{$workID}.json");
-        $workData = DLSiteWorkData::fromArray(json_decode($json, true), $workID);
         $visibleCreateFields = ProductFieldLayout::visibleFields(Option::quickAddFieldLayout());
 
         $dlsite_product_id = $workData->productId;
@@ -187,7 +186,11 @@ class ProductController extends Controller
         $returnTarget = ReturnTarget::fromRequest($request)
             ->forProduct($product);
 
-        return $this->productMutationResponse($request, $returnTarget->toUrl());
+        return $this->productMutationResponse(
+            $request,
+            $returnTarget->toUrl(),
+            $fetchResult->imageFailureMessage(),
+        );
     }
 
     public function store_custom(StoreCustomProductRequest $request)
@@ -379,28 +382,27 @@ class ProductController extends Controller
         return $this->productMutationResponse($request, $returnTarget->afterDeleting()->toUrl());
     }
 
-    private function scrape(string $workID, DLSitePythonRunner $pythonRunner): void
-    {
-        $result = $pythonRunner->runScraper($workID);
+    private function fetchDLSiteWork(
+        string $workID,
+        DLSiteWorkFetcher $workFetcher,
+    ): DLSiteFetchResult {
+        try {
+            return $workFetcher->fetch(
+                $workID,
+                Storage::disk('local')->path("Works/{$workID}.json"),
+                Storage::disk('public')->path("Works/{$workID}"),
+            );
+        } catch (RuntimeException $exception) {
+            $message = trim($exception->getMessage());
 
-        // Show any errors
-        if ($result->failed()) {
-            $stderr = trim($result->errorOutput());
-
-            // Show error on the previos page
-            if ($result->exitCode() === 2 && $stderr !== '') {
-                throw ValidationException::withMessages([
-                    'id' => match ($stderr) {
-                        'GeoBlocked DLSite work',
-                        'Deleted or Non-existing DLSite work',
-                        'Non-existing DLSite work' => __($stderr),
-                        default => $stderr,
-                    },
-                ]);
-            }
-
-            // Show error in Laravel
-            $result->throw();
+            throw ValidationException::withMessages([
+                'id' => match ($message) {
+                    'GeoBlocked DLSite work',
+                    'Deleted or Non-existing DLSite work',
+                    'Non-existing DLSite work' => __($message),
+                    default => $message,
+                },
+            ]);
         }
     }
 
@@ -709,14 +711,19 @@ class ProductController extends Controller
         ];
     }
 
-    private function productMutationResponse(Request $request, string $redirectUrl): RedirectResponse|View
-    {
+    private function productMutationResponse(
+        Request $request,
+        string $redirectUrl,
+        ?string $warning = null,
+    ): RedirectResponse|View {
         if (! $request->boolean('modal')) {
-            return redirect($redirectUrl);
+            return redirect($redirectUrl)
+                ->with('dlsite_image_warning', $warning);
         }
 
         return view('WorkFormCompleted', [
             'redirectUrl' => $redirectUrl,
+            'warning' => $warning,
         ]);
     }
 

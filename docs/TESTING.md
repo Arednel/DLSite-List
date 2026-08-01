@@ -16,7 +16,7 @@ Current automated coverage includes Laravel PHPUnit and Python `unittest` tests:
   - Tag behavior: editable and readonly current-locale fetched-tag rows, fetched-bucket validation and updates, preservation of other fetched/custom buckets, optional Edit readonly tag colors, separately ordered custom/fetched rows, editable custom tag source behavior, and Tag Library page/component mounting
   - Index return navigation: visible-work anchors, visibility-filter redirects including metadata filters, maker ID-only circle-filter cleanup, visible/hidden-description general search return policy, custom-sort return page calculation, a full visible-update return workflow, and filtered delete page fallback including hidden-description search override page clamping
   - Create navigation and completion: Laravel previous URL create back links, malformed create back-link input, create-mode back-link preservation including `modal=1`, Create Go Back preservation after scraper validation errors, custom create/upload flow, modal create/update/delete completion responses with calculated redirect URLs, and unchanged redirects for standalone requests
-  - Product persistence and updates: DLSite storage with one fetched tag in both JP/EN buckets, DLSite contributor sync, automatic Series from `title_name`, enum-backed product field validation, metadata update flow, map-driven editable update payload behavior, duplicate English description cleanup against submitted or stored Japanese descriptions, and logged destroy cleanup failures
+  - Product persistence and updates: shared five-attempt DLSite fetches, dismissible fixed Index and modal-completion image-failure warnings, DLSite storage with one fetched tag in both JP/EN buckets, contributor sync, automatic Series from `title_name`, enum-backed product field validation, metadata update flow, map-driven editable update payload behavior, duplicate English description cleanup, and logged destroy cleanup failures
   - Quick Add client behavior: DLSite-only fetching status markup and asset, Custom Quick Add exclusion, green Cherry/Black theme values, submit-event reveal behavior, browser-history reset behavior, and exact three-message recognized-scraper translation versus verbatim unknown errors
 - `tests/Feature/TagLibraryManagerTest.php`
   - Tag listing and locale behavior: current-language fetched/custom and zero-pivot tag listing, other-language exclusion, and locale-aware group members/counts/links/usage
@@ -62,10 +62,16 @@ Current automated coverage includes Laravel PHPUnit and Python `unittest` tests:
   - covers migration of legacy product genre JSON into `genres` + `genre_product`, language row backfill into `genre_product_languages`, removal of old `genres.type` / `genres.language`, same product/tag attachments with both JP and EN language rows, legacy migration compatibility when `genres.title_key` exists, and index visibility migration backfill from legacy `genres.group_id` into `genre_group_genre`
 - `tests/Feature/ProductMetadataMigrationTest.php`
   - covers metadata backfill from stored DLSite JSON, duplicate English description collapse, missing/invalid JSON skip behavior, and the rule that Series is not backfilled
-- `tests/Feature/OptionsControllerTest.php`
-  - covers the General/Field Layouts/Refetch page tabs, the distinct Field Layouts introduction header, decorative Font Awesome icons on active Options section and Field Layout headings, invalid tab fallback, modal host settings and Quick Add standalone links on Options/Refetch pages, latest-refetch link, Refetch Tags request validation, queue batch creation, selected/all work scopes including numeric RJ-desc queued order, progress JSON including cancellation metadata, cancel route behavior, tags-only job results, cancelled-before-fetch skips, during-fetch cancellation, relationship-backed tag diff ordering, case-insensitive/kana-sensitive tag identity, skipped errors/custom-only works, review rendering/change indicators, optional refetch review tag background/font colors and removal of Blade-side color lookup logic, newest-run-only apply controls, partial cancelled run apply, new-tag add/ignore behavior, stale-language move/remove behavior, JP-only to JP+EN and EN-only transitions, and custom-to-fetched promote/keep choices
+- `tests/Feature/OptionsGeneralTest.php`
+  - covers General/Field Layouts/Refetch tab rendering, invalid-tab fallback, shared modal configuration, empty Refetch state, distinct all/selected Refetch cards, and latest-run-only linking
+- `tests/Feature/FullRefetchTest.php`
+  - covers all/selected batching through result rows, including empty-start validation and custom-created RJ works, the run-wide Refetch Images choice and help, reversible lean replacement schema, deterministic staging paths, full staged metadata fetches, thirteen ordered review tabs, shared review-select styling and tooltip assets, Livewire category validation and apply actions, newest-run-only behavior, incremental apply, checked retryable file promotion, JSON promotion timing, full metadata/contributor/tag overwrite with user-owned fields preserved, detailed tag actions, independent cover/sample promotion, optional tag colors, pre-apply rejection, and partial-apply finish behavior
+- `tests/Feature/DLSiteImageFailureSettingsTest.php`
+  - confirms the removed image-failure setting and choices are absent from the General tab
 - `tests/Feature/OptionsRefetchProgressTest.php`
-  - covers the Livewire refetch progress panel polling while a run is running/cancelling, showing the cancel action only while running, and redirecting once review results are ready
+  - covers the Livewire refetch progress panel polling while a run is running/cancelling, its status and single fetched/failed/total summary, showing the cancel action only while running, and redirecting once review results are ready
+- `tests/Feature/OptionsRefetchReviewTest.php`
+  - covers initial and changed Livewire tabs, choice preservation across navigation and Apply Tab, validation, eligible-only Set Overwrite for All presets, preserved per-change overrides, read-only runs, built-in confirmations, accessible tab markup, and the no-inline-PHP/no-Alpine review and prepared-value views
 - `tests/Feature/OptionsWorkSearchTest.php`
   - covers the Livewire selected-work search, numeric RJ-desc visible order, and selected product preservation when filtered results change
 - `tests/Feature/AuthenticationTest.php`
@@ -90,7 +96,11 @@ Current automated coverage includes Laravel PHPUnit and Python `unittest` tests:
 - `tests/Unit/Models/ProductDLSiteUrlTest.php`
   - covers the no-age-access disabled Maniax path plus enabled Home mapping for exact All Ages and Maniax fallback for R15, R18, null, and malformed legacy ages
 - `tests/Unit/Support/DLSite/DLSitePythonRunnerTest.php`
-  - covers the Laravel Process command arrays used for scraper and tag-fetcher Python calls, including the project venv executable, disabled timeout, and normalized log-retention subprocess environment
+  - covers the Laravel Process command arrays for explicit work id, JSON/log destinations, optional image destination, project venv executable, disabled timeout, and normalized log-retention subprocess environment
+- `tests/Unit/Support/DLSite/DLSiteWorkFetcherTest.php`
+  - covers PHP-owned five-attempt retries, latest-manifest partial results, immediate success, strict manifest/JSON failures, and rejection of stale JSON fallback
+- `tests/Unit/Support/RefetchDiffBuilderTest.php`
+  - covers every metadata/creator/tag category, content-hashed Cover changes, and independently unavailable Sample Images after any sample failure
 - `tests/Unit/Logging/WeeklyRotatingFileHandlerTest.php`
   - covers UTC weekly filenames and boundaries, same-week appends, Monday file switching, first-write cleanup after same-week expiry, complete-week retention, selective cleanup, concurrent archive removal, invalid retention fallback, and non-blocking cleanup failures
 - `tests/Unit/Logging/LoggingConfigurationTest.php`
@@ -105,14 +115,14 @@ Current automated coverage includes Laravel PHPUnit and Python `unittest` tests:
   - covers title-key identity, including case-insensitive tag reuse, preserved display casing, and distinct Hiragana/Katakana variants
 - `tests/Unit/Support/VisibleGenreAttachmentTest.php`
   - covers current-locale defaults, explicit language overrides, always-visible custom attachments, fetched-source gating, and one-row visibility for shared JP+EN attachments
-- `tests/Unit/Support/TagRefetch/DLSiteTagFetcherTest.php`
-  - covers Process-faked tag fetch output parsing, failed-process error messages, and invalid JSON handling
 - `tests/Unit/Support/ReturnTargetTest.php`
   - covers index-only return query/fragment normalization, malformed input fallback, ignored legacy return routes, and URL generation
 - `tests/Unit/View/Components/Fields/EnumSelectFieldTest.php`
   - covers enum-backed field component defaults and option maps
-- `tests/Unit/Models/TagRefetchStateTest.php`
-  - covers refetch run/result state helper methods used by Blade and controller code, including active/cancelling/cancelled run state, run summaries, and result change-bucket helpers
+- `tests/Unit/Models/RefetchStateTest.php`
+  - covers generic refetch run/result state and category helpers
+- `tests/Unit/Support/DLSite/DLSiteScraperContractTest.php`
+  - checks the explicit destination arguments, structured image manifest, and absence of a Python retry loop
 
 - `python/tests/test_weekly_logging.py`
   - covers Python's matching UTC week calculation, weekly append/switch behavior, first-write cleanup after same-week expiry, complete-week retention, selective cleanup, concurrent archive removal, invalid retention fallback, the production handler interface, and non-blocking cleanup failures
@@ -137,8 +147,8 @@ Feature tests use `RefreshDatabase`, so the configured test database is migrated
 
 Upload tests use Laravel's `UploadedFile::fake()` and `Storage::fake('public')` helpers, so custom cover/sample image tests do not write to the real public storage disk.
 
-Refetch Tags tests use Laravel's `Bus::fake()` for batch dispatch assertions and fake `DLSiteTagFetcher` classes so no DLSite network calls run during tests.
-Python process tests use Laravel's `Process::fake()` and `Process::preventStrayProcesses()` so scraper/tag-fetcher commands can be asserted without running Python.
+Full Refetch tests use Laravel's `Bus::fake()`, `Process::fake()`, and fake storage disks so no DLSite network calls or canonical storage writes occur during tests.
+Python process tests use Laravel's `Process::fake()` and `Process::preventStrayProcesses()` so scraper commands can be asserted without running Python.
 
 Livewire component tests use `Livewire::test()` to update component state without a browser.
 Index pagination tests set `options.index_per_page` through `App\Models\Option` so fixed, custom, and unlimited list sizes can be verified without touching application config.

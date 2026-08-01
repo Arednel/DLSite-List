@@ -8,19 +8,26 @@ use Illuminate\Support\Facades\Process;
 
 class DLSitePythonRunner
 {
-    public function runScraper(string $workId): ProcessResult
-    {
-        return $this->runScript('DLSiteScraper.py', [
-            storage_path(),
+    public function fetchWork(
+        string $workId,
+        string $jsonPath,
+        ?string $imageDirectory = null,
+    ): ProcessResult {
+        $arguments = [
+            '--work-id',
             $workId,
-        ]);
-    }
+            '--json-output',
+            $jsonPath,
+            '--log-directory',
+            storage_path('logs'),
+        ];
 
-    public function runTagFetcher(string $workId): ProcessResult
-    {
-        return $this->runScript('DLSiteTagFetcher.py', [
-            $workId,
-        ]);
+        if ($imageDirectory !== null) {
+            $arguments[] = '--image-output';
+            $arguments[] = $imageDirectory;
+        }
+
+        return $this->runScript('DLSiteScraper.py', $arguments);
     }
 
     /**

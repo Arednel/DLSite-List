@@ -11,6 +11,8 @@ class OptionsWorkSearch extends Component
 {
     public string $search = '';
 
+    public bool $checkImages = false;
+
     /**
      * @var list<string>
      */

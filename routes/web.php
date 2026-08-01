@@ -4,6 +4,7 @@ use App\Http\Controllers\AuthenticationController;
 use App\Http\Controllers\AutocompleteController;
 use App\Http\Controllers\OptionsController;
 use App\Http\Controllers\ProductController;
+use App\Http\Controllers\RefetchController;
 use App\Support\ReturnTarget;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
@@ -42,11 +43,13 @@ Route::controller(ProductController::class)->group(function () {
 // Options
 Route::controller(OptionsController::class)->group(function () {
     Route::get('/options', 'index')->name('options.index');
-    Route::post('/options/refetch-tags', 'startRefetchTags')->name('options.refetch-tags.start');
-    Route::get('/options/refetch-tags/{run}', 'showRefetchTags')->name('options.refetch-tags.show');
-    Route::get('/options/refetch-tags/{run}/status', 'refetchTagsStatus')->name('options.refetch-tags.status');
-    Route::post('/options/refetch-tags/{run}/cancel', 'cancelRefetchTags')->name('options.refetch-tags.cancel');
-    Route::post('/options/refetch-tags/{run}/apply', 'applyRefetchTags')->name('options.refetch-tags.apply');
+});
+
+// Refetch
+Route::controller(RefetchController::class)->prefix('/options/refetch')->group(function () {
+    Route::post('/', 'start')->name('options.refetch.start');
+    Route::get('/{run}', 'show')->name('options.refetch.show');
+    Route::post('/{run}/cancel', 'cancel')->name('options.refetch.cancel');
 });
 
 // Autocomplete

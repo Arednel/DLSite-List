@@ -1,4 +1,4 @@
-<form method="POST" action="{{ route('options.refetch-tags.start') }}" class="stack">
+<form method="POST" action="{{ route('options.refetch.start') }}" class="stack">
     @csrf
     <input type="hidden" name="scope" value="selected">
     <input type="hidden" name="tab" value="refetch">
@@ -27,10 +27,16 @@
             </label>
         @empty
             <p class="empty-state">
-                {{ trim($search) === '' ? __('No works available for tag refetch.') : __('No works match this search.') }}
+                {{ trim($search) === '' ? __('No works available for refetch.') : __('No works match this search.') }}
             </p>
         @endforelse
     </div>
+
+    <x-options.switch name="check_images" value="1" wire:model="checkImages" :checked="$checkImages" :help="__(
+        'Downloads the current cover and sample images for every selected work and compares Cover and Sample Images separately. This makes the refetch slower. Downloads are staged for review and do not replace saved images unless that category is applied; failed image categories remain unavailable for overwrite.',
+    )">
+        {{ __('Refetch Images') }}
+    </x-options.switch>
 
     @if ($hasAnyProducts)
         <div class="option-actions">

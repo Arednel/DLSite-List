@@ -2,9 +2,8 @@
 
 namespace App\Jobs;
 
-use App\Models\TagRefetchWorkResult;
-use App\Support\TagRefetch\DLSiteTagFetcher;
-use App\Support\TagRefetch\TagRefetchService;
+use App\Models\RefetchWorkResult;
+use App\Support\Refetch\RefetchService;
 use Illuminate\Bus\Batchable;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
@@ -12,7 +11,7 @@ use Illuminate\Foundation\Bus\Dispatchable;
 use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Queue\SerializesModels;
 
-class FetchProductTagsJob implements ShouldQueue
+class FetchProductWorkJob implements ShouldQueue
 {
     use Batchable;
     use Dispatchable;
@@ -27,11 +26,11 @@ class FetchProductTagsJob implements ShouldQueue
         public string $productId,
     ) {}
 
-    public function handle(DLSiteTagFetcher $fetcher, TagRefetchService $service): void
+    public function handle(RefetchService $service): void
     {
-        $result = TagRefetchWorkResult::query()
+        $result = RefetchWorkResult::query()
             ->with('run')
-            ->where('tag_refetch_run_id', $this->runId)
+            ->where('refetch_run_id', $this->runId)
             ->where('product_id', $this->productId)
             ->first();
 
@@ -40,11 +39,11 @@ class FetchProductTagsJob implements ShouldQueue
         }
 
         if ($this->batch()?->cancelled() || $result->run?->isCancelling()) {
-            $service->recordSkippedResult($result, TagRefetchService::CANCELLED_BEFORE_FETCH_MESSAGE);
+            $service->recordFailedResult($result, RefetchService::CANCELLED_BEFORE_FETCH_MESSAGE);
 
             return;
         }
 
-        $service->fetchAndRecordResult($result, $fetcher);
+        $service->fetchAndRecordResult($result);
     }
 }

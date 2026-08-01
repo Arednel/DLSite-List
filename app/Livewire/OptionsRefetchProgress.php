@@ -2,7 +2,7 @@
 
 namespace App\Livewire;
 
-use App\Models\TagRefetchRun;
+use App\Models\RefetchRun;
 use Illuminate\View\View;
 use Livewire\Component;
 
@@ -10,7 +10,7 @@ class OptionsRefetchProgress extends Component
 {
     public int $runId;
 
-    public function mount(TagRefetchRun $run): void
+    public function mount(RefetchRun $run): void
     {
         $this->runId = (int) $run->getKey();
     }
@@ -20,7 +20,7 @@ class OptionsRefetchProgress extends Component
         $run = $this->run();
 
         if ($run->hasReviewResults()) {
-            $this->redirectRoute('options.refetch-tags.show', ['run' => $this->runId]);
+            $this->redirectRoute('options.refetch.show', ['run' => $this->runId]);
         }
     }
 
@@ -34,12 +34,12 @@ class OptionsRefetchProgress extends Component
         ]);
     }
 
-    private function run(): TagRefetchRun
+    private function run(): RefetchRun
     {
-        return TagRefetchRun::query()->findOrFail($this->runId);
+        return RefetchRun::query()->findOrFail($this->runId);
     }
 
-    private function progressPercent(TagRefetchRun $run): int
+    private function progressPercent(RefetchRun $run): int
     {
         if ($run->total_count === 0) {
             return 0;

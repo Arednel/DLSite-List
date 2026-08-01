@@ -1,34 +1,42 @@
-import sys
-import os
-from PIL import Image
-from io import BytesIO
-import time
-import logging
 import asyncio
+import argparse
 import json
-from dlsite_async import DlsiteAPI
-import requests
+import logging
+import os
 import re
+import sys
 from pathlib import Path
+
+import requests
+from dlsite_async import DlsiteAPI
+from PIL import Image
 
 from weekly_logging import WeeklyFileHandler
 
-storageDir = sys.argv[1]
-workID = sys.argv[2]
 
-# Configure logging
-logging.basicConfig(
-    handlers=[
-        WeeklyFileHandler(
-            Path(storageDir, "logs"),
-            "DLSiteScraper",
-            retention_days=os.getenv("LOG_RETENTION_DAYS"),
-        )
-    ],
-    level=logging.DEBUG,
-    format="%(asctime)s \n%(message)s",
-    datefmt="[%Y-%m-%d] [%H:%M:%S]",
-)
+def parse_arguments(argv=None):
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--work-id", required=True)
+    parser.add_argument("--json-output", required=True)
+    parser.add_argument("--log-directory", required=True)
+    parser.add_argument("--image-output")
+    return parser.parse_args(argv)
+
+
+def configure_logging(log_directory):
+    logging.basicConfig(
+        handlers=[
+            WeeklyFileHandler(
+                Path(log_directory),
+                "DLSiteScraper",
+                retention_days=os.getenv("LOG_RETENTION_DAYS"),
+            )
+        ],
+        level=logging.DEBUG,
+        format="%(asctime)s \n%(message)s",
+        datefmt="[%Y-%m-%d] [%H:%M:%S]",
+        force=True,
+    )
 
 
 def to_serializable(obj):
@@ -46,17 +54,24 @@ def to_serializable(obj):
         return str(obj)  # Fallback for anything weird
 
 
-async def japaneseDLsite():
+async def japanese_dlsite(work_id):
     async with DlsiteAPI() as api:
-        return await api.get_work(workID)
+        return await api.get_work(work_id)
 
 
-async def englishDLsite():
+async def english_dlsite(work_id):
     async with DlsiteAPI(locale="en_US") as api:
-        return await api.get_work(workID)
+        return await api.get_work(work_id)
 
 
-def download_image(url, save_path, retries=5, delay=5):
+async def fetch_work_data(work_id):
+    japanese = await japanese_dlsite(work_id)
+    english = await english_dlsite(work_id)
+
+    return japanese, english
+
+
+def download_image(url, save_path):
     # Fix protocol-relative URLs
     if url.startswith("//"):
         url = "https:" + url
@@ -71,44 +86,37 @@ def download_image(url, save_path, retries=5, delay=5):
         )
     }
 
-    for attempt in range(1, retries + 1):
+    temporary_path = save_path.with_name(f"{save_path.name}.part")
+
+    try:
+        logging.debug(f"Downloading {url}")
+        response = requests.get(url, stream=True, timeout=15, headers=headers)
+        response.raise_for_status()
+
+        save_path.parent.mkdir(parents=True, exist_ok=True)
+        with open(temporary_path, "wb") as file:
+            for chunk in response.iter_content(8192):
+                file.write(chunk)
+
+        if os.path.getsize(temporary_path) == 0:
+            raise IOError("Downloaded file is empty")
+
         try:
-            logging.debug(f"Attempt {attempt}/{retries}: downloading {url}")
+            with Image.open(temporary_path) as image:
+                image.verify()
+            with Image.open(temporary_path) as image:
+                image.load()
+        except Exception as error:
+            raise IOError(f"Corrupted or incomplete image: {error}")
 
-            response = requests.get(url, stream=True, timeout=15, headers=headers)
-            response.raise_for_status()
-
-            # Save to file
-            with open(save_path, "wb") as f:
-                for chunk in response.iter_content(8192):
-                    f.write(chunk)
-
-            # Check if file is not empty
-            if os.path.getsize(save_path) == 0:
-                os.remove(save_path)
-                raise IOError("Downloaded file is empty")
-
-            # Validate image
-            try:
-                with Image.open(save_path) as img:
-                    img.verify()  # quick integrity check
-                # Re-open to ensure it can actually be loaded
-                with Image.open(save_path) as img:
-                    img.load()
-            except Exception as e:
-                os.remove(save_path)
-                raise IOError(f"Corrupted or incomplete image: {e}")
-
-            logging.info(f"Downloaded {url} → {save_path}")
-            return True
-
-        except Exception as e:
-            logging.warning(f"Download failed ({attempt}/{retries}) for {url}: {e}")
-            if attempt < retries:
-                time.sleep(delay)
-            else:
-                logging.error(f"Giving up on {url} after {retries} attempts.")
-                return False
+        os.replace(temporary_path, save_path)
+        logging.info(f"Downloaded {url} → {save_path}")
+        return True
+    except Exception as error:
+        if temporary_path.exists():
+            temporary_path.unlink()
+        logging.warning(f"Download failed for {url}: {error}")
+        return False
 
 
 def map_known_error(error_message: str, work_id: str):
@@ -131,56 +139,78 @@ def map_known_error(error_message: str, work_id: str):
     return None
 
 
-try:
-    workJapanese = asyncio.run(japaneseDLsite())
+def fetch_images(work, image_output):
+    downloaded_images = []
+    failed_images = []
+    image_output.mkdir(parents=True, exist_ok=True)
+    image_targets = [
+        ("cover.jpg", work.get("work_image")),
+        *[
+            (f"sample_{index}.jpg", url)
+            for index, url in enumerate(work.get("sample_images") or [], start=1)
+        ],
+    ]
 
-    workEnglish = asyncio.run(englishDLsite())
+    for filename, url in image_targets:
+        if url and download_image(url, image_output / filename):
+            downloaded_images.append(filename)
+        else:
+            failed_images.append(filename)
 
-    # Convert to serializable dicts
-    workJapanese_serialized = to_serializable(workJapanese)
-    workEnglish_serialized = to_serializable(workEnglish)
+    return downloaded_images, failed_images
 
-    # Combine and save
-    combined = {"japanese": workJapanese_serialized, "english": workEnglish_serialized}
 
-    # Define save path and filename
-    savePath = os.path.join(storageDir, "app", "Works")
-    os.makedirs(savePath, exist_ok=True)  # Create folder if it doesn't exist
-    filename = f"{workJapanese.product_id}.json"
+def run(arguments):
+    work_japanese, work_english = asyncio.run(fetch_work_data(arguments.work_id))
+    japanese = to_serializable(work_japanese)
+    english = to_serializable(work_english)
+    combined = {"japanese": japanese, "english": english}
+    json_output = Path(arguments.json_output)
+    json_output.parent.mkdir(parents=True, exist_ok=True)
 
-    # Save JSON
-    with open(os.path.join(savePath, filename), "w", encoding="utf-8") as f:
+    with open(json_output, "w", encoding="utf-8") as f:
         json.dump(combined, f, ensure_ascii=False, indent=2)
 
-    # After saving JSON
-    images_dir = os.path.join(
-        storageDir, "app", "public", "Works", workJapanese.product_id
-    )
-    os.makedirs(images_dir, exist_ok=True)
+    downloaded_images = []
+    failed_images = []
 
-    # Main cover
-    cover_url = workJapanese_serialized["work_image"]
-    cover_path = os.path.join(images_dir, "cover.jpg")
-    download_image(cover_url, cover_path)
+    if arguments.image_output:
+        downloaded_images, failed_images = fetch_images(
+            japanese,
+            Path(arguments.image_output),
+        )
 
-    # Sample images
-    for idx, img_url in enumerate(
-        workJapanese_serialized.get("sample_images") or [], start=1
-    ):
-        img_path = os.path.join(images_dir, f"sample_{idx}.jpg")
-        download_image(img_url, img_path)
+    product_id = japanese.get("product_id") or arguments.work_id
+    logging.info(f"{product_id} completed")
 
-    logging.info(f"" + workJapanese.product_id + " completed")
-except Exception as error:
-    error_message = str(error).strip()
-    logging.error(f"Error occurred:\n{error}")
+    return {
+        "product_id": product_id,
+        "json_path": str(json_output),
+        "downloaded_images": downloaded_images,
+        "failed_images": failed_images,
+    }
 
-    mapped = map_known_error(error_message, workID)
-    if mapped:
-        user_message, exit_code = mapped
-        print(user_message, file=sys.stderr)
-        sys.exit(exit_code)
 
-    # Otherwise return the raw error and exit non-zero
-    print(error_message, file=sys.stderr)
-    sys.exit(1)
+def main(argv=None):
+    arguments = parse_arguments(argv)
+    configure_logging(arguments.log_directory)
+
+    try:
+        print(json.dumps(run(arguments), ensure_ascii=False))
+        return 0
+    except Exception as error:
+        error_message = str(error).strip()
+        logging.error(f"Error occurred:\n{error}")
+        mapped = map_known_error(error_message, arguments.work_id)
+
+        if mapped:
+            user_message, exit_code = mapped
+            print(user_message, file=sys.stderr)
+            return exit_code
+
+        print(error_message, file=sys.stderr)
+        return 1
+
+
+if __name__ == "__main__":
+    sys.exit(main())

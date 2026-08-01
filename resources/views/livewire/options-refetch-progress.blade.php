@@ -9,11 +9,11 @@
     </div>
     <div class="summary-grid">
         <div>{{ __('Fetched') }} <strong>{{ $run->fetched_count }}</strong></div>
-        <div>{{ __('Skipped') }} <strong>{{ $run->skipped_count }}</strong></div>
+        <div>{{ __('Failed') }} <strong>{{ $run->failed_count }}</strong></div>
         <div>{{ __('Total') }} <strong>{{ $run->total_count }}</strong></div>
     </div>
     @if ($run->canBeCancelled())
-        <form method="POST" action="{{ route('options.refetch-tags.cancel', $run) }}" class="option-actions">
+        <form method="POST" action="{{ route('options.refetch.cancel', $run) }}" class="option-actions">
             @csrf
             <button type="submit" class="tag tag--outline tag--md is-clickable">
                 {{ __('Cancel Refetch') }}

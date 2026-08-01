@@ -16,15 +16,20 @@
         <p class="work-form-completed-message">
             {{ __('Your change was saved successfully. You can continue if this window does not close automatically.') }}
         </p>
+        @if ($warning ?? null)
+            <p class="work-form-completed-message" role="alert">{{ $warning }}</p>
+        @endif
         <a class="work-form-completed-action" href="{{ $redirectUrl }}" target="_top">{{ __('Continue') }}</a>
     </main>
 
-    <script>
-        window.parent.postMessage({
-            type: 'work-form-completed',
-            redirectUrl: @js($redirectUrl),
-        }, window.location.origin);
-    </script>
+    @if (!($warning ?? null))
+        <script>
+            window.parent.postMessage({
+                type: 'work-form-completed',
+                redirectUrl: @js($redirectUrl),
+            }, window.location.origin);
+        </script>
+    @endif
 </body>
 
 </html>

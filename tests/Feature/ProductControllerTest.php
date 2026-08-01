@@ -1778,7 +1778,7 @@ class ProductControllerTest extends TestCase
     {
         Storage::fake('local');
         Process::fake([
-            '*' => Process::result(),
+            '*' => Process::result(output: '{"failed_images":[]}'),
         ])->preventStrayProcesses();
 
         $workId = Product::factory()->make()->id;
@@ -1822,8 +1822,14 @@ class ProductControllerTest extends TestCase
             return $process->command === [
                 $this->expectedPythonExecutable(),
                 base_path('python/DLSiteScraper.py'),
-                storage_path(),
+                '--work-id',
                 $workId,
+                '--json-output',
+                Storage::disk('local')->path("Works/{$workId}.json"),
+                '--log-directory',
+                storage_path('logs'),
+                '--image-output',
+                Storage::disk('public')->path("Works/{$workId}"),
             ] && $process->timeout === null;
         });
 
@@ -1874,10 +1880,43 @@ class ProductControllerTest extends TestCase
         }
     }
 
+    public function test_store_saves_and_redirects_with_a_warning_when_images_still_fail(): void
+    {
+        Storage::fake('local');
+        Storage::fake('public');
+        $workId = Product::factory()->make()->id;
+        Storage::disk('local')->put("Works/{$workId}.json", json_encode(
+            $this->scrapedWorkPayload($workId, [
+                'work_image' => 'cover-url',
+                'sample_images' => ['sample-url'],
+            ]),
+            JSON_THROW_ON_ERROR,
+        ));
+        Process::fake([
+            '*' => Process::result(output: json_encode([
+                'product_id' => $workId,
+                'downloaded_images' => [],
+                'failed_images' => ['cover.jpg', 'sample_1.jpg'],
+            ], JSON_THROW_ON_ERROR)),
+        ])->preventStrayProcesses();
+
+        $this->post('/store', ['id' => $workId])
+            ->assertSessionHasNoErrors()
+            ->assertRedirect("/#{$workId}")
+            ->assertSessionHas(
+                'dlsite_image_warning',
+                'DLSite work data was fetched, but these images could not be downloaded: cover.jpg, sample_1.jpg',
+            );
+
+        $this->assertDatabaseHas('products', ['id' => $workId]);
+        Process::assertRanTimes(fn(): bool => true, 5);
+    }
+
     public function test_store_uses_visible_quick_add_metadata_overrides_and_preserves_hidden_scraped_metadata(): void
     {
         Storage::fake('local');
-        Process::fake(['*' => Process::result()])->preventStrayProcesses();
+        Process::fake(['*' => Process::result(output: '{"failed_images":[]}')])
+            ->preventStrayProcesses();
 
         Option::setQuickAddFieldLayout([
             ['field' => ProductField::AgeCategory->value, 'visible' => true],
@@ -1927,7 +1966,8 @@ class ProductControllerTest extends TestCase
     public function test_store_preserves_hidden_scraped_description_language_and_accepts_visible_override(): void
     {
         Storage::fake('local');
-        Process::fake(['*' => Process::result()])->preventStrayProcesses();
+        Process::fake(['*' => Process::result(output: '{"failed_images":[]}')])
+            ->preventStrayProcesses();
 
         Option::setQuickAddFieldLayout([
             ['field' => ProductField::DescriptionJapanese->value, 'visible' => true],
@@ -1956,7 +1996,8 @@ class ProductControllerTest extends TestCase
     public function test_store_keeps_manual_series_when_title_name_is_fetched(): void
     {
         Storage::fake('local');
-        Process::fake(['*' => Process::result()])->preventStrayProcesses();
+        Process::fake(['*' => Process::result(output: '{"failed_images":[]}')])
+            ->preventStrayProcesses();
 
         $workId = Product::factory()->make()->id;
         Storage::disk('local')->put("Works/{$workId}.json", json_encode($this->scrapedWorkPayload($workId, [
@@ -1975,7 +2016,8 @@ class ProductControllerTest extends TestCase
     {
         Option::setAutoSeriesFromTitleName(false);
         Storage::fake('local');
-        Process::fake(['*' => Process::result()])->preventStrayProcesses();
+        Process::fake(['*' => Process::result(output: '{"failed_images":[]}')])
+            ->preventStrayProcesses();
 
         $workId = Product::factory()->make()->id;
         Storage::disk('local')->put("Works/{$workId}.json", json_encode($this->scrapedWorkPayload($workId, [
@@ -2140,9 +2182,9 @@ class ProductControllerTest extends TestCase
         $response->assertSessionHasNoErrors();
         $response->assertRedirect('/#' . $workId);
 
-        Storage::disk('public')->assertExists("Works/{$workId}/cover.png");
-        Storage::disk('public')->assertExists("Works/{$workId}/sample_1.jpg");
-        Storage::disk('public')->assertExists("Works/{$workId}/sample_2.png");
+        $this->assertTrue(Storage::disk('public')->exists("Works/{$workId}/cover.png"));
+        $this->assertTrue(Storage::disk('public')->exists("Works/{$workId}/sample_1.jpg"));
+        $this->assertTrue(Storage::disk('public')->exists("Works/{$workId}/sample_2.png"));
 
         $product = Product::query()->whereKey($workId)->firstOrFail();
 
@@ -2209,7 +2251,7 @@ class ProductControllerTest extends TestCase
         $this->assertSame([], $product->sample_images);
         $this->assertDatabaseHas('contributors', ['name' => 'CUSTOM_VISIBLE_AUTHOR_TOKEN']);
         $this->assertDatabaseMissing('contributors', ['name' => 'MALICIOUS_CUSTOM_VOICE_TOKEN']);
-        Storage::disk('public')->assertMissing("Works/{$workId}/sample_1.jpg");
+        $this->assertFalse(Storage::disk('public')->exists("Works/{$workId}/sample_1.jpg"));
     }
 
     public function test_custom_store_saves_visible_split_description_and_nulls_hidden_language(): void

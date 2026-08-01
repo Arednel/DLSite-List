@@ -78,11 +78,11 @@
     @break
 
     @case('tags')
-        @php($tagCsvHelp = __('Comma-separated. Use double quotes for tags that contain commas, e.g. "Junior / Senior (at work, school, etc)", Office Lady'))
         <div class="filter-widget tags">
             <label class="widget-header" for="filter_tags">{{ __('Tags') }}</label>
             <div class="filter-field-stack">
-                <textarea id="filter_tags" name="tags" rows="3" wire:model="draft.tags" placeholder="{{ $tagCsvHelp }}"
+                <textarea id="filter_tags" name="tags" rows="3" wire:model="draft.tags"
+                    placeholder="{{ __('Comma-separated. Use double quotes for tags that contain commas, e.g. "Junior / Senior (at work, school, etc)", Office Lady') }}"
                     data-autocomplete-source="tags" data-autocomplete-mode="csv"
                     data-autocomplete-url="{{ route('autocomplete.tags', [], false) }}"></textarea>
                 <x-index.segmented-radio-group name="tag_match" :options="$filterOptions['tag_match']" wire:model="draft.tag_match" />

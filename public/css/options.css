@@ -174,7 +174,8 @@ body.options-page {
 .options-page .field-label,
 .options-page .option-field,
 .options-page .option-radio,
-.options-page .review-actions label {
+.options-page .review-actions label,
+.options-page .refetch-review label {
     color: var(--options-text);
     font-size: 12px;
     font-weight: bold;
@@ -232,7 +233,8 @@ body.options-page {
 .options-page .option-control,
 .options-page .option-control-input,
 .options-page .option-field input,
-.options-page .review-actions select {
+.options-page .review-actions select,
+.options-page .refetch-review select {
     width: 100%;
     min-height: 34px;
     border: 1px solid rgba(var(--options-border-rgb), 0.95);
@@ -254,7 +256,8 @@ body.options-page {
 .options-page .option-control:focus,
 .options-page .option-control-input:focus,
 .options-page .option-field input:focus,
-.options-page .review-actions select:focus {
+.options-page .review-actions select:focus,
+.options-page .refetch-review select:focus {
     border-color: var(--options-accent);
     outline: 2px solid rgba(var(--options-accent-rgb), 0.42);
     outline-offset: 2px;
@@ -695,7 +698,8 @@ body.options-page {
     gap: 8px;
 }
 
-.options-page .review-actions label {
+.options-page .review-actions label,
+.options-page .refetch-review label {
     display: grid;
     gap: 5px;
     min-width: 0;
@@ -992,6 +996,150 @@ body.options-page {
     margin-left: 4px;
 }
 
+.options-page [x-cloak] {
+    display: none !important;
+}
+
+.options-page .refetch-review {
+    display: grid;
+    gap: 16px;
+}
+
+.options-page .refetch-scope-grid {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    gap: 18px;
+    margin-top: 18px;
+}
+
+.options-page .refetch-scope-card {
+    display: grid;
+    align-content: start;
+    gap: 14px;
+    min-width: 0;
+    padding: 16px;
+    border: 1px solid rgba(var(--options-border-rgb), 0.65);
+    border-radius: var(--options-radius);
+    background: rgba(var(--options-bg-rgb), 0.38);
+}
+
+.options-page .refetch-scope-card h3,
+.options-page .refetch-scope-card p {
+    margin: 0;
+}
+
+.options-page .refetch-scope-card h3 {
+    color: var(--options-text);
+    font: bold 13px/1.25 Verdana, Arial, sans-serif;
+    letter-spacing: 0;
+}
+
+.options-page .refetch-scope-card h3 i {
+    margin-inline-end: 8px;
+    color: inherit;
+}
+
+.options-page .refetch-scope-card p {
+    margin-top: 5px;
+    color: var(--options-muted);
+    font-size: 12px;
+    line-height: 1.5;
+}
+
+.options-page .refetch-tabs {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    padding: 8px;
+    border: 1px solid rgba(var(--options-border-rgb), 0.55);
+    border-radius: var(--options-radius);
+    background: rgba(var(--options-bg-rgb), 0.46);
+}
+
+.options-page .refetch-tabs button {
+    display: inline-flex;
+    gap: 6px;
+    align-items: center;
+    padding: 7px 10px;
+    border: 1px solid rgba(var(--options-border-rgb), 0.7);
+    border-radius: 999px;
+    background: var(--options-surface);
+    color: var(--options-text);
+    cursor: pointer;
+}
+
+.options-page .refetch-tabs button.is-active {
+    border-color: var(--options-accent);
+    background: var(--options-accent-soft);
+}
+
+.options-page .refetch-tabs button.is-resolved {
+    opacity: 0.68;
+}
+
+.options-page .refetch-tab-panel,
+.options-page .refetch-change-list {
+    display: grid;
+    gap: 12px;
+}
+
+.options-page .refetch-tab-header {
+    display: flex;
+    gap: 12px;
+    align-items: end;
+    justify-content: space-between;
+}
+
+.options-page .refetch-tab-header>div {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+}
+
+.options-page .refetch-change-comparison {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 10px;
+}
+
+.options-page .refetch-change-comparison>div {
+    min-width: 0;
+    padding: 10px;
+    border: 1px solid rgba(var(--options-border-rgb), 0.5);
+    border-radius: var(--options-radius);
+    background: rgba(var(--options-bg-rgb), 0.38);
+    overflow-wrap: anywhere;
+}
+
+.options-page .refetch-preview-image {
+    display: block;
+    width: auto;
+    max-width: 220px;
+    max-height: 220px;
+    margin-top: 8px;
+    border-radius: var(--options-radius);
+}
+
+.options-page .refetch-preview-images,
+.options-page .refetch-tag-details {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    gap: 10px;
+}
+
+.options-page .refetch-tag-details {
+    margin-top: 12px;
+}
+
+.options-page .refetch-tag-details>div {
+    min-width: 0;
+}
+
+.options-page .refetch-language-values {
+    display: grid;
+    gap: 8px;
+}
+
 @media (max-width: 768px) {
     .options-shell {
         width: 100%;
@@ -1054,6 +1202,7 @@ body.options-page {
     .options-page .option-switch,
     .options-page .field-layout-switch,
     .options-page .review-actions label,
+    .options-page .refetch-review label,
     .options-page .option-field input {
         width: 100%;
     }
@@ -1100,5 +1249,23 @@ body.options-page {
     .options-page .result-grid,
     .options-page .summary-grid {
         grid-template-columns: 1fr;
+    }
+
+    .options-page .refetch-tab-header {
+        align-items: stretch;
+        flex-direction: column;
+    }
+
+    .options-page .refetch-change-comparison {
+        grid-template-columns: 1fr;
+    }
+
+    .options-page .refetch-tabs {
+        flex-wrap: nowrap;
+        overflow-x: auto;
+    }
+
+    .options-page .refetch-tabs button {
+        flex: 0 0 auto;
     }
 }

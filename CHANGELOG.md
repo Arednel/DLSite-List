@@ -2,6 +2,12 @@
 
 ## Development
 
+* 2026-08-01 -- 1.7.9 Full Work Refetch
+  * Replaced tag-only refetch with staged full-work refetch and per-category review
+  * Unified DLSite fetching for Add and Refetch
+  * Image download failures now save the work and show a warning
+  * Code cleanup
+
 * 2026-07-29 -- 1.7.8 Optional Statuses & Index Polish
   * Added optional On Hold and Dropped statuses across forms, navigation, and filters
   * Refined responsive Index progress and Search/Filters layout

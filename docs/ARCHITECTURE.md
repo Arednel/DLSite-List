@@ -2,9 +2,9 @@
 
 ## Stack
 - Backend: Laravel 12 (PHP 8.3)
-- Frontend: Blade templates, Livewire for the Index list, Options work search/settings/refetch progress, and plain CSS/JS
+- Frontend: Blade templates, Livewire for the Index list, Options work search/settings/refetch progress and review, and plain CSS/JS
 - Database: MySQL 8
-- Scraper: Python scripts invoked from Laravel (`python/DLSiteScraper.py`, `python/DLSiteTagFetcher.py`)
+- Scraper: `python/DLSiteScraper.py`, invoked through Laravel with explicit output destinations
 - Background work: Laravel database queues and job batches
 
 ## Main Application Flow
@@ -13,11 +13,11 @@
 3. `GET /tags` renders the self-contained Index-aligned tag library shell, then `app/Livewire/TagLibraryManager.php` owns tag search, empty tag creation/deletion, saved collapsed/expanded default state, and tag links back to the same index filter used on the list page.
 4. `GET /options` renders the General tab by default; `field-layouts`, `authentication`, and `refetch` query values render the other Options tabs.
 5. User can create/edit/delete entries through forms.
-6. Store flow (`POST /store`) validates input, runs scraper, reads scraped JSON, and creates a `products` row.
+6. Store flow (`POST /store`) validates input, asks the shared PHP fetch service for canonical JSON/images, then creates a `products` row.
 7. Custom store flow (`POST /store/custom`) validates manual input, skips scraper/network checks, stores the required local cover plus optional sample images, and creates a `products` row.
 8. Update flow (`POST /update/{id}`) validates and updates editable fields.
 9. Destroy flow (`POST /destroy/{id}`) removes DB row and related local files.
-10. Refetch Tags starts a queued batch, stores per-work fetched/skipped results, shows progress, can cancel a running batch, then applies reviewed tag changes.
+10. Refetch Works starts one Laravel batch job per selected work, fetches complete staged snapshots, and lets each changed metadata/image category be overwritten or ignored before canonical JSON is promoted.
 
 ## Key Components
 - Routes: `routes/web.php`
@@ -26,8 +26,7 @@
 - Autocomplete controller: `app/Http/Controllers/AutocompleteController.php`
 - Authentication controller: `app/Http/Controllers/AuthenticationController.php`
 - Requests:
-  - `app/Http/Requests/StartTagRefetchRequest.php`
-  - `app/Http/Requests/ApplyTagRefetchRequest.php`
+  - `app/Http/Requests/StartRefetchRequest.php`
   - `app/Http/Requests/StoreProductRequest.php`
   - `app/Http/Requests/StoreCustomProductRequest.php`
   - `app/Http/Requests/UpdateProductRequest.php`
@@ -42,13 +41,14 @@
   - `app/Http/Middleware/RequireOptionalAuthentication.php`
   - it runs in the `web` group after session/locale startup, so normal web routes and Livewire update/upload requests share one protection boundary
 - Refetch models:
-  - `app/Models/TagRefetchRun.php`
-  - `app/Models/TagRefetchWorkResult.php`
+  - `app/Models/RefetchRun.php`
+  - `app/Models/RefetchWorkResult.php`
 - Refetch job/support:
-  - `app/Jobs/FetchProductTagsJob.php`
+  - `app/Jobs/FetchProductWorkJob.php`
   - `app/Support/DLSite/DLSitePythonRunner.php`
-  - `app/Support/TagRefetch/DLSiteTagFetcher.php`
-  - `app/Support/TagRefetch/TagRefetchService.php`
+  - `app/Support/DLSite/DLSiteWorkFetcher.php`
+  - `app/Support/Refetch/RefetchDiffBuilder.php`
+  - `app/Support/Refetch/RefetchService.php`
 - Shared genre sync helpers:
   - `app/Support/ProductGenreSync.php`
   - `app/Support/GenreSyncPayload.php`
@@ -80,6 +80,7 @@
   - `app/Livewire/ProductFormModalSettings.php`
   - `app/Livewire/OptionsWorkSearch.php`
   - `app/Livewire/OptionsRefetchProgress.php`
+  - `app/Livewire/OptionsRefetchReview.php`
   - `app/Livewire/AuthenticationSettings.php`
 - Livewire shared settings concern:
   - `app/Livewire/Concerns/ConfirmsOptionReset.php`
@@ -213,21 +214,17 @@ The `/tags` Livewire manager also owns tag groups, group/tag order, and Index vi
 - tags hidden directly or assigned to any hidden group render a compact accessible red status indicator inside the All Tags chip, while group names and group-hidden state remain in filters, group management, and the tag settings modal
 - tag and group order values are normalized before rendering, so Tag Library and Index use normal ordered queries; Tag Library counts and visibility filters use Eloquent relationship helpers and counts for total pivots and current-language/custom-visible products
 
-`tag_refetch_runs` stores each Options -> Refetch Tags batch:
-- batch id and status
-- selected product ids
-- total/processed/fetched/skipped counts
-- started/completed/cancelled/applied timestamps
+`refetch_runs` stores each Options -> Refetch Works batch:
+- Laravel batch id, run status, and the run-wide `check_images` choice
+- total/processed/fetched/failed counts
+- resolved category tabs
+- started/completed/cancelled/applied/rejected timestamps
 
-`tag_refetch_work_results` stores each product result for a run:
-- fetched JP/EN tags
-- new JP/EN tags
-- stale JP/EN tags
-- custom tags that DLSite now returns as JP/EN fetched tags
-- skipped error text
-- chosen new-tag handling for JP/EN
-- chosen stale-tag handling for JP/EN
-- chosen custom-to-fetched handling
+`refetch_work_results` stores each work result:
+- the product id, which also represents that work's membership in the run
+- fetch status, errors, and separate cover/sample warnings
+- detected changes grouped by the thirteen `RefetchCategory` values
+- per-change apply decisions retained as review history
 
 Queue tables:
 - `jobs` stores pending database queue jobs
@@ -316,12 +313,24 @@ Runtime note:
 - product create/update and refetch apply use `app/Support/ProductGenreSync.php` to sync `genre_product.source` and `genre_product_languages` together
 - `app/Support/GenreSyncPayload.php` keeps fetched-over-custom source precedence and builds the fetched language map used by `ProductGenreSync`
 - `app/Models/Genre.php` resolves tag titles by `title_key`, preserving the existing display title when the new input only differs by case
-- Options -> Refetch Tags dispatches one queued `FetchProductTagsJob` per selected product and stores results before any product tags are changed
-- running refetch runs can be cancelled from the progress page; cancellation changes the run from `running` to `cancelling`, cancels that run's Laravel batch, lets any already-started Python fetch finish, and moves the run to `review` after pending results become fetched or skipped
-- cancelled-before-fetch work results are stored as skipped results, while fetched results completed before or during cancellation remain reviewable and can be applied
-- the refetch progress panel is rendered by Livewire and polls every second while the run is active (`running` or `cancelling`)
+- Options -> Refetch Works dispatches one queued `FetchProductWorkJob` per selected product, including custom-created RJ works without a maker id
+- each job writes complete JP/EN JSON to `storage/app/Refetch/{run}/Works/{RJ}.json`; when Refetch Images is enabled, cover/samples are written under `storage/app/public/Refetch/{run}/Works/{RJ}`
+- running refetch runs can be cancelled from the progress page; cancellation changes the run from `running` to `cancelling`, cancels that run's Laravel batch, lets any already-started fetch finish, and moves the run to review after pending results become fetched or failed
+- cancelled-before-fetch work results are retained as failed history entries, while successful results completed before or during cancellation remain reviewable
+- the refetch progress panel is rendered and polled every second by Livewire while the run is active (`running` or `cancelling`); no separate JSON status route is used
 - the Options page has separate `General`, `Field Layouts`, `Authentication`, and `Refetch` tabs; `OptionsController` normalizes the query or flashed old tab before rendering, and validation errors from refetch forms reopen the Refetch tab
-- the Refetch tab links to the latest refetch run when at least one run exists
+- the Refetch tab keeps its latest-run navigation separate from distinct vertically stacked Refetch All Works and Refetch Selected Works cards; persisted older runs remain accessible by direct URL
+- the review uses one enum-driven set of Titles, Descriptions, Series, Age, Circle, Maker ID, four creator-role, Tags, Cover, and Sample Images tabs; tabs without changes or unrequested images resolve automatically
+- `OptionsRefetchReview` prepares category counts, saved choices, tag details/colors, active-tab state, and Set Overwrite for All presets; its Blade view uses Livewire `wire:show`, `wire:cloak`, and bound select state without inline PHP or Alpine, while the page directly loads the shared keyboard/touch tooltip stylesheet and script
+- Livewire validates the bound review choices, confirms and runs Apply Tab, Apply All, and Reject/Finish directly, then delegates every mutation and newest-run guard to `RefetchService`
+- all global, per-change, and detailed-tag review selects reuse the same refetch control and focus styling
+- global actions default to Ignore, each value defaults to Use global choice, Set Overwrite for All only edits unresolved form presets while preserving explicit per-change choices, and Apply Tab resolves its complete category without remounting or discarding draft choices on other tabs
+- Apply All and Ignore Remaining load the fetched work results once, reuse that collection across every unresolved category, and persist the final resolved-tab list once
+- Cover and Sample Images are compared by SHA-256 content and applied independently; any failed sample download makes that work's entire Sample Images category unavailable without blocking Cover or metadata review
+- Reject Run is available before any tab decision; after a tab is resolved it becomes Ignore Remaining and Finish so already-applied values remain
+- successful staged files are promoted with checked same-disk copies, and staged JSON reaches `storage/app/Works/{RJ}.json` only when every tab is resolved; a failed copy prevents Applied status and restores the previous resolved-tab state for retry, rejected runs leave canonical JSON unchanged, and staged snapshots remain stored with their runs
+- only the newest unfinished review can be changed; older unfinished reviews remain accessible by direct URL and read-only
+- fetched metadata can overwrite only its matching product metadata/category. Progress, scores, dates, notes, priority, relisten fields, and custom tags are never overwritten
 - the General tab includes an Index Pagination setting powered by Livewire and persisted in `options.index_per_page`; changing the mode can reveal the custom-value input immediately, but the setting is only persisted when Save is submitted
 - the General tab includes `OptionalProductStatusesSettings`, with independent On Hold and Dropped switches persisted together in `options.optional_product_statuses`; one Save action, individual reset confirmation, and Reset All restore both to disabled without rewriting products
 - the General tab includes Livewire autocomplete ordering settings persisted in `options.tag_autocomplete_order` and `options.series_autocomplete_order`
@@ -335,7 +344,7 @@ Runtime note:
 
 ## Image Storage and Viewer Flow
 
-- `python/DLSiteScraper.py` stores the cover and position-numbered sample files under `storage/app/public/Works/{RJ}`. `DLSiteWorkData` normalizes and case-insensitively deduplicates the scraped image list, and `ProductController` derives deterministic `storage/Works/{RJ}/sample_N.jpg` database paths from its count without checking which downloads succeeded.
+- PHP supplies every JSON/image destination to `python/DLSiteScraper.py`. Normal Add uses canonical `Works/{RJ}` locations; Refetch uses run/work-specific staging locations. `DLSiteWorkData` normalizes and case-insensitively deduplicates the scraped image list, and `ProductController` derives deterministic `storage/Works/{RJ}/sample_N.jpg` database paths from its count.
 - `products.work_image` stores the cover's public path, while `products.sample_images` stores ordered public paths through the model's array cast. Missing files keep their database positions so the presentation layer can render a missing-image state.
 - `2026_07_27_000000_normalize_product_sample_image_paths.php` is the final legacy-data boundary. It canonicalizes existing cover/sample paths, repairs malformed positions, preserves supported custom-upload extensions, and leaves runtime retrieval free of path normalization or filesystem checks.
 - `options.index_image_viewer_enabled` is part of the resettable Options set and is loaded with the other Index settings through `ProductIndexSettings`. `ProductIndex` combines that value with Image-column visibility into one page-wide `imageViewerEnabled` flag.
@@ -352,29 +361,23 @@ Runtime note:
 - The application creates at most one account through setup but deliberately adds no database uniqueness or one-row constraint. `admin:reset` can clear unsupported/manual extra rows; password-specific recovery refuses to select among multiple rows.
 - `ADMIN_PASSWORD_RESET=true` is considered only while normal authentication is enabled and a user exists. Middleware forces the dedicated recovery route, and the password replacement plus non-resettable consumed marker are committed atomically so a failed marker write cannot leave anonymous recovery reusable after changing the password.
 - Login, setup, help, and recovery use a shared Blade authentication layout and a small CSS-variable Cherry/Black stylesheet. No registration, email reset, password-token table, or authentication package is involved.
+
+## Full Refetch Flow
+
 - the selected-work search on the Refetch tab is rendered by Livewire and uses Laravel query helpers for the ID/title match
-- the Refetch tab work list and queued all/selected refetch ids use numeric RJ descending order, matching the Index default order
-- custom-only works are skipped during refetch because they do not have DLSite metadata to fetch from
-- applying a refetch run attaches new fetched tags with `genre_product.source = fetched` and one language row per fetched bucket, unless the review form ignores new JP/EN tags globally or for that work
-- Refetch fetches, reviews, and stores both languages through its explicitly bilingual `fetched_japanese_tags`, `fetched_english_tags`, `custom_to_fetched_japanese_tags`, and `custom_to_fetched_english_tags` fields
-- Refetch review colors are resolved once per review page from existing stored genres by `title_key` when the refetch color surface is enabled; fetched tags that do not yet exist in `genres` render with the default style, and the Blade view receives prepared tag rows instead of doing color lookups itself
-- stale fetched JP/EN actions remove only that language row when another fetched language remains; the tag moves to `genre_product.source = custom` only when no fetched language rows remain and the selected stale action is move-to-custom
-- custom tags that DLSite now returns as fetched are promoted to fetched by default; the review form has global and per-work controls to keep those tags custom instead
-- refetch diff/apply reads current fetched/custom tags through the Product genre relationships and compares titles by the same `Genre::titleKey()` identity rule used for storage
-- existing custom tags are preserved, and unused global fetched `genres` rows are detached from products but not deleted
-- only the newest review run shows apply controls; older review runs are read-only to avoid applying stale review decisions after a newer fetch
-- each review result row shows compact indicators for new JP, new EN, stale JP, stale EN, and custom-to-fetched changes when those buckets are present
-- refetch Blade views use small state/summary helpers on `TagRefetchRun` and `TagRefetchWorkResult` instead of checking raw status constants or counting buckets in controllers
+- the Refetch tab work list and queued all/selected ids use numeric RJ descending order, matching the Index default order
+- Tags supports whole-category overwrite plus detailed new/stale/custom-to-fetched JP/EN actions; custom tags are preserved and tag identity continues to use `Genre::titleKey()`
+- optional Refetch tag colors are resolved by title key in the review component and attached to each prepared tag value; Blade only renders the supplied value and colors
+- `RefetchRun` and `RefetchWorkResult` expose the state/category helpers used by the controller and both Livewire refetch components
 
 ## Scraper Integration
 - `app/Support/DLSite/DLSitePythonRunner.php` runs Python scripts through Laravel's Process facade with the project `python/venv`.
 - `DLSitePythonRunner` passes Laravel's normalized `LOG_RETENTION_DAYS` value into Python subprocesses.
-- Product create runs `python/DLSiteScraper.py` through `DLSitePythonRunner`.
-- Python fetches Japanese/English DLSite metadata, stores JSON in `storage/app/Works`, and downloads images to `storage/app/public/Works/{RJ}`.
+- Product create and Refetch use the same `DLSiteWorkFetcher`, which invokes `python/DLSiteScraper.py` up to five times through `DLSitePythonRunner`.
+- Each Python invocation performs one fetch attempt, writes complete Japanese/English JSON to the supplied path, downloads images only when an image path is supplied, and prints a downloaded/failed-image manifest.
+- PHP owns the five-attempt loop, canonical versus staged destinations, comparison, persistence, promotion, and user-visible behavior. Normal Add saves valid fetched metadata even when images remain missing, then shows their filenames in a dismissible fixed Index warning after redirect or on the modal completion page.
 - The stored JSON is also the source for metadata backfill migrations when a matching `products.rj_number` exists.
 - Custom create does not run the scraper and does not create or read scraped JSON.
-- `DLSiteTagFetcher` runs `python/DLSiteTagFetcher.py` through `DLSitePythonRunner` for the Refetch Tags queue job.
-- `python/DLSiteTagFetcher.py` fetches tags only, returns `japanese.genre` and `english.genre` JSON through stdout, and does not write files.
 - Persisted and logged errors remain raw. Refetch and Quick Add translate only their fixed, app-recognized errors at display boundaries; unknown Python, API, and exception text is shown verbatim.
 
 ## Logging
@@ -391,8 +394,8 @@ Runtime note:
 - `BaseProductRequest` validates progress, score, priority, and re-listen value against the matching product enums so form input cannot drift from the UI option sets.
 - `StoreCustomProductRequest` keeps RJ-format and uniqueness validation, requires Japanese title, age category, and cover image, and validates cover/sample uploads as images up to 20 MB each.
 - form requests translate only their repository-authored RJ/date/refetch messages through JSON keys; generic Laravel/vendor validation remains outside the localization boundary
-- `StartTagRefetchRequest` validates all/selected refetch scope and resolves the product ids before the controller creates a run.
-- `ApplyTagRefetchRequest` validates new-tag, stale-tag, and custom-to-fetched actions, then blocks applying any run except the newest review run.
+- `StartRefetchRequest` validates all/selected scope, the run-wide image checkbox, and resolves product ids before creating a run.
+- `OptionsRefetchReview` validates category keys and global/per-change/tag actions before calling `RefetchService`; only the service decides whether the run is still applicable.
 - Custom tags are comma-separated and parsed with CSV rules:
   - commas inside a tag are supported via quotes
   - example: `"Junior / Senior (at work, school, etc)", Office Lady`

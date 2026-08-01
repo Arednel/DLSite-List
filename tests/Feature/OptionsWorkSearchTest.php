@@ -74,6 +74,16 @@ class OptionsWorkSearchTest extends TestCase
             ->set('search', 'VISIBLE_FILTERED')
             ->assertSee('VISIBLE_FILTERED_WORK_TOKEN')
             ->assertDontSee('SELECTED_WORK_TOKEN')
-            ->assertSee('<input type="hidden" name="product_ids[]" value="'.$selected->id.'">', false);
+            ->assertSee('<input type="hidden" name="product_ids[]" value="' . $selected->id . '">', false);
+    }
+
+    public function test_image_choice_is_preserved_while_search_rerenders(): void
+    {
+        Product::factory()->create(['work_name' => 'IMAGE_SEARCH_TOKEN']);
+
+        Livewire::test(OptionsWorkSearch::class)
+            ->set('checkImages', true)
+            ->set('search', 'IMAGE_SEARCH')
+            ->assertSet('checkImages', true);
     }
 }

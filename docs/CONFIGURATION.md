@@ -188,7 +188,7 @@ Docker database services:
 - `database_test` stores test data in the `dbdata_test` Docker volume and is used only by the `tests` service
 
 ## Queue and Scheduler
-Refetch Tags runs through Laravel's database queue and job batches.
+Refetch Works runs through Laravel's database queue and job batches, with one job per selected work.
 
 Relevant variable:
 - `QUEUE_CONNECTION=database`
@@ -196,15 +196,15 @@ Relevant variable:
 Required migrations create:
 - `jobs`
 - `job_batches`
-- `tag_refetch_runs`
-- `tag_refetch_work_results`
+- `refetch_runs`
+- `refetch_work_results`
 
-Run the queue worker from the project root while using Refetch Tags:
+Run the queue worker from the project root while using Refetch Works:
 ```bash
 php artisan queue:work
 ```
 
-Cancelling a Refetch Tags run is cooperative. Keep the queue worker running after pressing Cancel so the active fetch can finish and the remaining queued jobs can mark their work results as skipped.
+Cancellation is cooperative. Keep the queue worker running after pressing Cancel so an active fetch can finish and queued jobs can retain cancelled-before-fetch failures on the run.
 
 `php artisan schedule:work` is only needed if a scheduled command is added. The project does not currently register a scheduled batch-pruning command.
 
@@ -485,7 +485,7 @@ Options page tabs:
 - `General` is the default tab and contains UI Language, Index Pagination, Index Search, Image Viewer, Index Table Width, Series Metadata, Add/Edit form theme and modal behavior, Autocomplete, Tag Library settings, and Reset All Options
 - `Field Layouts` is the second tab and contains Index Table Fields, Index Filter Fields, Index Sort Menu, Edit Form Fields, Quick Add Form Fields, Custom Quick Add Form Fields, and Reset All Options
 - `Authentication` contains the default-off administrator login switch, independent Cherry/Black authentication-page theme, account status, and authenticated password change
-- `Refetch` contains the tag refetch workflow
+- `Refetch` separates Refetch All Works and Refetch Selected Works into distinct vertically stacked cards, with an optional run-wide Refetch Images choice and inline help, Livewire progress and review state, cancellation, and an independent latest-run link
 
 Options reset behavior:
 - each visible Options setting has a modal-confirmed `Reset to default` action
@@ -523,14 +523,17 @@ Autocomplete ordering choices:
 
 ## Scraper Runtime Paths
 - Python script: `python/DLSiteScraper.py`
-- Tags-only Python script: `python/DLSiteTagFetcher.py`
 - Python requirements: `python/requirements.txt`
-- Scraped JSON output: `storage/app/Works/*.json`
-- Scraped image output: `storage/app/public/Works/{RJ}/*`
+- Normal Add JSON output: `storage/app/Works/{RJ}.json`
+- Normal Add image output: `storage/app/public/Works/{RJ}/*`
+- Refetch staged JSON: `storage/app/Refetch/{run}/Works/{RJ}.json`
+- Refetch staged images when requested: `storage/app/public/Refetch/{run}/Works/{RJ}/*`
+
+Refetch derives these staging paths from the run and work ids when fetching and promoting files; it does not persist duplicate path columns.
 
 Scraped JSON files are also used by the product metadata backfill migration. The migration reads `storage/app/Works/{RJ}.json` when it exists and skips missing or invalid JSON without blocking the migration.
 
-`python/DLSiteTagFetcher.py` is used only by the Options -> Refetch Tags workflow. It prints JP/EN genre JSON to stdout and does not write scraped JSON or download images.
+Laravel supplies the work id, JSON path, log directory, and optional image directory to `DLSiteScraper.py`. Python always writes complete JP/EN JSON to that exact path, downloads images only when the image directory is present, performs no retries, and prints a structured image manifest. PHP retries failed processes or reported image failures up to five times and trusts the latest successful manifest without combining attempts or scanning image files. A successful process must return a valid manifest and valid destination JSON; existing JSON is never used as a fallback. PHP also owns review state and canonical/staged promotion. Promotion uses checked Laravel filesystem copies; a failed copy leaves the run in review with its affected tab retryable instead of marking the run Applied.
 
 Refetch and Quick Add translate only recognized app-defined errors at display boundaries. Persisted and logged errors remain raw, and unknown Python, API, exception, stdout, or stderr text is shown verbatim.
 
