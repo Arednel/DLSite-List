@@ -11,6 +11,7 @@ use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
+use Illuminate\Support\Facades\Storage;
 
 class Product extends Model
 {
@@ -49,6 +50,9 @@ class Product extends Model
         'rj_number' => 'integer',
         'start_date_sort' => 'integer',
         'end_date_sort' => 'integer',
+        'num_re_listen_times' => 'integer',
+        're_listen_value' => 'integer',
+        'priority' => 'integer',
     ];
 
     protected static function booted(): void
@@ -77,6 +81,14 @@ class Product extends Model
         return $this->age_category === ProductAgeCategory::AllAges->value
             ? "https://www.dlsite.com/home/work/=/product_id/{$productId}.html"
             : $maniaxUrl;
+    }
+
+    public static function versionedImagePath(string $path): string
+    {
+        $file = Storage::disk('public')->path(substr($path, strlen('storage/')));
+        $version = is_file($file) ? filemtime($file) : false;
+
+        return $version === false ? $path : "{$path}?v={$version}";
     }
 
     public function genres(): BelongsToMany

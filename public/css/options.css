@@ -305,6 +305,15 @@ body.options-page {
     margin-top: 12px;
 }
 
+.options-page .refetch-cleanup-button {
+    margin-left: auto;
+}
+
+.options-page .refetch-cleanup>.saved-notice,
+.options-page .refetch-cleanup>.text-error {
+    margin-top: 8px;
+}
+
 .options-page .option-reset-button {
     margin-left: auto;
 }

@@ -13,16 +13,38 @@ final class ProductGenreSync
      * @param  array<string, list<int|string>>  $fetchedGenreIdsByLanguage
      * @param  list<int|string>  $customGenreIds
      */
-    public function sync(Product $product, array $fetchedGenreIdsByLanguage, array $customGenreIds): void
+    public function sync(Product $product, array $fetchedGenreIdsByLanguage, array $customGenreIds): bool
     {
+        $fetchedGenreIdsByLanguage = $this->normalizeFetchedGenreIdsByLanguage(
+            $fetchedGenreIdsByLanguage
+        );
+        $customGenreIds = $this->customGenreIdsWithoutFetched(
+            $customGenreIds,
+            $this->flattenGenreIds($fetchedGenreIdsByLanguage),
+        );
         $languageMap = GenreSyncPayload::languageMap($fetchedGenreIdsByLanguage);
 
-        DB::transaction(function () use ($product, $customGenreIds, $languageMap): void {
+        return DB::transaction(function () use (
+            $product,
+            $fetchedGenreIdsByLanguage,
+            $customGenreIds,
+            $languageMap,
+        ): bool {
+            $changed = $this->currentFetchedGenreIdsByLanguage($product) !== $fetchedGenreIdsByLanguage
+                || $this->currentCustomGenreIds($product) !== $customGenreIds;
+
+            if (! $changed) {
+                return false;
+            }
+
             $product->genres()->sync(
                 GenreSyncPayload::build(array_keys($languageMap), $customGenreIds)
             );
 
             $this->syncLanguageRows($product, $languageMap);
+            $product->touch();
+
+            return true;
         });
     }
 
@@ -50,27 +72,16 @@ final class ProductGenreSync
         ?array $customGenreIds,
     ): bool {
         $fetchedGenreIdsByLanguage = $this->currentFetchedGenreIdsByLanguage($product);
-        $currentFetchedGenreIds = $this->normalizeGenreIds(
-            $fetchedGenreIdsByLanguage[$fetchedLanguage] ?? []
-        );
-        $currentCustomGenreIds = $this->currentCustomGenreIds($product);
 
         if ($fetchedGenreIds !== null) {
             $fetchedGenreIdsByLanguage[$fetchedLanguage] = $this->normalizeGenreIds($fetchedGenreIds);
         }
 
-        $newFetchedGenreIds = $this->normalizeGenreIds(
-            $fetchedGenreIdsByLanguage[$fetchedLanguage] ?? []
+        return $this->sync(
+            $product,
+            $fetchedGenreIdsByLanguage,
+            $customGenreIds ?? $this->currentCustomGenreIds($product),
         );
-        $effectiveCustomGenreIds = $this->customGenreIdsWithoutFetched(
-            $customGenreIds ?? $currentCustomGenreIds,
-            $this->flattenGenreIds($fetchedGenreIdsByLanguage),
-        );
-
-        $this->sync($product, $fetchedGenreIdsByLanguage, $effectiveCustomGenreIds);
-
-        return $currentFetchedGenreIds !== $newFetchedGenreIds
-            || $currentCustomGenreIds !== $effectiveCustomGenreIds;
     }
 
     /**
@@ -143,6 +154,19 @@ final class ProductGenreSync
             ->unique()
             ->sort()
             ->values()
+            ->all();
+    }
+
+    /**
+     * @param  array<string, list<int|string>>  $genreIdsByLanguage
+     * @return array<string, list<int>>
+     */
+    private function normalizeFetchedGenreIdsByLanguage(array $genreIdsByLanguage): array
+    {
+        return collect($genreIdsByLanguage)
+            ->map(fn(array $genreIds): array => $this->normalizeGenreIds($genreIds))
+            ->filter()
+            ->sortKeys()
             ->all();
     }
 

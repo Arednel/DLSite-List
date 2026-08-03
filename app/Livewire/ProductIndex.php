@@ -105,7 +105,9 @@ class ProductIndex extends Component
 
     public function mount(): void
     {
-        $this->syncStateFromFilters(ProductIndexFilters::fromQuery($this->currentInput()));
+        $this->fill(
+            ProductIndexFilters::fromQuery($this->only(ProductIndexFilters::INPUT_KEYS))->toInput()
+        );
         $this->searchInput = $this->search;
         $this->syncDraftFromCurrent();
     }
@@ -222,10 +224,13 @@ class ProductIndex extends Component
             'sample_images',
         ]);
 
-        return array_map('asset', [
-            $product->work_image,
-            ...($product->sample_images ?? []),
-        ]);
+        return array_map(
+            fn(string $path): string => asset(Product::versionedImagePath($path)),
+            [
+                $product->work_image,
+                ...($product->sample_images ?? []),
+            ],
+        );
     }
 
     public function applyFilters(): void
@@ -235,7 +240,7 @@ class ProductIndex extends Component
             'genre' => $this->genre,
         ]);
 
-        $this->syncStateFromFilters(ProductIndexFilters::fromQuery($draft));
+        $this->fill(ProductIndexFilters::fromQuery($draft)->toInput());
         $this->searchInput = $this->search;
         $this->syncDraftFromCurrent();
         $this->resetPage();
@@ -243,7 +248,7 @@ class ProductIndex extends Component
 
     public function clearFilters(): void
     {
-        $this->syncStateFromFilters(new ProductIndexFilters);
+        $this->reset(ProductIndexFilters::INPUT_KEYS);
         $this->searchInput = '';
         $this->syncDraftFromCurrent();
         $this->resetPage();
@@ -296,16 +301,6 @@ class ProductIndex extends Component
     /**
      * @return array<string, string>
      */
-    private function currentInput(): array
-    {
-        return collect(ProductIndexFilters::INPUT_KEYS)
-            ->mapWithKeys(fn(string $key): array => [$key => (string) $this->{$key}])
-            ->all();
-    }
-
-    /**
-     * @return array<string, string>
-     */
     private function queryWithCurrentPage(array $query, bool $isUnlimited): array
     {
         if (! $isUnlimited) {
@@ -317,13 +312,6 @@ class ProductIndex extends Component
         }
 
         return $query;
-    }
-
-    private function syncStateFromFilters(ProductIndexFilters $filters): void
-    {
-        foreach ($filters->toInput() as $key => $value) {
-            $this->{$key} = $value;
-        }
     }
 
     private function syncDraftFromCurrent(): void
@@ -345,6 +333,6 @@ class ProductIndex extends Component
 
     private function currentFilters(): ProductIndexFilters
     {
-        return ProductIndexFilters::fromQuery($this->currentInput());
+        return ProductIndexFilters::fromQuery($this->only(ProductIndexFilters::INPUT_KEYS));
     }
 }

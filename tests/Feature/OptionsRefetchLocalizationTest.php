@@ -4,6 +4,7 @@ namespace Tests\Feature;
 
 use App\Enums\RefetchCategory;
 use App\Enums\UiLanguage;
+use App\Livewire\OptionsRefetchReview;
 use App\Livewire\OptionsResetDefaults;
 use App\Models\Option;
 use App\Models\Product;
@@ -44,6 +45,8 @@ class OptionsRefetchLocalizationTest extends TestCase
             ->assertOk()
             ->assertSee('<html lang="ja">', false)
             ->assertSee('作品を再取得')
+            ->assertSee('再取得データをクリーンアップ')
+            ->assertSee('aria-label="再取得のクリーンアップについて"', false)
             ->assertSee('RJ IDまたはタイトルで検索…')
             ->assertSee('value="selected"', false);
     }
@@ -115,6 +118,12 @@ class OptionsRefetchLocalizationTest extends TestCase
             ->assertSee('UPSTREAM_RAW_ERROR_TOKEN')
             ->assertSee('value="move_to_custom"', false)
             ->assertSee('wire:model="globalActions.tags"', false);
+
+        Livewire::test(OptionsRefetchReview::class, ['run' => $run])
+            ->call('askApplyAll')
+            ->assertSee('未処理のすべてのタブの選択を適用しますか？')
+            ->assertSee('すべてのタブを適用')
+            ->assertSee('キャンセル');
     }
 
     public function test_japanese_refetch_validation_messages_are_localized_without_changing_run_state(): void

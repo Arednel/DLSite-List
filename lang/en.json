@@ -209,6 +209,13 @@
     "Refetch All Works": "Refetch All Works",
     "Fetch every work in the library in one refetch run.": "Fetch every work in the library in one refetch run.",
     "Go to latest refetch": "Go to latest refetch",
+    "Clean up refetch data": "Clean up refetch data",
+    "About refetch cleanup": "About refetch cleanup",
+    "Permanently deletes all refetch run records and all downloaded refetch images. Already applied info is not changed. Cleanup is unavailable while a refetch run is running or cancelling.": "Permanently deletes all refetch run records and all downloaded refetch images. Already applied info is not changed. Cleanup is unavailable while a refetch run is running or cancelling.",
+    "Permanently delete all refetch run records and all downloaded refetch images? Already applied info is not changed.": "Permanently delete all refetch run records and all downloaded refetch images? Already applied info is not changed.",
+    "Refetch data cleaned up.": "Refetch data cleaned up.",
+    "Refetch cleanup is unavailable while a refetch run is running or cancelling.": "Refetch cleanup is unavailable while a refetch run is running or cancelling.",
+    "Refetch cleanup failed while removing staged files.": "Refetch cleanup failed while removing staged files.",
     "UI language": "UI language",
     "Save UI language": "Save UI language",
     "Reset to default": "Reset to default",
@@ -571,5 +578,9 @@
     "Japanese": "Japanese",
     "Yes": "Yes",
     "No": "No",
-    "Failed to promote staged refetch file.": "Failed to promote staged refetch file."
+    "Failed to promote staged refetch file.": "Failed to promote staged refetch file.",
+    "Refetch cannot start while another refetch action is in progress.": "Refetch cannot start while another refetch action is in progress.",
+    "Refetch changes cannot be applied while another refetch action is in progress.": "Refetch changes cannot be applied while another refetch action is in progress.",
+    "Refetch cleanup is temporarily unavailable while another refetch action is in progress.": "Refetch cleanup is temporarily unavailable while another refetch action is in progress.",
+    "Failed to restore work images after refetch promotion failed.": "Failed to restore work images after refetch promotion failed."
 }

@@ -2,6 +2,12 @@
 
 ## Development
 
+* 2026-08-04 -- 1.8.0 Refetch Fixes & Cleanup
+  * Added modal confirmations and cleanup for Refetch runs
+  * Fixed Refetch image replacement with rollback-safe promotion, obsolete file cleanup, and browser refreshes for overwritten images
+  * Fixed Updated Date and canonical JSON changes to occur only for effective work updates
+  * Simplified Index filters, product requests, and relationship syncing with Laravel/Livewire helpers
+
 * 2026-08-01 -- 1.7.9 Full Work Refetch
   * Replaced tag-only refetch with staged full-work refetch and per-category review
   * Unified DLSite fetching for Add and Refetch

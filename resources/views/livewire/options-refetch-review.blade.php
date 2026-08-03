@@ -43,7 +43,7 @@
             @endforeach
         </nav>
 
-        <form wire:submit="applyAll" class="stack">
+        <div class="stack">
             @if ($canApply)
                 <div class="option-actions option-actions--primary">
                     <button type="button" class="tag tag--soft tag--lg is-clickable"
@@ -53,8 +53,8 @@
                     <i class="fa-solid fa-circle-question" tabindex="0"
                         aria-label="{{ __('About Set Overwrite for All') }}"
                         title="{{ __('Sets each unresolved tab that contains changes to Overwrite. Changes still set to Use global choice will inherit Overwrite; explicit per-change choices remain unchanged. Resolved tabs are not changed, and nothing is applied until you confirm Apply All Tabs or apply a tab separately.') }}"></i>
-                    <button type="submit" class="tag tag--gradient tag--lg is-clickable"
-                        wire:confirm="{{ __('Apply choices for every unresolved tab?') }}">
+                    <button type="button" class="tag tag--gradient tag--lg is-clickable" wire:click="askApplyAll"
+                        wire:loading.attr="disabled">
                         {{ __('Apply All Tabs') }}
                     </button>
                 </div>
@@ -165,14 +165,13 @@
 
                     @if ($canApply && !$review['resolved'] && $review['has_changes'])
                         <button type="button" class="tag tag--gradient tag--lg is-clickable"
-                            wire:click="applyTab('{{ $review['value'] }}')"
-                            wire:confirm="{{ __('Apply and resolve this tab?') }}" wire:loading.attr="disabled">
+                            wire:click="askApplyTab('{{ $review['value'] }}')" wire:loading.attr="disabled">
                             {{ __('Apply Tab') }}
                         </button>
                     @endif
                 </section>
             @endforeach
-        </form>
+        </div>
 
         @if ($canApply)
             <div class="option-actions">
@@ -183,4 +182,22 @@
             </div>
         @endif
     </div>
+
+    @include('livewire.partials.options-reset-confirmation-modal', [
+        'open' => $confirmingApplyAll,
+        'modalId' => 'refetch-apply-all-modal',
+        'message' => 'Apply choices for every unresolved tab?',
+        'confirmLabel' => 'Apply All Tabs',
+        'confirmAction' => 'applyAll',
+        'cancelAction' => 'cancelApplyConfirmation',
+    ])
+
+    @include('livewire.partials.options-reset-confirmation-modal', [
+        'open' => $confirmingApplyCategory !== null,
+        'modalId' => 'refetch-apply-tab-modal',
+        'message' => 'Apply and resolve this tab?',
+        'confirmLabel' => 'Apply Tab',
+        'confirmAction' => 'applyTab',
+        'cancelAction' => 'cancelApplyConfirmation',
+    ])
 </section>

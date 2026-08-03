@@ -18,11 +18,13 @@ use Illuminate\Bus\PendingBatch;
 use Illuminate\Contracts\Filesystem\Filesystem;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Bus;
+use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Process;
-use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\Storage;
 use Livewire\Livewire;
 use Mockery;
+use PHPUnit\Framework\Attributes\DataProvider;
 use Tests\TestCase;
 
 class FullRefetchTest extends TestCase
@@ -90,6 +92,30 @@ class FullRefetchTest extends TestCase
         ]);
         Bus::assertBatched(fn(PendingBatch $batch): bool => $batch->jobs->count() === 1
             && $batch->jobs->first()->productId === $first->id);
+    }
+
+    public function test_start_is_rejected_while_refetch_cleanup_holds_the_lifecycle_lock(): void
+    {
+        Bus::fake();
+        Product::factory()->create();
+        $lock = Cache::lock(
+            RefetchRun::LIFECYCLE_LOCK,
+            RefetchRun::LIFECYCLE_LOCK_SECONDS,
+        );
+        $this->assertTrue($lock->get());
+
+        try {
+            $this->post(route('options.refetch.start'), ['scope' => 'all'])
+                ->assertRedirect(route('options.index', ['tab' => 'refetch']))
+                ->assertSessionHasErrors([
+                    'product_ids' => 'Refetch cannot start while another refetch action is in progress.',
+                ]);
+        } finally {
+            $lock->release();
+        }
+
+        $this->assertDatabaseCount('refetch_runs', 0);
+        Bus::assertNothingBatched();
     }
 
     public function test_starting_all_requires_an_existing_work(): void
@@ -228,7 +254,8 @@ class FullRefetchTest extends TestCase
                 'globalActions.' . RefetchCategory::Titles->value,
                 RefetchService::ACTION_OVERWRITE,
             )
-            ->call('applyTab', RefetchCategory::Titles->value)
+            ->call('askApplyTab', RefetchCategory::Titles->value)
+            ->call('applyTab')
             ->assertNoRedirect();
 
         $this->assertSame('New Title', $product->refresh()->work_name);
@@ -243,6 +270,31 @@ class FullRefetchTest extends TestCase
         $this->assertSame('Old Description', $product->refresh()->description);
         $this->assertSame(RefetchRun::STATUS_APPLIED, $run->refresh()->status);
         $this->assertSame('{"version":"new"}', Storage::disk('local')->get("Works/{$product->id}.json"));
+    }
+
+    public function test_apply_does_not_overlap_refetch_cleanup(): void
+    {
+        [$run, $product] = $this->reviewRun();
+        $lock = Cache::lock(
+            RefetchRun::LIFECYCLE_LOCK,
+            RefetchRun::LIFECYCLE_LOCK_SECONDS,
+        );
+        $this->assertTrue($lock->get());
+
+        try {
+            Livewire::test(OptionsRefetchReview::class, ['run' => $run])
+                ->set('globalActions.titles', RefetchService::ACTION_OVERWRITE)
+                ->call('askApplyTab', RefetchCategory::Titles->value)
+                ->call('applyTab')
+                ->assertHasErrors('run')
+                ->assertSee('Refetch changes cannot be applied while another refetch action is in progress.')
+                ->assertNoRedirect();
+        } finally {
+            $lock->release();
+        }
+
+        $this->assertSame('Old Title', $product->fresh()->work_name);
+        $this->assertFalse($run->fresh()->tabResolved(RefetchCategory::Titles));
     }
 
     public function test_failed_json_promotion_keeps_the_run_retryable(): void
@@ -270,7 +322,8 @@ class FullRefetchTest extends TestCase
 
         Livewire::test(OptionsRefetchReview::class, ['run' => $run])
             ->set('globalActions.titles', RefetchService::ACTION_OVERWRITE)
-            ->call('applyTab', RefetchCategory::Titles->value)
+            ->call('askApplyTab', RefetchCategory::Titles->value)
+            ->call('applyTab')
             ->assertHasErrors('run')
             ->assertSee('Failed to promote staged refetch file.')
             ->assertNoRedirect();
@@ -295,7 +348,8 @@ class FullRefetchTest extends TestCase
             ->set('globalActions.titles', 'overwrite')
             ->set("actions.titles.{$result->id}.work_name", 'ignore')
             ->set("actions.titles.{$result->id}.work_name_english", 'overwrite')
-            ->call('applyTab', 'titles')
+            ->call('askApplyTab', 'titles')
+            ->call('applyTab')
             ->assertNoRedirect();
 
         $this->assertSame('Old Title', $product->refresh()->work_name);
@@ -303,6 +357,67 @@ class FullRefetchTest extends TestCase
         $result->refresh();
         $this->assertSame('ignore', data_get($result->decisions, 'titles.work_name.action'));
         $this->assertSame('overwrite', data_get($result->decisions, 'titles.work_name_english.action'));
+        $this->assertFalse(data_get($result->decisions, 'titles.work_name.changed'));
+        $this->assertTrue(data_get($result->decisions, 'titles.work_name_english.changed'));
+    }
+
+    #[DataProvider('nonCircleContributorProvider')]
+    public function test_applying_refetched_contributors_updates_the_work_timestamp(
+        RefetchCategory $category,
+        ProductContributorRole $role,
+    ): void {
+        Storage::fake('local');
+        $product = Product::factory()->create();
+        app(ProductContributorSync::class)->syncRole($product, $role, ['Old Contributor']);
+        $updatedAt = $product->fresh()->updated_at;
+        $run = app(RefetchService::class)->createRun([$product->id], false);
+        $result = $run->results()->firstOrFail();
+        $result->forceFill([
+            'status' => RefetchWorkResult::STATUS_FETCHED,
+            'changes' => [
+                $category->value => [
+                    $role->value => [
+                        'label' => $role->label(),
+                        'old' => ['Old Contributor'],
+                        'new' => ['New Contributor'],
+                    ],
+                ],
+            ],
+        ])->save();
+        $run->forceFill([
+            'status' => RefetchRun::STATUS_REVIEW,
+            'processed_count' => 1,
+            'fetched_count' => 1,
+            'completed_at' => now(),
+            'resolved_tabs' => array_values(array_diff(
+                RefetchCategory::values(),
+                [$category->value],
+            )),
+        ])->save();
+        Storage::disk('local')->put($this->stagedJsonPath($run, $product), '{"version":"new"}');
+        $this->travelTo($updatedAt->copy()->addMinute());
+
+        Livewire::test(OptionsRefetchReview::class, ['run' => $run])
+            ->set("globalActions.{$category->value}", RefetchService::ACTION_OVERWRITE)
+            ->call('askApplyTab', $category->value)
+            ->call('applyTab')
+            ->assertNoRedirect();
+
+        $this->assertSame(
+            ['New Contributor'],
+            app(ProductContributorSync::class)->namesByRole($product->fresh())[$role->value],
+        );
+        $this->assertTrue($product->fresh()->updated_at->greaterThan($updatedAt));
+        $this->assertTrue(data_get(
+            $result->fresh()->decisions,
+            "{$category->value}.{$role->value}.changed",
+        ));
+        $this->assertSame(
+            '{"version":"new"}',
+            Storage::disk('local')->get("Works/{$product->id}.json"),
+        );
+
+        $this->travelBack();
     }
 
     public function test_reject_before_any_tab_is_applied_keeps_product_and_json_unchanged(): void
@@ -319,6 +434,26 @@ class FullRefetchTest extends TestCase
         $this->assertSame(RefetchRun::STATUS_REJECTED, $run->refresh()->status);
         $this->assertSame('Old Title', $product->refresh()->work_name);
         $this->assertSame('{"version":"old"}', Storage::disk('local')->get("Works/{$product->id}.json"));
+    }
+
+    public function test_json_is_not_promoted_when_all_refetch_changes_are_ignored(): void
+    {
+        Storage::fake('local');
+        [$run, $product] = $this->reviewRun();
+        Storage::disk('local')->put("Works/{$product->id}.json", '{"version":"old"}');
+        Storage::disk('local')->put($this->stagedJsonPath($run, $product), '{"version":"new"}');
+
+        Livewire::test(OptionsRefetchReview::class, ['run' => $run])
+            ->call('askApplyAll')
+            ->call('applyAll')
+            ->assertRedirectToRoute('options.refetch.show', $run);
+
+        $this->assertSame(RefetchRun::STATUS_APPLIED, $run->refresh()->status);
+        $this->assertFalse($run->results()->firstOrFail()->hasAppliedChanges());
+        $this->assertSame(
+            '{"version":"old"}',
+            Storage::disk('local')->get("Works/{$product->id}.json"),
+        );
     }
 
     public function test_cancellation_settles_to_review_and_retains_failed_history(): void
@@ -363,8 +498,8 @@ class FullRefetchTest extends TestCase
 
         Livewire::test(OptionsRefetchReview::class, ['run' => $olderRun])
             ->set('globalActions.titles', 'overwrite')
-            ->call('applyTab', 'titles')
-            ->assertHasErrors('run')
+            ->call('askApplyTab', 'titles')
+            ->assertSet('confirmingApplyCategory', null)
             ->assertNoRedirect();
 
         $this->assertSame('Old Title', $product->refresh()->work_name);
@@ -487,6 +622,7 @@ class FullRefetchTest extends TestCase
                     ])
                     ->all(),
             )
+            ->call('askApplyAll')
             ->call('applyAll')
             ->assertRedirectToRoute('options.refetch.show', $run);
 
@@ -529,14 +665,28 @@ class FullRefetchTest extends TestCase
         Storage::fake('local');
         Storage::fake('public');
         $product = Product::factory()->create([
-            'work_image' => 'storage/Works/RJ000000001/cover.jpg',
-            'sample_images' => ['storage/Works/RJ000000001/sample_1.jpg'],
+            'id' => 'RJ000000001',
+            'work_image' => 'storage/Works/RJ000000001/cover.png',
+            'sample_images' => [
+                'storage/Works/RJ000000001/sample_1.jpg',
+                'storage/Works/RJ000000001/sample_2.jpg',
+            ],
+        ]);
+        $untouchedProduct = Product::factory()->create([
+            'id' => 'RJ000000002',
+            'sample_images' => [],
         ]);
         $run = app(RefetchService::class)->createRun([$product->id], true);
         $result = $run->results()->firstOrFail();
         $stage = "Refetch/{$run->id}/Works/{$product->id}";
-        Storage::disk('public')->put("Works/{$product->id}/cover.jpg", 'old-cover');
+        Storage::disk('public')->put("Works/{$product->id}/cover.png", 'old-cover');
         Storage::disk('public')->put("Works/{$product->id}/sample_1.jpg", 'old-sample');
+        Storage::disk('public')->put("Works/{$product->id}/sample_2.jpg", 'old-extra-sample');
+        Storage::disk('public')->put("Works/{$product->id}/reference.jpg", 'unrelated-image');
+        Storage::disk('public')->put(
+            "Works/{$untouchedProduct->id}/sample_1.jpg",
+            'untouched-product-image',
+        );
         Storage::disk('public')->put("{$stage}/cover.jpg", 'new-cover');
         Storage::disk('public')->put("{$stage}/sample_1.jpg", 'new-sample');
         Storage::disk('local')->put("Refetch/{$run->id}/Works/{$product->id}.json", '{"version":"new"}');
@@ -546,7 +696,7 @@ class FullRefetchTest extends TestCase
                 'cover' => [
                     'cover' => [
                         'label' => 'Cover',
-                        'old' => "storage/Works/{$product->id}/cover.jpg",
+                        'old' => "storage/Works/{$product->id}/cover.png",
                         'new' => "storage/{$stage}/cover.jpg",
                         'staged_path' => "{$stage}/cover.jpg",
                     ],
@@ -554,7 +704,10 @@ class FullRefetchTest extends TestCase
                 'sample_images' => [
                     'sample_images' => [
                         'label' => 'Sample Images',
-                        'old' => ["storage/Works/{$product->id}/sample_1.jpg"],
+                        'old' => [
+                            "storage/Works/{$product->id}/sample_1.jpg",
+                            "storage/Works/{$product->id}/sample_2.jpg",
+                        ],
                         'new' => ["storage/{$stage}/sample_1.jpg"],
                         'staged_paths' => ["{$stage}/sample_1.jpg"],
                     ],
@@ -578,20 +731,108 @@ class FullRefetchTest extends TestCase
 
         Livewire::test(OptionsRefetchReview::class, ['run' => $run])
             ->set('globalActions.cover', 'overwrite')
-            ->call('applyTab', 'cover')
+            ->call('askApplyTab', 'cover')
+            ->call('applyTab')
             ->assertNoRedirect();
 
         $this->assertSame('new-cover', Storage::disk('public')->get("Works/{$product->id}/cover.jpg"));
+        $this->assertFileDoesNotExist(
+            Storage::disk('public')->path("Works/{$product->id}/cover.png")
+        );
         $this->assertSame('old-sample', Storage::disk('public')->get("Works/{$product->id}/sample_1.jpg"));
+        $this->assertSame(
+            'old-extra-sample',
+            Storage::disk('public')->get("Works/{$product->id}/sample_2.jpg"),
+        );
         $this->assertSame(RefetchRun::STATUS_REVIEW, $run->refresh()->status);
 
         Livewire::test(OptionsRefetchReview::class, ['run' => $run])
             ->set('globalActions.sample_images', 'overwrite')
-            ->call('applyTab', 'sample_images')
+            ->call('askApplyTab', 'sample_images')
+            ->call('applyTab')
             ->assertNoRedirect();
 
         $this->assertSame('new-sample', Storage::disk('public')->get("Works/{$product->id}/sample_1.jpg"));
+        $this->assertFileDoesNotExist(
+            Storage::disk('public')->path("Works/{$product->id}/sample_2.jpg")
+        );
+        $this->assertSame(
+            'unrelated-image',
+            Storage::disk('public')->get("Works/{$product->id}/reference.jpg"),
+        );
+        $this->assertSame(
+            'untouched-product-image',
+            Storage::disk('public')->get("Works/{$untouchedProduct->id}/sample_1.jpg"),
+        );
         $this->assertSame(RefetchRun::STATUS_APPLIED, $run->refresh()->status);
+    }
+
+    public function test_failed_image_database_update_restores_the_previous_canonical_image(): void
+    {
+        Storage::fake('local');
+        Storage::fake('public');
+        $product = Product::factory()->create([
+            'id' => 'RJ000000001',
+            'work_image' => 'storage/Works/RJ000000001/cover.jpg',
+            'sample_images' => [],
+        ]);
+        $run = app(RefetchService::class)->createRun([$product->id], true);
+        $result = $run->results()->firstOrFail();
+        $stage = "Refetch/{$run->id}/Works/{$product->id}";
+        Storage::disk('public')->put("Works/{$product->id}/cover.jpg", 'old-cover');
+        Storage::disk('public')->put("{$stage}/cover.jpg", 'new-cover');
+        $result->forceFill([
+            'status' => RefetchWorkResult::STATUS_FETCHED,
+            'changes' => [
+                'cover' => [
+                    'cover' => [
+                        'label' => 'Cover',
+                        'old' => $product->work_image,
+                        'new' => "storage/{$stage}/cover.jpg",
+                        'staged_path' => "{$stage}/cover.jpg",
+                    ],
+                ],
+            ],
+        ])->save();
+        $run->forceFill([
+            'status' => RefetchRun::STATUS_REVIEW,
+            'processed_count' => 1,
+            'fetched_count' => 1,
+            'resolved_tabs' => array_values(array_diff(
+                RefetchCategory::values(),
+                ['cover'],
+            )),
+        ])->save();
+        $this->travelTo($product->updated_at->copy()->addMinute());
+        Event::listen(
+            'eloquent.updating: ' . Product::class,
+            function (Product $updatingProduct) use ($product): void {
+                if ($updatingProduct->is($product)) {
+                    throw new \RuntimeException('Simulated product update failure.');
+                }
+            },
+        );
+
+        Livewire::test(OptionsRefetchReview::class, ['run' => $run])
+            ->set('globalActions.cover', RefetchService::ACTION_OVERWRITE)
+            ->call('askApplyTab', 'cover')
+            ->call('applyTab')
+            ->assertHasErrors('run')
+            ->assertNoRedirect();
+
+        $this->assertSame(
+            'old-cover',
+            Storage::disk('public')->get("Works/{$product->id}/cover.jpg"),
+        );
+        $this->assertSame(
+            [],
+            Storage::disk('public')->allFiles(
+                "Refetch/{$run->id}/Backups/Works/{$product->id}",
+            ),
+        );
+        $this->assertFalse($run->fresh()->tabResolved(RefetchCategory::Cover));
+        $this->assertSame([], $result->fresh()->decisions);
+        $this->travelBack();
     }
 
     public function test_detailed_tag_choices_preserve_each_existing_tag_decision(): void
@@ -639,6 +880,8 @@ class FullRefetchTest extends TestCase
             'resolved_tabs' => array_values(array_diff(RefetchCategory::values(), ['tags'])),
         ])->save();
         Storage::disk('local')->put($this->stagedJsonPath($run, $product), '{"version":"new"}');
+        $updatedAtBeforeApply = $product->fresh()->updated_at;
+        $this->travelTo($updatedAtBeforeApply->copy()->addMinute());
 
         Livewire::test(OptionsRefetchReview::class, ['run' => $run])
             ->set('globalActions.tags', 'ignore')
@@ -653,10 +896,12 @@ class FullRefetchTest extends TestCase
                     'custom_to_fetched' => 'keep_custom',
                 ],
             )
-            ->call('applyTab', 'tags')
+            ->call('askApplyTab', 'tags')
+            ->call('applyTab')
             ->assertNoRedirect();
 
         $product->refresh();
+        $this->assertTrue($product->updated_at->greaterThan($updatedAtBeforeApply));
         $this->assertSame([], $product->japaneseGenres()->pluck('genres.title')->all());
         $this->assertSame(['Added EN'], $product->englishGenres()->pluck('genres.title')->all());
         $this->assertEqualsCanonicalizing(
@@ -665,6 +910,7 @@ class FullRefetchTest extends TestCase
         );
         $this->assertSame('detailed', data_get($result->fresh()->decisions, 'tags.tags.action'));
         $this->assertSame(RefetchRun::STATUS_APPLIED, $run->refresh()->status);
+        $this->travelBack();
     }
 
     public function test_invalid_tab_key_is_rejected_by_livewire_validation(): void
@@ -672,7 +918,7 @@ class FullRefetchTest extends TestCase
         [$run] = $this->reviewRun();
 
         Livewire::test(OptionsRefetchReview::class, ['run' => $run])
-            ->call('applyTab', 'unexpected')
+            ->call('askApplyTab', 'unexpected')
             ->assertHasErrors('category')
             ->assertNoRedirect();
 
@@ -765,5 +1011,25 @@ class FullRefetchTest extends TestCase
     private function stagedJsonPath(RefetchRun $run, Product $product): string
     {
         return "Refetch/{$run->id}/Works/{$product->id}.json";
+    }
+
+    public static function nonCircleContributorProvider(): iterable
+    {
+        yield 'scenario author' => [
+            RefetchCategory::Scenario,
+            ProductContributorRole::Scenario,
+        ];
+        yield 'voice actor' => [
+            RefetchCategory::VoiceActor,
+            ProductContributorRole::VoiceActor,
+        ];
+        yield 'illustration author' => [
+            RefetchCategory::Illustration,
+            ProductContributorRole::Illustration,
+        ];
+        yield 'author' => [
+            RefetchCategory::Author,
+            ProductContributorRole::Author,
+        ];
     }
 }

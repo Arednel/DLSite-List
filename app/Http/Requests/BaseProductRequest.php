@@ -77,9 +77,9 @@ abstract class BaseProductRequest extends FormRequest
             ProductContributorRole::Author->value => $this->normalizeGenreList($this->input(ProductContributorRole::Author->value)),
             'start_date' => $this->normalizeDateParts($this->input('add.start_date')),
             'end_date' => $this->normalizeDateParts($this->input('add.finish_date')),
-            'num_re_listen_times' => $this->normalizeNullableInt($this->input('add.num_re_listen_times')),
-            're_listen_value' => $this->normalizeNullableInt($this->input('add.re_listen_value')),
-            'priority' => $this->normalizeNullableInt($this->input('add.priority')),
+            'num_re_listen_times' => $this->input('add.num_re_listen_times'),
+            're_listen_value' => $this->input('add.re_listen_value'),
+            'priority' => $this->input('add.priority'),
         ]);
     }
 
@@ -221,20 +221,5 @@ abstract class BaseProductRequest extends FormRequest
         }
 
         return null;
-    }
-
-    protected function normalizeNullableInt($value): ?int
-    {
-        if ($value === null || $value === '') {
-            return null;
-        }
-
-        return (int) $value;
-    }
-
-    public function wasAnySubmitted(string|array $keys): bool
-    {
-        return collect((array) $keys)
-            ->contains(fn(string $key): bool => $this->wasSubmitted($key));
     }
 }

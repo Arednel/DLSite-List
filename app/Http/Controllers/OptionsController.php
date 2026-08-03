@@ -3,7 +3,6 @@
 namespace App\Http\Controllers;
 
 use App\Models\Option;
-use App\Models\RefetchRun;
 use Illuminate\Http\Request;
 use Illuminate\View\View;
 
@@ -22,9 +21,6 @@ class OptionsController extends Controller
 
         return view('Options', [
             'activeTab' => $activeTab,
-            'latestRefetchRunId' => $activeTab === 'refetch'
-                ? RefetchRun::query()->latest('id')->value('id')
-                : null,
             ...$this->productFormModalSettings(),
         ]);
     }

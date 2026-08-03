@@ -8,6 +8,10 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class RefetchRun extends Model
 {
+    public const LIFECYCLE_LOCK = 'refetch-lifecycle';
+
+    public const LIFECYCLE_LOCK_SECONDS = 3600;
+
     public const STATUS_RUNNING = 'running';
 
     public const STATUS_CANCELLING = 'cancelling';

@@ -104,4 +104,29 @@ class ProductContributorSyncTest extends TestCase
             $sync->namesByRole($product)[ProductContributorRole::Author->value]
         );
     }
+
+    public function test_sync_role_touches_the_product_only_when_its_contributors_change(): void
+    {
+        $product = Product::factory()->create();
+        $sync = app(ProductContributorSync::class);
+
+        $this->assertTrue(
+            $sync->syncRole($product, ProductContributorRole::VoiceActor, ['Voice Name'])
+        );
+
+        $updatedAt = $product->fresh()->updated_at;
+        $this->travelTo($updatedAt->copy()->addMinute());
+
+        $this->assertFalse(
+            $sync->syncRole($product, ProductContributorRole::VoiceActor, ['voice name'])
+        );
+        $this->assertTrue($product->fresh()->updated_at->equalTo($updatedAt));
+
+        $this->assertTrue(
+            $sync->syncRole($product, ProductContributorRole::VoiceActor, ['New Voice'])
+        );
+        $this->assertTrue($product->fresh()->updated_at->greaterThan($updatedAt));
+
+        $this->travelBack();
+    }
 }

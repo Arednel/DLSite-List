@@ -35,6 +35,7 @@ final readonly class ProductIndexRowBuilder
             $id = Arr::string($attributes, 'id');
             $series = $attributes['series'] ?? null;
             $circle = $attributes['circle'] ?? null;
+            $workImage = $attributes['work_image'] ?? null;
 
             return new ProductIndexRow(
                 id: $id,
@@ -42,7 +43,9 @@ final readonly class ProductIndexRowBuilder
                 workNameEnglish: $attributes['work_name_english'] ?? null,
                 notes: $attributes['notes'] ?? null,
                 progress: $attributes['progress'] ?? null,
-                workImage: $attributes['work_image'] ?? null,
+                workImage: $workImage === null
+                    ? null
+                    : Product::versionedImagePath($workImage),
                 score: isset($attributes['score']) ? (int) $attributes['score'] : null,
                 series: $series,
                 ageCategory: $attributes['age_category'] ?? null,

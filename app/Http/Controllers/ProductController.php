@@ -13,7 +13,6 @@ use App\Http\Requests\BaseProductRequest;
 use App\Http\Requests\StoreCustomProductRequest;
 use App\Http\Requests\StoreProductRequest;
 use App\Http\Requests\UpdateProductRequest;
-use App\Models\Contributor;
 use App\Models\Genre;
 use App\Models\Option;
 use App\Models\Product;
@@ -330,7 +329,11 @@ class ProductController extends Controller
         $editableFields = ProductFieldLayout::editableFields($editFieldLayout);
         $product->fill($this->updatePayload($request, $data, $editableFields, $product));
         $productFieldsChanged = $product->isDirty(self::VISIBILITY_AFFECTING_PRODUCT_FIELDS);
-        $product->save();
+
+        if ($product->isDirty()) {
+            $product->save();
+        }
+
         $contributorsChanged = $this->syncProductEditContributors($request, $product, $data, $editableFields);
         $genresChanged = $this->syncProductEditGenres($request, $product, $data, $editFieldLayout);
 
@@ -644,7 +647,7 @@ class ProductController extends Controller
         string|array $submittedKeys,
     ): bool {
         return $this->createFieldVisible($visibleFields, $field)
-            && $request->wasAnySubmitted($submittedKeys);
+            && $request->hasAny($submittedKeys);
     }
 
     private function createFieldVisible(array $visibleFields, ProductField $field): bool
@@ -778,7 +781,7 @@ class ProductController extends Controller
         foreach ($this->updatePayloadFieldMap() as $field => $submittedColumns) {
             if (
                 ! in_array($field, $editableFields, true)
-                || ! $request->wasAnySubmitted(array_keys($submittedColumns))
+                || ! $request->hasAny(array_keys($submittedColumns))
             ) {
                 continue;
             }
@@ -787,6 +790,15 @@ class ProductController extends Controller
                 ...$payload,
                 ...$this->updatePayloadForField($field, $data, $submittedColumns, $japaneseDescriptionForDuplicateCheck),
             ];
+        }
+
+        foreach (['start_date', 'end_date'] as $dateField) {
+            if (
+                array_key_exists($dateField, $payload)
+                && Product::dateSortValue($payload[$dateField]) === Product::dateSortValue($product->{$dateField})
+            ) {
+                unset($payload[$dateField]);
+            }
         }
 
         return $payload;
@@ -871,7 +883,6 @@ class ProductController extends Controller
         array $editableFields,
     ): bool {
         $changed = false;
-        $currentNamesByRole = $this->contributorSync->namesByRole($product);
 
         foreach (ProductField::cases() as $field) {
             $role = $field->contributorRole();
@@ -895,31 +906,16 @@ class ProductController extends Controller
             $newNames = $role === ProductContributorRole::Circle
                 ? array_values(array_filter([$product->circle]))
                 : ($data[$role->value] ?? []);
-            $currentNames = $currentNamesByRole[$role->value] ?? [];
 
-            if ($this->normalizedNameList($newNames) !== $this->normalizedNameList($currentNames)) {
-                $changed = true;
-            }
-
-            $this->contributorSync->syncRole(
+            $changed = $this->contributorSync->syncRole(
                 $product,
                 $role,
                 $newNames,
                 $role === ProductContributorRole::Circle ? $product->maker_id : null,
-            );
+            ) || $changed;
         }
 
         return $changed;
-    }
-
-    private function normalizedNameList(array $names): array
-    {
-        return collect($names)
-            ->map(fn(mixed $name): string => Contributor::nameKey($name))
-            ->filter()
-            ->sort()
-            ->values()
-            ->all();
     }
 
     private function buildDateFieldOptions(): array

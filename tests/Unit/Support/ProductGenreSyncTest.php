@@ -66,6 +66,32 @@ class ProductGenreSyncTest extends TestCase
         $this->assertSame(['Custom'], $product->customGenres->pluck('title')->all());
     }
 
+    public function test_custom_tag_changes_touch_the_product_but_an_unchanged_sync_does_not(): void
+    {
+        $product = Product::factory()->create();
+        $genre = Genre::query()->create(['title' => 'Timestamp Tag']);
+        $sync = app(ProductGenreSync::class);
+        $initialUpdatedAt = $product->updated_at;
+
+        $this->travelTo($initialUpdatedAt->copy()->addMinute());
+
+        $this->assertTrue($sync->syncCustom($product, [$genre->getKey()]));
+        $addedUpdatedAt = $product->fresh()->updated_at;
+        $this->assertTrue($addedUpdatedAt->greaterThan($initialUpdatedAt));
+
+        $this->travelTo($addedUpdatedAt->copy()->addMinute());
+
+        $this->assertFalse($sync->syncCustom($product, [$genre->getKey()]));
+        $this->assertTrue($product->fresh()->updated_at->equalTo($addedUpdatedAt));
+
+        $this->travelTo($addedUpdatedAt->copy()->addMinutes(2));
+
+        $this->assertTrue($sync->syncCustom($product, []));
+        $this->assertTrue($product->fresh()->updated_at->greaterThan($addedUpdatedAt));
+
+        $this->travelBack();
+    }
+
     public function test_editable_english_sync_replaces_english_and_preserves_japanese_and_custom_rows(): void
     {
         $product = Product::factory()->create();

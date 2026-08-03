@@ -93,4 +93,24 @@ class RefetchStateTest extends TestCase
 
         $this->assertTrue($run->hasAppliedDecisions());
     }
+
+    public function test_work_result_detects_only_decisions_that_changed_the_work(): void
+    {
+        $unchanged = new RefetchWorkResult([
+            'decisions' => [
+                RefetchCategory::Titles->value => [
+                    'work_name' => ['action' => 'ignore', 'changed' => false],
+                ],
+            ],
+        ]);
+        $changed = new RefetchWorkResult([
+            'decisions' => [
+                RefetchCategory::VoiceActor->value => [
+                    'voice_actor' => ['action' => 'overwrite', 'changed' => true],
+                ],
+            ],
+        ]);
+        $this->assertFalse($unchanged->hasAppliedChanges());
+        $this->assertTrue($changed->hasAppliedChanges());
+    }
 }

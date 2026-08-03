@@ -12,9 +12,11 @@ final class ProductContributorSync
     /**
      * @param  array<string, list<string>>  $namesByRole
      */
-    public function sync(Product $product, array $namesByRole, ?string $makerId = null): void
+    public function sync(Product $product, array $namesByRole, ?string $makerId = null): bool
     {
-        DB::transaction(function () use ($product, $namesByRole, $makerId): void {
+        return DB::transaction(function () use ($product, $namesByRole, $makerId): bool {
+            $changed = false;
+
             foreach ($namesByRole as $role => $names) {
                 $role = ProductContributorRole::tryFrom((string) $role);
 
@@ -22,13 +24,15 @@ final class ProductContributorSync
                     continue;
                 }
 
-                $this->syncRole(
+                $changed = $this->syncRole(
                     $product,
                     $role,
                     $names,
                     $role === ProductContributorRole::Circle ? $makerId : null,
-                );
+                ) || $changed;
             }
+
+            return $changed;
         });
     }
 
@@ -40,16 +44,22 @@ final class ProductContributorSync
         ProductContributorRole|string $role,
         array $names,
         ?string $makerId = null,
-    ): void {
+    ): bool {
         $role = $role instanceof ProductContributorRole
             ? $role
             : ProductContributorRole::from($role);
 
-        DB::transaction(function () use ($product, $role, $names, $makerId): void {
+        return DB::transaction(function () use ($product, $role, $names, $makerId): bool {
             $contributorIds = Contributor::resolveIdsFromNames($names, $makerId);
+            $changes = $product->contributorsForRole($role)->sync($contributorIds);
 
-            $product->contributorsForRole($role)
-                ->syncWithPivotValues($contributorIds, ['role' => $role->value]);
+            if (array_filter($changes) === []) {
+                return false;
+            }
+
+            $product->touch();
+
+            return true;
         });
     }
 

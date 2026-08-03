@@ -232,14 +232,7 @@
                         </div>
                     @endif
 
-                    @if ($latestRefetchRunId)
-                        <div class="option-actions option-actions--primary">
-                            <a class="tag tag--soft tag--lg is-clickable"
-                                href="{{ route('options.refetch.show', $latestRefetchRunId) }}">
-                                {{ __('Go to latest refetch') }}
-                            </a>
-                        </div>
-                    @endif
+                    <livewire:options-refetch-actions />
 
                     <div class="refetch-scope-grid">
                         <section class="refetch-scope-card" aria-labelledby="refetch-all-heading">

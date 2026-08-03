@@ -2205,10 +2205,14 @@ class ProductControllerTest extends TestCase
             ['Custom One', 'Custom Two'],
             $product->customGenres->pluck('title')->all()
         );
+        $coverPath = "storage/Works/{$workId}/cover.png";
+        $coverVersion = filemtime(
+            Storage::disk('public')->path("Works/{$workId}/cover.png")
+        );
 
         $this->get('/')
             ->assertOk()
-            ->assertSee('src="storage/Works/' . $workId . '/cover.png"', false)
+            ->assertSee("src=\"{$coverPath}?v={$coverVersion}\"", false)
             ->assertDontSee('images/No Image.png', false);
     }
 
@@ -2625,6 +2629,72 @@ class ProductControllerTest extends TestCase
         $this->assertSame(3, $product->num_re_listen_times);
         $this->assertSame(5, $product->re_listen_value);
         $this->assertSame(2, $product->priority);
+    }
+
+    public function test_update_with_semantically_unchanged_dates_does_not_touch_product(): void
+    {
+        $product = Product::factory()->create([
+            'work_name' => 'UNCHANGED_DATES_TIMESTAMP_TOKEN',
+            'work_name_english' => null,
+            'start_date' => ['year' => '2025', 'month' => '03', 'day' => '01'],
+            'end_date' => ['year' => '2025', 'month' => '03', 'day' => '07'],
+        ]);
+        $updatedAt = $product->updated_at;
+        $this->travelTo($updatedAt->copy()->addMinute());
+
+        $this->post("/update/{$product->id}", [
+            'work_name' => $product->work_name,
+            'add' => [
+                'start_date' => [
+                    'month' => '03',
+                    'day' => '01',
+                    'year' => '2025',
+                ],
+                'finish_date' => [
+                    'month' => '03',
+                    'day' => '07',
+                    'year' => '2025',
+                ],
+            ],
+        ])->assertSessionHasNoErrors();
+
+        $this->assertTrue($product->fresh()->updated_at->equalTo($updatedAt));
+
+        $this->travelBack();
+    }
+
+    public function test_update_with_an_actual_date_change_touches_product(): void
+    {
+        $product = Product::factory()->create([
+            'work_name' => 'CHANGED_DATE_TIMESTAMP_TOKEN',
+            'work_name_english' => null,
+            'start_date' => ['year' => '2025', 'month' => '03', 'day' => '01'],
+            'end_date' => ['year' => '2025', 'month' => '03', 'day' => '07'],
+        ]);
+        $updatedAt = $product->updated_at;
+        $this->travelTo($updatedAt->copy()->addMinute());
+
+        $this->post("/update/{$product->id}", [
+            'work_name' => $product->work_name,
+            'add' => [
+                'start_date' => [
+                    'month' => '03',
+                    'day' => '02',
+                    'year' => '2025',
+                ],
+                'finish_date' => [
+                    'month' => '03',
+                    'day' => '07',
+                    'year' => '2025',
+                ],
+            ],
+        ])->assertSessionHasNoErrors();
+
+        $product->refresh();
+        $this->assertSame('02', (string) data_get($product->start_date, 'day'));
+        $this->assertTrue($product->updated_at->greaterThan($updatedAt));
+
+        $this->travelBack();
     }
 
     public function test_update_payload_applies_only_editable_submitted_fields(): void

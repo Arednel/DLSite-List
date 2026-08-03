@@ -10,6 +10,7 @@ use App\Models\Option;
 use App\Models\Product;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Storage;
 use Livewire\Livewire;
 use Tests\TestCase;
 
@@ -91,19 +92,35 @@ class IndexImageViewerTest extends TestCase
 
     public function test_enabled_viewer_uses_a_livewire_action_and_renders_viewer_assets(): void
     {
+        Storage::fake('public');
         Option::setIndexImageViewerEnabled(true);
 
+        $paths = [
+            'storage/Works/RJ100000002/cover.webp',
+            'storage/Works/RJ100000002/sample_1.png',
+            'storage/Works/RJ100000002/sample_2.jpg',
+            'storage/Works/RJ100000002/sample_3.avif',
+        ];
         $product = Product::factory()->create([
             'id' => 'RJ100000002',
             'work_name' => 'VIEWER_ENABLED_WORK',
             'work_name_english' => 'VIEWER_ENABLED_WORK_EN',
-            'work_image' => 'storage/Works/RJ100000002/cover.webp',
-            'sample_images' => [
-                'storage/Works/RJ100000002/sample_1.png',
-                'storage/Works/RJ100000002/sample_2.jpg',
-                'storage/Works/RJ100000002/sample_3.avif',
-            ],
+            'work_image' => $paths[0],
+            'sample_images' => array_slice($paths, 1),
         ]);
+        $disk = Storage::disk('public');
+
+        foreach ($paths as $path) {
+            $disk->put(substr($path, strlen('storage/')), 'image');
+        }
+
+        $versionedPaths = array_map(
+            fn(string $path): string => "{$path}?v=" . filemtime(
+                $disk->path(substr($path, strlen('storage/')))
+            ),
+            $paths,
+        );
+        $versionedUrls = array_map('asset', $versionedPaths);
         $dlsiteUrl = $product->dlsiteWorkUrl(false);
 
         $component = Livewire::test(ProductIndex::class)
@@ -111,18 +128,14 @@ class IndexImageViewerTest extends TestCase
             ->assertSee('data-index-image-viewer-product="RJ100000002"', false)
             ->assertSee('data-index-image-viewer-title="RJ100000002 - VIEWER_ENABLED_WORK"', false)
             ->assertSee('index-image-viewer-dialog', false)
-            ->assertSee('wire:ignore', false);
+            ->assertSee('wire:ignore', false)
+            ->assertSee($versionedPaths[0], false);
 
         $this->assertSame(2, substr_count($component->html(), $dlsiteUrl));
 
         Livewire::test(ProductIndex::class)
             ->call('workImages', $product->id)
-            ->assertReturned([
-                asset('storage/Works/RJ100000002/cover.webp'),
-                asset('storage/Works/RJ100000002/sample_1.png'),
-                asset('storage/Works/RJ100000002/sample_2.jpg'),
-                asset('storage/Works/RJ100000002/sample_3.avif'),
-            ]);
+            ->assertReturned($versionedUrls);
 
         Livewire::flushState();
 

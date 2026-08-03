@@ -45,7 +45,8 @@ class OptionsRefetchReviewTest extends TestCase
                 "actions.descriptions.{$result->getKey()}.description",
                 RefetchService::ACTION_IGNORE,
             )
-            ->call('applyTab', RefetchCategory::Titles->value)
+            ->call('askApplyTab', RefetchCategory::Titles->value)
+            ->call('applyTab')
             ->assertNoRedirect()
             ->assertSet(
                 'globalActions.descriptions',
@@ -122,7 +123,8 @@ class OptionsRefetchReviewTest extends TestCase
 
         Livewire::test(OptionsRefetchReview::class, ['run' => $run])
             ->set('globalActions.titles', 'unexpected')
-            ->call('applyTab', 'titles')
+            ->call('askApplyTab', 'titles')
+            ->call('applyTab')
             ->assertHasErrors('globalActions.titles')
             ->assertNoRedirect();
 

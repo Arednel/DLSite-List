@@ -485,7 +485,8 @@ Options page tabs:
 - `General` is the default tab and contains UI Language, Index Pagination, Index Search, Image Viewer, Index Table Width, Series Metadata, Add/Edit form theme and modal behavior, Autocomplete, Tag Library settings, and Reset All Options
 - `Field Layouts` is the second tab and contains Index Table Fields, Index Filter Fields, Index Sort Menu, Edit Form Fields, Quick Add Form Fields, Custom Quick Add Form Fields, and Reset All Options
 - `Authentication` contains the default-off administrator login switch, independent Cherry/Black authentication-page theme, account status, and authenticated password change
-- `Refetch` separates Refetch All Works and Refetch Selected Works into distinct vertically stacked cards, with an optional run-wide Refetch Images choice and inline help, Livewire progress and review state, cancellation, and an independent latest-run link
+- `Refetch` separates Refetch All Works and Refetch Selected Works into distinct vertically stacked cards, with an optional run-wide Refetch Images choice and inline help, Livewire progress and review state, shared modal confirmations for Apply Tab and Apply All, cancellation, an independent latest-run link, and an always-visible right-aligned cleanup action
+- Refetch cleanup includes a help circle and confirmation modal. It is disabled while any run is running or cancelling, and a shared Laravel atomic lock prevents cleanup from overlapping creation of a new run or application of review changes. Cleanup commits deletion of `refetch_runs` with cascaded `refetch_work_results` before clearing every staged item below both Refetch roots while preserving the roots. If staged-file removal fails, cleanup can be run again for the remaining orphaned files; products and canonical `Works` files remain unchanged
 
 Options reset behavior:
 - each visible Options setting has a modal-confirmed `Reset to default` action
@@ -536,6 +537,12 @@ Scraped JSON files are also used by the product metadata backfill migration. The
 Laravel supplies the work id, JSON path, log directory, and optional image directory to `DLSiteScraper.py`. Python always writes complete JP/EN JSON to that exact path, downloads images only when the image directory is present, performs no retries, and prints a structured image manifest. PHP retries failed processes or reported image failures up to five times and trusts the latest successful manifest without combining attempts or scanning image files. A successful process must return a valid manifest and valid destination JSON; existing JSON is never used as a fallback. PHP also owns review state and canonical/staged promotion. Promotion uses checked Laravel filesystem copies; a failed copy leaves the run in review with its affected tab retryable instead of marking the run Applied.
 
 Refetch and Quick Add translate only recognized app-defined errors at display boundaries. Persisted and logged errors remain raw, and unknown Python, API, exception, stdout, or stderr text is shown verbatim.
+
+## Work Image Cleanup
+
+Run `php artisan works:cleanup-images` to remove obsolete covers and out-of-range samples (if any errors occured. Not needed for normal use).
+
+Refetch performs this cleanup automatically whenever refetched cover or sample images are applied. The command is only needed for manual cleanup.
 
 ## Custom Work Upload Paths
 - Required custom cover upload output: `storage/app/public/Works/{RJ}/cover.{ext}`

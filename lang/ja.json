@@ -209,6 +209,13 @@
     "Refetch All Works": "すべての作品を再取得",
     "Fetch every work in the library in one refetch run.": "ライブラリ内のすべての作品を1回の再取得で処理します。",
     "Go to latest refetch": "最新の再取得結果を開く",
+    "Clean up refetch data": "再取得データをクリーンアップ",
+    "About refetch cleanup": "再取得のクリーンアップについて",
+    "Permanently deletes all refetch run records and all downloaded refetch images. Already applied info is not changed. Cleanup is unavailable while a refetch run is running or cancelling.": "すべての再取得履歴とダウンロード済みの再取得画像を完全に削除します。適用済みの情報は変更されません。再取得が実行中またはキャンセル中の場合は使用できません。",
+    "Permanently delete all refetch run records and all downloaded refetch images? Already applied info is not changed.": "すべての再取得履歴とダウンロード済みの再取得画像を完全に削除しますか？ 適用済みの情報は変更されません。",
+    "Refetch data cleaned up.": "再取得データをクリーンアップしました。",
+    "Refetch cleanup is unavailable while a refetch run is running or cancelling.": "再取得が実行中またはキャンセル中のため、クリーンアップできません。",
+    "Refetch cleanup failed while removing staged files.": "一時保存された再取得ファイルの削除中にクリーンアップに失敗しました。",
     "UI language": "表示言語",
     "Save UI language": "表示言語を保存",
     "Reset to default": "初期設定に戻す",
@@ -571,5 +578,9 @@
     "Japanese": "日本語",
     "Yes": "はい",
     "No": "いいえ",
-    "Failed to promote staged refetch file.": "再取得した一時ファイルを保存先へ反映できませんでした。"
+    "Failed to promote staged refetch file.": "再取得した一時ファイルを保存先へ反映できませんでした。",
+    "Refetch cannot start while another refetch action is in progress.": "別の再取得操作の処理中は再取得を開始できません。",
+    "Refetch changes cannot be applied while another refetch action is in progress.": "別の再取得操作の処理中は再取得の変更を適用できません。",
+    "Refetch cleanup is temporarily unavailable while another refetch action is in progress.": "別の再取得操作の処理中は再取得のクリーンアップを利用できません。",
+    "Failed to restore work images after refetch promotion failed.": "再取得画像の反映失敗後に以前の作品画像を復元できませんでした。"
 }

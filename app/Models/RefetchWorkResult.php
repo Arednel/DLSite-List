@@ -77,6 +77,19 @@ class RefetchWorkResult extends Model
         return $this->changesFor($category) !== [];
     }
 
+    public function hasAppliedChanges(): bool
+    {
+        foreach ($this->decisions ?? [] as $categoryDecisions) {
+            foreach ($categoryDecisions as $decision) {
+                if (($decision['changed'] ?? null) === true) {
+                    return true;
+                }
+            }
+        }
+
+        return false;
+    }
+
     public function displayError(): ?string
     {
         if ($this->error === null) {

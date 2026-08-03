@@ -4,7 +4,6 @@ namespace Tests\Feature;
 
 use App\Models\Option;
 use App\Models\Product;
-use App\Models\RefetchRun;
 use App\Support\Refetch\RefetchService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
@@ -80,6 +79,7 @@ class OptionsGeneralTest extends TestCase
             ->assertOk()
             ->assertSee('Refetch Works')
             ->assertSee('No works available for refetch.')
+            ->assertSee('Clean up refetch data')
             ->assertDontSee('Go to latest refetch')
             ->assertDontSee('Refetch selected works');
     }
@@ -93,6 +93,11 @@ class OptionsGeneralTest extends TestCase
         $this->get('/options?tab=refetch')
             ->assertOk()
             ->assertSee('Go to latest refetch')
+            ->assertSeeInOrder([
+                'Go to latest refetch',
+                'Clean up refetch data',
+            ])
+            ->assertSee('About refetch cleanup')
             ->assertSee('class="refetch-scope-grid"', false)
             ->assertSeeInOrder([
                 'Refetch All Works',

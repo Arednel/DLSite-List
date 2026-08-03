@@ -20,6 +20,12 @@ class OptionsRefetchReview extends Component
     #[Locked]
     public int $runId;
 
+    #[Locked]
+    public bool $confirmingApplyAll = false;
+
+    #[Locked]
+    public ?string $confirmingApplyCategory = null;
+
     public string $activeCategory;
 
     /**
@@ -43,9 +49,9 @@ class OptionsRefetchReview extends Component
         $run->loadMissing(['results.product']);
 
         $firstCategory = collect(RefetchCategory::cases())->first(
-            fn (RefetchCategory $category): bool => ! $run->tabResolved($category)
+            fn(RefetchCategory $category): bool => ! $run->tabResolved($category)
                 && $run->results->contains(
-                    fn (RefetchWorkResult $result): bool => $result->hasChangesFor($category)
+                    fn(RefetchWorkResult $result): bool => $result->hasChangesFor($category)
                 )
         );
 
@@ -72,7 +78,7 @@ class OptionsRefetchReview extends Component
             if (
                 ! $run->tabResolved($category)
                 && $run->results->contains(
-                    fn (RefetchWorkResult $result): bool => $result->hasChangesFor($category)
+                    fn(RefetchWorkResult $result): bool => $result->hasChangesFor($category)
                 )
             ) {
                 $this->globalActions[$category->value] = RefetchService::ACTION_OVERWRITE;
@@ -80,7 +86,17 @@ class OptionsRefetchReview extends Component
         }
     }
 
-    public function applyTab(string $value, RefetchService $service): void
+    public function askApplyAll(): void
+    {
+        if (! $this->run()->canBeApplied()) {
+            return;
+        }
+
+        $this->confirmingApplyCategory = null;
+        $this->confirmingApplyAll = true;
+    }
+
+    public function askApplyTab(string $value): void
     {
         $category = RefetchCategory::tryFrom($value);
 
@@ -90,6 +106,29 @@ class OptionsRefetchReview extends Component
             return;
         }
 
+        if (! $this->run()->canBeApplied()) {
+            return;
+        }
+
+        $this->confirmingApplyAll = false;
+        $this->confirmingApplyCategory = $category->value;
+    }
+
+    public function cancelApplyConfirmation(): void
+    {
+        $this->confirmingApplyAll = false;
+        $this->confirmingApplyCategory = null;
+    }
+
+    public function applyTab(RefetchService $service): void
+    {
+        $category = RefetchCategory::tryFrom((string) $this->confirmingApplyCategory);
+
+        if ($category === null) {
+            return;
+        }
+
+        $this->cancelApplyConfirmation();
         $validated = $this->validate();
 
         try {
@@ -109,6 +148,11 @@ class OptionsRefetchReview extends Component
 
     public function applyAll(RefetchService $service): void
     {
+        if (! $this->confirmingApplyAll) {
+            return;
+        }
+
+        $this->cancelApplyConfirmation();
         $validated = $this->validate();
 
         try {
@@ -125,6 +169,11 @@ class OptionsRefetchReview extends Component
         }
 
         $this->redirectRoute('options.refetch.show', ['run' => $this->runId]);
+    }
+
+    public function resetConfirmDelaySeconds(): int
+    {
+        return 0;
     }
 
     public function rejectOrFinish(RefetchService $service): void
@@ -272,7 +321,7 @@ class OptionsRefetchReview extends Component
                         $colors = $category === RefetchCategory::Tags ? $tagColors : [];
 
                         $changes = collect($result->changesFor($category))
-                            ->map(fn (array $change, string $field): array => [
+                            ->map(fn(array $change, string $field): array => [
                                 'field' => $field,
                                 'label' => (string) $change['label'],
                                 'old' => $this->prepareReviewValue($change['old'], $category->isImage(), $colors),
@@ -291,7 +340,7 @@ class OptionsRefetchReview extends Component
                             'changes' => $changes,
                         ];
                     })
-                    ->filter(fn (array $result): bool => $result['changes'] !== [])
+                    ->filter(fn(array $result): bool => $result['changes'] !== [])
                     ->values()
                     ->all();
 
@@ -299,7 +348,7 @@ class OptionsRefetchReview extends Component
                     'value' => $category->value,
                     'label' => $category->label(),
                     'count' => collect($results)->sum(
-                        fn (array $result): int => count($result['changes'])
+                        fn(array $result): int => count($result['changes'])
                     ),
                     'resolved' => $run->tabResolved($category),
                     'has_changes' => $results !== [],
@@ -364,12 +413,12 @@ class OptionsRefetchReview extends Component
 
         if (! array_is_list($value)) {
             return collect($value)
-                ->map(fn (mixed $items): mixed => $this->prepareReviewValue($items, false, $colors))
+                ->map(fn(mixed $items): mixed => $this->prepareReviewValue($items, false, $colors))
                 ->all();
         }
 
         return collect($value)
-            ->map(fn (mixed $item): array => [
+            ->map(fn(mixed $item): array => [
                 'value' => $item,
                 'colors' => $colors[(string) $item] ?? [],
             ])
@@ -505,20 +554,20 @@ class OptionsRefetchReview extends Component
         }
 
         $titles = $run->results
-            ->flatMap(fn (RefetchWorkResult $result) => collect($result->changesFor(RefetchCategory::Tags))
-                ->flatMap(fn (array $change): array => [
+            ->flatMap(fn(RefetchWorkResult $result) => collect($result->changesFor(RefetchCategory::Tags))
+                ->flatMap(fn(array $change): array => [
                     ...data_get($change, 'old.japanese', []),
                     ...data_get($change, 'old.english', []),
                     ...data_get($change, 'old.custom', []),
                     ...data_get($change, 'new.japanese', []),
                     ...data_get($change, 'new.english', []),
                 ]))
-            ->map(fn (mixed $title): string => trim((string) $title))
+            ->map(fn(mixed $title): string => trim((string) $title))
             ->filter()
             ->unique()
             ->values();
         $pairs = TagColor::effectiveColorPairsForTitleKeys(
-            $titles->map(fn (string $title): string => Genre::titleKey($title))
+            $titles->map(fn(string $title): string => Genre::titleKey($title))
         );
 
         return $titles

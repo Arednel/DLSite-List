@@ -47,8 +47,12 @@
   - `app/Jobs/FetchProductWorkJob.php`
   - `app/Support/DLSite/DLSitePythonRunner.php`
   - `app/Support/DLSite/DLSiteWorkFetcher.php`
+  - `app/Support/ProductImageCleanupService.php`
+  - `app/Support/Refetch/RefetchCleanupService.php`
   - `app/Support/Refetch/RefetchDiffBuilder.php`
   - `app/Support/Refetch/RefetchService.php`
+- Maintenance command:
+  - `app/Console/Commands/CleanupWorkImages.php`
 - Shared genre sync helpers:
   - `app/Support/ProductGenreSync.php`
   - `app/Support/GenreSyncPayload.php`
@@ -79,6 +83,7 @@
   - `app/Livewire/IndexTableWidthSettings.php`
   - `app/Livewire/ProductFormModalSettings.php`
   - `app/Livewire/OptionsWorkSearch.php`
+  - `app/Livewire/OptionsRefetchActions.php`
   - `app/Livewire/OptionsRefetchProgress.php`
   - `app/Livewire/OptionsRefetchReview.php`
   - `app/Livewire/AuthenticationSettings.php`
@@ -224,7 +229,9 @@ The `/tags` Livewire manager also owns tag groups, group/tag order, and Index vi
 - the product id, which also represents that work's membership in the run
 - fetch status, errors, and separate cover/sample warnings
 - detected changes grouped by the thirteen `RefetchCategory` values
-- per-change apply decisions retained as review history
+- per-change apply decisions and whether each decision actually changed the work, retained as review history
+
+`OptionsRefetchActions` owns the Refetch tab's latest-run link and right-aligned cleanup action. Cleanup remains visible but disabled while any run is `running` or `cancelling`, requires a Livewire confirmation modal, then delegates to `RefetchCleanupService`. Cleanup, `RefetchService::createRun()`, and review apply/finish mutations acquire the same Laravel cache atomic lock, so a new running row or staged-file consumer cannot overlap cleanup. Cleanup rechecks active runs and commits deletion of `refetch_runs` first; the existing foreign-key cascade deletes their `refetch_work_results`. It then clears the contents of `storage/app/Refetch` and `storage/app/public/Refetch` while preserving both roots. A later filesystem failure can therefore leave only retryable orphaned staged files, not run records whose required files were already removed. Products and canonical `Works` files are not changed.
 
 Queue tables:
 - `jobs` stores pending database queue jobs
@@ -266,8 +273,8 @@ Runtime note:
 - `ProductIndex` shows current-language fetched + custom genres through one lightweight grouped query from `genre_product` + `genres` + `genre_groups` for the current page only when the Tags column is visible, loads contributor pivots only when visible contributor columns need them, and passes the grouped genres plus builder-prepared contributor rows to Blade
 - `Product::dlsiteWorkUrl()` returns the existing Maniax URL immediately while age-appropriate links are disabled. When enabled, only exact `ALL_AGES` values use DLSite Home; R15, R18, null, and malformed values fall back to Maniax
 - `ProductIndex` keeps its single batched Options read and narrow product select for DLSite links. It adds `age_category` to hydration only while age-appropriate links are enabled, even when the Age column is hidden, then the row builder prepares one URL on each typed row for the image, Japanese title, and optional English title anchors without changing column visibility
-- `ProductContributorSync` syncs contributor pivots through `Product::contributorsForRole()` and Laravel's role-scoped many-to-many `syncWithPivotValues()` so replacing one creator role does not detach the same contributor from another role
-- index cover images are rendered directly from `products.work_image` only when the Image column is visible
+- `ProductContributorSync` syncs contributor pivots through `Product::contributorsForRole()` and Laravel's role-scoped many-to-many `sync()`, using its attached/detached/updated result to detect effective changes without a separate comparison query; replacing one creator role does not detach the same contributor from another role, effective changes touch only the selected product, and unchanged role syncs leave its Updated Date unchanged
+- index cover images are rendered from `products.work_image` only when the Image column is visible; existing local files receive the same modification-time query-string cache busting used by CSS/JS assets
 - `products.start_date` and `products.end_date` JSON remain the editable/display source of truth; their `*_sort` columns store `YYYYMMDD` integers with missing month/day as `00`
 - `ProductIndex` keeps its filter/sort state in the URL through Livewire's `queryString()` config, then normalizes that state into `app/Support/ProductIndexFilters.php`
 - `app/Support/ProductIndexFilters.php` provides the normalized filter query used by progress tabs, preserved search state, tag links, explicit Livewire query-string keys, and the visibility-affecting filter groups used by return redirects
@@ -308,9 +315,10 @@ Runtime note:
 - the Edit Form field layout uses separate `tags` and `fetched_tags` rows. Fetched-tag updates replace the selected current-language bucket while preserving other fetched languages and unsubmitted custom tags.
 - Edit Work reads the edit field layout from Options; hidden or read-only metadata/listening fields are not cleared during save because the update request only applies submitted/editable field groups, including nested `add[...]` date/re-listen/priority inputs. Its Progress select uses the same optional-status visibility switches as both Add forms and additionally includes the product's current On Hold or Dropped value. A hidden Progress layout row remains hidden.
 - Optional-status switches affect rendered choices only and do not add request-validation or product-rewrite rules.
-- `ProductController` builds the editable product update payload from a field-to-column map keyed by `ProductField`, maps Japanese and English description layout rows independently to `products.description` and `products.description_english`, and keeps special cases such as duplicate English descriptions and contributor/tag syncing outside the map
+- `ProductController` builds the editable product update payload from a field-to-column map keyed by `ProductField`, maps Japanese and English description layout rows independently to `products.description` and `products.description_english`, removes semantically unchanged start/finish dates regardless of JSON key order, and saves the product model only when Eloquent reports an actual dirty attribute; contributor/tag syncing remains separate and applies its own effective-change timestamp rules
 - custom create stores user-uploaded covers/samples in `storage/app/public/Works/{RJ}`, saves the uploaded cover public path in `products.work_image`, and attaches custom tags through the same genre resolver used by update
-- product create/update and refetch apply use `app/Support/ProductGenreSync.php` to sync `genre_product.source` and `genre_product_languages` together
+- product create/update and refetch apply use `app/Support/ProductGenreSync.php` to sync `genre_product.source` and `genre_product_languages` together; effective fetched/custom tag changes touch `products.updated_at`, while unchanged tag syncs leave the work's Updated Date unchanged
+- applying refetched scalar metadata, contributor roles, tags, covers, or samples updates only the selected work's `products.updated_at`; changes to shared contributor metadata do not fan out timestamps to unrelated products
 - `app/Support/GenreSyncPayload.php` keeps fetched-over-custom source precedence and builds the fetched language map used by `ProductGenreSync`
 - `app/Models/Genre.php` resolves tag titles by `title_key`, preserving the existing display title when the new input only differs by case
 - Options -> Refetch Works dispatches one queued `FetchProductWorkJob` per selected product, including custom-created RJ works without a maker id
@@ -321,14 +329,14 @@ Runtime note:
 - the Options page has separate `General`, `Field Layouts`, `Authentication`, and `Refetch` tabs; `OptionsController` normalizes the query or flashed old tab before rendering, and validation errors from refetch forms reopen the Refetch tab
 - the Refetch tab keeps its latest-run navigation separate from distinct vertically stacked Refetch All Works and Refetch Selected Works cards; persisted older runs remain accessible by direct URL
 - the review uses one enum-driven set of Titles, Descriptions, Series, Age, Circle, Maker ID, four creator-role, Tags, Cover, and Sample Images tabs; tabs without changes or unrequested images resolve automatically
-- `OptionsRefetchReview` prepares category counts, saved choices, tag details/colors, active-tab state, and Set Overwrite for All presets; its Blade view uses Livewire `wire:show`, `wire:cloak`, and bound select state without inline PHP or Alpine, while the page directly loads the shared keyboard/touch tooltip stylesheet and script
-- Livewire validates the bound review choices, confirms and runs Apply Tab, Apply All, and Reject/Finish directly, then delegates every mutation and newest-run guard to `RefetchService`
+- `OptionsRefetchReview` prepares category counts, saved choices, tag details/colors, active-tab state, and Set Overwrite for All presets; its Blade view uses Livewire `wire:show`, `wire:cloak`, and bound select state without inline PHP, reuses the shared Alpine-backed confirmation modal partial, and directly loads the shared keyboard/touch tooltip stylesheet and script
+- Livewire validates the bound review choices, opens the shared body-teleported confirmation modal before Apply Tab or Apply All, and delegates confirmed mutations and newest-run guards to `RefetchService`; Reject/Finish retains its separate confirmation
 - all global, per-change, and detailed-tag review selects reuse the same refetch control and focus styling
 - global actions default to Ignore, each value defaults to Use global choice, Set Overwrite for All only edits unresolved form presets while preserving explicit per-change choices, and Apply Tab resolves its complete category without remounting or discarding draft choices on other tabs
 - Apply All and Ignore Remaining load the fetched work results once, reuse that collection across every unresolved category, and persist the final resolved-tab list once
-- Cover and Sample Images are compared by SHA-256 content and applied independently; any failed sample download makes that work's entire Sample Images category unavailable without blocking Cover or metadata review
+- Cover and Sample Images are compared by SHA-256 content and applied independently; applying either category promotes its new files and removes recognized images no longer referenced by that work, while any failed sample download makes that work's entire Sample Images category unavailable without blocking Cover or metadata review
 - Reject Run is available before any tab decision; after a tab is resolved it becomes Ignore Remaining and Finish so already-applied values remain
-- successful staged files are promoted with checked same-disk copies, and staged JSON reaches `storage/app/Works/{RJ}.json` only when every tab is resolved; a failed copy prevents Applied status and restores the previous resolved-tab state for retry, rejected runs leave canonical JSON unchanged, and staged snapshots remain stored with their runs
+- successful staged files are promoted with checked same-disk copies, and staged JSON reaches `storage/app/Works/{RJ}.json` only when every tab is resolved and at least one recorded decision actually changed that work; ignored/no-op results and rejected runs leave canonical JSON unchanged, a failed required copy prevents Applied status and restores the previous resolved-tab state for retry, and staged snapshots remain stored with their runs
 - only the newest unfinished review can be changed; older unfinished reviews remain accessible by direct URL and read-only
 - fetched metadata can overwrite only its matching product metadata/category. Progress, scores, dates, notes, priority, relisten fields, and custom tags are never overwritten
 - the General tab includes an Index Pagination setting powered by Livewire and persisted in `options.index_per_page`; changing the mode can reveal the custom-value input immediately, but the setting is only persisted when Save is submitted
@@ -346,10 +354,12 @@ Runtime note:
 
 - PHP supplies every JSON/image destination to `python/DLSiteScraper.py`. Normal Add uses canonical `Works/{RJ}` locations; Refetch uses run/work-specific staging locations. `DLSiteWorkData` normalizes and case-insensitively deduplicates the scraped image list, and `ProductController` derives deterministic `storage/Works/{RJ}/sample_N.jpg` database paths from its count.
 - `products.work_image` stores the cover's public path, while `products.sample_images` stores ordered public paths through the model's array cast. Missing files keep their database positions so the presentation layer can render a missing-image state.
+- `ProductImageCleanupService` removes only unreferenced, root-level `cover.*` and `sample_N.*` image files from one existing RJ product folder. It compares each deterministic `Works/{RJ}` disk path directly with its `storage/Works/{RJ}` database path, does not recurse, and leaves unknown filenames, nested files, non-RJ folders, and orphan RJ folders untouched.
+- `works:cleanup-images` enumerates every top-level `storage/app/public/Works/RJ...` folder one by one and runs that cleanup only when a matching product exists. Applying a Refetch Cover or Sample Images category first backs up canonical destination files below the run's public `Refetch` directory, promotes the staged images, and commits the deterministic product paths and Updated Date. A failed database update restores overwritten files and removes newly promoted destinations. Only after the transaction succeeds does the shared cleanup service remove obsolete cover/sample files for that updated work; successful promotion then removes its temporary backups.
 - `2026_07_27_000000_normalize_product_sample_image_paths.php` is the final legacy-data boundary. It canonicalizes existing cover/sample paths, repairs malformed positions, preserves supported custom-upload extensions, and leaves runtime retrieval free of path normalization or filesystem checks.
 - `options.index_image_viewer_enabled` is part of the resettable Options set and is loaded with the other Index settings through `ProductIndexSettings`. `ProductIndex` combines that value with Image-column visibility into one page-wide `imageViewerEnabled` flag.
 - Blade uses that flag to choose the thumbnail's DLSite link or viewer trigger and conditionally render the `wire:ignore` dialog plus its `@assets` script. The trigger carries only the product id and display title.
-- `ProductIndex::workImages()` is a Livewire 4 `#[Json]` action that gates access on the saved option, selects only `id`, `work_image`, and `sample_images`, and returns cover-first URLs through Laravel's `asset()` helper. The viewer script invokes the owning component with `Livewire.find(...)`; optional authentication protects the Livewire request, while the resulting `/storage` files remain public static assets.
+- `Product::versionedImagePath()` accepts a deterministic local public-disk image path, appends its file modification time when the file exists, and leaves a missing path unchanged. The Index row builder checks nullable cover state before calling it, and `ProductIndex::workImages()` uses it before Laravel's `asset()` helper returns cover-first viewer URLs. The viewer script invokes the owning component with `Livewire.find(...)`; optional authentication protects the Livewire request, while the resulting `/storage` files remain public static assets.
 
 ## Optional Authentication Flow
 
