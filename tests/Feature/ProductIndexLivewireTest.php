@@ -666,7 +666,6 @@ class ProductIndexLivewireTest extends TestCase
         $genre = Genre::query()->create([
             'title' => 'ROW_DATA_TAG',
             'description' => null,
-            'order' => null,
         ]);
 
         app(ProductGenreSync::class)->syncCustom($product, [$genre->getKey()]);
@@ -693,22 +692,18 @@ class ProductIndexLivewireTest extends TestCase
         $customGenre = Genre::query()->create([
             'title' => 'SPLIT_INDEX_CUSTOM_TAG',
             'description' => null,
-            'order' => null,
         ]);
         $englishGenre = Genre::query()->create([
             'title' => 'SPLIT_INDEX_FETCHED_EN_TAG',
             'description' => null,
-            'order' => null,
         ]);
         $japaneseGenre = Genre::query()->create([
             'title' => 'SPLIT_INDEX_FETCHED_JP_TAG',
             'description' => null,
-            'order' => null,
         ]);
         $sharedGenre = Genre::query()->create([
             'title' => 'SPLIT_INDEX_FETCHED_SHARED_TAG',
             'description' => null,
-            'order' => null,
         ]);
 
         app(ProductGenreSync::class)->sync($product, [
@@ -782,22 +777,18 @@ class ProductIndexLivewireTest extends TestCase
         $customGenre = Genre::query()->create([
             'title' => 'SPLIT_JA_INDEX_CUSTOM_TAG',
             'description' => null,
-            'order' => null,
         ]);
         $englishGenre = Genre::query()->create([
             'title' => 'SPLIT_JA_INDEX_FETCHED_EN_TAG',
             'description' => null,
-            'order' => null,
         ]);
         $japaneseGenre = Genre::query()->create([
             'title' => 'SPLIT_JA_INDEX_FETCHED_JP_TAG',
             'description' => null,
-            'order' => null,
         ]);
         $sharedGenre = Genre::query()->create([
             'title' => 'SPLIT_JA_INDEX_FETCHED_SHARED_TAG',
             'description' => null,
-            'order' => null,
         ]);
 
         app(ProductGenreSync::class)->sync($product, [
@@ -847,12 +838,10 @@ class ProductIndexLivewireTest extends TestCase
         $customGenre = Genre::query()->create([
             'title' => 'SPLIT_SEARCH_CUSTOM_TAG',
             'description' => null,
-            'order' => null,
         ]);
         $englishGenre = Genre::query()->create([
             'title' => 'SPLIT_SEARCH_FETCHED_EN_TAG',
             'description' => null,
-            'order' => null,
         ]);
 
         app(ProductGenreSync::class)->syncCustom($customProduct, [$customGenre->getKey()]);
@@ -956,7 +945,6 @@ class ProductIndexLivewireTest extends TestCase
         $emptyQueryGenre = Genre::query()->create([
             'title' => 'TAG_LINK_EMPTY_QUERY_GENRE',
             'description' => null,
-            'order' => null,
         ]);
 
         app(ProductGenreSync::class)->syncCustom($emptyQueryProduct, [$emptyQueryGenre->getKey()]);
@@ -967,12 +955,10 @@ class ProductIndexLivewireTest extends TestCase
         $currentGenre = Genre::query()->create([
             'title' => 'TAG_LINK_CURRENT_GENRE',
             'description' => null,
-            'order' => null,
         ]);
         $linkedGenre = Genre::query()->create([
             'title' => 'TAG_LINK_LINKED_GENRE',
             'description' => null,
-            'order' => null,
         ]);
         $filteredProduct = $this->createProduct(2, [
             'work_name' => 'rain TAG_LINK_FILTERED_WORK',
@@ -1023,17 +1009,14 @@ class ProductIndexLivewireTest extends TestCase
         $alphaGroupedTag = Genre::query()->create([
             'title' => 'TAG_PLAIN_ORDER_ALPHA_GROUPED',
             'description' => null,
-            'order' => 9,
         ]);
         $middleUngroupedTag = Genre::query()->create([
             'title' => 'TAG_PLAIN_ORDER_MIDDLE_UNGROUPED',
             'description' => null,
-            'order' => 1,
         ]);
         $zuluGroupedTag = Genre::query()->create([
             'title' => 'TAG_PLAIN_ORDER_ZZZ_GROUPED',
             'description' => null,
-            'order' => 2,
         ]);
         $this->attachTagToGroup($secondGroup, $alphaGroupedTag, 10);
         $this->attachTagToGroup($firstGroup, $zuluGroupedTag, 1);
@@ -1074,32 +1057,26 @@ class ProductIndexLivewireTest extends TestCase
         $alphaUngrouped = Genre::query()->create([
             'title' => 'TAG_ORDER_ALPHA_UNGROUPED',
             'description' => null,
-            'order' => 9,
         ]);
         $zuluUngrouped = Genre::query()->create([
             'title' => 'TAG_ORDER_ZZZ_UNGROUPED',
             'description' => null,
-            'order' => 1,
         ]);
         $firstGroupSecondTag = Genre::query()->create([
             'title' => 'TAG_ORDER_FIRST_GROUP_SECOND',
             'description' => null,
-            'order' => 1,
         ]);
         $firstGroupFirstTag = Genre::query()->create([
             'title' => 'TAG_ORDER_FIRST_GROUP_FIRST',
             'description' => null,
-            'order' => 1,
         ]);
         $secondGroupTag = Genre::query()->create([
             'title' => 'TAG_ORDER_SECOND_GROUP',
             'description' => null,
-            'order' => 1,
         ]);
         $multiGroupTag = Genre::query()->create([
             'title' => 'TAG_ORDER_MULTI_GROUP',
             'description' => null,
-            'order' => 1,
         ]);
         $this->attachTagToGroup($firstGroup, $firstGroupSecondTag, 2);
         $this->attachTagToGroup($firstGroup, $firstGroupFirstTag, 1);
@@ -1146,12 +1123,10 @@ class ProductIndexLivewireTest extends TestCase
         $firstTag = Genre::query()->create([
             'title' => 'Zzz Ordered First Tag',
             'description' => null,
-            'order' => 1,
         ]);
         $secondTag = Genre::query()->create([
             'title' => 'Alpha Ordered Second Tag',
             'description' => null,
-            'order' => 1,
         ]);
 
         $this->attachTagToGroup($group, $firstTag, 1);
@@ -1191,17 +1166,14 @@ class ProductIndexLivewireTest extends TestCase
         $alphaTag = Genre::query()->create([
             'title' => 'TAG_TIE_ALPHA_OTHER',
             'description' => null,
-            'order' => 1,
         ]);
         $zuluTag = Genre::query()->create([
             'title' => 'TAG_TIE_AAA_ZULU_OTHER',
             'description' => null,
-            'order' => 1,
         ]);
         $multiGroupTag = Genre::query()->create([
             'title' => 'TAG_TIE_ZZZ_SHARED',
             'description' => null,
-            'order' => 1,
         ]);
 
         $this->attachTagToGroup($zuluGroup, $zuluTag, 1);
@@ -1226,7 +1198,7 @@ class ProductIndexLivewireTest extends TestCase
         $this->assertSame(1, substr_count($component->html(), 'TAG_TIE_ZZZ_SHARED'));
     }
 
-    public function test_index_tag_chips_normalize_null_orders_before_plain_ordering(): void
+    public function test_index_tag_chips_support_a_group_created_with_a_null_order(): void
     {
         Option::setIndexFieldLayout([
             ['field' => ProductField::Tags->value, 'visible' => true],
@@ -1241,12 +1213,10 @@ class ProductIndexLivewireTest extends TestCase
         $grouped = Genre::query()->create([
             'title' => 'TAG_NULL_ORDER_GROUPED',
             'description' => null,
-            'order' => null,
         ]);
         $ungrouped = Genre::query()->create([
             'title' => 'TAG_NULL_ORDER_UNGROUPED',
             'description' => null,
-            'order' => null,
         ]);
         $this->attachTagToGroup($group, $grouped, 1);
 
@@ -1263,8 +1233,6 @@ class ProductIndexLivewireTest extends TestCase
             ]);
 
         $this->assertNotNull($group->refresh()->order);
-        $this->assertNotNull($grouped->refresh()->order);
-        $this->assertNotNull($ungrouped->refresh()->order);
     }
 
     public function test_index_tag_chips_respect_tag_and_group_hidden_settings(): void
@@ -1295,37 +1263,31 @@ class ProductIndexLivewireTest extends TestCase
         $visibleTag = Genre::query()->create([
             'title' => 'TAG_HIDE_VISIBLE',
             'description' => null,
-            'order' => 1,
             'hidden_on_index' => false,
         ]);
         $hiddenTag = Genre::query()->create([
             'title' => 'TAG_HIDE_BY_TAG',
             'description' => null,
-            'order' => 2,
             'hidden_on_index' => true,
         ]);
         $hiddenByGroup = Genre::query()->create([
             'title' => 'TAG_HIDE_BY_GROUP',
             'description' => null,
-            'order' => 3,
             'hidden_on_index' => false,
         ]);
         $visibleThroughSecondGroup = Genre::query()->create([
             'title' => 'TAG_HIDE_VISIBLE_THROUGH_SECOND_GROUP',
             'description' => null,
-            'order' => 4,
             'hidden_on_index' => false,
         ]);
         $duplicateGroupTag = Genre::query()->create([
             'title' => 'TAG_HIDE_DUPLICATE_GROUPS',
             'description' => null,
-            'order' => 5,
             'hidden_on_index' => false,
         ]);
         $duplicateVisibleGroupTag = Genre::query()->create([
             'title' => 'TAG_HIDE_DUPLICATE_VISIBLE_GROUPS',
             'description' => null,
-            'order' => 6,
             'hidden_on_index' => false,
         ]);
         $this->attachTagToGroup($hiddenGroup, $hiddenByGroup, 1);
@@ -1366,7 +1328,6 @@ class ProductIndexLivewireTest extends TestCase
         $genre = Genre::query()->create([
             'title' => 'INDEX_COLOR_TAG',
             'description' => null,
-            'order' => 1,
             'color' => '#aa3366',
             'text_color' => '#111111',
         ]);
@@ -1391,7 +1352,6 @@ class ProductIndexLivewireTest extends TestCase
         $genre = Genre::query()->create([
             'title' => 'INDEX_BACKGROUND_ONLY_TAG',
             'description' => null,
-            'order' => 1,
             'color' => '#aa3366',
             'text_color' => null,
         ]);
@@ -1416,7 +1376,6 @@ class ProductIndexLivewireTest extends TestCase
         $genre = Genre::query()->create([
             'title' => 'INDEX_FONT_ONLY_TAG',
             'description' => null,
-            'order' => 1,
             'color' => null,
             'text_color' => '#111111',
         ]);
@@ -1442,7 +1401,6 @@ class ProductIndexLivewireTest extends TestCase
         $genre = Genre::query()->create([
             'title' => 'INDEX_COLOR_DISABLED_TAG',
             'description' => null,
-            'order' => 1,
             'color' => '#aa3366',
             'text_color' => '#111111',
         ]);
@@ -1467,7 +1425,6 @@ class ProductIndexLivewireTest extends TestCase
         $genre = Genre::query()->create([
             'title' => 'INDEX_NO_COLOR_FAST_PATH_TAG',
             'description' => null,
-            'order' => 1,
             'color' => null,
             'text_color' => null,
         ]);
@@ -1520,7 +1477,6 @@ class ProductIndexLivewireTest extends TestCase
         $genre = Genre::query()->create([
             'title' => 'INDEX_GROUP_COLOR_TAG',
             'description' => null,
-            'order' => 1,
             'color' => '#aa3366',
             'text_color' => '#111111',
         ]);
@@ -1555,7 +1511,6 @@ class ProductIndexLivewireTest extends TestCase
         $genre = Genre::query()->create([
             'title' => 'INDEX_COLOR_QUERY_TAG',
             'description' => null,
-            'order' => 1,
             'color' => '#aa3366',
             'text_color' => '#111111',
         ]);
@@ -1586,7 +1541,6 @@ class ProductIndexLivewireTest extends TestCase
         $genre = Genre::query()->create([
             'title' => 'INDEX_NO_HIDDEN_GROUP_TAG',
             'description' => null,
-            'order' => 1,
         ]);
 
         app(ProductGenreSync::class)->syncCustom($product, [$genre->getKey()]);

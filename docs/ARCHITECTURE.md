@@ -149,10 +149,9 @@ Shared UI note:
 `genres` table stores one row per tag title:
 - `title` as the display text
 - `title_key` as the unique identity key
-- normalized integer `order` for the ungrouped tag list
 - `hidden_on_index`, which hides only that tag from Index tag chips
 
-`title_key` is built from the trimmed title with Unicode case folding, then stored with a binary collation. This keeps tag matching case-insensitive while still treating Hiragana/Katakana variants as separate tags.
+`title_key` is built from the trimmed title with Unicode case folding, then stored with a binary collation. This keeps tag matching case-insensitive while still treating Hiragana/Katakana variants as separate tags. Tag Library rename updates the existing `genres` row, so its relationships and product pivot metadata remain intact; Eloquent's saving hook recalculates `title_key` while preserving the submitted display casing in `title`.
 
 `genre_groups` stores optional genre group definitions:
 - `title` as the display text
@@ -164,13 +163,20 @@ Shared UI note:
 - `genre_id`
 - normalized integer `order` for that tag inside that group
 
-The index visibility/tag group migration backfills legacy `genres.group_id` assignments into `genre_group_genre` before dropping the old single-group column, using the normalized genre order as the initial per-group pivot order.
+`genre_relations` stores the directed parent/child hierarchy between tags:
+- `parent_genre_id`
+- `child_genre_id`
+- a unique parent/child pair, with both foreign keys cascading when either tag is deleted
+
+`Genre::parents()` and `Genre::children()` expose the two directions as self-referencing Laravel many-to-many relationships. `GenreHierarchy` resolves every ancestor iteratively, synchronizes both sides of one edited tag, and rejects self-referencing or indirect cycles before persistence.
 
 A tag can belong to multiple groups. Index tag chips sort alphabetically by tag title by default. When the persisted `Enable group ordering on Index` option is enabled, grouped tags sort by group order and saved tag order inside each group, then ungrouped tags sort alphabetically. Each multi-group tag renders once through its first visible group membership. In both modes, a tag is hidden from Index when it is directly hidden or belongs to any hidden group, even if it also belongs to visible groups.
 
-`Genre::groups()` and `GenreGroup::genres()` centralize the Laravel many-to-many ordering for tag groups. They expose the pivot `id` and `order` fields, automatically maintain pivot timestamps, and apply the default group/tag order used by Tag Library. Tag settings use Eloquent relationship synchronization while preserving existing per-group order and appending new memberships; deleting a group relies on the pivot foreign key's cascading delete. `Genre::visibleOnIndex()`, `Genre::hiddenOnIndex()`, `GenreGroup::visibleOnIndex()`, and `GenreGroup::hiddenOnIndex()` keep reusable index visibility rules in the models while `ProductIndexResults` keeps its raw SQL tag-chip query for page-level performance.
+Tag Library's All Tags list defaults to alphabetical tag-title sorting and can instead sort by its current-language/custom-visible `products_count`, in either direction. Count ties fall back to title and id. All Tags sorting is independent of tag creation order, group order, and per-group pivot order; Tag Group cards continue to use their saved group and per-group tag ordering.
 
-Tag Library group creation and rename use Laravel's model-backed unique validation rule as the application-level duplicate check, with the database unique index remaining the final constraint. Rename validation ignores the current group and preserves the existing notice-and-reset workflow.
+`Genre::groups()` and `GenreGroup::genres()` centralize the Laravel many-to-many ordering for tag groups. They expose the pivot `id` and `order` fields, automatically maintain pivot timestamps, and apply the saved group/tag order used by Tag Group cards. Tag settings use Eloquent relationship synchronization while preserving existing per-group order and appending new memberships; deleting a group relies on the pivot foreign key's cascading delete. The same settings transaction uses Laravel's relationship-sync change set to identify newly related children, then backfills missing ancestors through an Eloquent product relationship-existence query. `Genre::visibleOnIndex()`, `Genre::hiddenOnIndex()`, `GenreGroup::visibleOnIndex()`, and `GenreGroup::hiddenOnIndex()` keep reusable index visibility rules in the models while `ProductIndexResults` keeps its raw SQL tag-chip query for page-level performance.
+
+Tag Library tag and group renames use Laravel's model-backed unique validation rule as the application-level duplicate check, with database unique indexes remaining the final constraint. Tag rename validates the case-folded `title_key` while ignoring the current tag; group rename validates `title` while ignoring the current group.
 
 Tag and group colors are stored as nullable `#RRGGBB` strings. `genres.color` / `genre_groups.color` control the tag background/accent color, while `genres.text_color` / `genre_groups.text_color` control the font color. `app/Support/TagColor.php` normalizes colors and batches effective color-pair lookup for autocomplete, Edit readonly tags, and Refetch review tags, including one ordered group-color lookup that resolves background and font colors together. Index tag colors stay in `ProductIndexResults` so the Index can select the needed color columns or subqueries without hydrating tag relationships. Group background/font colors override tag background/font colors independently through ordered group membership; when rendering inside a specific Tag Library group card, that card's group color value wins for whichever value is set. Edit readonly tag colors render as inline text marks inside the normal readonly field container, not as separate tag plaques.
 
@@ -212,7 +218,8 @@ The `/tags` Livewire manager also owns tag groups, group/tag order, and Index vi
 - group hidden state hides every assigned tag from Index without changing each tag's own hidden setting
 - the persisted `Enable group ordering on Index` option is off by default; when enabled, Index tag chips use saved group order, saved tag order inside groups, then ungrouped tags alphabetically instead of plain alphabetical title ordering
 - tag background/font color editing is handled in the tag settings modal, and group background/font color editing is handled on each group card; rendering is controlled by the `tag_color_surfaces` option map
-- the All Tags list can be filtered by Index visibility, group status, specific group, and empty/used state without hiding group management rows
+- the All Tags list uses a fixed-layout, session-only filter modal for Index visibility, group status, specific group, empty/used state, parent/child relationship role, and the tag's own color state. Its staged values apply together, Clear leaves the separate live search unchanged, and filtering never hides or reorders Tag Group management rows
+- All Tags can sort alphabetically or by the same constrained visible-work count rendered on each tag chip; relationship filters use the self-referencing Eloquent relations, and own-color filtering intentionally ignores inherited group colors
 - the All Tags list has a session-only Edit Tags mode; normal mode keeps tag chips as Index filter links, while edit mode changes tag clicks into Livewire actions that open a teleported tag settings modal
 - the tag settings modal updates tag-level Index visibility and group memberships in one save, preserving existing pivot orders and appending newly selected memberships to the end of their groups
 - Edit Tags, Hide Tag on Index, and Hide Group on Index use shared `tag-library-switch-*` CSS/markup classes around native Livewire-bound checkboxes
@@ -268,6 +275,7 @@ Migration note:
 - `2026_05_30_000000_create_contributors_table.php` adds normalized creator/circle metadata in `contributors` and `contributor_product`
 - `2026_05_30_000001_expand_metadata_options_columns.php` changes description and option values to nullable text so longer descriptions/layout JSON can be stored
 - `2026_05_30_000002_backfill_product_metadata_from_storage.php` reads matching `storage/app/Works/{RJ}.json` files to backfill maker/circle, descriptions, and contributor pivots; missing or invalid JSON is skipped and `series` is not backfilled
+- `2026_08_08_000001_drop_order_from_genres_table.php` removes the unused global tag order; group order remains in `genre_groups.order`, and per-group tag order remains in `genre_group_genre.order`
 
 Runtime note:
 - `ProductIndex` shows current-language fetched + custom genres through one lightweight grouped query from `genre_product` + `genres` + `genre_groups` for the current page only when the Tags column is visible, loads contributor pivots only when visible contributor columns need them, and passes the grouped genres plus builder-prepared contributor rows to Blade
@@ -317,10 +325,12 @@ Runtime note:
 - Optional-status switches affect rendered choices only and do not add request-validation or product-rewrite rules.
 - `ProductController` builds the editable product update payload from a field-to-column map keyed by `ProductField`, maps Japanese and English description layout rows independently to `products.description` and `products.description_english`, removes semantically unchanged start/finish dates regardless of JSON key order, and saves the product model only when Eloquent reports an actual dirty attribute; contributor/tag syncing remains separate and applies its own effective-change timestamp rules
 - custom create stores user-uploaded covers/samples in `storage/app/public/Works/{RJ}`, saves the uploaded cover public path in `products.work_image`, and attaches custom tags through the same genre resolver used by update
-- product create/update and refetch apply use `app/Support/ProductGenreSync.php` to sync `genre_product.source` and `genre_product_languages` together; effective fetched/custom tag changes touch `products.updated_at`, while unchanged tag syncs leave the work's Updated Date unchanged
+- product create/update and refetch apply use `app/Support/ProductGenreSync.php` to sync `genre_product.source` and `genre_product_languages` together; it expands every submitted fetched/custom tag to all ancestors through `GenreHierarchy`, attaches missing ancestors with `genre_product.source = custom`, and preserves fetched precedence when an ancestor is already fetched. Effective fetched/custom tag changes touch `products.updated_at`, while unchanged tag syncs leave the work's Updated Date unchanged
+- creating a parent/child relation immediately runs the same ancestor expansion for every existing work containing its child. Removing a relation is intentionally non-destructive: parent tags already attached to works remain until the user removes them through the normal tag editor
 - applying refetched scalar metadata, contributor roles, tags, covers, or samples updates only the selected work's `products.updated_at`; changes to shared contributor metadata do not fan out timestamps to unrelated products
 - `app/Support/GenreSyncPayload.php` keeps fetched-over-custom source precedence and builds the fetched language map used by `ProductGenreSync`
 - `app/Models/Genre.php` resolves tag titles by `title_key`, preserving the existing display title when the new input only differs by case
+- materially renamed fetched tags and their former DLSite names therefore remain distinct during Refetch, while case-only renames retain one identity and the manually selected display casing
 - Options -> Refetch Works dispatches one queued `FetchProductWorkJob` per selected product, including custom-created RJ works without a maker id
 - each job writes complete JP/EN JSON to `storage/app/Refetch/{run}/Works/{RJ}.json`; when Refetch Images is enabled, cover/samples are written under `storage/app/public/Refetch/{run}/Works/{RJ}`
 - running refetch runs can be cancelled from the progress page; cancellation changes the run from `running` to `cancelling`, cancels that run's Laravel batch, lets any already-started fetch finish, and moves the run to review after pending results become fetched or failed

@@ -12,6 +12,7 @@ use App\Support\ProductGenreSync;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\App;
 use Illuminate\Support\Facades\DB;
+use Livewire\Features\SupportLockedProperties\CannotUpdateLockedPropertyException;
 use Livewire\Livewire;
 use Tests\TestCase;
 
@@ -149,7 +150,6 @@ class TagLibraryManagerTest extends TestCase
             'title' => 'New Empty Stage Tag',
             'title_key' => Genre::titleKey('New Empty Stage Tag'),
         ]);
-        $this->assertNotNull(Genre::query()->where('title', 'New Empty Stage Tag')->value('order'));
 
         $this->assertSame(0, DB::table('genre_product')
             ->where('genre_id', Genre::query()->where('title', 'New Empty Stage Tag')->value('id'))
@@ -324,27 +324,15 @@ class TagLibraryManagerTest extends TestCase
         $this->assertFalse(Option::tagLibraryIndexGroupOrderingEnabled());
     }
 
-    public function test_model_creation_normalizes_null_group_and_tag_orders(): void
+    public function test_group_creation_normalizes_a_null_order(): void
     {
         $group = GenreGroup::query()->create([
             'title' => 'Null Order Group',
             'description' => null,
             'order' => null,
         ]);
-        $groupedTag = Genre::query()->create([
-            'title' => 'Null Order Grouped Tag',
-            'description' => null,
-            'order' => null,
-        ]);
-        $ungroupedTag = Genre::query()->create([
-            'title' => 'Null Order Ungrouped Tag',
-            'description' => null,
-            'order' => null,
-        ]);
 
         $this->assertSame(1, $group->refresh()->order);
-        $this->assertSame(1, $groupedTag->refresh()->order);
-        $this->assertSame(2, $ungroupedTag->refresh()->order);
     }
 
     public function test_deleting_group_removes_only_that_groups_memberships_without_deleting_tags(): void
@@ -557,11 +545,154 @@ class TagLibraryManagerTest extends TestCase
             ->set('tagEditMode', true)
             ->call('openTagSettings', $genre->getKey())
             ->assertSet('editingTagId', $genre->getKey())
+            ->assertSet('editingTagTitle', 'Modal Editable Tag')
             ->assertSet('editingTagHidden', true)
             ->assertSet('editingTagGroupIds', [$group->getKey()])
             ->assertSee('Edit tag settings')
+            ->assertSee('wire:model="editingTagTitle" required maxlength="255"', false)
             ->assertSee('Modal Editable Tag')
             ->assertSee('Modal Existing Group');
+    }
+
+    public function test_renaming_tag_preserves_id_settings_relationships_groups_and_product_sources(): void
+    {
+        $group = GenreGroup::query()->create([
+            'title' => 'Rename Preservation Group',
+            'description' => null,
+            'order' => 1,
+        ]);
+        $parent = Genre::resolveByTitle('Rename Preservation Parent');
+        $tag = Genre::resolveByTitle('Original Rename Display');
+        $child = Genre::resolveByTitle('Rename Preservation Child');
+        $tag->forceFill([
+            'hidden_on_index' => true,
+            'color' => '#112233',
+            'text_color' => '#fefefe',
+        ])->save();
+        $tag->parents()->attach($parent);
+        $tag->children()->attach($child);
+        $this->attachTagToGroup($group, $tag, 4);
+
+        $fetchedProduct = Product::factory()->create();
+        $customProduct = Product::factory()->create();
+        app(ProductGenreSync::class)->sync($fetchedProduct, [
+            Genre::LANGUAGE_ENGLISH => [$tag->getKey()],
+        ], []);
+        app(ProductGenreSync::class)->syncCustom($customProduct, [$tag->getKey()]);
+
+        $fetchedPivot = DB::table('genre_product')
+            ->where('product_id', $fetchedProduct->getKey())
+            ->where('genre_id', $tag->getKey())
+            ->firstOrFail();
+        $customPivot = DB::table('genre_product')
+            ->where('product_id', $customProduct->getKey())
+            ->where('genre_id', $tag->getKey())
+            ->firstOrFail();
+
+        Livewire::test(TagLibraryManager::class)
+            ->call('openTagSettings', $tag->getKey())
+            ->set('editingTagTitle', '  ReNamed Display TAG  ')
+            ->call('saveTagSettings')
+            ->assertHasNoErrors()
+            ->assertSet('editingTagId', null)
+            ->assertSet('editingTagTitle', '')
+            ->assertSee('Tag settings saved.');
+
+        $renamedTag = Genre::query()->findOrFail($tag->getKey());
+        $this->assertSame($tag->getKey(), $renamedTag->getKey());
+        $this->assertSame('ReNamed Display TAG', $renamedTag->title);
+        $this->assertSame(Genre::titleKey('ReNamed Display TAG'), $renamedTag->title_key);
+        $this->assertTrue((bool) $renamedTag->hidden_on_index);
+        $this->assertSame('#112233', $renamedTag->color);
+        $this->assertSame('#fefefe', $renamedTag->text_color);
+        $this->assertSame(4, $this->groupTagOrder($group, $renamedTag));
+        $this->assertDatabaseHas('genre_relations', [
+            'parent_genre_id' => $parent->getKey(),
+            'child_genre_id' => $renamedTag->getKey(),
+        ]);
+        $this->assertDatabaseHas('genre_relations', [
+            'parent_genre_id' => $renamedTag->getKey(),
+            'child_genre_id' => $child->getKey(),
+        ]);
+        $this->assertDatabaseHas('genre_product', [
+            'id' => $fetchedPivot->id,
+            'product_id' => $fetchedProduct->getKey(),
+            'genre_id' => $renamedTag->getKey(),
+            'source' => Genre::PIVOT_SOURCE_FETCHED,
+        ]);
+        $this->assertDatabaseHas('genre_product_languages', [
+            'genre_product_id' => $fetchedPivot->id,
+            'language' => Genre::LANGUAGE_ENGLISH,
+        ]);
+        $this->assertDatabaseHas('genre_product', [
+            'id' => $customPivot->id,
+            'product_id' => $customProduct->getKey(),
+            'genre_id' => $renamedTag->getKey(),
+            'source' => Genre::PIVOT_SOURCE_CUSTOM,
+        ]);
+    }
+
+    public function test_case_only_tag_rename_keeps_the_same_identity_and_display_casing(): void
+    {
+        $tag = Genre::resolveByTitle('ASMR Rename');
+        $originalTitleKey = $tag->title_key;
+
+        Livewire::test(TagLibraryManager::class)
+            ->call('openTagSettings', $tag->getKey())
+            ->set('editingTagTitle', 'Asmr Rename')
+            ->call('saveTagSettings')
+            ->assertHasNoErrors();
+
+        $resolved = Genre::resolveByTitle('ASMR RENAME');
+
+        $this->assertTrue($tag->is($resolved));
+        $this->assertSame('Asmr Rename', $resolved->title);
+        $this->assertSame($originalTitleKey, $resolved->title_key);
+        $this->assertSame(1, Genre::query()->where('title_key', $originalTitleKey)->count());
+    }
+
+    public function test_tag_rename_rejects_blank_overlong_and_duplicate_case_folded_titles(): void
+    {
+        $existing = Genre::resolveByTitle('Existing Rename Target');
+        $tag = Genre::resolveByTitle('Rename Validation Source');
+
+        Livewire::test(TagLibraryManager::class)
+            ->call('openTagSettings', $tag->getKey())
+            ->set('editingTagTitle', '   ')
+            ->call('saveTagSettings')
+            ->assertHasErrors(['editingTagTitle' => 'Enter a tag title.'])
+            ->assertSet('editingTagId', $tag->getKey());
+
+        Livewire::test(TagLibraryManager::class)
+            ->call('openTagSettings', $tag->getKey())
+            ->set('editingTagTitle', str_repeat('a', 256))
+            ->call('saveTagSettings')
+            ->assertHasErrors([
+                'editingTagTitle' => 'Tag titles may not be greater than 255 characters.',
+            ])
+            ->assertSet('editingTagId', $tag->getKey());
+
+        Livewire::test(TagLibraryManager::class)
+            ->call('openTagSettings', $tag->getKey())
+            ->set('editingTagTitle', mb_strtolower($existing->title))
+            ->call('saveTagSettings')
+            ->assertHasErrors(['editingTagTitle' => 'Tag title already exists.'])
+            ->assertSet('editingTagId', $tag->getKey());
+
+        $this->assertSame('Rename Validation Source', $tag->refresh()->title);
+        $this->assertSame('Existing Rename Target', $existing->refresh()->title);
+    }
+
+    public function test_editing_tag_id_is_locked_against_client_updates(): void
+    {
+        $genre = Genre::resolveByTitle('Locked Modal Tag');
+        $otherGenre = Genre::resolveByTitle('Other Locked Modal Tag');
+        $component = Livewire::test(TagLibraryManager::class)
+            ->call('openTagSettings', $genre->getKey());
+
+        $this->expectException(CannotUpdateLockedPropertyException::class);
+
+        $component->set('editingTagId', $otherGenre->getKey());
     }
 
     public function test_hide_tag_on_index_controls_render_as_switches(): void
@@ -676,7 +807,7 @@ class TagLibraryManagerTest extends TestCase
             ->assertSee('No groups assigned.');
     }
 
-    public function test_closing_tag_settings_discards_unsaved_group_plaque_changes(): void
+    public function test_closing_tag_settings_discards_unsaved_title_and_group_plaque_changes(): void
     {
         $existingGroup = GenreGroup::query()->create([
             'title' => 'Existing Unsaved Group',
@@ -693,11 +824,15 @@ class TagLibraryManagerTest extends TestCase
 
         Livewire::test(TagLibraryManager::class)
             ->call('openTagSettings', $genre->getKey())
+            ->set('editingTagTitle', 'Unsaved Replacement Title')
             ->call('addEditingTagGroup', $addedGroup->getKey())
             ->call('removeEditingTagGroup', $existingGroup->getKey())
             ->call('closeTagSettings')
+            ->assertSet('editingTagTitle', '')
             ->assertSet('editingTagGroupIds', [])
             ->assertSet('editingTagGroupSearch', '');
+
+        $this->assertSame('Unsaved Plaque Tag', $genre->refresh()->title);
 
         $this->assertDatabaseHas('genre_group_genre', [
             'genre_group_id' => $existingGroup->getKey(),
@@ -751,6 +886,116 @@ class TagLibraryManagerTest extends TestCase
             'genre_id' => $genre->getKey(),
         ]);
         $this->assertSame(8, $this->groupTagOrder($addedGroup, $genre));
+    }
+
+    public function test_tag_settings_searches_saves_and_removes_parent_child_relations(): void
+    {
+        $parent = Genre::resolveByTitle('Relationship Parent Tag');
+        $child = Genre::resolveByTitle('Relationship Child Tag');
+        $unrelated = Genre::resolveByTitle('Unrelated Search Tag');
+        $product = Product::factory()->create();
+        app(ProductGenreSync::class)->syncCustom($product, [$child->getKey()]);
+
+        Livewire::test(TagLibraryManager::class)
+            ->call('openTagSettings', $child->getKey())
+            ->assertSet('editingTagParentIds', [])
+            ->assertSet('editingTagChildIds', [])
+            ->assertSee('Parent / child tags')
+            ->assertSee('About parent and child tags')
+            ->assertSee('class="fa-solid fa-circle-question"', false)
+            ->assertDontSee('tag-library-help-circle', false)
+            ->assertSee('Removing a relationship does not remove parent tags already added to works.')
+            ->set('editingTagParentSearch', 'Relationship Parent')
+            ->assertSee('wire:click="addEditingTagParent(' . $parent->getKey() . ')"', false)
+            ->assertDontSee('wire:click="addEditingTagParent(' . $unrelated->getKey() . ')"', false)
+            ->call('addEditingTagParent', $parent->getKey())
+            ->assertSet('editingTagParentIds', [$parent->getKey()])
+            ->assertSet('editingTagParentSearch', '')
+            ->assertSee('wire:click="removeEditingTagParent(' . $parent->getKey() . ')"', false)
+            ->call('saveTagSettings')
+            ->assertHasNoErrors()
+            ->assertSee('Tag settings saved.');
+
+        $this->assertDatabaseHas('genre_relations', [
+            'parent_genre_id' => $parent->getKey(),
+            'child_genre_id' => $child->getKey(),
+        ]);
+        $this->assertDatabaseHas('genre_product', [
+            'product_id' => $product->getKey(),
+            'genre_id' => $parent->getKey(),
+            'source' => Genre::PIVOT_SOURCE_CUSTOM,
+        ]);
+
+        Livewire::test(TagLibraryManager::class)
+            ->call('openTagSettings', $parent->getKey())
+            ->assertSet('editingTagChildIds', [$child->getKey()])
+            ->assertSee('wire:click="removeEditingTagChild(' . $child->getKey() . ')"', false)
+            ->call('removeEditingTagChild', $child->getKey())
+            ->call('saveTagSettings')
+            ->assertHasNoErrors();
+
+        $this->assertDatabaseMissing('genre_relations', [
+            'parent_genre_id' => $parent->getKey(),
+            'child_genre_id' => $child->getKey(),
+        ]);
+        $this->assertDatabaseHas('genre_product', [
+            'product_id' => $product->getKey(),
+            'genre_id' => $parent->getKey(),
+            'source' => Genre::PIVOT_SOURCE_CUSTOM,
+        ]);
+    }
+
+    public function test_adding_a_child_relation_from_parent_settings_backfills_existing_works(): void
+    {
+        $parent = Genre::resolveByTitle('Child Side Parent');
+        $child = Genre::resolveByTitle('Child Side Child');
+        $product = Product::factory()->create();
+        app(ProductGenreSync::class)->syncCustom($product, [$child->getKey()]);
+
+        Livewire::test(TagLibraryManager::class)
+            ->call('openTagSettings', $parent->getKey())
+            ->set('editingTagChildSearch', 'Child Side Child')
+            ->assertSee('wire:click="addEditingTagChild(' . $child->getKey() . ')"', false)
+            ->call('addEditingTagChild', $child->getKey())
+            ->assertSet('editingTagChildIds', [$child->getKey()])
+            ->call('saveTagSettings')
+            ->assertHasNoErrors();
+
+        $this->assertDatabaseHas('genre_relations', [
+            'parent_genre_id' => $parent->getKey(),
+            'child_genre_id' => $child->getKey(),
+        ]);
+        $this->assertDatabaseHas('genre_product', [
+            'product_id' => $product->getKey(),
+            'genre_id' => $parent->getKey(),
+            'source' => Genre::PIVOT_SOURCE_CUSTOM,
+        ]);
+    }
+
+    public function test_tag_settings_reject_relationship_cycles(): void
+    {
+        $first = Genre::resolveByTitle('Cycle First');
+        $second = Genre::resolveByTitle('Cycle Second');
+        $third = Genre::resolveByTitle('Cycle Third');
+        $second->parents()->attach($first);
+        $third->parents()->attach($second);
+
+        Livewire::test(TagLibraryManager::class)
+            ->call('openTagSettings', $first->getKey())
+            ->set('editingTagParentIds', [$third->getKey()])
+            ->call('saveTagSettings')
+            ->assertHasErrors(['editingTagRelationships'])
+            ->assertSee('Parent/child tag relationships cannot contain a cycle.')
+            ->assertSet('editingTagId', $first->getKey());
+
+        $this->assertDatabaseMissing('genre_relations', [
+            'parent_genre_id' => $third->getKey(),
+            'child_genre_id' => $first->getKey(),
+        ]);
+        $this->assertDatabaseHas('genre_relations', [
+            'parent_genre_id' => $first->getKey(),
+            'child_genre_id' => $second->getKey(),
+        ]);
     }
 
     public function test_tag_settings_saves_clears_and_validates_tag_color(): void
@@ -1047,6 +1292,76 @@ class TagLibraryManagerTest extends TestCase
             ->assertSee('wire:click="askDeleteTag(' . $empty->getKey() . ')"', false);
     }
 
+    public function test_filter_drafts_apply_together_and_clear_without_clearing_search(): void
+    {
+        $visible = Genre::resolveByTitle('Modal Filter Visible');
+        $hidden = Genre::resolveByTitle('Modal Filter Hidden');
+        $hidden->forceFill(['hidden_on_index' => true])->save();
+
+        Livewire::test(TagLibraryManager::class)
+            ->call('toggleAllTags')
+            ->set('search', 'Modal Filter')
+            ->set('filterDraft.visibilityFilter', 'hidden_tag')
+            ->assertSet('visibilityFilter', 'all')
+            ->assertSee('tag-library-tag-title">' . $visible->title, false)
+            ->assertSee('tag-library-tag-title">' . $hidden->title, false)
+            ->call('applyFilters')
+            ->assertSet('visibilityFilter', 'hidden_tag')
+            ->assertSee('tag-library-filter-button is-active', false)
+            ->assertDontSee('tag-library-tag-title">' . $visible->title, false)
+            ->assertSee('tag-library-tag-title">' . $hidden->title, false)
+            ->set('filterDraft.sortField', 'work_count')
+            ->set('filterDraft.sortDirection', 'desc')
+            ->call('applyFilters')
+            ->assertSet('sortField', 'work_count')
+            ->assertSet('sortDirection', 'desc')
+            ->call('clearFilters')
+            ->assertSet('search', 'Modal Filter')
+            ->assertSet('visibilityFilter', 'all')
+            ->assertSet('sortField', 'alphabetical')
+            ->assertSet('sortDirection', 'asc')
+            ->assertSet('filterDraft.visibilityFilter', 'all')
+            ->assertSet('filterDraft.sortField', 'alphabetical')
+            ->assertSet('filterDraft.sortDirection', 'asc')
+            ->assertSee('tag-library-tag-title">' . $visible->title, false)
+            ->assertSee('tag-library-tag-title">' . $hidden->title, false)
+            ->assertDontSee('tag-library-filter-button is-active', false);
+    }
+
+    public function test_filter_apply_normalizes_tampered_values_to_defaults(): void
+    {
+        Livewire::test(TagLibraryManager::class)
+            ->set('filterDraft', [
+                'visibilityFilter' => 'invalid',
+                'groupStatusFilter' => 'invalid',
+                'groupFilter' => '999999',
+                'usageFilter' => 'invalid',
+                'relationshipFilter' => 'invalid',
+                'colorFilter' => 'invalid',
+                'sortField' => 'invalid',
+                'sortDirection' => 'invalid',
+            ])
+            ->call('applyFilters')
+            ->assertSet('visibilityFilter', 'all')
+            ->assertSet('groupStatusFilter', 'all')
+            ->assertSet('groupFilter', 'all')
+            ->assertSet('usageFilter', 'all')
+            ->assertSet('relationshipFilter', 'all')
+            ->assertSet('colorFilter', 'all')
+            ->assertSet('sortField', 'alphabetical')
+            ->assertSet('sortDirection', 'asc')
+            ->assertSet('filterDraft', [
+                'visibilityFilter' => 'all',
+                'groupStatusFilter' => 'all',
+                'groupFilter' => 'all',
+                'usageFilter' => 'all',
+                'relationshipFilter' => 'all',
+                'colorFilter' => 'all',
+                'sortField' => 'alphabetical',
+                'sortDirection' => 'asc',
+            ]);
+    }
+
     public function test_all_tags_filters_visibility_group_status_specific_group_and_usage(): void
     {
         $hiddenGroup = GenreGroup::query()->create([
@@ -1086,82 +1401,276 @@ class TagLibraryManagerTest extends TestCase
         $component = fn() => Livewire::test(TagLibraryManager::class)->call('toggleAllTags');
 
         $component()
-            ->set('visibilityFilter', 'visible')
+            ->set('filterDraft.visibilityFilter', 'visible')
+            ->call('applyFilters')
             ->assertSee('tag-library-tag-title">Filter Visible Grouped', false)
             ->assertDontSee('tag-library-tag-title">Filter Hidden By Tag', false)
             ->assertDontSee('tag-library-tag-title">Filter Hidden By Group', false)
             ->assertDontSee('tag-library-tag-title">Filter Mixed Hidden By Group', false);
 
         $component()
-            ->set('visibilityFilter', 'hidden_tag')
+            ->set('filterDraft.visibilityFilter', 'hidden_tag')
+            ->call('applyFilters')
             ->assertSee('tag-library-tag-title">Filter Hidden By Tag', false)
             ->assertDontSee('tag-library-tag-title">Filter Hidden By Group', false);
 
         $component()
-            ->set('visibilityFilter', 'hidden_group')
+            ->set('filterDraft.visibilityFilter', 'hidden_group')
+            ->call('applyFilters')
             ->assertSee('tag-library-tag-title">Filter Hidden By Group', false)
             ->assertSee('tag-library-tag-title">Filter Mixed Hidden By Group', false)
             ->assertDontSee('tag-library-tag-title">Filter Hidden By Tag', false);
 
         $component()
-            ->set('visibilityFilter', 'hidden_any')
+            ->set('filterDraft.visibilityFilter', 'hidden_any')
+            ->call('applyFilters')
             ->assertSee('tag-library-tag-title">Filter Hidden By Tag', false)
             ->assertSee('tag-library-tag-title">Filter Hidden By Group', false)
             ->assertSee('tag-library-tag-title">Filter Mixed Hidden By Group', false);
 
         $component()
-            ->set('groupStatusFilter', 'ungrouped')
+            ->set('filterDraft.groupStatusFilter', 'ungrouped')
+            ->call('applyFilters')
             ->assertSee('tag-library-tag-title">Filter Ungrouped', false)
             ->assertDontSee('tag-library-tag-title">Filter Visible Grouped', false);
 
         $component()
-            ->set('groupStatusFilter', 'grouped')
+            ->set('filterDraft.groupStatusFilter', 'grouped')
+            ->call('applyFilters')
             ->assertSee('tag-library-tag-title">Filter Visible Grouped', false)
             ->assertDontSee('tag-library-tag-title">Filter Ungrouped', false);
 
         $component()
-            ->set('groupFilter', (string) $hiddenGroup->getKey())
+            ->set('filterDraft.groupFilter', (string) $hiddenGroup->getKey())
+            ->call('applyFilters')
             ->assertSee('tag-library-tag-title">Filter Hidden By Group', false)
             ->assertDontSee('tag-library-tag-title">Filter Visible Grouped', false);
 
         $component()
-            ->set('usageFilter', 'empty')
+            ->set('filterDraft.usageFilter', 'empty')
+            ->call('applyFilters')
             ->assertSee('tag-library-tag-title">Filter Visible Grouped', false)
             ->assertDontSee('tag-library-tag-title">Filter Used', false);
 
         $component()
-            ->set('usageFilter', 'used')
+            ->set('filterDraft.usageFilter', 'used')
+            ->call('applyFilters')
             ->assertSee('tag-library-tag-title">Filter Used', false)
             ->assertDontSee('tag-library-tag-title">Filter Ungrouped', false);
     }
 
-    public function test_grouped_all_tags_sort_uses_group_title_before_tag_title(): void
+    public function test_all_tags_filters_parent_and_child_relationship_roles(): void
     {
-        $alphaGroup = GenreGroup::query()->create([
-            'title' => 'Alpha Sort Group',
-            'description' => null,
-            'order' => 1,
-            'hidden_on_index' => false,
-        ]);
-        $betaGroup = GenreGroup::query()->create([
-            'title' => 'Beta Sort Group',
-            'description' => null,
-            'order' => 1,
-            'hidden_on_index' => false,
-        ]);
-        $alphaGroupTag = Genre::resolveByTitle('Sort Z Alpha Group Tag');
-        $betaGroupTag = Genre::resolveByTitle('Sort A Beta Group Tag');
+        $parentOnly = Genre::resolveByTitle('Relation Parent Only');
+        $both = Genre::resolveByTitle('Relation Both');
+        $childOnly = Genre::resolveByTitle('Relation Child Only');
+        $neither = Genre::resolveByTitle('Relation Neither');
 
-        $this->attachTagToGroup($alphaGroup, $alphaGroupTag, 1);
-        $this->attachTagToGroup($betaGroup, $betaGroupTag, 1);
+        $both->parents()->attach($parentOnly);
+        $childOnly->parents()->attach($both);
 
-        Livewire::test(TagLibraryManager::class)
+        $filtered = fn(string $filter) => Livewire::test(TagLibraryManager::class)
             ->call('toggleAllTags')
-            ->set('groupStatusFilter', 'grouped')
-            ->assertSeeInOrder([
-                'Sort Z Alpha Group Tag',
-                'Sort A Beta Group Tag',
-            ]);
+            ->set('filterDraft.relationshipFilter', $filter)
+            ->call('applyFilters');
+
+        $filtered('related')
+            ->assertSee('tag-library-tag-title">' . $parentOnly->title, false)
+            ->assertSee('tag-library-tag-title">' . $both->title, false)
+            ->assertSee('tag-library-tag-title">' . $childOnly->title, false)
+            ->assertDontSee('tag-library-tag-title">' . $neither->title, false);
+
+        $filtered('has_parent')
+            ->assertDontSee('tag-library-tag-title">' . $parentOnly->title, false)
+            ->assertSee('tag-library-tag-title">' . $both->title, false)
+            ->assertSee('tag-library-tag-title">' . $childOnly->title, false);
+
+        $filtered('has_child')
+            ->assertSee('tag-library-tag-title">' . $parentOnly->title, false)
+            ->assertSee('tag-library-tag-title">' . $both->title, false)
+            ->assertDontSee('tag-library-tag-title">' . $childOnly->title, false);
+
+        $filtered('both')
+            ->assertDontSee('tag-library-tag-title">' . $parentOnly->title, false)
+            ->assertSee('tag-library-tag-title">' . $both->title, false)
+            ->assertDontSee('tag-library-tag-title">' . $childOnly->title, false)
+            ->assertDontSee('tag-library-tag-title">' . $neither->title, false);
+
+        $filtered('neither')
+            ->assertDontSee('tag-library-tag-title">' . $parentOnly->title, false)
+            ->assertDontSee('tag-library-tag-title">' . $both->title, false)
+            ->assertDontSee('tag-library-tag-title">' . $childOnly->title, false)
+            ->assertSee('tag-library-tag-title">' . $neither->title, false);
+    }
+
+    public function test_all_tags_custom_color_filter_uses_only_the_tags_own_colors(): void
+    {
+        $coloredGroup = GenreGroup::query()->create([
+            'title' => 'Inherited Color Group',
+            'description' => null,
+            'order' => 1,
+            'color' => '#112233',
+            'text_color' => '#eeeeee',
+        ]);
+        $background = Genre::resolveByTitle('Own Background Color');
+        $background->forceFill(['color' => '#445566'])->save();
+        $text = Genre::resolveByTitle('Own Text Color');
+        $text->forceFill(['text_color' => '#778899'])->save();
+        $inherited = Genre::resolveByTitle('Inherited Group Color Only');
+        $plain = Genre::resolveByTitle('Default Color Tag');
+        $this->attachTagToGroup($coloredGroup, $inherited, 1);
+
+        $filtered = fn(string $filter) => Livewire::test(TagLibraryManager::class)
+            ->call('toggleAllTags')
+            ->set('filterDraft.colorFilter', $filter)
+            ->call('applyFilters');
+
+        $filtered('customized')
+            ->assertSee('tag-library-tag-title">' . $background->title, false)
+            ->assertSee('tag-library-tag-title">' . $text->title, false)
+            ->assertDontSee('tag-library-tag-title">' . $inherited->title, false)
+            ->assertDontSee('tag-library-tag-title">' . $plain->title, false)
+            ->assertSee(
+                'wire:key="tag-group-' . $coloredGroup->getKey() . '-tag-' . $inherited->getKey() . '"',
+                false,
+            );
+
+        $filtered('default')
+            ->assertDontSee('tag-library-tag-title">' . $background->title, false)
+            ->assertDontSee('tag-library-tag-title">' . $text->title, false)
+            ->assertSee('tag-library-tag-title">' . $inherited->title, false)
+            ->assertSee('tag-library-tag-title">' . $plain->title, false);
+    }
+
+    public function test_all_tags_work_count_sort_uses_displayed_visible_count_and_title_ties(): void
+    {
+        $rawHeavy = Genre::resolveByTitle('A Raw Heavy Tag');
+        $tie = Genre::resolveByTitle('B One Visible Tag');
+        $visibleLeader = Genre::resolveByTitle('Z Visible Leader Tag');
+        $unused = Genre::resolveByTitle('Unused Count Tag');
+
+        app(ProductGenreSync::class)->syncCustom(Product::factory()->create(), [$rawHeavy->getKey()]);
+        app(ProductGenreSync::class)->syncCustom(Product::factory()->create(), [$tie->getKey()]);
+        app(ProductGenreSync::class)->syncCustom(Product::factory()->create(), [$visibleLeader->getKey()]);
+        app(ProductGenreSync::class)->syncCustom(Product::factory()->create(), [$visibleLeader->getKey()]);
+
+        foreach (range(1, 3) as $_) {
+            app(ProductGenreSync::class)->sync(Product::factory()->create(), [
+                Genre::LANGUAGE_JAPANESE => [$rawHeavy->getKey()],
+            ], []);
+        }
+
+        $descendingHtml = Livewire::test(TagLibraryManager::class)
+            ->call('toggleAllTags')
+            ->set('filterDraft.sortField', 'work_count')
+            ->set('filterDraft.sortDirection', 'desc')
+            ->call('applyFilters')
+            ->html();
+
+        $this->assertTagLibraryCount($descendingHtml, $rawHeavy->title, 1);
+        $this->assertTagLibraryCount($descendingHtml, $visibleLeader->title, 2);
+        $descendingPositions = array_map(
+            fn(Genre $genre): int|false => strpos(
+                $descendingHtml,
+                'wire:key="tag-library-tag-' . $genre->getKey() . '"',
+            ),
+            [$visibleLeader, $rawHeavy, $tie, $unused],
+        );
+
+        foreach ($descendingPositions as $position) {
+            $this->assertIsInt($position);
+        }
+
+        $this->assertSame($descendingPositions, collect($descendingPositions)->sort()->values()->all());
+
+        $ascendingHtml = Livewire::test(TagLibraryManager::class)
+            ->call('toggleAllTags')
+            ->set('filterDraft.sortField', 'work_count')
+            ->set('filterDraft.sortDirection', 'asc')
+            ->call('applyFilters')
+            ->html();
+        $ascendingPositions = array_map(
+            fn(Genre $genre): int|false => strpos(
+                $ascendingHtml,
+                'wire:key="tag-library-tag-' . $genre->getKey() . '"',
+            ),
+            [$unused, $rawHeavy, $tie, $visibleLeader],
+        );
+
+        foreach ($ascendingPositions as $position) {
+            $this->assertIsInt($position);
+        }
+
+        $this->assertSame($ascendingPositions, collect($ascendingPositions)->sort()->values()->all());
+    }
+
+    public function test_all_tags_sort_alphabetically_while_group_cards_keep_saved_tag_order(): void
+    {
+        $group = GenreGroup::query()->create([
+            'title' => 'Independent Sort Group',
+            'description' => null,
+            'order' => 1,
+            'hidden_on_index' => false,
+        ]);
+        $olderTag = Genre::resolveByTitle('Zulu Older Tag');
+        $newerTag = Genre::resolveByTitle('Alpha Newer Tag');
+
+        $this->attachTagToGroup($group, $olderTag, 1);
+        $this->attachTagToGroup($group, $newerTag, 2);
+
+        $component = Livewire::test(TagLibraryManager::class)
+            ->call('toggleAllTags')
+            ->set('filterDraft.sortField', 'work_count')
+            ->set('filterDraft.sortDirection', 'desc')
+            ->call('applyFilters');
+        $html = $component->html();
+
+        $newerAllTagsPosition = strpos($html, 'wire:key="tag-library-tag-' . $newerTag->getKey() . '"');
+        $olderAllTagsPosition = strpos($html, 'wire:key="tag-library-tag-' . $olderTag->getKey() . '"');
+        $olderGroupPosition = strpos(
+            $html,
+            'wire:key="tag-group-' . $group->getKey() . '-tag-' . $olderTag->getKey() . '"',
+        );
+        $newerGroupPosition = strpos(
+            $html,
+            'wire:key="tag-group-' . $group->getKey() . '-tag-' . $newerTag->getKey() . '"',
+        );
+
+        $this->assertIsInt($newerAllTagsPosition);
+        $this->assertIsInt($olderAllTagsPosition);
+        $this->assertIsInt($olderGroupPosition);
+        $this->assertIsInt($newerGroupPosition);
+        $this->assertLessThan($olderAllTagsPosition, $newerAllTagsPosition);
+        $this->assertLessThan($newerGroupPosition, $olderGroupPosition);
+
+        $descendingAlphabeticalHtml = $component
+            ->set('filterDraft.sortField', 'alphabetical')
+            ->set('filterDraft.sortDirection', 'desc')
+            ->call('applyFilters')
+            ->html();
+        $olderDescendingPosition = strpos(
+            $descendingAlphabeticalHtml,
+            'wire:key="tag-library-tag-' . $olderTag->getKey() . '"',
+        );
+        $newerDescendingPosition = strpos(
+            $descendingAlphabeticalHtml,
+            'wire:key="tag-library-tag-' . $newerTag->getKey() . '"',
+        );
+        $olderGroupDescendingPosition = strpos(
+            $descendingAlphabeticalHtml,
+            'wire:key="tag-group-' . $group->getKey() . '-tag-' . $olderTag->getKey() . '"',
+        );
+        $newerGroupDescendingPosition = strpos(
+            $descendingAlphabeticalHtml,
+            'wire:key="tag-group-' . $group->getKey() . '-tag-' . $newerTag->getKey() . '"',
+        );
+
+        $this->assertIsInt($olderDescendingPosition);
+        $this->assertIsInt($newerDescendingPosition);
+        $this->assertIsInt($olderGroupDescendingPosition);
+        $this->assertIsInt($newerGroupDescendingPosition);
+        $this->assertLessThan($newerDescendingPosition, $olderDescendingPosition);
+        $this->assertLessThan($newerGroupDescendingPosition, $olderGroupDescendingPosition);
     }
 
     private function assertTagLibraryUsesFetchedLanguage(
@@ -1204,13 +1713,15 @@ class TagLibraryManagerTest extends TestCase
 
         Livewire::test(TagLibraryManager::class)
             ->call('toggleAllTags')
-            ->set('usageFilter', 'used')
+            ->set('filterDraft.usageFilter', 'used')
+            ->call('applyFilters')
             ->assertSee('tag-library-tag-title">' . $currentGenre->title, false)
             ->assertDontSee('tag-library-tag-title">' . $emptyGenre->title, false);
 
         Livewire::test(TagLibraryManager::class)
             ->call('toggleAllTags')
-            ->set('usageFilter', 'empty')
+            ->set('filterDraft.usageFilter', 'empty')
+            ->call('applyFilters')
             ->assertSee('tag-library-tag-title">' . $emptyGenre->title, false)
             ->assertDontSee('tag-library-tag-title">' . $currentGenre->title, false);
     }
@@ -1220,7 +1731,6 @@ class TagLibraryManagerTest extends TestCase
         $genre = Genre::query()->create([
             'title' => $title,
             'description' => null,
-            'order' => null,
         ]);
 
         $genre->setAttribute('type', $type);

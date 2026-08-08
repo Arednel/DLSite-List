@@ -221,7 +221,6 @@ class PerformanceSmokeTest extends TestCase
                             'title' => $this->tagTitle($number),
                             'title_key' => Genre::titleKey($this->tagTitle($number)),
                             'description' => null,
-                            'order' => null,
                             'created_at' => $now,
                             'updated_at' => $now,
                         ])

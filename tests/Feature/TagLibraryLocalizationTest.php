@@ -30,6 +30,11 @@ class TagLibraryLocalizationTest extends TestCase
             ->assertSee('placeholder="タグを検索…"', false)
             ->assertSee('<h2 class="tag-library-section-title">すべてのタグ</h2>', false)
             ->assertSee('<option value="hidden_group">グループで非表示</option>', false)
+            ->assertSee('「すべてのタグ」のみに絞り込みを適用します。')
+            ->assertSee('<option value="related">親子関係あり</option>', false)
+            ->assertSee('<option value="customized">カスタム設定済み</option>', false)
+            ->assertSee('<option value="work_count">作品数</option>', false)
+            ->assertSee('<option value="desc">降順</option>', false)
             ->assertSee('data-autocomplete-source="tags"', false);
     }
 
@@ -55,6 +60,11 @@ class TagLibraryLocalizationTest extends TestCase
             ->assertSee('value="all"', false)
             ->call('openTagSettings', $tag->getKey())
             ->assertSee('タグ設定を編集')
+            ->assertSee('タグ名')
+            ->assertSee('親／子タグ')
+            ->assertSee('親タグを検索')
+            ->assertSee('子タグを検索')
+            ->assertSee('関係を解除しても、作品に追加済みの親タグは削除されません。')
             ->assertSee('aria-label="「RAW_USER_GROUP_TITLE」への割り当てを解除"', false);
 
         $this->assertSame('RAW_USER_TAG_TITLE', $tag->refresh()->title);

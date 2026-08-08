@@ -23,17 +23,14 @@ class GenreGroupRelationshipTest extends TestCase
         $second = Genre::query()->create([
             'title' => 'Relationship Second',
             'description' => null,
-            'order' => 1,
         ]);
         $thirdByTitle = Genre::query()->create([
             'title' => 'Relationship Zebra',
             'description' => null,
-            'order' => 2,
         ]);
         $firstByTitle = Genre::query()->create([
             'title' => 'Relationship Alpha',
             'description' => null,
-            'order' => 3,
         ]);
 
         $secondPivotId = $this->attachTagToGroup($group, $second, 2);
@@ -59,7 +56,6 @@ class GenreGroupRelationshipTest extends TestCase
         $genre = Genre::query()->create([
             'title' => 'Multi Group Tag',
             'description' => null,
-            'order' => 1,
         ]);
 
         $secondGroup = GenreGroup::query()->create([
@@ -114,31 +110,26 @@ class GenreGroupRelationshipTest extends TestCase
         $ungroupedVisible = Genre::query()->create([
             'title' => 'Scope Ungrouped Visible',
             'description' => null,
-            'order' => 1,
             'hidden_on_index' => false,
         ]);
         $hiddenByTag = Genre::query()->create([
             'title' => 'Scope Hidden By Tag',
             'description' => null,
-            'order' => 2,
             'hidden_on_index' => true,
         ]);
         $hiddenByGroup = Genre::query()->create([
             'title' => 'Scope Hidden By Group',
             'description' => null,
-            'order' => 3,
             'hidden_on_index' => false,
         ]);
         $visibleByGroup = Genre::query()->create([
             'title' => 'Scope Visible By Group',
             'description' => null,
-            'order' => 4,
             'hidden_on_index' => false,
         ]);
         $visibleThroughOneGroup = Genre::query()->create([
             'title' => 'Scope Visible Through One Group',
             'description' => null,
-            'order' => 5,
             'hidden_on_index' => false,
         ]);
 
@@ -172,7 +163,6 @@ class GenreGroupRelationshipTest extends TestCase
         $genre = Genre::query()->create([
             'title' => 'Colored Relationship Tag',
             'description' => null,
-            'order' => 1,
             'color' => '#ff3366',
             'text_color' => '#111111',
         ]);

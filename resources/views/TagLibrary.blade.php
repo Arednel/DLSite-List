@@ -41,10 +41,14 @@
         </main>
     </div>
 
+
     @livewireScripts
     <script
         src="{{ asset('scripts/autocomplete-text.js') }}?v={{ filemtime(public_path('scripts/autocomplete-text.js')) }}">
     </script>
+    <script
+        src="{{ asset('scripts/tag-library-filters.js') }}?v={{ filemtime(public_path('scripts/tag-library-filters.js')) }}"
+        defer></script>
 </body>
 
 </html>

@@ -6,6 +6,8 @@ use App\Enums\UiLanguage;
 use App\Models\Genre;
 use App\Models\GenreGroup;
 use App\Models\Option;
+use App\Support\GenreHierarchy;
+use App\Support\ProductGenreSync;
 use App\Support\TagColor;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Collection;
@@ -14,6 +16,7 @@ use Illuminate\Support\Facades\Validator;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
 use Illuminate\View\View;
+use Livewire\Attributes\Locked;
 use Livewire\Component;
 
 class TagLibraryManager extends Component
@@ -36,6 +39,42 @@ class TagLibraryManager extends Component
         'all',
         'empty',
         'used',
+    ];
+
+    private const RELATIONSHIP_FILTERS = [
+        'all',
+        'related',
+        'has_parent',
+        'has_child',
+        'both',
+        'neither',
+    ];
+
+    private const COLOR_FILTERS = [
+        'all',
+        'customized',
+        'default',
+    ];
+
+    private const SORT_FIELDS = [
+        'alphabetical',
+        'work_count',
+    ];
+
+    private const SORT_DIRECTIONS = [
+        'asc',
+        'desc',
+    ];
+
+    private const FILTER_DEFAULTS = [
+        'visibilityFilter' => 'all',
+        'groupStatusFilter' => 'all',
+        'groupFilter' => 'all',
+        'usageFilter' => 'all',
+        'relationshipFilter' => 'all',
+        'colorFilter' => 'all',
+        'sortField' => 'alphabetical',
+        'sortDirection' => 'asc',
     ];
 
     public string $search = '';
@@ -74,11 +113,24 @@ class TagLibraryManager extends Component
 
     public string $usageFilter = 'all';
 
+    public string $relationshipFilter = 'all';
+
+    public string $colorFilter = 'all';
+
+    public string $sortField = 'alphabetical';
+
+    public string $sortDirection = 'asc';
+
+    public array $filterDraft = self::FILTER_DEFAULTS;
+
     public bool $tagEditMode = false;
 
     public bool $indexGroupOrderingEnabled = false;
 
+    #[Locked]
     public ?int $editingTagId = null;
+
+    public string $editingTagTitle = '';
 
     public bool $editingTagHidden = false;
 
@@ -89,6 +141,14 @@ class TagLibraryManager extends Component
     public array $editingTagGroupIds = [];
 
     public string $editingTagGroupSearch = '';
+
+    public array $editingTagParentIds = [];
+
+    public string $editingTagParentSearch = '';
+
+    public array $editingTagChildIds = [];
+
+    public string $editingTagChildSearch = '';
 
     protected function rules(): array
     {
@@ -109,10 +169,12 @@ class TagLibraryManager extends Component
     {
         $this->showAllTags = Option::tagLibraryTagsExpandedByDefault();
         $this->indexGroupOrderingEnabled = Option::tagLibraryIndexGroupOrderingEnabled();
+        $this->syncFilterDraft();
     }
 
-    public function render(): View
+    public function render(GenreHierarchy $hierarchy): View
     {
+        $this->normalizeFilters();
         $groups = $this->groups();
         $this->syncGroupState($groups);
         $tagLibraryColorsEnabled = Option::tagColorSurfaceEnabled(Option::TAG_COLOR_SURFACE_TAG_LIBRARY);
@@ -126,8 +188,25 @@ class TagLibraryManager extends Component
             'editingTag' => $this->editingTag(),
             'editingSelectedGroupOptions' => $this->editingSelectedGroupOptions($groups),
             'editingAvailableGroupOptions' => $this->editingAvailableGroupOptions($groups),
+            'editingSelectedParentOptions' => $this->editingSelectedRelationshipOptions($this->editingTagParentIds),
+            'editingAvailableParentOptions' => $this->editingAvailableParentOptions($hierarchy),
+            'editingSelectedChildOptions' => $this->editingSelectedRelationshipOptions($this->editingTagChildIds),
+            'editingAvailableChildOptions' => $this->editingAvailableChildOptions($hierarchy),
             'fetchedLanguageCode' => UiLanguage::current()->fetchedTagCode(),
+            'filtersActive' => $this->filtersAreActive(),
         ]);
+    }
+
+    public function updated(string $property): void
+    {
+        if (! array_key_exists($property, self::FILTER_DEFAULTS)) {
+            return;
+        }
+
+        $this->normalizeFilters();
+        $this->syncFilterDraft();
+        $this->showAllTags = true;
+        $this->clearNotice();
     }
 
     public function updatedSearch(): void
@@ -137,34 +216,6 @@ class TagLibraryManager extends Component
         if (filled($this->search)) {
             $this->showAllTags = true;
         }
-    }
-
-    public function updatedVisibilityFilter(): void
-    {
-        $this->normalizeFilters();
-        $this->showAllTags = true;
-        $this->clearNotice();
-    }
-
-    public function updatedGroupStatusFilter(): void
-    {
-        $this->normalizeFilters();
-        $this->showAllTags = true;
-        $this->clearNotice();
-    }
-
-    public function updatedGroupFilter(): void
-    {
-        $this->normalizeFilters();
-        $this->showAllTags = true;
-        $this->clearNotice();
-    }
-
-    public function updatedUsageFilter(): void
-    {
-        $this->normalizeFilters();
-        $this->showAllTags = true;
-        $this->clearNotice();
     }
 
     public function updatedTagEditMode(): void
@@ -190,6 +241,22 @@ class TagLibraryManager extends Component
     public function toggleAllTags(): void
     {
         $this->showAllTags = ! $this->showAllTags;
+        $this->clearNotice();
+    }
+
+    public function applyFilters(): void
+    {
+        $this->assignFilterState($this->normalizedFilterState($this->filterDraft));
+        $this->syncFilterDraft();
+        $this->showAllTags = true;
+        $this->clearNotice();
+    }
+
+    public function clearFilters(): void
+    {
+        $this->reset(array_keys(self::FILTER_DEFAULTS));
+        $this->syncFilterDraft();
+        $this->showAllTags = true;
         $this->clearNotice();
     }
 
@@ -445,7 +512,7 @@ class TagLibraryManager extends Component
     public function openTagSettings(int $genreId): void
     {
         $genre = Genre::query()
-            ->with('groups')
+            ->with(['groups', 'parents', 'children'])
             ->find($genreId);
 
         if (! $genre) {
@@ -456,26 +523,34 @@ class TagLibraryManager extends Component
 
         $this->tagEditMode = true;
         $this->editingTagId = $genre->getKey();
+        $this->editingTagTitle = $genre->title;
         $this->editingTagHidden = (bool) $genre->hidden_on_index;
         $this->editingTagColor = $genre->color ?? '';
         $this->editingTagTextColor = $genre->text_color ?? '';
-        $this->editingTagGroupIds = $genre->groups
-            ->pluck('id')
-            ->map(fn($groupId): int => (int) $groupId)
-            ->values()
-            ->all();
+        $this->editingTagGroupIds = $genre->groups->modelKeys();
         $this->editingTagGroupSearch = '';
+        $this->editingTagParentIds = $genre->parents->modelKeys();
+        $this->editingTagParentSearch = '';
+        $this->editingTagChildIds = $genre->children->modelKeys();
+        $this->editingTagChildSearch = '';
         $this->clearNotice();
     }
 
     public function closeTagSettings(): void
     {
-        $this->editingTagId = null;
-        $this->editingTagHidden = false;
-        $this->editingTagColor = '';
-        $this->editingTagTextColor = '';
-        $this->editingTagGroupIds = [];
-        $this->editingTagGroupSearch = '';
+        $this->reset([
+            'editingTagId',
+            'editingTagTitle',
+            'editingTagHidden',
+            'editingTagColor',
+            'editingTagTextColor',
+            'editingTagGroupIds',
+            'editingTagGroupSearch',
+            'editingTagParentIds',
+            'editingTagParentSearch',
+            'editingTagChildIds',
+            'editingTagChildSearch',
+        ]);
     }
 
     public function addEditingTagGroup(int $groupId): void
@@ -502,20 +577,81 @@ class TagLibraryManager extends Component
             ->all();
     }
 
-    public function saveTagSettings(): void
+    public function addEditingTagParent(int $genreId): void
     {
+        $this->addEditingRelationshipTag(
+            $genreId,
+            $this->editingTagParentIds,
+            $this->editingTagChildIds,
+        );
+        $this->editingTagParentSearch = '';
+    }
+
+    public function removeEditingTagParent(int $genreId): void
+    {
+        $this->editingTagParentIds = $this->withoutRelationshipTag(
+            $this->editingTagParentIds,
+            $genreId,
+        );
+    }
+
+    public function addEditingTagChild(int $genreId): void
+    {
+        $this->addEditingRelationshipTag(
+            $genreId,
+            $this->editingTagChildIds,
+            $this->editingTagParentIds,
+        );
+        $this->editingTagChildSearch = '';
+    }
+
+    public function removeEditingTagChild(int $genreId): void
+    {
+        $this->editingTagChildIds = $this->withoutRelationshipTag(
+            $this->editingTagChildIds,
+            $genreId,
+        );
+    }
+
+    public function saveTagSettings(
+        GenreHierarchy $hierarchy,
+        ProductGenreSync $genreSync,
+    ): void {
         if ($this->editingTagId === null) {
             return;
         }
 
         $genreId = $this->editingTagId;
+        $title = trim($this->editingTagTitle);
+        Validator::make(
+            ['editingTagTitle' => $title],
+            ['editingTagTitle' => ['required', 'string', 'max:255']],
+            [
+                'editingTagTitle.required' => __('Enter a tag title.'),
+                'editingTagTitle.max' => __('Tag titles may not be greater than 255 characters.'),
+            ],
+        )->validate();
         $hiddenOnIndex = $this->editingTagHidden;
         $color = $this->validatedColor($this->editingTagColor, 'editingTagColor');
         $textColor = $this->validatedColor($this->editingTagTextColor, 'editingTagTextColor');
         $targetGroupIds = $this->validEditingGroupIds();
+        $targetParentIds = $this->validEditingRelationshipIds($this->editingTagParentIds);
+        $targetChildIds = $this->validEditingRelationshipIds($this->editingTagChildIds);
         $saved = false;
 
-        DB::transaction(function () use ($genreId, $hiddenOnIndex, $color, $textColor, $targetGroupIds, &$saved): void {
+        DB::transaction(function () use (
+            $genreId,
+            $title,
+            $hiddenOnIndex,
+            $color,
+            $textColor,
+            $targetGroupIds,
+            $targetParentIds,
+            $targetChildIds,
+            $hierarchy,
+            $genreSync,
+            &$saved,
+        ): void {
             $genre = Genre::query()
                 ->lockForUpdate()
                 ->find($genreId);
@@ -524,7 +660,18 @@ class TagLibraryManager extends Component
                 return;
             }
 
+            Validator::make(
+                ['editingTagTitle' => Genre::titleKey($title)],
+                [
+                    'editingTagTitle' => [
+                        Rule::unique(Genre::class, 'title_key')->ignore($genre),
+                    ],
+                ],
+                ['editingTagTitle.unique' => __('Tag title already exists.')],
+            )->validate();
+
             $genre->forceFill([
+                'title' => $title,
                 'hidden_on_index' => $hiddenOnIndex,
                 'color' => $color,
                 'text_color' => $textColor,
@@ -543,6 +690,8 @@ class TagLibraryManager extends Component
                 ->all();
 
             $genre->groups()->sync($groupPivots);
+            $affectedChildIds = $hierarchy->sync($genre, $targetParentIds, $targetChildIds);
+            $genreSync->syncParentsForProductsWithAny($affectedChildIds);
 
             $saved = true;
         });
@@ -616,33 +765,11 @@ class TagLibraryManager extends Component
      */
     private function visibleGenres(bool $colorsEnabled): Collection
     {
-        $this->normalizeFilters();
         $specificGroupId = $this->specificGroupFilterId();
-        $genres = $this->visibleGenreQuery()->get();
 
-        if ($this->groupStatusFilter === 'ungrouped') {
-            return $genres
-                ->sort(fn(Genre $left, Genre $right): int => $this->compareUngroupedGenres($left, $right))
-                ->values()
-                ->map(fn(Genre $genre): object => $this->genreViewData($genre, $specificGroupId, $colorsEnabled));
-        }
-
-        if ($specificGroupId !== null || $this->groupStatusFilter === 'grouped' || $this->visibilityFilter === 'hidden_group') {
-            return $genres
-                ->sort(fn(Genre $left, Genre $right): int => $this->compareGroupedGenres($left, $right, $specificGroupId))
-                ->values()
-                ->map(fn(Genre $genre): object => $this->genreViewData($genre, $specificGroupId, $colorsEnabled));
-        }
-
-        [$grouped, $ungrouped] = $genres->partition(
-            fn(Genre $genre): bool => $genre->groups->isNotEmpty()
-        );
-
-        return $grouped
-            ->sort(fn(Genre $left, Genre $right): int => $this->compareGroupedGenres($left, $right, null))
-            ->concat($ungrouped->sort(fn(Genre $left, Genre $right): int => $this->compareUngroupedGenres($left, $right)))
-            ->values()
-            ->map(fn(Genre $genre): object => $this->genreViewData($genre, null, $colorsEnabled));
+        return $this->visibleGenreQuery()
+            ->get()
+            ->map(fn(Genre $genre): object => $this->genreViewData($genre, $specificGroupId, $colorsEnabled));
     }
 
     private function visibleGenreQuery(): Builder
@@ -693,7 +820,42 @@ class TagLibraryManager extends Component
             })
             ->when($this->usageFilter === 'used', function ($query): void {
                 $query->has('products');
-            });
+            })
+            ->when($this->relationshipFilter === 'related', function ($query): void {
+                $query->where(function (Builder $relations): void {
+                    $relations->has('parents')->orHas('children');
+                });
+            })
+            ->when($this->relationshipFilter === 'has_parent', function ($query): void {
+                $query->has('parents');
+            })
+            ->when($this->relationshipFilter === 'has_child', function ($query): void {
+                $query->has('children');
+            })
+            ->when($this->relationshipFilter === 'both', function ($query): void {
+                $query->has('parents')->has('children');
+            })
+            ->when($this->relationshipFilter === 'neither', function ($query): void {
+                $query->doesntHave('parents')->doesntHave('children');
+            })
+            ->when($this->colorFilter === 'customized', function ($query): void {
+                $query->where(function (Builder $colors): void {
+                    $colors->whereNotNull('genres.color')->orWhereNotNull('genres.text_color');
+                });
+            })
+            ->when($this->colorFilter === 'default', function ($query): void {
+                $query->whereNull('genres.color')->whereNull('genres.text_color');
+            })
+            ->when(
+                $this->sortField === 'work_count',
+                fn(Builder $query): Builder => $query
+                    ->orderBy('products_count', $this->sortDirection)
+                    ->orderBy('genres.title')
+                    ->orderBy('genres.id'),
+                fn(Builder $query): Builder => $query
+                    ->orderBy('genres.title', $this->sortDirection)
+                    ->orderBy('genres.id', $this->sortDirection),
+            );
     }
 
     private function specificGroupFilterId(): ?int
@@ -774,46 +936,6 @@ class TagLibraryManager extends Component
             $groupColors['color'] ?? TagColor::normalize($genre->color),
             $groupColors['text_color'] ?? TagColor::normalize($genre->text_color),
         );
-    }
-
-    private function compareGroupedGenres(Genre $left, Genre $right, ?int $specificGroupId): int
-    {
-        return $this->groupedGenreSortKey($left, $specificGroupId)
-            <=> $this->groupedGenreSortKey($right, $specificGroupId);
-    }
-
-    private function groupedGenreSortKey(Genre $genre, ?int $specificGroupId): array
-    {
-        $group = $specificGroupId === null
-            ? $this->firstIndexGroup($genre)
-            : $genre->groups->firstWhere('id', $specificGroupId);
-
-        return [
-            (int) ($group?->order ?? PHP_INT_MAX),
-            (int) ($group?->pivot?->order ?? PHP_INT_MAX),
-            $group?->title ?? '',
-            $genre->title,
-            $genre->getKey(),
-        ];
-    }
-
-    private function firstIndexGroup(Genre $genre): ?GenreGroup
-    {
-        return $genre->groups->first(fn(GenreGroup $group): bool => ! (bool) $group->hidden_on_index)
-            ?? $genre->groups->first();
-    }
-
-    private function compareUngroupedGenres(Genre $left, Genre $right): int
-    {
-        return [
-            (int) $left->order,
-            $left->title,
-            $left->getKey(),
-        ] <=> [
-            (int) $right->order,
-            $right->title,
-            $right->getKey(),
-        ];
     }
 
     private function confirmingDeleteTag(): ?Genre
@@ -909,6 +1031,120 @@ class TagLibraryManager extends Component
             ->values();
     }
 
+    private function editingSelectedRelationshipOptions(array $genreIds): Collection
+    {
+        if ($this->editingTagId === null) {
+            return collect();
+        }
+
+        return Genre::query()
+            ->whereKey($this->normalizedEditingRelationshipIds($genreIds))
+            ->orderBy('title')
+            ->orderBy('id')
+            ->get(['id', 'title'])
+            ->map(fn(Genre $genre): array => [
+                'id' => $genre->getKey(),
+                'title' => $genre->title,
+            ]);
+    }
+
+    private function editingAvailableParentOptions(GenreHierarchy $hierarchy): Collection
+    {
+        if ($this->editingTagId === null || blank($this->editingTagParentSearch)) {
+            return collect();
+        }
+
+        $excludedIds = [
+            ...$this->editingTagChildIds,
+            ...$hierarchy->descendantIds([$this->editingTagId]),
+        ];
+
+        return $this->editingAvailableRelationshipOptions(
+            $this->editingTagParentSearch,
+            $this->editingTagParentIds,
+            $excludedIds,
+        );
+    }
+
+    private function editingAvailableChildOptions(GenreHierarchy $hierarchy): Collection
+    {
+        if ($this->editingTagId === null || blank($this->editingTagChildSearch)) {
+            return collect();
+        }
+
+        $excludedIds = [
+            ...$this->editingTagParentIds,
+            ...$hierarchy->ancestorIds([$this->editingTagId]),
+        ];
+
+        return $this->editingAvailableRelationshipOptions(
+            $this->editingTagChildSearch,
+            $this->editingTagChildIds,
+            $excludedIds,
+        );
+    }
+
+    private function editingAvailableRelationshipOptions(
+        string $search,
+        array $selectedIds,
+        array $excludedIds,
+    ): Collection {
+        $search = trim($search);
+
+        if ($this->editingTagId === null || $search === '') {
+            return collect();
+        }
+
+        $excludedIds = collect([
+            $this->editingTagId,
+            ...$selectedIds,
+            ...$excludedIds,
+        ])
+            ->map(fn($genreId): int => (int) $genreId)
+            ->unique()
+            ->all();
+
+        return Genre::query()
+            ->whereKeyNot($excludedIds)
+            ->whereLike('title', '%' . $search . '%')
+            ->orderBy('title')
+            ->orderBy('id')
+            ->limit(25)
+            ->get(['id', 'title'])
+            ->map(fn(Genre $genre): array => [
+                'id' => $genre->getKey(),
+                'title' => $genre->title,
+            ]);
+    }
+
+    private function addEditingRelationshipTag(int $genreId, array &$selectedIds, array $oppositeIds): void
+    {
+        if (
+            $this->editingTagId === null
+            || $genreId === $this->editingTagId
+            || in_array($genreId, $oppositeIds, true)
+            || ! Genre::query()->whereKey($genreId)->exists()
+        ) {
+            return;
+        }
+
+        $selectedIds = collect($selectedIds)
+            ->push($genreId)
+            ->map(fn($selectedId): int => (int) $selectedId)
+            ->unique()
+            ->values()
+            ->all();
+    }
+
+    private function withoutRelationshipTag(array $genreIds, int $removedGenreId): array
+    {
+        return collect($genreIds)
+            ->map(fn($genreId): int => (int) $genreId)
+            ->reject(fn(int $genreId): bool => $genreId === $removedGenreId)
+            ->values()
+            ->all();
+    }
+
     private function syncGroupState(Collection $groups): void
     {
         foreach ($groups as $group) {
@@ -946,21 +1182,109 @@ class TagLibraryManager extends Component
 
     private function normalizeFilters(): void
     {
-        if (! in_array($this->visibilityFilter, self::VISIBILITY_FILTERS, true)) {
-            $this->visibilityFilter = 'all';
+        $this->assignFilterState($this->normalizedFilterState($this->currentFilterState()));
+    }
+
+    private function syncFilterDraft(): void
+    {
+        $this->filterDraft = $this->currentFilterState();
+    }
+
+    /**
+     * @return array<string, string>
+     */
+    private function currentFilterState(): array
+    {
+        $state = [];
+
+        foreach (array_keys(self::FILTER_DEFAULTS) as $property) {
+            $state[$property] = $this->{$property};
         }
 
-        if (! in_array($this->groupStatusFilter, self::GROUP_STATUS_FILTERS, true)) {
-            $this->groupStatusFilter = 'all';
+        return $state;
+    }
+
+    /**
+     * @param  array<string, mixed>  $state
+     * @return array<string, string>
+     */
+    private function normalizedFilterState(array $state): array
+    {
+        return [
+            'visibilityFilter' => $this->normalizedChoice(
+                $state['visibilityFilter'] ?? null,
+                self::VISIBILITY_FILTERS,
+            ),
+            'groupStatusFilter' => $this->normalizedChoice(
+                $state['groupStatusFilter'] ?? null,
+                self::GROUP_STATUS_FILTERS,
+            ),
+            'groupFilter' => $this->normalizedGroupFilter($state['groupFilter'] ?? null),
+            'usageFilter' => $this->normalizedChoice(
+                $state['usageFilter'] ?? null,
+                self::USAGE_FILTERS,
+            ),
+            'relationshipFilter' => $this->normalizedChoice(
+                $state['relationshipFilter'] ?? null,
+                self::RELATIONSHIP_FILTERS,
+            ),
+            'colorFilter' => $this->normalizedChoice(
+                $state['colorFilter'] ?? null,
+                self::COLOR_FILTERS,
+            ),
+            'sortField' => $this->normalizedChoice(
+                $state['sortField'] ?? null,
+                self::SORT_FIELDS,
+                'alphabetical',
+            ),
+            'sortDirection' => $this->normalizedChoice(
+                $state['sortDirection'] ?? null,
+                self::SORT_DIRECTIONS,
+                'asc',
+            ),
+        ];
+    }
+
+    /**
+     * @param  array<string, string>  $state
+     */
+    private function assignFilterState(array $state): void
+    {
+        foreach (array_keys(self::FILTER_DEFAULTS) as $property) {
+            $this->{$property} = $state[$property];
+        }
+    }
+
+    /**
+     * @param  array<int, string>  $allowed
+     */
+    private function normalizedChoice(mixed $value, array $allowed, string $default = 'all'): string
+    {
+        return is_string($value) && in_array($value, $allowed, true)
+            ? $value
+            : $default;
+    }
+
+    private function normalizedGroupFilter(mixed $value): string
+    {
+        if ($value === 'all') {
+            return 'all';
         }
 
-        if ($this->groupFilter !== 'all' && ! ctype_digit($this->groupFilter)) {
-            $this->groupFilter = 'all';
+        if ((! is_string($value) && ! is_int($value)) || ! ctype_digit((string) $value)) {
+            return 'all';
         }
 
-        if (! in_array($this->usageFilter, self::USAGE_FILTERS, true)) {
-            $this->usageFilter = 'all';
-        }
+        $groupId = (int) $value;
+
+        return $groupId > 0 && GenreGroup::query()->whereKey($groupId)->exists()
+            ? (string) $groupId
+            : 'all';
+    }
+
+    private function filtersAreActive(): bool
+    {
+        return $this->currentFilterState() !== self::FILTER_DEFAULTS;
     }
 
     private function validatedTitle(
@@ -1020,10 +1344,37 @@ class TagLibraryManager extends Component
 
         return GenreGroup::query()
             ->ordered()
-            ->whereIn('id', $groupIds)
-            ->pluck('id')
-            ->map(fn($groupId): int => (int) $groupId)
-            ->all();
+            ->whereKey($groupIds)
+            ->get(['id'])
+            ->modelKeys();
+    }
+
+    private function validEditingRelationshipIds(array $genreIds): array
+    {
+        $genreIds = $this->normalizedEditingRelationshipIds($genreIds);
+
+        if ($genreIds->isEmpty()) {
+            return [];
+        }
+
+        return Genre::query()
+            ->whereKey($genreIds)
+            ->orderBy('id')
+            ->get(['id'])
+            ->modelKeys();
+    }
+
+    /**
+     * @return Collection<int, int>
+     */
+    private function normalizedEditingRelationshipIds(array $genreIds): Collection
+    {
+        return collect($genreIds)
+            ->map(fn($genreId): string => (string) $genreId)
+            ->filter(fn(string $genreId): bool => ctype_digit($genreId))
+            ->map(fn(string $genreId): int => (int) $genreId)
+            ->unique()
+            ->values();
     }
 
     /**

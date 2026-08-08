@@ -141,6 +141,7 @@ Tag identity uses `genres.title_key` instead of the display `genres.title` colum
 - `genres.title_key` is trimmed and Unicode case-folded by PHP
 - `genres.title_key` uses binary collation so kana variants stay distinct
 - `genres.title` keeps the user/DLSite display casing and is not the uniqueness column
+- Tag Library renames preserve the submitted display casing and update the existing tag row. A case-only rename keeps the same `title_key`; a materially different rename receives a different `title_key`
 
 The Tag Library can create manual empty tags:
 - submitting a new tag title creates a `genres` row with zero `genre_product` pivots
@@ -152,7 +153,6 @@ The Tag Library can create manual empty tags:
 The Tag Library can organize tags into groups:
 - group titles are stored in `genre_groups.title`
 - group order is stored in `genre_groups.order`
-- ungrouped tag order is stored in `genres.order`
 - group membership and per-group tag order are stored in `genre_group_genre`
 - adding a tag to a group resolves an existing `genres.title_key` match or creates a new empty tag, then attaches that group/tag membership
 - the same tag can belong to multiple groups
@@ -164,11 +164,10 @@ The Tag Library can organize tags into groups:
 - Index tag chips sort alphabetically by tag title by default; enabling `Enable group ordering on Index` switches visible grouped tags to group order and saved tag order inside each group, then shows ungrouped tags alphabetically. In both modes, a tag is excluded from Index when it is directly hidden or belongs to any hidden group.
 - `genres.color` and `genre_groups.color` store optional `#RRGGBB` background/accent colors. `genres.text_color` and `genre_groups.text_color` store optional independent font colors. Group background/font colors override tag background/font colors independently by the same ordered membership rules used for display; inside a specific group card, that group color value wins for whichever color value it defines.
 
-Tag Library filters apply only to the All Tags list. They can filter by Index visibility, grouped/ungrouped state, a specific group, and empty/used state while group management sections keep showing their current members.
-
 The All Tags list has a session-only `Edit tags` mode:
 - when off, clicking a tag opens Index filtered by that tag
 - when on, clicking a tag opens a tag settings modal instead of navigating
+- the modal can rename the shared tag. Duplicate case-folded titles are rejected, while product sources/languages, group memberships, colors, visibility, and parent/child relations stay attached to the same tag id
 - the mode uses a switch-style toggle bound to the Livewire `tagEditMode` checkbox state
 - the `Add group` field is inside the Tag Groups section header, next to group management
 - `Enable group ordering on Index` is a persisted switch in the Tag Groups section and in Options; it is off by default, so saved group order affects Index tag-chip ordering only after enabling it
@@ -178,6 +177,11 @@ The All Tags list has a session-only `Edit tags` mode:
 - Tag Library switch controls share the same `tag-library-switch-*` markup/CSS classes while keeping each native checkbox and Livewire binding intact
 - the modal can search existing tag groups through a dropdown-style search field, add them as assignment plaques, and remove selected plaques before saving
 - group search results are hidden until search text is entered; selected plaques and the empty selected-groups message stay below the search field
+- the modal has matching searchable Parent Tags and Child Tags selectors in one column, with Parent Tags on the first row and Child Tags on the second. A tag may have multiple parents and children, but self-relations and direct or indirect cycles are rejected
+- adding a child tag during Quick Add, Edit, or Refetch apply automatically adds every missing parent and ancestor to the work as `custom`; an ancestor already attached as `fetched` keeps its fetched source and language rows
+- saving a new relation immediately applies the same ancestor rule to existing works containing its child, whether the relation was added from the child's Parent Tags list or the parent's Child Tags list
+- removing a parent/child relation does not remove parent tags already attached to works; the modal uses the same Font Awesome help-circle markup and shared title-tooltip assets as the other application pages to document this additive behavior
+- after a material rename, Refetch continues comparing fetched names by `title_key`: the old DLSite name is a distinct tag, while case-only DLSite variants still resolve to the renamed tag without replacing its display casing
 - existing memberships keep their current per-group order
 - newly added memberships are appended to the end of each selected group
 - Cancel, backdrop click, and Escape close the modal without persisting unsaved group plaque changes
@@ -510,6 +514,7 @@ Tag Library defaults:
 - collapsed by default
 - when enabled, `/tags` opens with the full tag list shown
 - typing in Tag Library search still opens matching results regardless of this default
+- the filter modal starts with every filter set to All/Any and sorting set to Alphabetical + Ascending; these controls are not configurable or URL-persisted
 - Index group ordering is disabled by default
 - when enabled, Index tag chips use saved group order, saved tag order inside groups, then ungrouped tags alphabetically instead of plain alphabetical title ordering
 - the Options page shows inline helper tooltips for the expanded-list, Index group-ordering, and Field Layouts Updated Date filter/sort switches

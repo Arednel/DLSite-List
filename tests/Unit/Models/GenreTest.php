@@ -66,7 +66,21 @@ class GenreTest extends TestCase
             'title' => 'New Genre',
             'title_key' => 'new genre',
             'description' => null,
-            'order' => 1,
+        ]);
+    }
+
+    public function test_parent_and_child_relationships_are_inverse_views_of_the_same_relation(): void
+    {
+        $parent = Genre::query()->create(['title' => 'Parent']);
+        $child = Genre::query()->create(['title' => 'Child']);
+
+        $child->parents()->attach($parent);
+
+        $this->assertTrue($child->parents()->first()->is($parent));
+        $this->assertTrue($parent->children()->first()->is($child));
+        $this->assertDatabaseHas('genre_relations', [
+            'parent_genre_id' => $parent->getKey(),
+            'child_genre_id' => $child->getKey(),
         ]);
     }
 }

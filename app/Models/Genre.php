@@ -30,7 +30,6 @@ class Genre extends Model
     protected $fillable = [
         'title',
         'description',
-        'order',
         'hidden_on_index',
         'color',
         'text_color',
@@ -46,10 +45,6 @@ class Genre extends Model
             if ($genre->isDirty('title') || blank($genre->title_key)) {
                 $genre->title_key = self::titleKey($genre->title);
             }
-
-            if ($genre->order === null) {
-                $genre->order = self::nextOrder();
-            }
         });
     }
 
@@ -61,6 +56,32 @@ class Genre extends Model
             ->orderBy('genre_groups.order')
             ->orderByPivot('order')
             ->orderBy('genre_groups.title');
+    }
+
+    public function parents(): BelongsToMany
+    {
+        return $this->belongsToMany(
+            self::class,
+            'genre_relations',
+            'child_genre_id',
+            'parent_genre_id',
+        )
+            ->withTimestamps()
+            ->orderBy('genres.title')
+            ->orderBy('genres.id');
+    }
+
+    public function children(): BelongsToMany
+    {
+        return $this->belongsToMany(
+            self::class,
+            'genre_relations',
+            'parent_genre_id',
+            'child_genre_id',
+        )
+            ->withTimestamps()
+            ->orderBy('genres.title')
+            ->orderBy('genres.id');
     }
 
     public function products(): BelongsToMany
@@ -137,10 +158,5 @@ class Genre extends Model
         $normalizedTitle = trim((string) $title);
 
         return $normalizedTitle === '' ? null : $normalizedTitle;
-    }
-
-    private static function nextOrder(): int
-    {
-        return (int) self::query()->max('order') + 1;
     }
 }

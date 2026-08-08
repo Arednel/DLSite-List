@@ -200,4 +200,72 @@ class ProductGenreSyncTest extends TestCase
             [$sharedGenre->getKey(), $customGenre->getKey()],
         ));
     }
+
+    public function test_sync_adds_every_missing_parent_and_ancestor_as_custom(): void
+    {
+        $grandparent = Genre::query()->create(['title' => 'Grandparent Tag']);
+        $parent = Genre::query()->create(['title' => 'Parent Tag']);
+        $secondParent = Genre::query()->create(['title' => 'Second Parent Tag']);
+        $child = Genre::query()->create(['title' => 'Child Tag']);
+        $parent->parents()->attach($grandparent);
+        $child->parents()->attach([$parent->getKey(), $secondParent->getKey()]);
+        $product = Product::factory()->create();
+
+        app(ProductGenreSync::class)->sync($product, [
+            Genre::LANGUAGE_ENGLISH => [$child->getKey()],
+        ], []);
+
+        $sources = DB::table('genre_product')
+            ->where('product_id', $product->getKey())
+            ->pluck('source', 'genre_id');
+
+        $this->assertSame(Genre::PIVOT_SOURCE_FETCHED, $sources[$child->getKey()]);
+        $this->assertSame(Genre::PIVOT_SOURCE_CUSTOM, $sources[$parent->getKey()]);
+        $this->assertSame(Genre::PIVOT_SOURCE_CUSTOM, $sources[$secondParent->getKey()]);
+        $this->assertSame(Genre::PIVOT_SOURCE_CUSTOM, $sources[$grandparent->getKey()]);
+    }
+
+    public function test_custom_sync_adds_the_child_and_all_ancestors_as_custom(): void
+    {
+        $grandparent = Genre::query()->create(['title' => 'Custom Grandparent']);
+        $parent = Genre::query()->create(['title' => 'Custom Parent']);
+        $child = Genre::query()->create(['title' => 'Custom Child']);
+        $parent->parents()->attach($grandparent);
+        $child->parents()->attach($parent);
+        $product = Product::factory()->create();
+
+        app(ProductGenreSync::class)->syncCustom($product, [$child->getKey()]);
+
+        $this->assertEqualsCanonicalizing(
+            [$grandparent->getKey(), $parent->getKey(), $child->getKey()],
+            $product->customGenres()->pluck('genres.id')->all(),
+        );
+    }
+
+    public function test_parent_that_is_already_fetched_remains_fetched(): void
+    {
+        $parent = Genre::query()->create(['title' => 'Already Fetched Parent']);
+        $child = Genre::query()->create(['title' => 'Fetched Child']);
+        $child->parents()->attach($parent);
+        $product = Product::factory()->create();
+
+        app(ProductGenreSync::class)->sync($product, [
+            Genre::LANGUAGE_ENGLISH => [$parent->getKey()],
+            Genre::LANGUAGE_JAPANESE => [$child->getKey()],
+        ], []);
+
+        $parentPivot = DB::table('genre_product')
+            ->where('product_id', $product->getKey())
+            ->where('genre_id', $parent->getKey())
+            ->first();
+
+        $this->assertSame(Genre::PIVOT_SOURCE_FETCHED, $parentPivot->source);
+        $this->assertSame(
+            [Genre::LANGUAGE_ENGLISH],
+            DB::table('genre_product_languages')
+                ->where('genre_product_id', $parentPivot->id)
+                ->pluck('language')
+                ->all(),
+        );
+    }
 }

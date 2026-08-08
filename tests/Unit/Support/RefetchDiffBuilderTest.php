@@ -103,4 +103,64 @@ class RefetchDiffBuilderTest extends TestCase
         $this->assertArrayNotHasKey(RefetchCategory::SampleImages->value, $changes);
         $this->assertSame('Custom Tag', $changes['tags']['tags']['old']['custom'][0]);
     }
+
+    public function test_materially_renamed_fetched_tag_is_distinct_from_refetched_original_name(): void
+    {
+        $product = Product::factory()->create();
+        $tag = Genre::resolveByTitle('Original DLSite Tag');
+        app(ProductGenreSync::class)->sync($product, [
+            Genre::LANGUAGE_JAPANESE => [$tag->getKey()],
+        ], []);
+        $tag->forceFill(['title' => 'Manually Renamed Tag'])->save();
+
+        $changes = app(RefetchDiffBuilder::class)->build(
+            $product,
+            $this->fetchWithJapaneseTags($product, ['Original DLSite Tag']),
+            null,
+        );
+        $tagChange = $changes['tags']['tags'];
+
+        $this->assertSame(['Manually Renamed Tag'], $tagChange['old']['japanese']);
+        $this->assertSame(['Original DLSite Tag'], $tagChange['new']['japanese']);
+        $this->assertSame(['Manually Renamed Tag'], $tagChange['details']['stale_japanese']);
+        $this->assertSame(['Original DLSite Tag'], $tagChange['details']['added_japanese']);
+        $this->assertFalse($tag->is(Genre::resolveByTitle('Original DLSite Tag')));
+    }
+
+    public function test_case_only_renamed_fetched_tag_remains_the_same_during_refetch(): void
+    {
+        $product = Product::factory()->create();
+        $tag = Genre::resolveByTitle('ASMR');
+        app(ProductGenreSync::class)->sync($product, [
+            Genre::LANGUAGE_JAPANESE => [$tag->getKey()],
+        ], []);
+        $tag->forceFill(['title' => 'Asmr'])->save();
+
+        $changes = app(RefetchDiffBuilder::class)->build(
+            $product,
+            $this->fetchWithJapaneseTags($product, ['ASMR']),
+            null,
+        );
+        $resolved = Genre::resolveByTitle('ASMR');
+
+        $this->assertArrayNotHasKey('tags', $changes);
+        $this->assertTrue($tag->is($resolved));
+        $this->assertSame('Asmr', $resolved->title);
+    }
+
+    /**
+     * @param  list<string>  $tags
+     */
+    private function fetchWithJapaneseTags(Product $product, array $tags): DLSiteFetchResult
+    {
+        return new DLSiteFetchResult(
+            workData: DLSiteWorkData::fromArray([
+                'japanese' => [
+                    'product_id' => $product->getKey(),
+                    'genre' => $tags,
+                ],
+            ]),
+            failedImages: [],
+        );
+    }
 }

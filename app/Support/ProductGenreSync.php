@@ -5,10 +5,15 @@ namespace App\Support;
 use App\Enums\UiLanguage;
 use App\Models\Genre;
 use App\Models\Product;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Facades\DB;
 
 final class ProductGenreSync
 {
+    public function __construct(
+        private readonly GenreHierarchy $hierarchy,
+    ) {}
+
     /**
      * @param  array<string, list<int|string>>  $fetchedGenreIdsByLanguage
      * @param  list<int|string>  $customGenreIds
@@ -18,9 +23,15 @@ final class ProductGenreSync
         $fetchedGenreIdsByLanguage = $this->normalizeFetchedGenreIdsByLanguage(
             $fetchedGenreIdsByLanguage
         );
+        $fetchedGenreIds = $this->flattenGenreIds($fetchedGenreIdsByLanguage);
+        $customGenreIds = $this->normalizeGenreIds($customGenreIds);
+        $automaticParentIds = $this->hierarchy->ancestorIds([
+            ...$fetchedGenreIds,
+            ...$customGenreIds,
+        ]);
         $customGenreIds = $this->customGenreIdsWithoutFetched(
-            $customGenreIds,
-            $this->flattenGenreIds($fetchedGenreIdsByLanguage),
+            [...$customGenreIds, ...$automaticParentIds],
+            $fetchedGenreIds,
         );
         $languageMap = GenreSyncPayload::languageMap($fetchedGenreIdsByLanguage);
 
@@ -82,6 +93,33 @@ final class ProductGenreSync
             $fetchedGenreIdsByLanguage,
             $customGenreIds ?? $this->currentCustomGenreIds($product),
         );
+    }
+
+    /**
+     * Add missing parent tags to works containing any newly related child.
+     *
+     * @param  list<int|string>  $childGenreIds
+     */
+    public function syncParentsForProductsWithAny(array $childGenreIds): void
+    {
+        $childGenreIds = $this->normalizeGenreIds($childGenreIds);
+
+        if ($childGenreIds === []) {
+            return;
+        }
+
+        Product::query()
+            ->whereHas('genres', function (Builder $genres) use ($childGenreIds): void {
+                $genres->whereKey($childGenreIds);
+            })
+            ->eachById(function (Product $product): void {
+                $this->syncEditableTagBuckets(
+                    $product,
+                    UiLanguage::current()->fetchedTagLanguage(),
+                    null,
+                    null,
+                );
+            });
     }
 
     /**

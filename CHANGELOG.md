@@ -2,6 +2,11 @@
 
 ## Development
 
+* 2026-08-04 -- 1.8.1 Tags Relationships, Renaming & Filters
+  * Added parent/child tag relationships
+  * Added tag renaming
+  * Added filters for Tag Library
+
 * 2026-08-04 -- 1.8.0 Refetch Fixes & Cleanup
   * Added modal confirmations and cleanup for Refetch runs
   * Fixed Refetch image replacement with rollback-safe promotion, obsolete file cleanup, and browser refreshes for overwritten images

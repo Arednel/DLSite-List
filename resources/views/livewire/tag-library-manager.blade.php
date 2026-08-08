@@ -1,4 +1,4 @@
-<section class="tag-library-panel" aria-labelledby="tag-library-heading">
+<section class="tag-library-panel" aria-labelledby="tag-library-heading" x-data="tagLibraryFilters()">
     <div class="tag-library-panel-heading">
         <h1 id="tag-library-heading" class="tag-library-section-title">{{ __('Tags') }}</h1>
     </div>
@@ -31,60 +31,142 @@
     @endif
 
     <div class="tag-library-panel-heading tag-library-panel-heading--all-tags">
-        <h2 class="tag-library-section-title">{{ __('All Tags') }}</h2>
-        <label class="tag-library-switch tag-library-switch--toolbar">
-            <input type="checkbox" class="tag-library-switch-input" wire:model.live="tagEditMode" role="switch">
-            <span class="tag-library-switch-track" aria-hidden="true">
-                <span class="tag-library-switch-thumb"></span>
-            </span>
-            <span class="tag-library-switch-text">{{ __('Edit tags') }}</span>
-        </label>
-        <button type="button" class="tag-library-toggle" wire:click="toggleAllTags"
-            aria-expanded="{{ $showAllTags ? 'true' : 'false' }}">
-            <span class="tag-library-toggle-icon">{{ $showAllTags ? 'v' : '>' }}</span>
-            <span>{{ $showAllTags ? __('Hide tags list') : __('Show tags list') }}</span>
-        </button>
+        <div class="tag-library-all-tags-primary">
+            <h2 class="tag-library-section-title">{{ __('All Tags') }}</h2>
+            <button type="button" class="tag-library-toggle" wire:click="toggleAllTags"
+                aria-expanded="{{ $showAllTags ? 'true' : 'false' }}">
+                <span class="tag-library-toggle-icon">{{ $showAllTags ? 'v' : '>' }}</span>
+                <span>{{ $showAllTags ? __('Hide tags list') : __('Show tags list') }}</span>
+            </button>
+        </div>
+
+        <div class="tag-library-all-tags-actions">
+            <label class="tag-library-switch tag-library-switch--toolbar">
+                <input type="checkbox" class="tag-library-switch-input" wire:model.live="tagEditMode" role="switch">
+                <span class="tag-library-switch-track" aria-hidden="true">
+                    <span class="tag-library-switch-thumb"></span>
+                </span>
+                <span class="tag-library-switch-text">{{ __('Edit tags') }}</span>
+            </label>
+            <button type="button" @class(['tag-library-filter-button', 'is-active' => $filtersActive]) aria-controls="tag-library-filters-modal"
+                x-bind:aria-expanded="filtersOpen.toString()" x-on:click="openFilters()" x-ref="filterButton">
+                <i class="fa-solid fa-sliders" aria-hidden="true"></i>
+                <span>{{ __('Filters') }}</span>
+            </button>
+        </div>
     </div>
 
-    <div class="tag-library-filters">
-        <label>
-            <span>{{ __('Index visibility') }}</span>
-            <select wire:model.live="visibilityFilter">
-                <option value="all">{{ __('All') }}</option>
-                <option value="visible">{{ __('Visible on Index') }}</option>
-                <option value="hidden_tag">{{ __('Hidden by tag') }}</option>
-                <option value="hidden_group">{{ __('Hidden by group') }}</option>
-                <option value="hidden_any">{{ __('Hidden by tag or group') }}</option>
-            </select>
-        </label>
+    <div id="tag-library-filters-modal" class="tag-library-filter-modal" x-cloak x-show="filtersOpen"
+        x-bind:aria-hidden="(!filtersOpen).toString()" x-on:keydown.escape.window="closeFilters()">
+        <button type="button" class="tag-library-filter-backdrop" aria-label="{{ __('Close filters') }}"
+            x-on:click="closeFilters()"></button>
 
-        <label>
-            <span>{{ __('Group status') }}</span>
-            <select wire:model.live="groupStatusFilter">
-                <option value="all">{{ __('All') }}</option>
-                <option value="grouped">{{ __('Grouped') }}</option>
-                <option value="ungrouped">{{ __('Ungrouped') }}</option>
-            </select>
-        </label>
+        <div class="tag-library-filter-panel" role="dialog" aria-modal="true"
+            aria-labelledby="tag-library-filters-title">
+            <button type="button" class="tag-library-filter-close" aria-label="{{ __('Close filters') }}"
+                x-on:click="closeFilters()">
+                <i class="fa-solid fa-xmark" aria-hidden="true"></i>
+            </button>
 
-        <label>
-            <span>{{ __('Group') }}</span>
-            <select wire:model.live="groupFilter">
-                <option value="all">{{ __('Any group') }}</option>
-                @foreach ($groupOptions as $groupOption)
-                    <option value="{{ $groupOption['id'] }}">{{ $groupOption['title'] }}</option>
-                @endforeach
-            </select>
-        </label>
+            <form wire:submit.prevent="applyFilters" x-on:submit="closeFilters()">
+                <h2 id="tag-library-filters-title" class="tag-library-filter-heading">
+                    {{ __('Filter') }}
+                    <span>{{ __('Apply filters to All Tags only.') }}</span>
+                </h2>
 
-        <label>
-            <span>{{ __('Usage') }}</span>
-            <select wire:model.live="usageFilter">
-                <option value="all">{{ __('All') }}</option>
-                <option value="empty">{{ __('Empty') }}</option>
-                <option value="used">{{ __('Used') }}</option>
-            </select>
-        </label>
+                <div class="tag-library-filter-fields">
+                    <label class="tag-library-filter-field" for="tag-library-filter-visibility">
+                        <span>{{ __('Index visibility') }}</span>
+                        <select id="tag-library-filter-visibility" wire:model="filterDraft.visibilityFilter"
+                            x-ref="firstFilterControl">
+                            <option value="all">{{ __('All') }}</option>
+                            <option value="visible">{{ __('Visible on Index') }}</option>
+                            <option value="hidden_tag">{{ __('Hidden by tag') }}</option>
+                            <option value="hidden_group">{{ __('Hidden by group') }}</option>
+                            <option value="hidden_any">{{ __('Hidden by tag or group') }}</option>
+                        </select>
+                    </label>
+
+                    <label class="tag-library-filter-field" for="tag-library-filter-group-status">
+                        <span>{{ __('Group status') }}</span>
+                        <select id="tag-library-filter-group-status" wire:model="filterDraft.groupStatusFilter">
+                            <option value="all">{{ __('All') }}</option>
+                            <option value="grouped">{{ __('Grouped') }}</option>
+                            <option value="ungrouped">{{ __('Ungrouped') }}</option>
+                        </select>
+                    </label>
+
+                    <label class="tag-library-filter-field" for="tag-library-filter-group">
+                        <span>{{ __('Group') }}</span>
+                        <select id="tag-library-filter-group" wire:model="filterDraft.groupFilter">
+                            <option value="all">{{ __('Any group') }}</option>
+                            @foreach ($groupOptions as $groupOption)
+                                <option value="{{ $groupOption['id'] }}">{{ $groupOption['title'] }}</option>
+                            @endforeach
+                        </select>
+                    </label>
+
+                    <label class="tag-library-filter-field" for="tag-library-filter-usage">
+                        <span>{{ __('Usage') }}</span>
+                        <select id="tag-library-filter-usage" wire:model="filterDraft.usageFilter">
+                            <option value="all">{{ __('All') }}</option>
+                            <option value="empty">{{ __('Unused') }}</option>
+                            <option value="used">{{ __('Used') }}</option>
+                        </select>
+                    </label>
+
+                    <label class="tag-library-filter-field" for="tag-library-filter-relationship">
+                        <span>{{ __('Parent / child') }}</span>
+                        <select id="tag-library-filter-relationship" wire:model="filterDraft.relationshipFilter">
+                            <option value="all">{{ __('Any') }}</option>
+                            <option value="related">{{ __('Has any relation') }}</option>
+                            <option value="has_parent">{{ __('Has parent') }}</option>
+                            <option value="has_child">{{ __('Has child') }}</option>
+                            <option value="both">{{ __('Has both') }}</option>
+                            <option value="neither">{{ __('Has neither') }}</option>
+                        </select>
+                    </label>
+
+                    <label class="tag-library-filter-field" for="tag-library-filter-color">
+                        <span>{{ __('Custom tag color') }}</span>
+                        <select id="tag-library-filter-color" wire:model="filterDraft.colorFilter">
+                            <option value="all">{{ __('Any') }}</option>
+                            <option value="customized">{{ __('Customized') }}</option>
+                            <option value="default">{{ __('Default') }}</option>
+                        </select>
+                    </label>
+                </div>
+
+                <h2 class="tag-library-filter-heading tag-library-filter-heading--sort">
+                    {{ __('Sort') }}
+                    <span>{{ __('Choose how All Tags are ordered.') }}</span>
+                </h2>
+
+                <div class="tag-library-filter-fields">
+                    <label class="tag-library-filter-field" for="tag-library-filter-sort-field">
+                        <span>{{ __('Sort by') }}</span>
+                        <select id="tag-library-filter-sort-field" wire:model="filterDraft.sortField">
+                            <option value="alphabetical">{{ __('Alphabetical') }}</option>
+                            <option value="work_count">{{ __('Work count') }}</option>
+                        </select>
+                    </label>
+
+                    <label class="tag-library-filter-field" for="tag-library-filter-sort-direction">
+                        <span>{{ __('Direction') }}</span>
+                        <select id="tag-library-filter-sort-direction" wire:model="filterDraft.sortDirection">
+                            <option value="asc">{{ __('Ascending') }}</option>
+                            <option value="desc">{{ __('Descending') }}</option>
+                        </select>
+                    </label>
+                </div>
+
+                <div class="tag-library-filter-actions">
+                    <button type="button" class="tag-library-filter-clear" wire:click="clearFilters"
+                        x-on:click="closeFilters()">{{ __('Clear') }}</button>
+                    <button type="submit" class="tag-library-filter-apply">{{ __('Apply') }}</button>
+                </div>
+            </form>
+        </div>
     </div>
 
     @if ($showAllTags)
@@ -373,7 +455,13 @@
                 wire:keydown.escape.window="closeTagSettings">
                 <form class="tag-library-modal-card tag-library-modal-card--wide" wire:submit.prevent="saveTagSettings">
                     <h3 id="tag-settings-modal-title">{{ __('Edit tag settings') }}</h3>
-                    <p class="tag-library-modal-tag-title">{{ $editingTag->title }}</p>
+                    <label class="tag-library-modal-title-field">
+                        <span>{{ __('Tag title') }}</span>
+                        <input type="text" wire:model="editingTagTitle" required maxlength="255">
+                    </label>
+                    @error('editingTagTitle')
+                        <div class="tag-library-message tag-library-message--error">{{ $message }}</div>
+                    @enderror
 
                     <div class="tag-library-modal-section">
                         <label class="tag-library-check tag-library-switch">
@@ -433,6 +521,113 @@
                     </fieldset>
 
                     <fieldset class="tag-library-modal-fieldset">
+                        <legend class="tag-library-modal-relationship-legend">
+                            <span>{{ __('Parent / child tags') }}</span>
+                            <i class="fa-solid fa-circle-question" tabindex="0"
+                                aria-label="{{ __('About parent and child tags') }}"
+                                title="{{ __('When a child tag is added during Quick Add, Edit, Refetch apply, or relationship creation, every missing parent and ancestor is added as a Custom tag. A parent that is already fetched stays fetched. Removing a relationship does not remove parent tags already added to works.') }}"></i>
+                        </legend>
+
+                        @error('editingTagRelationships')
+                            <div class="tag-library-message tag-library-message--error">{{ $message }}</div>
+                        @enderror
+
+                        <div class="tag-library-modal-relationship-grid">
+                            <section class="tag-library-modal-relationship-section"
+                                aria-labelledby="tag-parent-settings-heading">
+                                <h4 id="tag-parent-settings-heading">{{ __('Parent tags') }}</h4>
+                                <p class="tag-library-modal-relationship-description">
+                                    {{ __('Adding this tag also adds these parent tags.') }}
+                                </p>
+
+                                <div class="tag-library-modal-group-search-wrap">
+                                    <label class="tag-library-modal-group-search">
+                                        <input type="search" wire:model.live.debounce.250ms="editingTagParentSearch"
+                                            placeholder="{{ __('Search parent tags...') }}">
+                                    </label>
+
+                                    @if (trim($editingTagParentSearch) !== '')
+                                        <div class="tag-library-modal-group-dropdown">
+                                            @forelse ($editingAvailableParentOptions as $availableParentOption)
+                                                <button type="button" class="tag-library-modal-group-result"
+                                                    wire:click="addEditingTagParent({{ $availableParentOption['id'] }})">
+                                                    {{ $availableParentOption['title'] }}
+                                                </button>
+                                            @empty
+                                                <p class="tag-library-empty tag-library-empty--compact">
+                                                    {{ __('No matching tags.') }}</p>
+                                            @endforelse
+                                        </div>
+                                    @endif
+                                </div>
+
+                                <div class="tag-library-modal-group-plaques"
+                                    aria-label="{{ __('Assigned parent tags') }}">
+                                    @forelse ($editingSelectedParentOptions as $selectedParentOption)
+                                        <span class="tag-library-modal-group-plaque">
+                                            <span>{{ $selectedParentOption['title'] }}</span>
+                                            <button type="button"
+                                                aria-label="{{ __('Remove :tag as a parent tag', ['tag' => $selectedParentOption['title']]) }}"
+                                                wire:click="removeEditingTagParent({{ $selectedParentOption['id'] }})">
+                                                x
+                                            </button>
+                                        </span>
+                                    @empty
+                                        <p class="tag-library-empty tag-library-empty--compact">
+                                            {{ __('No parent tags assigned.') }}</p>
+                                    @endforelse
+                                </div>
+                            </section>
+
+                            <section class="tag-library-modal-relationship-section"
+                                aria-labelledby="tag-child-settings-heading">
+                                <h4 id="tag-child-settings-heading">{{ __('Child tags') }}</h4>
+                                <p class="tag-library-modal-relationship-description">
+                                    {{ __('Adding one of these child tags also adds this tag.') }}
+                                </p>
+
+                                <div class="tag-library-modal-group-search-wrap">
+                                    <label class="tag-library-modal-group-search">
+                                        <input type="search" wire:model.live.debounce.250ms="editingTagChildSearch"
+                                            placeholder="{{ __('Search child tags...') }}">
+                                    </label>
+
+                                    @if (trim($editingTagChildSearch) !== '')
+                                        <div class="tag-library-modal-group-dropdown">
+                                            @forelse ($editingAvailableChildOptions as $availableChildOption)
+                                                <button type="button" class="tag-library-modal-group-result"
+                                                    wire:click="addEditingTagChild({{ $availableChildOption['id'] }})">
+                                                    {{ $availableChildOption['title'] }}
+                                                </button>
+                                            @empty
+                                                <p class="tag-library-empty tag-library-empty--compact">
+                                                    {{ __('No matching tags.') }}</p>
+                                            @endforelse
+                                        </div>
+                                    @endif
+                                </div>
+
+                                <div class="tag-library-modal-group-plaques"
+                                    aria-label="{{ __('Assigned child tags') }}">
+                                    @forelse ($editingSelectedChildOptions as $selectedChildOption)
+                                        <span class="tag-library-modal-group-plaque">
+                                            <span>{{ $selectedChildOption['title'] }}</span>
+                                            <button type="button"
+                                                aria-label="{{ __('Remove :tag as a child tag', ['tag' => $selectedChildOption['title']]) }}"
+                                                wire:click="removeEditingTagChild({{ $selectedChildOption['id'] }})">
+                                                x
+                                            </button>
+                                        </span>
+                                    @empty
+                                        <p class="tag-library-empty tag-library-empty--compact">
+                                            {{ __('No child tags assigned.') }}</p>
+                                    @endforelse
+                                </div>
+                            </section>
+                        </div>
+                    </fieldset>
+
+                    <fieldset class="tag-library-modal-fieldset">
                         <legend>{{ __('Groups') }}</legend>
 
                         @if ($groupOptions->isEmpty())
@@ -440,7 +635,6 @@
                         @else
                             <div class="tag-library-modal-group-search-wrap">
                                 <label class="tag-library-modal-group-search">
-                                    <span>{{ __('Search tag groups') }}</span>
                                     <input type="search" wire:model.live.debounce.250ms="editingTagGroupSearch"
                                         placeholder="{{ __('Search tag groups...') }}">
                                 </label>

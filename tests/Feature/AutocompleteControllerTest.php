@@ -245,7 +245,6 @@ class AutocompleteControllerTest extends TestCase
         $genre = Genre::query()->create([
             'title' => $title,
             'description' => null,
-            'order' => null,
         ]);
 
         $genre->setAttribute('type', $type);
