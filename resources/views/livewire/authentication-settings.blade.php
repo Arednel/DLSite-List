@@ -52,8 +52,18 @@
 
             <form wire:submit.prevent="changePassword" class="option-form">
                 <label class="option-field">
+                    <span>{{ __('Current password') }}</span>
+                    <input type="password" wire:model="currentPassword" autocomplete="current-password"
+                        maxlength="{{ config('auth.password_max_length') }}">
+                </label>
+                @error('currentPassword')
+                    <div class="text-error">{{ $message }}</div>
+                @enderror
+
+                <label class="option-field">
                     <span>{{ __('New password') }}</span>
-                    <input type="password" wire:model="newPassword" autocomplete="new-password">
+                    <input type="password" wire:model="newPassword" autocomplete="new-password"
+                        maxlength="{{ config('auth.password_max_length') }}">
                 </label>
                 @error('newPassword')
                     <div class="text-error">{{ $message }}</div>
@@ -61,7 +71,8 @@
 
                 <label class="option-field">
                     <span>{{ __('Confirm new password') }}</span>
-                    <input type="password" wire:model="newPasswordConfirmation" autocomplete="new-password">
+                    <input type="password" wire:model="newPasswordConfirmation" autocomplete="new-password"
+                        maxlength="{{ config('auth.password_max_length') }}">
                 </label>
                 @error('newPasswordConfirmation')
                     <div class="text-error">{{ $message }}</div>

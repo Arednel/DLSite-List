@@ -503,6 +503,7 @@
     "Authentication settings saved.": "認証設定を保存しました。",
     "Change Administrator Password": "管理者パスワードを変更",
     "Changing the password signs out this browser and invalidates other sessions and remember-me cookies.": "パスワードを変更すると、このブラウザーからログアウトし、他のセッションとログイン保持Cookieも無効になります。",
+    "Current password": "現在のパスワード",
     "New password": "新しいパスワード",
     "Confirm new password": "新しいパスワードを確認",
     "Are you sure you want to change the administrator password?": "管理者パスワードを変更してもよろしいですか？",

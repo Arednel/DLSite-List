@@ -52,13 +52,13 @@ Open `Options -> Authentication` to:
 - enable or disable administrator login
 - choose the independent `Cherry` or `Black` authentication-page theme (`Cherry` is the default)
 - see whether an administrator account exists
-- change the password when the browser already has an authenticated session
+- change the password after confirming the current password in an authenticated session
 
 Authentication settings are deliberately separate from General and Field Layout settings. `Reset All Options` never changes the authentication switch or authentication-page theme.
 
 When authentication is enabled:
 - if the `users` table is empty, every application page redirects to `/admin/setup`
-- setup stores one username exactly as entered and accepts a confirmed password using the application-wide minimum of 8 characters
+- setup stores one username exactly as entered and accepts a confirmed password using the application-wide range of 8 to 256 characters
 - after an account exists, setup cannot create another account and guests are redirected to `/login`
 - application controllers, mutations, autocomplete endpoints, and Livewire update/upload requests require the administrator session
 - `/login`, `/admin/setup` when applicable, `/forgot-password`, and active recovery pages remain public
@@ -66,9 +66,11 @@ When authentication is enabled:
 
 Login usernames are case-sensitive and must exactly match the value entered during setup; passwords retain Laravel's case-sensitive hash verification. A casing mismatch uses the same generic credentials error and failed-attempt accounting as any other invalid login.
 
+Laravel hashes administrator passwords with Argon2id using 64 MiB memory, four iterations, and one thread. Setup, login, authenticated password change, environment recovery, and console recovery all enforce the shared 256-character maximum.
+
 Login allows five failed attempts per client IP during a five-minute window. The next attempt is blocked until that window expires; a successful login clears the IP's attempts. `Remember me` keeps the Laravel recaller cookie for 180 days through the `web` guard's `remember` configuration.
 
-The login, setup, password help, and recovery pages share the saved authentication theme. Logging out invalidates the current session. Changing or resetting the password rotates the remember token; the settings password form also logs out the current browser.
+The login, setup, password help, and recovery pages share the saved authentication theme. Logging out invalidates the current session. The settings password form verifies the current password with Laravel's `web` guard before replacing it. Changing or resetting the password rotates the remember token; the settings password form also logs out the current browser.
 
 ### Console recovery
 

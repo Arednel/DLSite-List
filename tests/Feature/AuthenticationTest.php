@@ -53,6 +53,7 @@ class AuthenticationTest extends TestCase
     public function test_enabling_authentication_without_a_user_forces_setup_and_creates_one_admin(): void
     {
         Option::setUserAuthenticationEnabled(true);
+        $password = str_repeat('a', 256);
 
         $this->get(route('index'))->assertRedirect(route('admin.setup'));
         $this->get(route('admin.setup'))
@@ -62,8 +63,8 @@ class AuthenticationTest extends TestCase
 
         $this->post(route('admin.setup.store'), [
             'username' => 'admin',
-            'password' => 'secure-password',
-            'password_confirmation' => 'secure-password',
+            'password' => $password,
+            'password_confirmation' => $password,
         ])->assertRedirect(route('index'));
 
         $this->assertAuthenticated();
@@ -71,7 +72,8 @@ class AuthenticationTest extends TestCase
         $user = User::query()->sole();
         $this->assertSame('admin', $user->username);
         $this->assertSame('Admin', $user->user_privilege);
-        $this->assertTrue(Hash::check('secure-password', $user->password));
+        $this->assertTrue(Hash::check($password, $user->password));
+        $this->assertSame('argon2id', Hash::info($user->password)['algoName']);
 
         $this->post(route('admin.setup.store'), [
             'username' => 'second-admin',
@@ -92,7 +94,28 @@ class AuthenticationTest extends TestCase
             'password_confirmation' => 'different',
         ])->assertSessionHasErrors(['username', 'password']);
 
+        $password = str_repeat('a', 257);
+
+        $this->post(route('admin.setup.store'), [
+            'username' => 'admin',
+            'password' => $password,
+            'password_confirmation' => $password,
+        ])->assertSessionHasErrors('password');
+
         $this->assertDatabaseCount('users', 0);
+    }
+
+    public function test_login_rejects_passwords_longer_than_256_characters(): void
+    {
+        $this->createAdmin();
+        Option::setUserAuthenticationEnabled(true);
+
+        $this->post(route('login.authenticate'), [
+            'username' => 'admin',
+            'password' => str_repeat('a', 257),
+        ])->assertSessionHasErrors('password');
+
+        $this->assertGuest();
     }
 
     public function test_enabled_authentication_protects_pages_mutations_and_livewire_requests(): void

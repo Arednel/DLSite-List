@@ -26,6 +26,7 @@ class AdminCommandTest extends TestCase
 
         $user->refresh();
         $this->assertTrue(Hash::check('new-secure-password', $user->password));
+        $this->assertSame('argon2id', Hash::info($user->password)['algoName']);
         $this->assertNotSame('old-token', $user->remember_token);
     }
 

@@ -47,7 +47,7 @@ class AuthenticationController extends Controller
 
         $credentials = $request->validate([
             'username' => ['required', 'string', 'max:50'],
-            'password' => ['required', 'string'],
+            'password' => ['required', 'string', 'max:' . config('auth.password_max_length')],
             'remember' => ['nullable', 'boolean'],
         ]);
 

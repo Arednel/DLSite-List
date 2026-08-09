@@ -74,6 +74,8 @@ class AuthenticationSettingsTest extends TestCase
         $this->actingAs($user);
 
         Livewire::test(AuthenticationSettings::class)
+            ->assertSee('Current password')
+            ->set('currentPassword', 'old-password')
             ->set('newPassword', 'new-secure-password')
             ->set('newPasswordConfirmation', 'new-secure-password')
             ->call('changePassword')
@@ -85,6 +87,28 @@ class AuthenticationSettingsTest extends TestCase
         $this->assertGuest();
     }
 
+    public function test_password_change_rejects_an_incorrect_current_password(): void
+    {
+        $user = User::factory()->create([
+            'password' => 'old-password',
+            'remember_token' => 'old-token',
+        ]);
+        Option::setUserAuthenticationEnabled(true);
+
+        Livewire::actingAs($user)
+            ->test(AuthenticationSettings::class)
+            ->set('currentPassword', 'incorrect-password')
+            ->set('newPassword', 'new-secure-password')
+            ->set('newPasswordConfirmation', 'new-secure-password')
+            ->call('changePassword')
+            ->assertHasErrors(['currentPassword' => 'current_password']);
+
+        $user->refresh();
+        $this->assertTrue(Hash::check('old-password', $user->password));
+        $this->assertSame('old-token', $user->remember_token);
+        $this->assertAuthenticatedAs($user);
+    }
+
     public function test_password_change_requires_matching_confirmed_values(): void
     {
         $user = User::factory()->create();
@@ -92,9 +116,27 @@ class AuthenticationSettingsTest extends TestCase
 
         Livewire::actingAs($user)
             ->test(AuthenticationSettings::class)
+            ->set('currentPassword', 'password')
             ->set('newPassword', 'new-secure-password')
             ->set('newPasswordConfirmation', 'different-password')
             ->call('changePassword')
             ->assertHasErrors(['newPassword']);
+    }
+
+    public function test_password_change_rejects_passwords_longer_than_256_characters(): void
+    {
+        $user = User::factory()->create();
+        Option::setUserAuthenticationEnabled(true);
+        $password = str_repeat('a', 257);
+
+        Livewire::actingAs($user)
+            ->test(AuthenticationSettings::class)
+            ->set('currentPassword', 'password')
+            ->set('newPassword', $password)
+            ->set('newPasswordConfirmation', $password)
+            ->call('changePassword')
+            ->assertHasErrors(['newPassword']);
+
+        $this->assertAuthenticatedAs($user);
     }
 }

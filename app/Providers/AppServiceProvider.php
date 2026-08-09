@@ -34,7 +34,9 @@ class AppServiceProvider extends ServiceProvider
         ]);
 
         Schema::defaultStringLength(191);
-        Password::defaults(fn() => Password::min(8));
+        Password::defaults(
+            fn() => Password::min(8)->max((int) config('auth.password_max_length')),
+        );
 
         if (isset($_SERVER['HTTPS']) && ($_SERVER['HTTPS'] == 'on' || $_SERVER['HTTPS'] == 1) || isset($_SERVER['HTTP_X_FORWARDED_PROTO']) && $_SERVER['HTTP_X_FORWARDED_PROTO'] == 'https') {
             \URL::forceScheme('https');

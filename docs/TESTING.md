@@ -78,9 +78,9 @@ Current automated coverage includes Laravel PHPUnit and Python `unittest` tests:
 - `tests/Feature/OptionsWorkSearchTest.php`
   - covers the Livewire selected-work search, numeric RJ-desc visible order, and selected product preservation when filtered results change
 - `tests/Feature/AuthenticationTest.php`
-  - covers default-off access without recovery-state queries, setup and single-account creation, exact-case usernames, protected routes/mutations/Livewire updates, public help, generic login failures, five-attempt per-IP throttling and expiry, intended redirects, logout, both authentication themes, and the 180-day remember cookie
+  - covers default-off access without recovery-state queries, Argon2id setup hashes, the shared 256-character maximum at setup/login, single-account creation, exact-case usernames, protected routes/mutations/Livewire updates, public help, generic login failures, five-attempt per-IP throttling and expiry, intended redirects, logout, both authentication themes, and the 180-day remember cookie
 - `tests/Feature/AuthenticationSettingsTest.php`
-  - covers the separate non-resettable Authentication tab, guest-hidden authenticated controls, enable/setup and enable/login redirects, theme persistence, global-reset exclusion, confirmed password replacement, remember-token rotation, and logout after change
+  - covers the separate non-resettable Authentication tab, guest-hidden authenticated controls, enable/setup and enable/login redirects, theme persistence, global-reset exclusion, current-password verification, rejected incorrect current passwords without credential mutation, the 256-character password maximum, confirmed password replacement, remember-token rotation, and logout after change
 - `tests/Feature/AdminRecoveryTest.php`
   - covers the environment flag being ignored while authentication is off, forced one-time recovery while enabled, atomic rollback when recovery-marker persistence fails, consumed-state blocking, flag removal/restart state clearing, and unsupported multiple-user recovery
 - `tests/Feature/AdminCommandTest.php`
@@ -168,7 +168,8 @@ Optional-status tests store the two switches in `options.optional_product_status
 - Fail login five times from one IP, confirm the next attempt is blocked, then confirm access returns after five minutes. Check another IP remains independent.
 - Sign in once without Remember me and once with it; confirm the remembered login survives a normal browser restart and is documented as 180 days.
 - Check login, setup, forgot-password help, and environment recovery in both Cherry and Black themes and both UI languages.
-- Change the password from the Authentication tab, accept the browser confirmation, and confirm the browser is logged out and the new password works.
+- Confirm setup, login, password change, and both recovery paths reject passwords longer than 256 characters.
+- Change the password from the Authentication tab, confirm an incorrect current password is rejected, then enter the correct current password, accept the browser confirmation, and confirm the browser is logged out and the new password works.
 - Run `php artisan admin:reset-password`, then `php artisan admin:reset`; confirm the first changes credentials and the second clears all user rows and returns enabled authentication to setup.
 - In a trusted local environment only, enable `ADMIN_PASSWORD_RESET=true`, restart, complete one reset, and confirm all pages remain blocked by the removal message. Remove the variable, restart/recreate the app process, and confirm normal login resumes.
 

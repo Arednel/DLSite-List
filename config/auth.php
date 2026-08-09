@@ -4,6 +4,8 @@ return [
 
     'admin_password_reset' => env('ADMIN_PASSWORD_RESET', false),
 
+    'password_max_length' => 256,
+
     /*
     |--------------------------------------------------------------------------
     | Authentication Defaults

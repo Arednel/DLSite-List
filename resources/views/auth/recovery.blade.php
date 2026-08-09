@@ -34,7 +34,8 @@
 
             <label class="auth-field">
                 <span>{{ __('New password') }}</span>
-                <input type="password" name="password" required autofocus autocomplete="new-password">
+                <input type="password" name="password" required autofocus autocomplete="new-password"
+                    maxlength="{{ config('auth.password_max_length') }}">
             </label>
             @error('password')
                 <div class="auth-error">{{ $message }}</div>
@@ -42,7 +43,8 @@
 
             <label class="auth-field">
                 <span>{{ __('Confirm new password') }}</span>
-                <input type="password" name="password_confirmation" required autocomplete="new-password">
+                <input type="password" name="password_confirmation" required autocomplete="new-password"
+                    maxlength="{{ config('auth.password_max_length') }}">
             </label>
 
             <p class="auth-hint">{{ __('Use at least 8 characters.') }}</p>

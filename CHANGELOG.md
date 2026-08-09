@@ -2,6 +2,10 @@
 
 ## Development
 
+* 2026-08-09 -- 1.8.2 Auth Improvements
+  * Now current password is required before changing it in Auth settings
+  * Switched password hashing to Argon2id and capped passwords at 256 characters (Existing account password must be reset manually)
+
 * 2026-08-04 -- 1.8.1 Tags Relationships, Renaming & Filters
   * Added parent/child tag relationships
   * Added tag renaming

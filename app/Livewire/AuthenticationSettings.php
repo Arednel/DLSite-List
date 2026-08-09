@@ -16,6 +16,8 @@ class AuthenticationSettings extends Component
 
     public string $theme = Option::AUTHENTICATION_PAGE_THEME_CHERRY;
 
+    public string $currentPassword = '';
+
     public string $newPassword = '';
 
     public string $newPasswordConfirmation = '';
@@ -69,6 +71,13 @@ class AuthenticationSettings extends Component
         abort_unless(Auth::guard('web')->check(), 403);
 
         $this->validate([
+            'currentPassword' => [
+                'bail',
+                'required',
+                'string',
+                'max:' . config('auth.password_max_length'),
+                'current_password:web',
+            ],
             'newPassword' => [
                 'required',
                 'same:newPasswordConfirmation',
@@ -81,7 +90,7 @@ class AuthenticationSettings extends Component
         $user = Auth::guard('web')->user();
         $user->replacePassword($this->newPassword);
 
-        $this->reset('newPassword', 'newPasswordConfirmation');
+        $this->reset('currentPassword', 'newPassword', 'newPasswordConfirmation');
 
         Auth::guard('web')->logout();
         session()->invalidate();

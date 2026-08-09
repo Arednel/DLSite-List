@@ -17,7 +17,8 @@
 
         <label class="auth-field">
             <span>{{ __('Password') }}</span>
-            <input type="password" name="password" required autocomplete="current-password">
+            <input type="password" name="password" required autocomplete="current-password"
+                maxlength="{{ config('auth.password_max_length') }}">
         </label>
         @error('password')
             <div class="auth-error">{{ $message }}</div>
