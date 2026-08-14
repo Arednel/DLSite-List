@@ -1,7 +1,9 @@
 # Testing
 
-## Scope
+## Automated Coverage
+
 Current automated coverage includes Laravel PHPUnit and Python `unittest` tests:
+
 - Language settings and requests cover English defaults, invalid-value fallback, persistence, Save/Reset redirects, destination-locale notices, and Laravel's active request locale.
 - Localization behavior covers catalog integrity, representative visible and accessible UI copy, dynamic document language, locale-aware months and pluralization, stable backed values, and current-language fetched tags across Index, Edit, and Tag Library.
 - Error behavior covers all recognized Refetch and Quick Add errors, raw persisted/logged values, and verbatim pass-through for unknown external errors.
@@ -17,7 +19,11 @@ Current automated coverage includes Laravel PHPUnit and Python `unittest` tests:
   - Index return navigation: visible-work anchors, visibility-filter redirects including metadata filters, maker ID-only circle-filter cleanup, visible/hidden-description general search return policy, custom-sort return page calculation, a full visible-update return workflow, and filtered delete page fallback including hidden-description search override page clamping
   - Create navigation and completion: Laravel previous URL create back links, malformed create back-link input, create-mode back-link preservation including `modal=1`, Create Go Back preservation after scraper validation errors, custom create/upload flow, modal create/update/delete completion responses with calculated redirect URLs, and unchanged redirects for standalone requests
   - Product persistence and updates: shared five-attempt DLSite fetches, dismissible fixed Index and modal-completion image-failure warnings, DLSite storage with one fetched tag in both JP/EN buckets, contributor sync, automatic Series from `title_name`, enum-backed product field validation, metadata update flow, map-driven editable update payload behavior, semantic partial-date comparison with no-op Updated Date preservation, real date-change timestamp updates, duplicate English description cleanup, and logged destroy cleanup failures
-  - Quick Add client behavior: DLSite-only fetching status markup and asset, Custom Quick Add exclusion, green Cherry/Black theme values, submit-event reveal behavior, browser-history reset behavior, and exact three-message recognized-scraper translation versus verbatim unknown errors
+  - Quick Add request behavior: exact three-message recognized-scraper translation versus verbatim unknown errors, preserved return navigation after scraper failure, and reloaded scraper-error markup with the fetching status hidden and red error visible
+- `tests/Feature/WorkFormModalTest.php`
+  - covers the server-rendered completion fallback's `_top` link and presence or absence of completion-script markup based on warning state
+- `tests/Feature/QuickAddFetchStatusTest.php`
+  - covers the DLSite fetching-status markup across representative standalone/modal, Cherry/Black, and English/Japanese combinations; exactly two enabled submit controls; Custom Quick Add exclusion in standalone/modal modes; and Laravel-validation reload markup
 - `tests/Feature/TagLibraryManagerTest.php`
   - Tag listing and locale behavior: current-language fetched/custom and zero-pivot tag listing, other-language exclusion, and locale-aware group members/counts/links/usage
   - Display state: collapsed default state, saved expanded default state, and search-open behavior
@@ -50,7 +56,7 @@ Current automated coverage includes Laravel PHPUnit and Python `unittest` tests:
 - `tests/Feature/IndexSearchSettingsTest.php`
   - covers the Options hidden-description search setting, including hydration, persistence, modal-confirmed reset-to-default behavior, and global reset refresh
 - `tests/Feature/IndexImageViewerTest.php`
-  - covers the default-off General setting, persistence, individual/global reset, disabled remote image links, Livewire JSON action success/error returns, unchanged title links, cover-first ordering, modification-time cache busting, retained missing paths, conditional dialog/script rendering, hidden Image-column behavior, and final-boundary migration cleanup
+  - covers the default-off General setting, persistence, individual/global reset, disabled remote image links, Livewire JSON action success/error returns, unchanged title links, cover-first ordering, modification-time cache busting, retained missing positions with later valid images, accessible placeholder/navigation/counter markup, the safe new-tab contract, conditional dialog/script rendering, hidden Image-column behavior, and final-boundary migration cleanup
 - `tests/Feature/OptionalProductStatusesTest.php`
   - covers every On Hold/Dropped switch combination across DLSite Quick Add, Custom Quick Add, Edit, Index navigation, and Advanced Filter; Edit's current-status exception; unconditional localized labels; and yellow/red row bars
 - `tests/Feature/AutocompleteSettingsTest.php`
@@ -78,13 +84,13 @@ Current automated coverage includes Laravel PHPUnit and Python `unittest` tests:
 - `tests/Feature/OptionsWorkSearchTest.php`
   - covers the Livewire selected-work search, numeric RJ-desc visible order, and selected product preservation when filtered results change
 - `tests/Feature/AuthenticationTest.php`
-  - covers default-off access without recovery-state queries, Argon2id setup hashes, the shared 256-character maximum at setup/login, single-account creation, exact-case usernames, protected routes/mutations/Livewire updates, public help, generic login failures, five-attempt per-IP throttling and expiry, intended redirects, logout, both authentication themes, and the 180-day remember cookie
+  - covers default-off access without recovery-state queries, Argon2id setup hashes, the shared 256-character maximum at setup/login, single-account creation, exact-case usernames, protected routes/mutations/Livewire updates, public help, generic login failures, five-attempt per-IP throttling and expiry, intended redirects, logout, login/setup/help/recovery markup across both authentication themes and both UI languages, and the 180-day remember cookie authenticating after session loss
 - `tests/Feature/AuthenticationSettingsTest.php`
-  - covers the separate non-resettable Authentication tab, guest-hidden authenticated controls, enable/setup and enable/login redirects, theme persistence, global-reset exclusion, current-password verification, rejected incorrect current passwords without credential mutation, the 256-character password maximum, confirmed password replacement, remember-token rotation, and logout after change
+  - covers the separate non-resettable Authentication tab, guest-hidden authenticated controls, enable/setup and enable/login redirects, theme persistence, global-reset exclusion, current-password verification, rejected incorrect current passwords without credential mutation, the 256-character password maximum, password-change `wire:confirm` markup, confirmed password replacement, remember-token rotation, and logout after change
 - `tests/Feature/AdminRecoveryTest.php`
-  - covers the environment flag being ignored while authentication is off, forced one-time recovery while enabled, atomic rollback when recovery-marker persistence fails, consumed-state blocking, flag removal/restart state clearing, and unsupported multiple-user recovery
+  - covers the environment flag being ignored while authentication is off, forced one-time recovery while enabled, the 256-character password maximum without credential mutation, atomic rollback when recovery-marker persistence fails, consumed-state blocking, flag removal/restart state clearing, and unsupported multiple-user recovery
 - `tests/Feature/AdminCommandTest.php`
-  - covers masked console password reset, zero/multiple-user refusal, full user-table reset confirmation, and reset cancellation
+  - covers masked console password reset, the 256-character password maximum without credential mutation, zero/multiple-user refusal, full user-table reset confirmation, and reset cancellation
 - `tests/Performance/PerformanceSmokeTest.php`
   - defaults to 500 works, 500 tags, 10000 tag pivot rows, and contributor rows for every Index contributor role, then reports average response times for default/full-column paginated and unlimited Index paths without configured colors, the same four Index paths with unique tag background/font colors, filtered/search/tag Index paths, Options tabs, common/recalculated/filter-cleanup update redirects, and delete page clamp redirects
   - performance smoke timings emit PHPUnit warning issues above 500ms and stronger warning text above 1000ms; use `--do-not-fail-on-phpunit-warning` when you want the command to exit successfully while still showing those warnings
@@ -129,7 +135,9 @@ Current automated coverage includes Laravel PHPUnit and Python `unittest` tests:
   - covers Python's matching UTC week calculation, weekly append/switch behavior, first-write cleanup after same-week expiry, complete-week retention, selective cleanup, concurrent archive removal, invalid retention fallback, the production handler interface, and non-blocking cleanup failures
 
 ## Test Environment Setup
+
 ### Local test setup
+
 1. Create a dedicated testing env file:
    - copy `.env.testing.example` to `.env.testing`
 2. Keep test settings separate from `docker/.env.docker`:
@@ -155,76 +163,53 @@ Livewire component tests use `Livewire::test()` to update component state withou
 Index pagination tests set `options.index_per_page` through `App\Models\Option` so fixed, custom, and unlimited list sizes can be verified without touching application config.
 Autocomplete settings tests set `options.tag_autocomplete_order` and `options.series_autocomplete_order` through `App\Models\Option` so tag and series suggestion ranking can be verified independently. Autocomplete controller tests cover optional tag background/font color payloads through `options.tag_color_surfaces` and assert suggestions do not render a separate color marker.
 Product metadata settings tests set the field layouts, automatic Series, and Index table width options through `App\Models\Option` so UI behavior can be verified without changing environment config. Field layout tests update Livewire component state and movement actions directly, then assert persisted layout order and checkbox/editability state remains attached to field ids after row movement.
-Work-form modal tests store both modal options through `App\Models\Option`, render all supported host pages, and assert option normalization, standalone link URLs, modal metadata, Livewire save/reset events, modal completion responses, and the same-Index pending-redirect asset contract without requiring a browser. The shared completion response assertion also covers its dedicated stylesheet, semantic fallback card, and `_top` Continue link.
+Work-form modal tests store both modal options through `App\Models\Option`, render all supported host pages, and assert option normalization, standalone link URLs, Livewire save/reset events, and modal completion responses without requiring a browser. The completion assertions also cover the dedicated stylesheet, semantic fallback card, `_top` Continue link, conditional completion-script markup, and warning behavior. They do not execute the modal JavaScript. Native dialog, iframe, focus, mouse, messaging, completion-action handling, scrolling, and navigation behavior remain browser checks.
 Age-appropriate DLSite link tests store `options.dlsite_age_appropriate_links_enabled` through `App\Models\Option`; query-log assertions verify hidden `age_category` remains unselected while disabled and is hydrated only when enabled.
-Image-viewer tests store `options.index_image_viewer_enabled` through `App\Models\Option`; Livewire action assertions verify ordered browser URLs without requiring files to exist, conditional response assertions cover dialog/script inclusion, and migration tests own unsafe value cleanup.
+Image-viewer tests store `options.index_image_viewer_enabled` through `App\Models\Option`; Livewire action assertions verify ordered browser URLs, retain missing positions, and cache-bust later valid files. Response assertions cover accessible dialog controls, the hidden safe new-tab link, conditional dialog/script inclusion, and migration-owned unsafe value cleanup.
 Optional-status tests store the two switches in `options.optional_product_statuses` and verify that they affect only rendered form, filter, and Index controls.
-
-## Manual Authentication Checks
-
-- With no user rows, confirm the application remains public by default. Enable `Options -> Authentication` and confirm the next page is administrator setup.
-- Create the administrator, log out, and confirm Index, Options, Tag Library, create/edit actions, autocomplete, Refetch, and Livewire interactions redirect to login.
-- Create a mixed-case username, confirm a differently cased login receives the generic credentials error and counts as a failed attempt, then confirm the exact username casing succeeds.
-- Fail login five times from one IP, confirm the next attempt is blocked, then confirm access returns after five minutes. Check another IP remains independent.
-- Sign in once without Remember me and once with it; confirm the remembered login survives a normal browser restart and is documented as 180 days.
-- Check login, setup, forgot-password help, and environment recovery in both Cherry and Black themes and both UI languages.
-- Confirm setup, login, password change, and both recovery paths reject passwords longer than 256 characters.
-- Change the password from the Authentication tab, confirm an incorrect current password is rejected, then enter the correct current password, accept the browser confirmation, and confirm the browser is logged out and the new password works.
-- Run `php artisan admin:reset-password`, then `php artisan admin:reset`; confirm the first changes credentials and the second clears all user rows and returns enabled authentication to setup.
-- In a trusted local environment only, enable `ADMIN_PASSWORD_RESET=true`, restart, complete one reset, and confirm all pages remain blocked by the removal message. Remove the variable, restart/recreate the app process, and confirm normal login resumes.
-
-## Manual UI Language and Locale-Aware Tag Checks
-- Save and reset `English` / `日本語` in Options. Confirm the full reload, destination-locale notice, global scope, and originating tab for Reset All.
-- Check representative Index, Create/Edit, Options, Tag Library, Refetch, and completion surfaces in both languages. Confirm dynamic `<html lang>`, localized months, accessible copy, desktop menu border/hover, and the mobile drawer.
-- Confirm recognized Refetch and Quick Add errors localize while persisted/logged and unknown external errors remain unchanged.
-- With EN-only, JP-only, shared, empty, and custom tags, verify Index display/search/filter/links, Edit, Tag Library counts/filters, one-row shared tags, and language-independent autocomplete.
-
-## Manual DLSite Link Checks
-- With the option disabled and the Age column hidden, confirm All Ages, R15, and R18 image/title links all open Maniax.
-- Enable General -> DLSite Links, keep the Age column hidden, and confirm All Ages image/title links open DLSite Home while R15 and R18 links open Maniax.
-- Confirm the Image, Japanese title, and optional English title links for the same work share one destination and still open in a new tab.
-
-## Manual Image Viewer Checks
-- With General -> Image Viewer disabled, confirm clicking an Index thumbnail opens DLSite and title links keep their configured DLSite destinations.
-- Enable the viewer and confirm clicking a thumbnail opens the saved cover first, shows only the image counter, and leaves both title links unchanged.
-- Confirm Previous and Next wrap between the cover and numerically ordered samples, keyboard navigation and close controls work, opening another work resets the viewer to its cover, and `View in full` opens the current loaded image in a new tab.
-- Confirm a retained path for a missing download shows `No image` without removing its counter position, hides `View in full`, and leaves later valid images reachable.
-- Hide the Image Index column and confirm no viewer trigger renders.
-- With optional authentication enabled, confirm a guest Livewire image action redirects to login. Remember that a known `/storage` URL is still a public static asset.
-
-## Manual Optional Status Checks
-
-- With both switches disabled, confirm Quick Add, Custom Quick Add, Index status buttons, and Advanced Filter show only Listening, Completed, and Plan to Listen.
-- Enable each switch separately and then together. Confirm the Index buttons stay between Completed and Plan to Listen and each form/filter exposes only enabled optional values.
-- Disable both after saving one On Hold work and one Dropped work. Confirm All ASMR still shows their localized labels with yellow/red bars; Add, Advanced Filter, and the Index status tabs hide both choices; and Edit offers only the work's own current optional status.
-
-## Manual Quick Add Fetch Status Checks
-- In standalone and modal DLSite Quick Add, confirm top Submit, bottom Submit, and Enter reveal the localized green fetching-status text beneath the RJ field.
-- Confirm an empty required RJ field does not reveal the message and both Submit buttons remain enabled while the message is visible.
-- Confirm Laravel validation and scraper errors reload Quick Add with the green message hidden and the existing red error visible.
-- Confirm Custom Quick Add never renders the fetching message and browser Back restores DLSite Quick Add with the message hidden.
-- Confirm the message remains readable in both Cherry and Black form themes.
-
-## Manual Work Form Modal Checks
-- With the option disabled, confirm Quick Add and Index Edit continue to navigate as standalone pages.
-- With it enabled, confirm ordinary left-click opens the native dialog on Index, Options, Tag Library, and Refetch for Quick Add, and on Index for Edit Work.
-- Confirm middle-click, right-click, and Ctrl/Cmd/Shift/Alt-click keep native link behavior and do not open the modal.
-- Confirm the header Close button, Escape, backdrop click, and the form's Go Back/Close control dismiss the dialog, clear the iframe, and return focus without treating the action as a successful mutation.
-- Confirm DLSite/Custom Create switching, validation errors, autocomplete, responsive sizing, Edit's Delete confirmation, and Create/Edit styling work inside the iframe without inheriting or covering host-page UI.
-- Confirm successful create, update, and delete apply each completion choice: Laravel redirect, host-page refresh, or close-only with potentially stale host data.
-- From the plain Index with Follow redirect selected, complete modal Quick Add and confirm the refreshed URL keeps `#RJ...` and the viewport moves to the newly rendered work row.
-- Confirm modal Quick Add from filtered/paginated Index URLs and non-Index hosts still follows the calculated destination, and modal Edit/Delete plus Refresh/Close behavior remains unchanged.
-- If parent messaging is intentionally blocked during inspection, confirm the completion fallback shows a centered responsive Cherry/Options card and its Continue button navigates the full browser page.
+Quick Add fetch-status tests render standalone/modal DLSite and Custom forms without executing JavaScript. They verify localized accessible markup, enabled submit controls, and server-rendered validation/error state; submit events, native browser validation, `pageshow` behavior, and visual readability remain browser checks.
 
 ### Docker test setup
+
 Docker tests use:
+
 - `docker/.env.testing.docker` for Laravel's testing environment variables
 - `database_test` as the MySQL host inside the Docker network
 - `dbdata_test` as the separate Docker test database volume
 
 The Docker test service is one-off and does not run during the normal app startup command unless it is requested directly.
 
+## Manual Authentication Checks
+
+- Sign in with Remember me, restart the browser normally, and confirm the login persists. Automated coverage verifies the persistent cookie's documented 180-day lifetime and authentication after session loss.
+- Visually spot-check login, setup, forgot-password help, and environment recovery, distributing the pages across both Cherry and Black themes and both UI languages instead of checking every combination. Their complete theme/language/content markup matrix is automated.
+- Change the password from the Authentication tab and exercise both cancel and accept on the browser confirmation. The `wire:confirm` contract, current-password validation, credential replacement, and logout are automated.
+- In a trusted local environment only, enable `ADMIN_PASSWORD_RESET=true`, restart, complete one reset, and confirm all pages remain blocked by the removal message. Remove the variable, restart/recreate the app process, and confirm normal login resumes.
+
+## Manual Image Viewer Checks
+
+- Enable the viewer and confirm clicking a thumbnail opens the saved cover first and shows only the image counter. Cover-first ordering, viewer markup, and unchanged title links are automated.
+- Confirm Previous and Next wrap between the cover and numerically ordered samples, keyboard navigation and close controls work, opening another work resets the viewer to its cover, and `View in full` opens the current loaded image in a new tab. Navigation controls and the safe new-tab markup are automated.
+- Confirm a retained path for a missing download shows `No image` without removing its counter position, hides `View in full`, and leaves later valid images reachable. Missing-position retention and later valid URLs are automated.
+
+## Manual Quick Add Fetch Status Checks
+
+- In standalone and modal DLSite Quick Add, confirm top Submit, bottom Submit, and Enter reveal readable fetching-status text beneath the RJ field; spot-check both Cherry and Black themes. Its localized markup is automated.
+- Confirm native browser validation prevents an empty required RJ field from revealing the message. Both rendered Submit controls are automatically verified as enabled.
+- Confirm browser Back restores DLSite Quick Add with the message hidden. Custom Quick Add exclusion and validation/scraper error reload markup are automated.
+
+## Manual Work Form Modal Checks
+
+- On Index, confirm Quick Add and Edit navigate as standalone pages while the option is disabled, then open the native dialog with an ordinary left-click while enabled. Also smoke-test Quick Add from one secondary host such as Options. Enabled host markers and server-rendered standalone URLs are automated; disabled click behavior is not.
+- Confirm middle-click, right-click, and Ctrl/Cmd/Shift/Alt-click keep native link behavior and do not open the modal.
+- Confirm the header Close button, Escape, backdrop click, and the form's Close control dismiss the dialog, clear the iframe, and return focus without treating cancellation as a successful mutation. Modal Close-control markup and marker preservation are automated.
+- Confirm DLSite/Custom Create switching, validation errors, autocomplete, responsive sizing, Edit's Delete confirmation, and Create/Edit styling work inside the iframe without inheriting or covering host-page UI. Mode/marker preservation, validation responses, autocomplete endpoints/markup, and Delete form markup are automated.
+- Confirm the browser applies Laravel redirect, host-page refresh, and close-only completion choices. Server responses for successful create, update, and delete are automated.
+- With Follow redirect selected, complete modal Quick Add from the plain Index, one filtered/paginated Index URL, and one non-Index host. Confirm each calculated destination is followed and the plain Index moves the viewport to the new `#RJ...` row. Destination calculation is automated.
+- Optional release/resilience check: intentionally block parent messaging, then confirm the completion fallback displays and its Continue button navigates the full browser page. Fallback and `_top` link markup are automated; messaging and navigation execution remain browser checks.
+
 ## Running Tests
+
 - Run Unit + Feature suites:
   - `php artisan test`
 - Run performance smoke suite:

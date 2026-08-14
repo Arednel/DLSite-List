@@ -2,6 +2,10 @@
 
 ## Development
 
+* 2026-08-14 -- 1.8.3 Test Coverage & Documentation
+  * Expanded regression coverage for authentication, Image Viewer, Quick Add status, and work-form modals
+  * Updated docs
+
 * 2026-08-09 -- 1.8.2 Auth Improvements
   * Now current password is required before changing it in Auth settings
   * Switched password hashing to Argon2id and capped passwords at 256 characters (Existing account password must be reset manually)

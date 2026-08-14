@@ -886,6 +886,11 @@ class ProductControllerTest extends TestCase
             ])
             ->assertOk()
             ->assertSee('Deleted or Non-existing DLSite work')
+            ->assertSee(
+                'data-dlsite-fetch-status role="status" aria-live="polite" hidden',
+                false,
+            )
+            ->assertSee('class="text-error"', false)
             ->assertSee('name="return_url" value="http://localhost/?progress=Listening"', false)
             ->assertSeeInOrder(['name="return_query[search]"', 'value="rain"'], false)
             ->assertSeeInOrder(['name="return_query[progress]"', 'value="Listening"'], false)

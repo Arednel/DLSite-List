@@ -62,6 +62,27 @@ class AdminRecoveryTest extends TestCase
         ]);
     }
 
+    public function test_environment_recovery_rejects_passwords_longer_than_256_characters(): void
+    {
+        $user = User::factory()->create([
+            'password' => 'old-password',
+            'remember_token' => 'old-token',
+        ]);
+        Option::setUserAuthenticationEnabled(true);
+        config()->set('auth.admin_password_reset', true);
+        $password = str_repeat('a', 257);
+
+        $this->post(route('admin.recovery.store'), [
+            'password' => $password,
+            'password_confirmation' => $password,
+        ])->assertSessionHasErrors('password');
+
+        $user->refresh();
+        $this->assertTrue(Hash::check('old-password', $user->password));
+        $this->assertSame('old-token', $user->remember_token);
+        $this->assertFalse(Option::adminPasswordResetConsumed());
+    }
+
     public function test_environment_recovery_rolls_back_password_when_the_consumed_marker_cannot_be_saved(): void
     {
         $user = User::factory()->create([

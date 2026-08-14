@@ -6,9 +6,11 @@ use App\Models\Option;
 use App\Models\User;
 use Illuminate\Database\Events\QueryExecuted;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\RateLimiter;
+use PHPUnit\Framework\Attributes\DataProvider;
 use Tests\TestCase;
 
 class AuthenticationTest extends TestCase
@@ -216,9 +218,9 @@ class AuthenticationTest extends TestCase
         $this->assertSame(0, RateLimiter::attempts($limiterKey));
     }
 
-    public function test_remember_me_cookie_expires_after_180_days(): void
+    public function test_remember_me_cookie_expires_after_180_days_and_authenticates_after_session_loss(): void
     {
-        $this->createAdmin();
+        $user = $this->createAdmin();
         Option::setUserAuthenticationEnabled(true);
         $startedAt = now();
 
@@ -239,6 +241,17 @@ class AuthenticationTest extends TestCase
             $rememberCookie->getExpiresTime(),
             5,
         );
+
+        $this->app['session']->invalidate();
+        Auth::forgetGuards();
+
+        $this->withUnencryptedCookie(
+            $rememberCookie->getName(),
+            $rememberCookie->getValue(),
+        )->get(route('index'))->assertOk();
+
+        $this->assertAuthenticatedAs($user);
+        $this->assertTrue(Auth::guard('web')->viaRemember());
     }
 
     public function test_successful_login_follows_intended_url_and_logout_invalidates_authentication(): void
@@ -266,36 +279,81 @@ class AuthenticationTest extends TestCase
         $this->assertGuest();
     }
 
-    public function test_black_authentication_theme_is_applied_to_login_and_help(): void
-    {
-        $this->createAdmin();
+    #[DataProvider('authenticationPagePresentationProvider')]
+    public function test_authentication_pages_use_the_selected_theme_and_ui_language(
+        string $routeName,
+        bool $requiresAdmin,
+        bool $recoveryEnabled,
+        string $theme,
+        string $locale,
+        string $title,
+        string $content,
+    ): void {
+        if ($requiresAdmin) {
+            $this->createAdmin();
+        }
+
         Option::setUserAuthenticationEnabled(true);
-        Option::setAuthenticationPageTheme(Option::AUTHENTICATION_PAGE_THEME_BLACK);
+        Option::setAuthenticationPageTheme($theme);
+        Option::setUiLanguage($locale);
+        config()->set('auth.admin_password_reset', $recoveryEnabled);
 
-        $this->get(route('login'))
+        $this->get(route($routeName))
             ->assertOk()
-            ->assertSee('auth-theme-black', false)
-            ->assertSee('Remember Me')
-            ->assertSee('Forgot your password?');
-
-        $this->get(route('password.help'))
-            ->assertOk()
-            ->assertSee('auth-theme-black', false);
+            ->assertSee('<html lang="' . $locale . '">', false)
+            ->assertSee('auth-theme-' . $theme, false)
+            ->assertSee(trans($title, locale: $locale))
+            ->assertSee(trans($content, locale: $locale));
     }
 
-    public function test_authentication_pages_follow_the_saved_japanese_ui_language(): void
+    public static function authenticationPagePresentationProvider(): iterable
     {
-        $this->createAdmin();
-        Option::setUserAuthenticationEnabled(true);
-        Option::setUiLanguage('ja');
+        $pages = [
+            'login' => [
+                'login',
+                true,
+                false,
+                'Sign in to continue',
+                'Remember Me',
+            ],
+            'setup' => [
+                'admin.setup',
+                false,
+                false,
+                'Create Administrator Account',
+                'Use at least 8 characters.',
+            ],
+            'help' => [
+                'password.help',
+                true,
+                false,
+                'Password Reset Help',
+                'Recommended: console command',
+            ],
+            'recovery' => [
+                'admin.recovery',
+                true,
+                true,
+                'Environment Password Recovery',
+                'Anyone who can reach this page can set the administrator password while recovery mode is active.',
+            ],
+        ];
 
-        $this->get(route('login'))
-            ->assertOk()
-            ->assertSee('<html lang="ja">', false);
-
-        $this->get(route('password.help'))
-            ->assertOk()
-            ->assertSee('パスワードリセットのヘルプ');
+        foreach ($pages as $page => [$routeName, $requiresAdmin, $recoveryEnabled, $title, $content]) {
+            foreach (['cherry', 'black'] as $theme) {
+                foreach (['en', 'ja'] as $locale) {
+                    yield "{$page}-{$theme}-{$locale}" => [
+                        $routeName,
+                        $requiresAdmin,
+                        $recoveryEnabled,
+                        $theme,
+                        $locale,
+                        $title,
+                        $content,
+                    ];
+                }
+            }
+        }
     }
 
     private function createAdmin(): User

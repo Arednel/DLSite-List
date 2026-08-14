@@ -129,6 +129,14 @@ class IndexImageViewerTest extends TestCase
             ->assertSee('data-index-image-viewer-title="RJ100000002 - VIEWER_ENABLED_WORK"', false)
             ->assertSee('index-image-viewer-dialog', false)
             ->assertSee('wire:ignore', false)
+            ->assertSee('data-index-image-viewer-placeholder hidden', false)
+            ->assertSee('No image')
+            ->assertSee('data-index-image-viewer-previous', false)
+            ->assertSee('data-index-image-viewer-next', false)
+            ->assertSee('data-index-image-viewer-counter', false)
+            ->assertSee('aria-live="polite"', false)
+            ->assertSee('data-index-image-viewer-full target="_blank"', false)
+            ->assertSee('rel="noopener noreferrer" hidden', false)
             ->assertSee($versionedPaths[0], false);
 
         $this->assertSame(2, substr_count($component->html(), $dlsiteUrl));
@@ -144,6 +152,37 @@ class IndexImageViewerTest extends TestCase
             ->assertSee('data-index-image-viewer-full', false)
             ->assertSee('scripts/index-image-viewer.js', false)
             ->assertSee('View in full');
+    }
+
+    public function test_work_images_retains_missing_positions_and_versions_later_valid_images(): void
+    {
+        Storage::fake('public');
+        Option::setIndexImageViewerEnabled(true);
+
+        $paths = [
+            'storage/Works/RJ100000005/cover.jpg',
+            'storage/Works/RJ100000005/sample_1.jpg',
+            'storage/Works/RJ100000005/sample_2.jpg',
+        ];
+        $product = Product::factory()->create([
+            'id' => 'RJ100000005',
+            'work_image' => $paths[0],
+            'sample_images' => array_slice($paths, 1),
+        ]);
+        $disk = Storage::disk('public');
+        $validPath = $paths[2];
+
+        $disk->put(substr($validPath, strlen('storage/')), 'image');
+
+        Livewire::test(ProductIndex::class)
+            ->call('workImages', $product->id)
+            ->assertReturned([
+                asset($paths[0]),
+                asset($paths[1]),
+                asset($validPath . '?v=' . filemtime(
+                    $disk->path(substr($validPath, strlen('storage/'))),
+                )),
+            ]);
     }
 
     public function test_hidden_image_column_does_not_render_a_viewer_trigger(): void

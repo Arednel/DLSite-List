@@ -30,6 +30,24 @@ class AdminCommandTest extends TestCase
         $this->assertNotSame('old-token', $user->remember_token);
     }
 
+    public function test_reset_password_command_rejects_passwords_longer_than_256_characters(): void
+    {
+        $user = User::factory()->create([
+            'password' => 'old-password',
+            'remember_token' => 'old-token',
+        ]);
+        $password = str_repeat('a', 257);
+
+        $this->artisan('admin:reset-password')
+            ->expectsQuestion('New password', $password)
+            ->expectsQuestion('Confirm new password', $password)
+            ->assertExitCode(1);
+
+        $user->refresh();
+        $this->assertTrue(Hash::check('old-password', $user->password));
+        $this->assertSame('old-token', $user->remember_token);
+    }
+
     public function test_reset_password_command_refuses_zero_or_multiple_users(): void
     {
         $this->artisan('admin:reset-password')
