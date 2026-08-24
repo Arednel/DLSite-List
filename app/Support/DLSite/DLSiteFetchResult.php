@@ -23,7 +23,7 @@ final readonly class DLSiteFetchResult
             return null;
         }
 
-        return __('DLSite work data was fetched, but these images could not be downloaded: :images', [
+        return __('DLSite data was fetched, but these images could not be downloaded: :images', [
             'images' => implode(', ', $this->failedImages),
         ]);
     }

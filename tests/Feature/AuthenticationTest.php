@@ -134,7 +134,7 @@ class AuthenticationTest extends TestCase
         $this->get(route('password.help'))
             ->assertOk()
             ->assertSee('php artisan admin:reset-password')
-            ->assertSee('To remove administator and reset account setup, run:')
+            ->assertSee('To remove administrator and reset account setup, run:')
             ->assertSee('ADMIN_PASSWORD_RESET=true');
     }
 

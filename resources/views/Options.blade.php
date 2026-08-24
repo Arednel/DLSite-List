@@ -104,7 +104,7 @@
                         {{ __('Image Viewer') }}
                     </h2>
                     <p class="option-description">
-                        {{ __('Choose whether clicking a work cover opens saved images in the application or visits DLsite.') }}
+                        {{ __('Choose whether clicking a cover opens saved images here or visits DLSite.') }}
                     </p>
 
                     <livewire:index-image-viewer-settings />
@@ -144,17 +144,17 @@
                         {{ __('Form Page Theme') }}
                     </h2>
                     <p class="option-description">
-                        {{ __('Choose the visual theme for Add Work, Add Custom Work, and Edit Work pages.') }}
+                        {{ __('Choose the visual theme for add and edit pages.') }}
                     </p>
 
                     <livewire:product-form-theme-settings />
 
                     <h2>
                         <i class="fa-solid fa-window-restore fa-fw options-section-icon" aria-hidden="true"></i>
-                        {{ __('Work Form Modals') }}
+                        {{ __('Add/Edit Modals') }}
                     </h2>
                     <p class="option-description">
-                        {{ __('Choose whether Quick Add and Edit Work open over the current page and what happens after a successful change.') }}
+                        {{ __('Choose whether Quick Add and Edit Details open over the current page and what happens after a successful change.') }}
                     </p>
 
                     <livewire:product-form-modal-settings />
@@ -190,7 +190,7 @@
                             {{ __('Field Layouts') }}
                         </h2>
                         <p class="option-description">
-                            {{ __('Choose which product fields are visible, editable, and how configurable columns are ordered.') }}
+                            {{ __('Choose which fields are visible and editable, and set their order.') }}
                         </p>
                     </header>
 
@@ -218,10 +218,10 @@
                 <section id="refetch-tab-panel" class="panel options-panel" role="tabpanel">
                     <h2>
                         <i class="fa-solid fa-arrows-rotate fa-fw options-section-icon" aria-hidden="true"></i>
-                        {{ __('Refetch Works') }}
+                        {{ __('Refetch DLSite Data') }}
                     </h2>
                     <p class="option-description">
-                        {{ __('Fetch complete current DLSite data for all works or only selected works.') }}
+                        {{ __('Fetch up-to-date DLSite data for all or only selected works.') }}
                         <br>
                         {{ __('Review each metadata category before applying or ignoring changes.') }}
                     </p>

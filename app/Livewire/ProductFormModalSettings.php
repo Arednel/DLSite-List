@@ -47,7 +47,7 @@ class ProductFormModalSettings extends Component
         Option::setProductFormModalEnabled($this->enabled);
         Option::setProductFormModalCompletionAction($this->completionAction);
         $this->syncFromOptions();
-        $this->markSaved('Work form modal settings saved.');
+        $this->markSaved('Add/Edit modal settings saved.');
         $this->dispatchSettingsUpdated();
     }
 
@@ -55,7 +55,7 @@ class ProductFormModalSettings extends Component
     {
         Option::resetProductFormModalSettingsToDefault();
         $this->syncFromOptions();
-        $this->completeResetWithNotice('Work form modal settings reset to default.');
+        $this->completeResetWithNotice('Add/Edit modal settings reset.');
         $this->dispatchSettingsUpdated();
     }
 

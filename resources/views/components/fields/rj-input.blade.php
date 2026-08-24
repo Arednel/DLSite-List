@@ -15,7 +15,7 @@
         @endif
         @if ($showDlsiteFetchStatus)
             <div class="dlsite-fetch-status" data-dlsite-fetch-status role="status" aria-live="polite" hidden>
-                {{ __('Work is being fetched…') }}
+                {{ __('Data is being fetched...') }}
             </div>
         @endif
     </td>

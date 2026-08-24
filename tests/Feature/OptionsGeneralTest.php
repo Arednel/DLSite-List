@@ -26,7 +26,7 @@ class OptionsGeneralTest extends TestCase
             ->assertSee('href="/options?tab=field-layouts"', false)
             ->assertSee('href="/options?tab=refetch"', false)
             ->assertSee('Index Pagination')
-            ->assertSee('Work Form Modals')
+            ->assertSee('Add/Edit Modals')
             ->assertSee('Reset All Options')
             ->assertDontSee('Index Sort Menu')
             ->assertDontSee('Refetch all works')
@@ -77,7 +77,7 @@ class OptionsGeneralTest extends TestCase
     {
         $this->get('/options?tab=refetch')
             ->assertOk()
-            ->assertSee('Refetch Works')
+            ->assertSee('Refetch DLSite Data')
             ->assertSee('No works available for refetch.')
             ->assertSee('Clean up refetch data')
             ->assertDontSee('Go to latest refetch')

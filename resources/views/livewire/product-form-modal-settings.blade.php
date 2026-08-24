@@ -1,9 +1,9 @@
 <div>
     <form wire:submit.prevent="save" class="option-form">
         <x-options.switch wire:model.live="enabled" :help="__(
-            'When enabled, an ordinary left-click opens Quick Add or Edit Work in a modal. Middle-click and modified clicks continue to open the normal page.',
+            'When enabled, an ordinary left-click opens Quick Add or Edit Details in a modal. Middle-click and modified clicks continue to open the normal page.',
         )">
-            {{ __('Open Quick Add and Edit Work in modal windows') }}
+            {{ __('Open Quick Add and Edit Details in modal windows') }}
         </x-options.switch>
 
         <fieldset class="option-subsetting">
@@ -40,7 +40,7 @@
         @include('livewire.partials.options-reset-confirmation-modal', [
             'open' => $confirmingResetToDefault,
             'modalId' => 'product-form-modal-reset-modal',
-            'message' => 'Reset the work form modal settings to their defaults?',
+            'message' => 'Reset the Add/Edit modal settings to their defaults?',
             'confirmLabel' => 'Reset to default',
             'confirmAction' => 'resetToDefault',
             'cancelAction' => 'cancelResetToDefault',

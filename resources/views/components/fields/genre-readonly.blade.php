@@ -1,4 +1,4 @@
-@props(['label', 'genres' => [], 'help' => null, 'empty' => 'No fetched genres.', 'showColorChips' => false])
+@props(['label', 'genres' => [], 'help' => null, 'empty' => 'No fetched tags.', 'showColorChips' => false])
 
 <tr>
     <td width="130" class="form-table-cell">{{ $label }}</td>

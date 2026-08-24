@@ -99,7 +99,7 @@ final class RefetchService
         $product = Product::query()->find($result->product_id);
 
         if (! $product) {
-            $this->recordFailedResult($result, 'Product no longer exists.');
+            $this->recordFailedResult($result, 'This work was removed from your library before it could be refetched.');
 
             return;
         }
@@ -779,7 +779,7 @@ final class RefetchService
     {
         $message = trim($exception->getMessage());
 
-        return $message === '' ? 'DLSite work fetch failed.' : mb_strimwidth($message, 0, 1000);
+        return $message === '' ? 'DLSite fetch failed.' : mb_strimwidth($message, 0, 1000);
     }
 
     /**

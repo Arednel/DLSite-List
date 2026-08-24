@@ -232,7 +232,7 @@ class ProductIndexFiltersTest extends TestCase
 
         $this->assertSame([
             ProductIndexSortField::Series->value => 'Series',
-            ProductIndexSortField::RJ->value => 'RJ / Title',
+            ProductIndexSortField::RJ->value => 'RJ Code',
         ], $options['sort_fields']);
         $this->assertArrayHasKey('sort_directions', $options);
     }

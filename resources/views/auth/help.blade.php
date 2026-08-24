@@ -15,7 +15,7 @@
 
         <section>
             <h2>{{ __('Reset the administrator account') }}</h2>
-            <p>{{ __('To remove administator and reset account setup, run:') }}</p>
+            <p>{{ __('To remove administrator and reset account setup, run:') }}</p>
             <code>php artisan admin:reset</code>
         </section>
 

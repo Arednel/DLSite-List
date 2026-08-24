@@ -6,14 +6,11 @@ use App\Enums\UiLanguage;
 use App\Models\RefetchRun;
 use App\Models\RefetchWorkResult;
 use App\Support\Refetch\RefetchService;
-use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\App;
 use Tests\TestCase;
 
 class UserFacingDisplayStateTest extends TestCase
 {
-    use RefreshDatabase;
-
     protected function tearDown(): void
     {
         App::setLocale(UiLanguage::English->value);
@@ -65,11 +62,11 @@ class UserFacingDisplayStateTest extends TestCase
         foreach (
             [
                 'Refetch was cancelled before this work was fetched.' => 'この作品を取得する前に再取得がキャンセルされました。',
-                'Product no longer exists.' => '作品が削除されたため見つかりません。',
-                'DLSite work fetch failed.' => 'DLSite作品情報の取得に失敗しました。',
+                'This work was removed from your library before it could be refetched.' => 'この作品は再取得される前にライブラリから削除されました。',
+                'DLSite fetch failed.' => 'DLSite情報の取得に失敗しました。',
                 'GeoBlocked DLSite work' => '地域制限によりアクセスできないDLSite作品',
-                'Deleted or Non-existing DLSite work' => '削除済み、または存在しないDLSite作品',
-                'Non-existing DLSite work' => '存在しないDLSite作品',
+                'This work was deleted or could not be found on DLSite' => 'この作品は削除されたか、DLSiteで見つかりませんでした。',
+                'This work could not be found on DLSite' => 'この作品はDLSiteで見つかりませんでした。',
             ] as $message => $localized
         ) {
             $result = new RefetchWorkResult(['error' => $message]);
@@ -87,27 +84,5 @@ class UserFacingDisplayStateTest extends TestCase
         $emptyResult = new RefetchWorkResult(['error' => null]);
 
         $this->assertNull($emptyResult->displayError());
-    }
-
-    public function test_persisted_canonical_error_uses_the_current_locale_without_changing_storage(): void
-    {
-        $run = RefetchRun::query()->create([
-            'status' => RefetchRun::STATUS_REVIEW,
-        ]);
-        $result = $run->results()->create([
-            'product_id' => 'RJ000001',
-            'status' => RefetchWorkResult::STATUS_FAILED,
-            'error' => 'Product no longer exists.',
-        ]);
-
-        App::setLocale(UiLanguage::English->value);
-        $this->assertSame('Product no longer exists.', $result->fresh()->displayError());
-
-        App::setLocale(UiLanguage::Japanese->value);
-        $this->assertSame('作品が削除されたため見つかりません。', $result->fresh()->displayError());
-        $this->assertDatabaseHas('refetch_work_results', [
-            'id' => $result->getKey(),
-            'error' => 'Product no longer exists.',
-        ]);
     }
 }

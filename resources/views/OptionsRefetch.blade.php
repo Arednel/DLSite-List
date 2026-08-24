@@ -3,7 +3,7 @@
 <html lang="{{ app()->getLocale() }}">
 
 <head>
-    <title>{{ __('Refetch Works') }}</title>
+    <title>{{ __('Refetch DLSite Data') }}</title>
 
     <meta name="viewport" content="width=device-width, initial-scale=1">
 
@@ -27,7 +27,7 @@
     <main class="options-shell">
         <div class="options-container">
             <header class="options-header">
-                <h1>{{ __('Refetch Works') }} #{{ $run->getKey() }}</h1>
+                <h1>{{ __('Refetch DLSite Data') }} #{{ $run->getKey() }}</h1>
             </header>
 
             <livewire:options-refetch-progress :run="$run" />

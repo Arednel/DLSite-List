@@ -22,7 +22,7 @@
         <div class="wrapper">
             <div id="contentWrapper">
                 <div>
-                    <h1 class="form-page-title">{{ $isCustomCreate ? __('Add Custom Work') : __('Add Work') }}</h1>
+                    <h1 class="form-page-title">{{ $isCustomCreate ? __('Add Manually') : __('Add by RJ Code') }}</h1>
                 </div>
 
                 <div id="content">
@@ -31,7 +31,7 @@
                             <tr>
                                 <td>
                                     <div class="dialog-title dialog-header">
-                                        {{ $isCustomCreate ? __('Add Custom Work') : __('Add Work') }}
+                                        {{ $isCustomCreate ? __('Add Manually') : __('Add by RJ Code') }}
                                     </div>
                                     <div class="dialog-body">
                                         <div class="create-mode-switch">
@@ -60,7 +60,7 @@
                                             <div id="top-submit-buttons"
                                                 class="margin-top-8 margin-bottom-8 dialog-submit-row">
                                                 <input type="submit" class="form-button submit-button"
-                                                    value="{{ __('Submit') }}">
+                                                    value="{{ __('Add work') }}">
                                             </div>
                                             <table class="form-fields-table" cellpadding="5" cellspacing="0"
                                                 width="100%">
@@ -74,7 +74,7 @@
                                             </table>
                                             <div class="margin-top-8 margin-bottom-8 dialog-submit-row">
                                                 <input type="submit" class="form-button submit-button"
-                                                    value="{{ __('Submit') }}">
+                                                    value="{{ __('Add work') }}">
                                             </div>
                                         </form>
 

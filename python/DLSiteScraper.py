@@ -128,8 +128,8 @@ def map_known_error(error_message: str, work_id: str):
 
     patterns = [
         (f"Failed to get product info for {work_id}", "GeoBlocked DLSite work", 2),
-        (f"Not Found", "Deleted or Non-existing DLSite work", 2),
-        (f"Bad Request", "Non-existing DLSite work", 2),
+        (f"Not Found", "This work was deleted or could not be found on DLSite", 2),
+        (f"Bad Request", "This work could not be found on DLSite", 2),
     ]
 
     for pattern, user_message, exit_code in patterns:

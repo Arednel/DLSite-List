@@ -2,6 +2,10 @@
 
 ## Development
 
+* 2026-08-24 -- 1.8.4 UI Text
+  * Refined wording across Add/Edit, images, DLSite links, Refetch, authentication, and validation
+  * Added RJ-specific modal deletion feedback and simplified DLSite fetch errors
+
 * 2026-08-14 -- 1.8.3 Test Coverage & Documentation
   * Expanded regression coverage for authentication, Image Viewer, Quick Add status, and work-form modals
   * Updated docs

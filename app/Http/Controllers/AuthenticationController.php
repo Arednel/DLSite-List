@@ -54,11 +54,14 @@ class AuthenticationController extends Controller
         $limiterKey = $this->loginLimiterKey($request);
 
         if (RateLimiter::tooManyAttempts($limiterKey, self::MAX_LOGIN_ATTEMPTS)) {
+            $seconds = RateLimiter::availableIn($limiterKey);
+
             return back()
                 ->withErrors([
-                    'username' => __(
-                        'Too many login attempts. Try again in :seconds seconds.',
-                        ['seconds' => RateLimiter::availableIn($limiterKey)],
+                    'username' => trans_choice(
+                        'Too many login attempts. Try again in :seconds second.|Too many login attempts. Try again in :seconds seconds.',
+                        $seconds,
+                        ['seconds' => $seconds],
                     ),
                 ])
                 ->onlyInput('username');

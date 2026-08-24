@@ -109,14 +109,14 @@
 
 <dialog class="work-form-modal" data-work-form-modal data-enabled="{{ $productFormModalEnabled ? 'true' : 'false' }}"
     data-completion-action="{{ $productFormModalCompletionAction }}"
-    data-work-form-default-title="{{ __('Work form') }}" aria-label="{{ __('Work form') }}">
+    data-work-form-default-title="{{ __('Add/Edit form') }}" aria-label="{{ __('Add/Edit form') }}">
     <div class="work-form-modal__surface">
         <div class="work-form-modal__header">
-            <span class="work-form-modal__title" data-work-form-modal-title>{{ __('Work form') }}</span>
+            <span class="work-form-modal__title" data-work-form-modal-title>{{ __('Add/Edit form') }}</span>
             <button type="button" class="work-form-modal__close" data-work-form-modal-close
                 aria-label="{{ __('Close modal') }}">&times;</button>
         </div>
-        <iframe class="work-form-modal__frame" data-work-form-modal-frame title="{{ __('Work form') }}"></iframe>
+        <iframe class="work-form-modal__frame" data-work-form-modal-frame title="{{ __('Add/Edit form') }}"></iframe>
     </div>
 </dialog>
 

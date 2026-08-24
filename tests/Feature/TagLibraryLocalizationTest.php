@@ -27,7 +27,7 @@ class TagLibraryLocalizationTest extends TestCase
             ->assertSee('<title>タグライブラリ</title>', false)
             ->assertSee('<span class="progress-heading">タグライブラリ</span>', false)
             ->assertSee('<h1 id="tag-library-heading" class="tag-library-section-title">タグ</h1>', false)
-            ->assertSee('placeholder="タグを検索…"', false)
+            ->assertSee('placeholder="タグを検索..."', false)
             ->assertSee('<h2 class="tag-library-section-title">すべてのタグ</h2>', false)
             ->assertSee('<option value="hidden_group">グループで非表示</option>', false)
             ->assertSee('「すべてのタグ」のみに絞り込みを適用します。')

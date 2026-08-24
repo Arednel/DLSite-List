@@ -47,7 +47,7 @@ class OptionsRefetchLocalizationTest extends TestCase
             ->assertSee('作品を再取得')
             ->assertSee('再取得データをクリーンアップ')
             ->assertSee('aria-label="再取得のクリーンアップについて"', false)
-            ->assertSee('RJ IDまたはタイトルで検索…')
+            ->assertSee('RJ IDまたはタイトルで検索...')
             ->assertSee('value="selected"', false);
     }
 
@@ -103,7 +103,7 @@ class OptionsRefetchLocalizationTest extends TestCase
         $this->get(route('options.refetch.show', $run))
             ->assertOk()
             ->assertSee('<html lang="ja">', false)
-            ->assertSee('<title>作品を再取得</title>', false)
+            ->assertSee('<title>DLSite情報を再取得</title>', false)
             ->assertSee('確認')
             ->assertSee('タイトル')
             ->assertSee('新規JP')

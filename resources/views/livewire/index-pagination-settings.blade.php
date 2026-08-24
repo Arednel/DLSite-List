@@ -13,7 +13,7 @@
     </div>
 
     @if ($mode === 'custom')
-        <label class="field-label" for="index-custom-per-page">{{ __('Custom works per page') }}</label>
+        <label class="field-label" for="index-custom-per-page">{{ __('Custom page size') }}</label>
         <input id="index-custom-per-page" class="option-control-input" type="number" min="1" step="1"
             wire:model="customValue">
         @error('customValue')

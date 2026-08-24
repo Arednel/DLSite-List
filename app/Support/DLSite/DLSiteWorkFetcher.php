@@ -76,6 +76,6 @@ final class DLSiteWorkFetcher
     {
         $message = trim((string) $result?->errorOutput());
 
-        return $message === '' ? 'DLSite work fetch failed.' : $message;
+        return $message === '' ? 'DLSite fetch failed.' : $message;
     }
 }

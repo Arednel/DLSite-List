@@ -50,10 +50,10 @@ class ProductSurfaceLocalizationTest extends TestCase
             ->assertSee('<html lang="ja">', false)
             ->assertSee('USER_WORK_NAME_TOKEN')
             ->assertSee('href="/?progress=Listening"', false)
-            ->assertSee('placeholder="検索…"', false)
+            ->assertSee('placeholder="検索..."', false)
             ->assertSee('aria-label="検索"', false)
             ->assertSee('data-label="タイトル"', false)
-            ->assertSee('data-work-form-modal-title="作品を編集"', false)
+            ->assertSee('data-work-form-modal-title="作品情報を編集"', false)
             ->getContent();
 
         $this->assertStringContainsString('聴取中', $html);
@@ -73,7 +73,7 @@ class ProductSurfaceLocalizationTest extends TestCase
             ->assertOk()
             ->assertSee('<html lang="ja"', false)
             ->assertSee('<title>追加</title>', false)
-            ->assertSee('カスタム作品を追加')
+            ->assertSee('手動で追加')
             ->assertSee('placeholder="カンマ区切りで入力します。カンマを含むタグは二重引用符で囲んでください。例: &quot;Junior / Senior (at work, school, etc)&quot;, Office Lady"', false)
             ->assertSee('今日の日付を入力');
 
@@ -81,7 +81,7 @@ class ProductSurfaceLocalizationTest extends TestCase
             ->assertOk()
             ->assertSee('<html lang="ja"', false)
             ->assertSee('<title>編集</title>', false)
-            ->assertSee('作品を編集')
+            ->assertSee('作品情報を編集')
             ->assertSee('この作品を削除してもよろしいですか？')
             ->assertSee('削除する');
     }
@@ -104,8 +104,8 @@ class ProductSurfaceLocalizationTest extends TestCase
             ->assertViewIs('WorkFormCompleted')
             ->assertViewHas('redirectUrl', "/#{$workId}")
             ->assertSee('<html lang="ja">', false)
-            ->assertSee('<title>作品を保存しました</title>', false)
-            ->assertSee('作品を保存しました')
+            ->assertSee('<title>保存しました</title>', false)
+            ->assertSee('変更を保存しました')
             ->assertSee('>続行</a>', false)
             ->assertSee("redirectUrl: '\\/#{$workId}'", false);
     }

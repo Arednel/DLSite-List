@@ -29,7 +29,7 @@ enum ProductIndexSortField: string
     public function label(): string
     {
         return match ($this) {
-            self::RJ => __('RJ / Title'),
+            self::RJ => __('RJ Code'),
             self::Score => __('Score'),
             self::Series => __('Series'),
             self::AgeCategory => __('Age'),

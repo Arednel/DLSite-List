@@ -296,7 +296,7 @@
                                             <span class="edit-action">
                                                 <a href="{{ $product->editUrl }}" class="product-edit-link"
                                                     data-work-form-modal-link
-                                                    data-work-form-modal-title="{{ __('Edit Work') }}">{{ __('Edit') }}</a>
+                                                    data-work-form-modal-title="{{ __('Edit Details') }}">{{ __('Edit') }}</a>
                                             </span>
                                         </div>
                                     </td>
@@ -329,7 +329,8 @@
                     wire:ignore data-image-label="{{ __('Image :current of :total for :title') }}">
                     <div class="index-image-viewer__panel">
                         <header class="index-image-viewer__header">
-                            <h2 id="index-image-viewer-title" data-index-image-viewer-title>{{ __('Work images') }}</h2>
+                            <h2 id="index-image-viewer-title" data-index-image-viewer-title>
+                                {{ __('Cover and Sample Images') }}</h2>
                             <button type="button" class="index-image-viewer__close" data-index-image-viewer-close
                                 aria-label="{{ __('Close image viewer') }}">
                                 <i class="fa-solid fa-xmark" aria-hidden="true"></i>

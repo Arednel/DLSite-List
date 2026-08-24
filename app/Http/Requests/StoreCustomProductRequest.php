@@ -36,7 +36,7 @@ class StoreCustomProductRequest extends BaseProductRequest
         return [
             'id.required' => __('Please enter an RJ code or a DLSite link that contains it.'),
             'id.regex' => __('Could not find an RJ code (format: RJ + numbers) in your input.'),
-            'id.unique' => __('This RJ work is already in the database'),
+            'id.unique' => __('Work with this RJ code is already in your library'),
         ];
     }
 

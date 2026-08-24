@@ -1,7 +1,7 @@
 <div>
     <form wire:submit.prevent="save" class="option-form">
         <x-options.switch wire:model.live="enabled">
-            {{ __('Set Series from DLsite title name when the Series field is empty') }}
+            {{ __('Set Series from DLSite title name when the Series field is empty') }}
         </x-options.switch>
 
         <div class="option-actions option-actions--inline">

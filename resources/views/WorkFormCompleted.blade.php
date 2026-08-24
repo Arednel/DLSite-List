@@ -3,7 +3,7 @@
 <html lang="{{ app()->getLocale() }}">
 
 <head>
-    <title>{{ __('Work saved') }}</title>
+    <title>{{ $completionStatus ?? __('Saved successfully') }}</title>
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <link rel="stylesheet"
         href="{{ asset('css/work-form-completed.css') }}?v={{ filemtime(public_path('css/work-form-completed.css')) }}">
@@ -12,9 +12,9 @@
 <body class="work-form-completed-page">
     <main class="work-form-completed-card" role="status" aria-labelledby="work-form-completed-title">
         <span class="work-form-completed-mark" aria-hidden="true"></span>
-        <h1 id="work-form-completed-title">{{ __('Work change completed') }}</h1>
+        <h1 id="work-form-completed-title">{{ $completionStatus ?? __('Changes saved') }}</h1>
         <p class="work-form-completed-message">
-            {{ __('Your change was saved successfully. You can continue if this window does not close automatically.') }}
+            {{ $completionDescription ?? __('Your change was saved successfully. You can continue if this window does not close automatically.') }}
         </p>
         @if ($warning ?? null)
             <p class="work-form-completed-message" role="alert">{{ $warning }}</p>

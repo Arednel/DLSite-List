@@ -29,10 +29,13 @@ class QuickAddFetchStatusTest extends TestCase
                 'data-dlsite-fetch-status role="status" aria-live="polite" hidden',
                 false,
             )
-            ->assertSee(trans('Work is being fetched…', locale: $locale))
+            ->assertSee(trans('Data is being fetched...', locale: $locale))
             ->assertSee('scripts/dlsite-create-status.js', false);
 
-        $this->assertTwoEnabledSubmitButtons($response->getContent());
+        $this->assertTwoEnabledSubmitButtons(
+            $response->getContent(),
+            trans('Add work', locale: $locale),
+        );
     }
 
     public static function dlsitePresentationProvider(): iterable
@@ -71,10 +74,10 @@ class QuickAddFetchStatusTest extends TestCase
             ->assertOk()
             ->assertDontSee('data-dlsite-fetch-form', false)
             ->assertDontSee('data-dlsite-fetch-status', false)
-            ->assertDontSee('Work is being fetched…')
+            ->assertDontSee('Data is being fetched...')
             ->assertDontSee('scripts/dlsite-create-status.js', false);
 
-        $this->assertTwoEnabledSubmitButtons($response->getContent());
+        $this->assertTwoEnabledSubmitButtons($response->getContent(), __('Add work'));
     }
 
     public static function modalProvider(): iterable
@@ -97,13 +100,14 @@ class QuickAddFetchStatusTest extends TestCase
             ->assertSee('Could not find an RJ code (format: RJ + numbers) in your input.');
     }
 
-    private function assertTwoEnabledSubmitButtons(string $html): void
+    private function assertTwoEnabledSubmitButtons(string $html, string $label): void
     {
         preg_match_all('/<input\b[^>]*\btype="submit"[^>]*>/i', $html, $matches);
 
         $this->assertCount(2, $matches[0]);
 
         foreach ($matches[0] as $submitButton) {
+            $this->assertStringContainsString('value="' . e($label) . '"', $submitButton);
             $this->assertDoesNotMatchRegularExpression(
                 '/\sdisabled(?:\s|=|>)/i',
                 $submitButton,

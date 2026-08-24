@@ -1,5 +1,5 @@
 <tr>
-    <td class="form-table-cell">{{ __('Work Image') }}</td>
+    <td class="form-table-cell">{{ __('Cover Image') }}</td>
     <td class="form-table-cell">
         <input id="work_image" name="work_image" class="form-control file-upload-input" type="file" accept="image/*"
             required>

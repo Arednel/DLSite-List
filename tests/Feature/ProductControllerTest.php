@@ -607,7 +607,7 @@ class ProductControllerTest extends TestCase
             ->assertOk()
             ->assertSee('class="product-form-theme-black"', false)
             ->assertDontSee('class="dark-mode"', false)
-            ->assertSee('Add Work')
+            ->assertSee('Add by RJ Code')
             ->assertSee('DLSite Create')
             ->assertSee('Custom Create')
             ->assertSee('width=device-width, initial-scale=1', false)
@@ -617,7 +617,8 @@ class ProductControllerTest extends TestCase
             ->assertSee('data-dlsite-fetch-status', false)
             ->assertSee('role="status"', false)
             ->assertSee('aria-live="polite" hidden', false)
-            ->assertSee('Work is being fetched…')
+            ->assertSee('Data is being fetched...')
+            ->assertSee('value="Add work"', false)
             ->assertSee('scripts/dlsite-create-status.js', false)
             ->assertSee('Custom Tags')
             ->assertSee('name="id"', false)
@@ -648,7 +649,7 @@ class ProductControllerTest extends TestCase
             ->assertOk()
             ->assertSee('class="product-form-theme-cherry"', false)
             ->assertDontSee('class="dark-mode"', false)
-            ->assertSee('Add Custom Work')
+            ->assertSee('Add Manually')
             ->assertSee('DLSite Create')
             ->assertSee('Custom Create')
             ->assertSee('/store/custom', false)
@@ -672,8 +673,8 @@ class ProductControllerTest extends TestCase
                 'Status',
                 'Your Score',
                 'Series',
-                'Title Japanese',
-                'Title English',
+                'Japanese Title',
+                'English Title',
                 'Custom Tags',
                 'Notes',
                 'Start Date',
@@ -694,12 +695,12 @@ class ProductControllerTest extends TestCase
                 'Status',
                 'Your Score',
                 'Series',
-                'Title Japanese',
-                'Title English',
+                'Japanese Title',
+                'English Title',
                 'Custom Tags',
                 'Notes',
                 'Age Category',
-                'Work Image',
+                'Cover Image',
                 'Sample Images',
                 'Start Date',
                 'Finish Date',
@@ -745,9 +746,9 @@ class ProductControllerTest extends TestCase
             ->assertSee('name="work_image"', false)
             ->assertSeeInOrder([
                 'RJ Code or Link',
-                'Title Japanese',
+                'Japanese Title',
                 'Age Category',
-                'Work Image',
+                'Cover Image',
                 'Priority',
             ])
             ->assertDontSee('name="sample_images[]"', false)
@@ -869,7 +870,7 @@ class ProductControllerTest extends TestCase
     {
         Process::fake([
             '*' => Process::result(
-                errorOutput: 'Deleted or Non-existing DLSite work',
+                errorOutput: 'This work was deleted or could not be found on DLSite',
                 exitCode: 2,
             ),
         ])->preventStrayProcesses();
@@ -885,7 +886,7 @@ class ProductControllerTest extends TestCase
                 ],
             ])
             ->assertOk()
-            ->assertSee('Deleted or Non-existing DLSite work')
+            ->assertSee('This work was deleted or could not be found on DLSite')
             ->assertSee(
                 'data-dlsite-fetch-status role="status" aria-live="polite" hidden',
                 false,
@@ -905,8 +906,8 @@ class ProductControllerTest extends TestCase
         foreach (
             [
                 'GeoBlocked DLSite work' => '地域制限によりアクセスできないDLSite作品',
-                'Deleted or Non-existing DLSite work' => '削除済み、または存在しないDLSite作品',
-                'Non-existing DLSite work' => '存在しないDLSite作品',
+                'This work was deleted or could not be found on DLSite' => 'この作品は削除されたか、DLSiteで見つかりませんでした。',
+                'This work could not be found on DLSite' => 'この作品はDLSiteで見つかりませんでした。',
             ] as $stderr => $localized
         ) {
             Process::fake([
@@ -987,7 +988,8 @@ class ProductControllerTest extends TestCase
             ->assertOk()
             ->assertSee('class="product-form-theme-black"', false)
             ->assertDontSee('class="dark-mode"', false)
-            ->assertSee('Edit Work')
+            ->assertSee('Edit Details')
+            ->assertSee('value="Save changes"', false)
             ->assertSee('width=device-width, initial-scale=1', false)
             ->assertSee('css/title-tooltips.css', false)
             ->assertSee('scripts/title-tooltips.js', false)
@@ -999,8 +1001,8 @@ class ProductControllerTest extends TestCase
                 'Status',
                 'Your Score',
                 'Series',
-                'Title Japanese',
-                'Title English',
+                'Japanese Title',
+                'English Title',
                 'Custom Tags',
                 'Notes',
                 'Start Date',
@@ -1776,7 +1778,7 @@ class ProductControllerTest extends TestCase
         $response->assertRedirect('/create');
         $response->assertSessionHasErrors(['id']);
 
-        $this->assertSame('This RJ work is already in the database', session('errors')->first('id'));
+        $this->assertSame('Work with this RJ code is already in your library', session('errors')->first('id'));
     }
 
     public function test_store_uses_fake_dlsite_process_and_scraped_json_to_create_product(): void
@@ -1910,7 +1912,7 @@ class ProductControllerTest extends TestCase
             ->assertRedirect("/#{$workId}")
             ->assertSessionHas(
                 'dlsite_image_warning',
-                'DLSite work data was fetched, but these images could not be downloaded: cover.jpg, sample_1.jpg',
+                'DLSite data was fetched, but these images could not be downloaded: cover.jpg, sample_1.jpg',
             );
 
         $this->assertDatabaseHas('products', ['id' => $workId]);
@@ -2343,7 +2345,7 @@ class ProductControllerTest extends TestCase
 
         $this->get("/edit/{$product->id}")
             ->assertOk()
-            ->assertSee('No fetched genres.')
+            ->assertSee('No fetched tags.')
             ->assertSee('Existing Store Auto Genre');
     }
 
@@ -2387,9 +2389,9 @@ class ProductControllerTest extends TestCase
             ->assertViewHas('redirectUrl', "/?progress=Listening#{$workId}")
             ->assertSee('css/work-form-completed.css', false)
             ->assertSee('<html lang="en">', false)
-            ->assertSee('<title>Work saved</title>', false)
+            ->assertSee('<title>Saved successfully</title>', false)
             ->assertSee('class="work-form-completed-page"', false)
-            ->assertSee('Work change completed')
+            ->assertSee('Changes saved')
             ->assertSee('Your change was saved successfully. You can continue if this window does not close automatically.')
             ->assertSee('>Continue</a>', false)
             ->assertSee('target="_top"', false)
@@ -2928,7 +2930,7 @@ class ProductControllerTest extends TestCase
 
         $this->get("/edit/{$product->id}")
             ->assertOk()
-            ->assertSee('No fetched genres.')
+            ->assertSee('No fetched tags.')
             ->assertSee('Existing Auto Genre');
     }
 
@@ -3615,7 +3617,7 @@ class ProductControllerTest extends TestCase
     {
         Storage::fake('local');
         Storage::fake('public');
-        $product = Product::factory()->create();
+        $product = Product::factory()->create(['id' => 'RJ1234']);
 
         $this->post("/destroy/{$product->id}", [
             'modal' => '1',
@@ -3623,6 +3625,10 @@ class ProductControllerTest extends TestCase
         ])->assertOk()
             ->assertViewIs('WorkFormCompleted')
             ->assertViewHas('redirectUrl', '/?progress=Completed')
+            ->assertSee('<title>&quot;RJ1234&quot; removed</title>', false)
+            ->assertSee('<h1 id="work-form-completed-title">&quot;RJ1234&quot; removed</h1>', false)
+            ->assertSee('The work was removed from your library.')
+            ->assertDontSee('Changes saved')
             ->assertSee('work-form-completed', false);
 
         $this->assertDatabaseMissing('products', ['id' => $product->id]);

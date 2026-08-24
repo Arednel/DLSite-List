@@ -181,7 +181,7 @@ class ProductMetadataSettingsTest extends TestCase
 
         $component = Livewire::test(DlsiteLinkSettings::class)
             ->assertSet('enabled', true)
-            ->assertSee('Use age-appropriate DLSite work links')
+            ->assertSee('Use age-appropriate DLSite links')
             ->assertSee('When enabled, All Ages works open on DLSite Home; R15 and R18 use Maniax. When disabled, all works use Maniax.');
 
         Option::resetVisibleSettingsToDefault();
@@ -273,7 +273,7 @@ class ProductMetadataSettingsTest extends TestCase
             ->call('save')
             ->assertHasNoErrors()
             ->assertSet('saved', true)
-            ->assertSet('notice', 'Work form modal settings saved.')
+            ->assertSet('notice', 'Add/Edit modal settings saved.')
             ->assertDispatched('work-form-modal-settings-updated');
 
         $this->assertFalse(Option::productFormModalEnabled());
@@ -298,7 +298,7 @@ class ProductMetadataSettingsTest extends TestCase
             ->assertHasNoErrors()
             ->assertSet('enabled', false)
             ->assertSet('completionAction', Option::PRODUCT_FORM_MODAL_COMPLETION_REDIRECT)
-            ->assertSet('notice', 'Work form modal settings reset to default.')
+            ->assertSet('notice', 'Add/Edit modal settings reset.')
             ->assertDispatched('work-form-modal-settings-updated');
 
         $this->assertFalse(Option::productFormModalEnabled());
@@ -312,7 +312,7 @@ class ProductMetadataSettingsTest extends TestCase
     {
         $html = Livewire::test(ProductFormModalSettings::class)->html();
 
-        $this->assertStringContainsString('Open Quick Add and Edit Work in modal windows', $html);
+        $this->assertStringContainsString('Open Quick Add and Edit Details in modal windows', $html);
         $this->assertSame(4, substr_count($html, 'fa-solid fa-circle-question'));
         $this->assertStringContainsString('The visible page may remain stale until it is reloaded.', $html);
     }

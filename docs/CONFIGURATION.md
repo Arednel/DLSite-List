@@ -194,7 +194,7 @@ Docker database services:
 - `database_test` stores test data in the `dbdata_test` Docker volume and is used only by the `tests` service
 
 ## Queue and Scheduler
-Refetch Works runs through Laravel's database queue and job batches, with one job per selected work.
+Refetch DLSite Data runs through Laravel's database queue and job batches, with one job per selected work.
 
 Relevant variable:
 - `QUEUE_CONNECTION=database`
@@ -205,7 +205,7 @@ Required migrations create:
 - `refetch_runs`
 - `refetch_work_results`
 
-Run the queue worker from the project root while using Refetch Works:
+Run the queue worker from the project root while using Refetch DLSite Data:
 ```bash
 php artisan queue:work
 ```
@@ -227,15 +227,15 @@ Current settings:
 - `series_autocomplete_order`: controls how series autocomplete suggestions are ordered
 - `auto_series_from_title_name`: controls whether DLSite create fills an empty Series from `japanese.title_name`
 - `dlsite_age_appropriate_links_enabled`: controls whether Index image/title links use the product's stored age to choose DLSite Home or Maniax. Defaults to `false`
-- `product_form_theme`: controls the Add Work, Add Custom Work, and Edit Work page theme. Defaults to `black`
-- `product_form_modal_enabled`: controls whether ordinary left-clicks open Quick Add and Index Edit Work links in a modal. Defaults to `false`
+- `product_form_theme`: controls the Add by RJ Code, Add Manually, and Edit Details page theme. Defaults to `black`
+- `product_form_modal_enabled`: controls whether ordinary left-clicks open Quick Add and Index Edit Details links in a modal. Defaults to `false`
 - `product_form_modal_completion_action`: controls what the host page does after a successful modal create, update, or delete. Valid values are `redirect`, `refresh`, and `close`; invalid values fall back to `redirect`
 - `tag_library_tags_expanded_by_default`: controls whether Tag Library opens with the full tag list shown
 - `tag_library_index_group_ordering_enabled`: controls whether Index tag chips use tag group order instead of plain alphabetical title ordering
 - `tag_color_surfaces`: JSON map controlling where stored tag/group background and font colors render. Defaults are `index=true`, `tag_library=true`, `autocomplete=false`, `edit_readonly=false`, and `refetch=false`.
   The Index surface keeps its color fast path inactive until at least one tag or tag group has a saved background/font color.
 - `index_field_layout`: controls Index table field visibility/order
-- `edit_field_layout`: controls Edit Work field visibility/order/editability
+- `edit_field_layout`: controls Edit Details field visibility/order/editability
 - `filter_field_layout`: controls Filter modal field visibility/order
 - `quick_add_field_layout`: controls DLSite Create field visibility/order
 - `custom_quick_add_field_layout`: controls Custom Create field visibility/order
@@ -275,7 +275,7 @@ Tag editing defaults:
 - Custom Tags editable: enabled by default in the Edit Form layout
 - Fetched Tags editable: disabled by default unless its Edit Form row enables it
 
-When Fetched Tags editing is enabled, Edit Work changes only the current UI locale's fetched bucket. Other fetched-language and custom tags remain stored unless their own editable field is submitted.
+When Fetched Tags editing is enabled, Edit Details changes only the current UI locale's fetched bucket. Other fetched-language and custom tags remain stored unless their own editable field is submitted.
 
 Automatic Series from DLSite `title_name` default:
 - enabled
@@ -302,7 +302,7 @@ Optional product status defaults:
 - On Hold: disabled
 - Dropped: disabled
 
-Both switches are independent and are saved together by General -> Optional Statuses. Enabling one makes it available in DLSite Quick Add, Custom Quick Add, Edit Work, the Index progress menu, and Advanced Filter. The order is All ASMR, Currently Listening, Completed, optional On Hold, optional Dropped, then Plan to Listen. New works still default to Plan to Listen.
+Both switches are independent and are saved together by General -> Optional Statuses. Enabling one makes it available in DLSite Quick Add, Custom Quick Add, Edit Details, the Index progress menu, and Advanced Filter. The order is All ASMR, Currently Listening, Completed, optional On Hold, optional Dropped, then Plan to Listen. New works still default to Plan to Listen.
 
 Disabling a status never rewrites products. A work already stored as On Hold or Dropped remains visible in All ASMR and matching filtered results. Add, Advanced Filter, and the Index status tabs hide disabled values; Edit also hides them except when the product currently has that status, allowing it to remain selected or be changed. The switches do not add request-validation rules. The saved Edit Field Layout still controls whether the Progress row is visible.
 
@@ -315,16 +315,16 @@ Product form theme choices:
 - `cherry`: uses the same warm Cherry palette as Index, Tag Library, and Options
 - `black`: preserves the previous dark Add/Edit form style
 
-Work form modal defaults:
+Add/Edit modal defaults:
 - disabled
 - completion action `redirect`
 
-Work form modal completion choices:
+Add/Edit modal completion choices:
 - `redirect`: navigate the host page to Laravel's calculated Index redirect, preserving its filter, page, and work-anchor behavior
 - `refresh`: close the modal and reload the page that opened it
 - `close`: close the modal without navigating or refreshing; the visible host page may remain stale until it is reloaded
 
-The modal setting applies to Quick Add on Index, Options, Tag Library, and Refetch pages, and to Edit Work links on Index. It intercepts only an unmodified primary-button click. Middle-click, right-click, Ctrl/Cmd/Shift/Alt-click, links with another target, and browsers without native `<dialog>` support keep normal anchor navigation, so the same URL can still be opened as a standalone page.
+The modal setting applies to Quick Add on Index, Options, Tag Library, and Refetch pages, and to Edit Details links on Index. It intercepts only an unmodified primary-button click. Middle-click, right-click, Ctrl/Cmd/Shift/Alt-click, links with another target, and browsers without native `<dialog>` support keep normal anchor navigation, so the same URL can still be opened as a standalone page.
 
 The modal uses a same-origin iframe and adds `modal=1` only to that iframe request. The marker survives switching between DLSite and Custom Create, validation redirects, and create/update/delete submissions. After a successful submission, the iframe posts Laravel's calculated redirect URL to the host page, which applies the selected completion action. The modal can also be dismissed with its Close button, Escape, or a backdrop click; Go Back/Close inside the form closes the modal without reporting a successful change. Its JavaScript fallback title comes from the localized `data-work-form-default-title` on the modal host rather than a JavaScript translation catalog.
 
@@ -501,7 +501,7 @@ Options reset behavior:
 - reset confirmation modals are teleported to the document body so they stay centered in the viewport instead of inside the Options panel
 - reset confirmation modals close from Cancel, Escape, or clicking outside the modal card
 - the global reset confirmation button is disabled for 3 seconds and shows a countdown before it can be clicked
-- reset defaults are UI language `en`, pagination `100`, hidden-description search disabled, Image Viewer disabled, On Hold/Dropped disabled, table width `default`, all five default field layouts, all default Index sort dropdown values, automatic Series enabled, product form theme `black`, work form modals disabled with completion action `redirect`, Tag Library collapsed, Index group ordering disabled, and autocomplete `usage`
+- reset defaults are UI language `en`, pagination `100`, hidden-description search disabled, Image Viewer disabled, On Hold/Dropped disabled, table width `default`, all five default field layouts, all default Index sort dropdown values, automatic Series enabled, product form theme `black`, Add/Edit modals disabled with completion action `redirect`, Tag Library collapsed, Index group ordering disabled, and autocomplete `usage`
 - global reset does not change Authentication-tab settings, products, tags, refetch runs, legacy hidden fallback keys, or unrelated future option rows
 
 Index search defaults:
@@ -543,9 +543,9 @@ Scraped JSON files are also used by the product metadata backfill migration. The
 
 Laravel supplies the work id, JSON path, log directory, and optional image directory to `DLSiteScraper.py`. Python always writes complete JP/EN JSON to that exact path, downloads images only when the image directory is present, performs no retries, and prints a structured image manifest. PHP retries failed processes or reported image failures up to five times and trusts the latest successful manifest without combining attempts or scanning image files. A successful process must return a valid manifest and valid destination JSON; existing JSON is never used as a fallback. PHP also owns review state and canonical/staged promotion. Promotion uses checked Laravel filesystem copies; a failed copy leaves the run in review with its affected tab retryable instead of marking the run Applied.
 
-Refetch and Quick Add translate only recognized app-defined errors at display boundaries. Persisted and logged errors remain raw, and unknown Python, API, exception, stdout, or stderr text is shown verbatim.
+Refetch and Quick Add translate only current recognized app-defined errors at display boundaries. Persisted and logged errors remain raw, and legacy messages plus unknown Python, API, exception, stdout, or stderr text are shown verbatim.
 
-## Work Image Cleanup
+## Cover and Sample Image Cleanup
 
 Run `php artisan works:cleanup-images` to remove obsolete covers and out-of-range samples (if any errors occured. Not needed for normal use).
 

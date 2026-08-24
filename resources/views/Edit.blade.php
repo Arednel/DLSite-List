@@ -22,7 +22,7 @@
         <div class="wrapper">
             <div id="contentWrapper">
                 <div>
-                    <h1 class="form-page-title">{{ __('Edit Work') }}</h1>
+                    <h1 class="form-page-title">{{ __('Edit Details') }}</h1>
                 </div>
 
                 <div id="content">
@@ -31,7 +31,7 @@
                             <tr>
                                 <td>
                                     <div class="dialog-title dialog-header">
-                                        {{ __('Edit Work') }}
+                                        {{ __('Edit Details') }}
                                     </div>
                                     <div class="dialog-body">
                                         <form name="edit_work" method="post" id="main-form"
@@ -50,7 +50,7 @@
                                             <div id="top-submit-buttons"
                                                 class="margin-top-8 margin-bottom-8 dialog-submit-row">
                                                 <input type="submit" class="form-button submit-button"
-                                                    value="{{ __('Submit') }}">
+                                                    value="{{ __('Save changes') }}">
                                             </div>
                                             <table class="form-fields-table" cellpadding="5" cellspacing="0"
                                                 width="100%">
@@ -68,7 +68,7 @@
                                             </table>
                                             <div class="margin-top-8 margin-bottom-8 dialog-submit-row">
                                                 <input type="submit" class="form-button submit-button"
-                                                    value="{{ __('Submit') }}">
+                                                    value="{{ __('Save changes') }}">
                                             </div>
                                         </form>
 
@@ -115,7 +115,7 @@
 
     <div id="deleteModal" class="modal">
         <div class="modal-content">
-            <p>{{ __('Are you sure you want to delete this item?') }}</p>
+            <p>{{ __('Are you sure you want to delete this work?') }}</p>
             <div class="modal-actions">
                 <button class="form-button danger" onclick="confirmDeletion()">{{ __('Yes, Delete') }}</button>
                 <button class="form-button margin-left-8" onclick="closeModal()">{{ __('Cancel') }}</button>

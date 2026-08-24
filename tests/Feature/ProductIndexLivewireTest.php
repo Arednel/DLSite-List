@@ -1647,11 +1647,11 @@ class ProductIndexLivewireTest extends TestCase
             ->assertSee('data-work-form-modal', false)
             ->assertSee('data-enabled="true"', false)
             ->assertSee('data-completion-action="refresh"', false)
-            ->assertSee('data-work-form-default-title="Work form"', false)
+            ->assertSee('data-work-form-default-title="Add/Edit form"', false)
             ->assertSee('href="/create?return_query%5Bprogress%5D=Listening"', false)
             ->assertDontSee('href="/create?modal=1', false)
             ->assertSee('href="/edit/' . $product->id . '?', false)
-            ->assertSee('data-work-form-modal-title="Edit Work"', false)
+            ->assertSee('data-work-form-modal-title="Edit Details"', false)
             ->assertSee('scripts/work-form-modal.js', false);
     }
 

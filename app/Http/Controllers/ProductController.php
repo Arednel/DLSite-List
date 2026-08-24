@@ -382,7 +382,14 @@ class ProductController extends Controller
         $product->delete();
 
         // Return to same page but no anchor (work is gone)
-        return $this->productMutationResponse($request, $returnTarget->afterDeleting()->toUrl());
+        return $this->productMutationResponse(
+            $request,
+            $returnTarget->afterDeleting()->toUrl(),
+            completionStatus: __('":work" removed', ['work' => $id]),
+            completionDescription: __(
+                'The work was removed from your library. You can continue if this window does not close automatically.',
+            ),
+        );
     }
 
     private function fetchDLSiteWork(
@@ -401,8 +408,8 @@ class ProductController extends Controller
             throw ValidationException::withMessages([
                 'id' => match ($message) {
                     'GeoBlocked DLSite work',
-                    'Deleted or Non-existing DLSite work',
-                    'Non-existing DLSite work' => __($message),
+                    'This work was deleted or could not be found on DLSite',
+                    'This work could not be found on DLSite' => __($message),
                     default => $message,
                 },
             ]);
@@ -718,6 +725,8 @@ class ProductController extends Controller
         Request $request,
         string $redirectUrl,
         ?string $warning = null,
+        ?string $completionStatus = null,
+        ?string $completionDescription = null,
     ): RedirectResponse|View {
         if (! $request->boolean('modal')) {
             return redirect($redirectUrl)
@@ -727,6 +736,8 @@ class ProductController extends Controller
         return view('WorkFormCompleted', [
             'redirectUrl' => $redirectUrl,
             'warning' => $warning,
+            'completionStatus' => $completionStatus,
+            'completionDescription' => $completionDescription,
         ]);
     }
 

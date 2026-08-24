@@ -239,7 +239,7 @@
         </div>
     @else
         <p class="tag-library-collapsed">
-            {{ __('All tags are collapsed. Use search or press "Show all tags" button to show them.') }}</p>
+            {{ __('All tags are collapsed. Use search or press "Show tags list" button to show them.') }}</p>
     @endif
 
     <section class="tag-library-groups" aria-labelledby="tag-library-groups-heading">

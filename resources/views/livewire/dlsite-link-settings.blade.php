@@ -3,7 +3,7 @@
         <x-options.switch wire:model.live="enabled" :help="__(
             'When enabled, All Ages works open on DLSite Home; R15 and R18 use Maniax. When disabled, all works use Maniax.',
         )">
-            {{ __('Use age-appropriate DLSite work links') }}
+            {{ __('Use age-appropriate DLSite links') }}
         </x-options.switch>
 
         @error('enabled')
