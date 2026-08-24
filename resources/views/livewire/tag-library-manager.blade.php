@@ -70,8 +70,7 @@
 
             <form wire:submit.prevent="applyFilters" x-on:submit="closeFilters()">
                 <h2 id="tag-library-filters-title" class="tag-library-filter-heading">
-                    {{ __('Filter') }}
-                    <span>{{ __('Apply filters to All Tags only.') }}</span>
+                    {{ __('Filter') }} <span class="description">{{ __('Apply filters to All Tags list') }}</span>
                 </h2>
 
                 <div class="tag-library-filter-fields">
@@ -138,26 +137,26 @@
                 </div>
 
                 <h2 class="tag-library-filter-heading tag-library-filter-heading--sort">
-                    {{ __('Sort') }}
-                    <span>{{ __('Choose how All Tags are ordered.') }}</span>
+                    {{ __('Sort') }} <span
+                        class="description">{{ __('Choose one or two columns to be sorted in ascending or descending order.') }}</span>
                 </h2>
 
                 <div class="tag-library-filter-fields">
-                    <label class="tag-library-filter-field" for="tag-library-filter-sort-field">
-                        <span>{{ __('Sort by') }}</span>
-                        <select id="tag-library-filter-sort-field" wire:model="filterDraft.sortField">
-                            <option value="alphabetical">{{ __('Alphabetical') }}</option>
-                            <option value="work_count">{{ __('Work count') }}</option>
-                        </select>
-                    </label>
+                    <x-index.filter-select id="tag-library-filter-primary-sort-field" name="primary_sort_field"
+                        label="Primary" group-class="tag-library-filter-field tag-library-sort-widget"
+                        :options="$sortFieldOptions" wire:model="filterDraft.primarySortField">
+                        <x-index.sort-direction-group name="primary_sort_direction" :options="$sortDirectionOptions"
+                            wire:model="filterDraft.primarySortDirection" />
+                    </x-index.filter-select>
 
-                    <label class="tag-library-filter-field" for="tag-library-filter-sort-direction">
-                        <span>{{ __('Direction') }}</span>
-                        <select id="tag-library-filter-sort-direction" wire:model="filterDraft.sortDirection">
-                            <option value="asc">{{ __('Ascending') }}</option>
-                            <option value="desc">{{ __('Descending') }}</option>
-                        </select>
-                    </label>
+                    <x-index.filter-select id="tag-library-filter-secondary-sort-field" name="secondary_sort_field"
+                        label="Secondary" group-class="tag-library-filter-field tag-library-sort-widget"
+                        :options="$sortFieldOptions" placeholder="None" wire:model="filterDraft.secondarySortField"
+                        x-ref="secondarySortSelect" x-on:change="setSecondarySort($event.target.value)">
+                        <x-index.sort-direction-group name="secondary_sort_direction" :options="$sortDirectionOptions"
+                            wire:model="filterDraft.secondarySortDirection"
+                            x-bind:disabled="secondarySort === ''" />
+                    </x-index.filter-select>
                 </div>
 
                 <div class="tag-library-filter-actions">

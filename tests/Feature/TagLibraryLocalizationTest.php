@@ -30,11 +30,16 @@ class TagLibraryLocalizationTest extends TestCase
             ->assertSee('placeholder="タグを検索..."', false)
             ->assertSee('<h2 class="tag-library-section-title">すべてのタグ</h2>', false)
             ->assertSee('<option value="hidden_group">グループで非表示</option>', false)
-            ->assertSee('「すべてのタグ」のみに絞り込みを適用します。')
+            ->assertSee('「すべてのタグ」リストにフィルターを適用します。')
             ->assertSee('<option value="related">親子関係あり</option>', false)
             ->assertSee('<option value="customized">カスタム設定済み</option>', false)
-            ->assertSee('<option value="work_count">作品数</option>', false)
-            ->assertSee('<option value="desc">降順</option>', false)
+            ->assertSee('昇順または降順で並べ替える列を1つまたは2つ選択します。')
+            ->assertSee('for="tag-library-filter-primary-sort-field">第1条件</label>', false)
+            ->assertSee('for="tag-library-filter-secondary-sort-field">第2条件</label>', false)
+            ->assertSee('value="work_count"', false)
+            ->assertSee('作品数')
+            ->assertSee('name="primary_sort_direction" value="desc"', false)
+            ->assertSee('<span>降順</span>', false)
             ->assertSee('data-autocomplete-source="tags"', false);
     }
 

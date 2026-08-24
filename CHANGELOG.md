@@ -2,6 +2,10 @@
 
 ## Development
 
+* 2026-08-24 -- 1.8.5 Tag Library Sorting UI
+  * Added primary/secondary Alphabetical and Work count sorting to All Tags with segmented Asc/Desc controls
+  * Aligned filter layout, mobile spacing, help text, and close controls across Tag Library and Index
+
 * 2026-08-24 -- 1.8.4 UI Text
   * Refined wording across Add/Edit, images, DLSite links, Refetch, authentication, and validation
   * Added RJ-specific modal deletion feedback and simplified DLSite fetch errors

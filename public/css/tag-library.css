@@ -670,15 +670,13 @@ body.filter-modal-open {
     padding-right: 36px;
     padding-bottom: 12px;
     border-bottom: 1px solid rgba(238, 152, 152, 0.9);
-    color: #2F1A26;
+    color: #7D6A6A;
     font-size: 24px;
     font-weight: 400;
 }
 
-.tag-library-filter-heading span {
-    display: block;
-    margin-top: 6px;
-    color: #7D6A6A;
+.tag-library-filter-heading .description {
+    margin: 6px 0 0;
     font-size: 12px;
 }
 
@@ -716,6 +714,26 @@ body.filter-modal-open {
 .tag-library-filter-field select:focus {
     border-color: #DD7D7D;
     outline: none;
+}
+
+.tag-library-sort-widget {
+    display: flex;
+    align-items: flex-start;
+    font-weight: normal;
+}
+
+.tag-library-sort-widget .widget-header {
+    width: 128px;
+    flex-shrink: 0;
+    font-size: 12px;
+    font-weight: bold;
+    line-height: 1.6;
+}
+
+.tag-library-sort-widget select {
+    width: 220px;
+    flex-shrink: 0;
+    font-size: 12px;
 }
 
 .tag-library-filter-actions {
@@ -1253,10 +1271,14 @@ button.tag-library-tag {
     }
 
     .tag-library-filter-panel {
-        max-height: calc(100dvh - 32px - env(safe-area-inset-top) - env(safe-area-inset-bottom));
-        margin-top: max(16px, env(safe-area-inset-top));
-        margin-bottom: max(16px, env(safe-area-inset-bottom));
-        padding: 20px 16px 18px;
+        width: calc(100vw - 20px);
+        max-height: calc(100dvh - 20px);
+        margin: 10px auto;
+        padding: 18px 16px calc(16px + env(safe-area-inset-bottom));
+    }
+
+    .tag-library-filter-heading {
+        font-size: 20px;
     }
 
     .tag-library-filter-field {
@@ -1264,8 +1286,32 @@ button.tag-library-tag {
         gap: 6px;
     }
 
+    .tag-library-sort-widget {
+        flex-direction: column;
+    }
+
+    .tag-library-sort-widget .widget-header {
+        width: auto;
+    }
+
+    .tag-library-sort-widget select {
+        width: 100%;
+    }
+
+    .tag-library-sort-widget .sort-direction-group {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        width: 100%;
+    }
+
+    .tag-library-sort-widget .sort-direction-option span {
+        box-sizing: border-box;
+        width: 100%;
+    }
+
     .tag-library-filter-actions {
         flex-direction: column-reverse;
+        padding-bottom: calc(16px + env(safe-area-inset-bottom));
     }
 
     .tag-library-filter-clear,

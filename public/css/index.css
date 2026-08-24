@@ -893,9 +893,11 @@ body.image-viewer-open {
     position: absolute;
     top: 14px;
     right: 14px;
+    padding: 4px;
     border: 0;
     background: transparent;
     color: #7D6A6A;
+    font: inherit;
     font-size: 20px;
     cursor: pointer;
 }
@@ -1058,45 +1060,6 @@ body.image-viewer-open {
 
 .sort-widget select {
     width: 220px;
-}
-
-.sort-direction-group {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 10px;
-}
-
-.sort-direction-option {
-    position: relative;
-}
-
-.sort-direction-option input {
-    position: absolute;
-    opacity: 0;
-    pointer-events: none;
-}
-
-.sort-direction-option span {
-    display: inline-flex;
-    justify-content: center;
-    min-width: 64px;
-    padding: 8px 14px;
-    border: 1px solid #EE9898;
-    border-radius: 999px;
-    background-color: #FFFFFF;
-    color: #7D6A6A;
-    font-size: 12px;
-    cursor: pointer;
-}
-
-.sort-direction-option input:checked+span {
-    background-color: #7D6A6A;
-    color: #FFFDF8;
-}
-
-.sort-direction-option input:disabled+span {
-    opacity: 0.55;
-    cursor: not-allowed;
 }
 
 .list-table-empty {

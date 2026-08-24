@@ -348,6 +348,7 @@ class ProductControllerTest extends TestCase
             ->assertOk()
             ->assertSee('data-index-filter-open', false)
             ->assertSee('data-index-filter-modal', false)
+            ->assertSee('<i class="fa-solid fa-xmark" aria-hidden="true"></i>', false)
             ->assertSee('scripts/index-advanced-filters.js', false)
             ->assertSee('name="title"', false)
             ->assertSee('name="notes"', false)

@@ -12,6 +12,8 @@
     <link rel="stylesheet"
         href="{{ asset('css/autocomplete.css') }}?v={{ filemtime(public_path('css/autocomplete.css')) }}">
     <link rel="stylesheet"
+        href="{{ asset('css/sort-direction.css') }}?v={{ filemtime(public_path('css/sort-direction.css')) }}">
+    <link rel="stylesheet"
         href="{{ asset('css/tag-library.css') }}?v={{ filemtime(public_path('css/tag-library.css')) }}">
     <link rel="stylesheet"
         href="{{ asset('css/list-menu-float.css') }}?v={{ filemtime(public_path('css/list-menu-float.css')) }}">

@@ -20,7 +20,7 @@
             aria-labelledby="advanced-options-title">
             <button type="button" class="advanced-options-close" data-index-filter-close
                 aria-label="{{ __('Close filters') }}" x-on:click="closeFilters()">
-                <i class="fa-solid fa-xmark"></i>
+                <i class="fa-solid fa-xmark" aria-hidden="true"></i>
             </button>
 
             <form wire:submit.prevent="applyFilters" x-on:submit="closeFilters()">

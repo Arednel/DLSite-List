@@ -1310,19 +1310,23 @@ class TagLibraryManagerTest extends TestCase
             ->assertSee('tag-library-filter-button is-active', false)
             ->assertDontSee('tag-library-tag-title">' . $visible->title, false)
             ->assertSee('tag-library-tag-title">' . $hidden->title, false)
-            ->set('filterDraft.sortField', 'work_count')
-            ->set('filterDraft.sortDirection', 'desc')
+            ->set('filterDraft.primarySortField', 'work_count')
+            ->set('filterDraft.primarySortDirection', 'desc')
             ->call('applyFilters')
-            ->assertSet('sortField', 'work_count')
-            ->assertSet('sortDirection', 'desc')
+            ->assertSet('primarySortField', 'work_count')
+            ->assertSet('primarySortDirection', 'desc')
             ->call('clearFilters')
             ->assertSet('search', 'Modal Filter')
             ->assertSet('visibilityFilter', 'all')
-            ->assertSet('sortField', 'alphabetical')
-            ->assertSet('sortDirection', 'asc')
+            ->assertSet('primarySortField', 'alphabetical')
+            ->assertSet('primarySortDirection', 'asc')
+            ->assertSet('secondarySortField', '')
+            ->assertSet('secondarySortDirection', 'asc')
             ->assertSet('filterDraft.visibilityFilter', 'all')
-            ->assertSet('filterDraft.sortField', 'alphabetical')
-            ->assertSet('filterDraft.sortDirection', 'asc')
+            ->assertSet('filterDraft.primarySortField', 'alphabetical')
+            ->assertSet('filterDraft.primarySortDirection', 'asc')
+            ->assertSet('filterDraft.secondarySortField', '')
+            ->assertSet('filterDraft.secondarySortDirection', 'asc')
             ->assertSee('tag-library-tag-title">' . $visible->title, false)
             ->assertSee('tag-library-tag-title">' . $hidden->title, false)
             ->assertDontSee('tag-library-filter-button is-active', false);
@@ -1338,8 +1342,10 @@ class TagLibraryManagerTest extends TestCase
                 'usageFilter' => 'invalid',
                 'relationshipFilter' => 'invalid',
                 'colorFilter' => 'invalid',
-                'sortField' => 'invalid',
-                'sortDirection' => 'invalid',
+                'primarySortField' => 'invalid',
+                'primarySortDirection' => 'invalid',
+                'secondarySortField' => 'invalid',
+                'secondarySortDirection' => 'invalid',
             ])
             ->call('applyFilters')
             ->assertSet('visibilityFilter', 'all')
@@ -1348,8 +1354,10 @@ class TagLibraryManagerTest extends TestCase
             ->assertSet('usageFilter', 'all')
             ->assertSet('relationshipFilter', 'all')
             ->assertSet('colorFilter', 'all')
-            ->assertSet('sortField', 'alphabetical')
-            ->assertSet('sortDirection', 'asc')
+            ->assertSet('primarySortField', 'alphabetical')
+            ->assertSet('primarySortDirection', 'asc')
+            ->assertSet('secondarySortField', '')
+            ->assertSet('secondarySortDirection', 'asc')
             ->assertSet('filterDraft', [
                 'visibilityFilter' => 'all',
                 'groupStatusFilter' => 'all',
@@ -1357,9 +1365,27 @@ class TagLibraryManagerTest extends TestCase
                 'usageFilter' => 'all',
                 'relationshipFilter' => 'all',
                 'colorFilter' => 'all',
-                'sortField' => 'alphabetical',
-                'sortDirection' => 'asc',
+                'primarySortField' => 'alphabetical',
+                'primarySortDirection' => 'asc',
+                'secondarySortField' => '',
+                'secondarySortDirection' => 'asc',
             ]);
+    }
+
+    public function test_filter_apply_discards_a_duplicate_secondary_sort_field(): void
+    {
+        Livewire::test(TagLibraryManager::class)
+            ->set('filterDraft.primarySortField', 'work_count')
+            ->set('filterDraft.primarySortDirection', 'desc')
+            ->set('filterDraft.secondarySortField', 'work_count')
+            ->set('filterDraft.secondarySortDirection', 'desc')
+            ->call('applyFilters')
+            ->assertSet('primarySortField', 'work_count')
+            ->assertSet('primarySortDirection', 'desc')
+            ->assertSet('secondarySortField', '')
+            ->assertSet('secondarySortDirection', 'asc')
+            ->assertSet('filterDraft.secondarySortField', '')
+            ->assertSet('filterDraft.secondarySortDirection', 'asc');
     }
 
     public function test_all_tags_filters_visibility_group_status_specific_group_and_usage(): void
@@ -1562,8 +1588,8 @@ class TagLibraryManagerTest extends TestCase
 
         $descendingHtml = Livewire::test(TagLibraryManager::class)
             ->call('toggleAllTags')
-            ->set('filterDraft.sortField', 'work_count')
-            ->set('filterDraft.sortDirection', 'desc')
+            ->set('filterDraft.primarySortField', 'work_count')
+            ->set('filterDraft.primarySortDirection', 'desc')
             ->call('applyFilters')
             ->html();
 
@@ -1585,8 +1611,8 @@ class TagLibraryManagerTest extends TestCase
 
         $ascendingHtml = Livewire::test(TagLibraryManager::class)
             ->call('toggleAllTags')
-            ->set('filterDraft.sortField', 'work_count')
-            ->set('filterDraft.sortDirection', 'asc')
+            ->set('filterDraft.primarySortField', 'work_count')
+            ->set('filterDraft.primarySortDirection', 'asc')
             ->call('applyFilters')
             ->html();
         $ascendingPositions = array_map(
@@ -1602,6 +1628,33 @@ class TagLibraryManagerTest extends TestCase
         }
 
         $this->assertSame($ascendingPositions, collect($ascendingPositions)->sort()->values()->all());
+
+        $secondaryDescendingHtml = Livewire::test(TagLibraryManager::class)
+            ->call('toggleAllTags')
+            ->set('filterDraft.primarySortField', 'work_count')
+            ->set('filterDraft.primarySortDirection', 'desc')
+            ->set('filterDraft.secondarySortField', 'alphabetical')
+            ->set('filterDraft.secondarySortDirection', 'desc')
+            ->call('applyFilters')
+            ->assertSet('secondarySortField', 'alphabetical')
+            ->assertSet('secondarySortDirection', 'desc')
+            ->html();
+        $secondaryDescendingPositions = array_map(
+            fn(Genre $genre): int|false => strpos(
+                $secondaryDescendingHtml,
+                'wire:key="tag-library-tag-' . $genre->getKey() . '"',
+            ),
+            [$visibleLeader, $tie, $rawHeavy, $unused],
+        );
+
+        foreach ($secondaryDescendingPositions as $position) {
+            $this->assertIsInt($position);
+        }
+
+        $this->assertSame(
+            $secondaryDescendingPositions,
+            collect($secondaryDescendingPositions)->sort()->values()->all(),
+        );
     }
 
     public function test_all_tags_sort_alphabetically_while_group_cards_keep_saved_tag_order(): void
@@ -1620,8 +1673,8 @@ class TagLibraryManagerTest extends TestCase
 
         $component = Livewire::test(TagLibraryManager::class)
             ->call('toggleAllTags')
-            ->set('filterDraft.sortField', 'work_count')
-            ->set('filterDraft.sortDirection', 'desc')
+            ->set('filterDraft.primarySortField', 'work_count')
+            ->set('filterDraft.primarySortDirection', 'desc')
             ->call('applyFilters');
         $html = $component->html();
 
@@ -1644,8 +1697,8 @@ class TagLibraryManagerTest extends TestCase
         $this->assertLessThan($newerGroupPosition, $olderGroupPosition);
 
         $descendingAlphabeticalHtml = $component
-            ->set('filterDraft.sortField', 'alphabetical')
-            ->set('filterDraft.sortDirection', 'desc')
+            ->set('filterDraft.primarySortField', 'alphabetical')
+            ->set('filterDraft.primarySortDirection', 'desc')
             ->call('applyFilters')
             ->html();
         $olderDescendingPosition = strpos(

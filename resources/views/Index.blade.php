@@ -7,6 +7,8 @@
 
     <meta name="viewport" content="width=device-width, initial-scale=1">
 
+    <link rel="stylesheet"
+        href="{{ asset('css/sort-direction.css') }}?v={{ filemtime(public_path('css/sort-direction.css')) }}">
     <link rel="stylesheet" href="{{ asset('css/index.css') }}?v={{ filemtime(public_path('css/index.css')) }}">
     <link rel="stylesheet"
         href="{{ asset('css/list-menu-float.css') }}?v={{ filemtime(public_path('css/list-menu-float.css')) }}">

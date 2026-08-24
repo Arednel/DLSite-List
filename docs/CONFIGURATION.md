@@ -171,6 +171,7 @@ The All Tags list has a session-only `Edit tags` mode:
 - when on, clicking a tag opens a tag settings modal instead of navigating
 - the modal can rename the shared tag. Duplicate case-folded titles are rejected, while product sources/languages, group memberships, colors, visibility, and parent/child relations stay attached to the same tag id
 - the mode uses a switch-style toggle bound to the Livewire `tagEditMode` checkbox state
+- the All Tags filter modal uses primary and optional secondary Alphabetical/Work count sorting. Primary defaults to `Alphabetical / Asc`, Secondary defaults to `None`, a secondary field that duplicates Primary is discarded, and both direction choices reuse the Index Asc/Desc segmented buttons
 - the `Add group` field is inside the Tag Groups section header, next to group management
 - `Enable group ordering on Index` is a persisted switch in the Tag Groups section and in Options; it is off by default, so saved group order affects Index tag-chip ordering only after enabling it
 - tag edit modals and Tag Group cards include separate background color and font color controls, each with a color picker, manual hex input, and Clear action; empty colors use the normal default tag style

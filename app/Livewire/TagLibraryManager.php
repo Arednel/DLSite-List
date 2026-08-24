@@ -2,6 +2,7 @@
 
 namespace App\Livewire;
 
+use App\Enums\ProductIndexSortDirection;
 use App\Enums\UiLanguage;
 use App\Models\Genre;
 use App\Models\GenreGroup;
@@ -61,11 +62,6 @@ class TagLibraryManager extends Component
         'work_count',
     ];
 
-    private const SORT_DIRECTIONS = [
-        'asc',
-        'desc',
-    ];
-
     private const FILTER_DEFAULTS = [
         'visibilityFilter' => 'all',
         'groupStatusFilter' => 'all',
@@ -73,8 +69,10 @@ class TagLibraryManager extends Component
         'usageFilter' => 'all',
         'relationshipFilter' => 'all',
         'colorFilter' => 'all',
-        'sortField' => 'alphabetical',
-        'sortDirection' => 'asc',
+        'primarySortField' => 'alphabetical',
+        'primarySortDirection' => 'asc',
+        'secondarySortField' => '',
+        'secondarySortDirection' => 'asc',
     ];
 
     public string $search = '';
@@ -117,9 +115,13 @@ class TagLibraryManager extends Component
 
     public string $colorFilter = 'all';
 
-    public string $sortField = 'alphabetical';
+    public string $primarySortField = 'alphabetical';
 
-    public string $sortDirection = 'asc';
+    public string $primarySortDirection = 'asc';
+
+    public string $secondarySortField = '';
+
+    public string $secondarySortDirection = 'asc';
 
     public array $filterDraft = self::FILTER_DEFAULTS;
 
@@ -194,6 +196,11 @@ class TagLibraryManager extends Component
             'editingAvailableChildOptions' => $this->editingAvailableChildOptions($hierarchy),
             'fetchedLanguageCode' => UiLanguage::current()->fetchedTagCode(),
             'filtersActive' => $this->filtersAreActive(),
+            'sortFieldOptions' => [
+                'alphabetical' => __('Alphabetical'),
+                'work_count' => __('Work count'),
+            ],
+            'sortDirectionOptions' => ProductIndexSortDirection::options(),
         ]);
     }
 
@@ -846,16 +853,45 @@ class TagLibraryManager extends Component
             ->when($this->colorFilter === 'default', function ($query): void {
                 $query->whereNull('genres.color')->whereNull('genres.text_color');
             })
-            ->when(
-                $this->sortField === 'work_count',
-                fn(Builder $query): Builder => $query
-                    ->orderBy('products_count', $this->sortDirection)
-                    ->orderBy('genres.title')
-                    ->orderBy('genres.id'),
-                fn(Builder $query): Builder => $query
-                    ->orderBy('genres.title', $this->sortDirection)
-                    ->orderBy('genres.id', $this->sortDirection),
-            );
+            ->tap(fn(Builder $query): Builder => $this->applyGenreSorts($query));
+    }
+
+    private function applyGenreSorts(Builder $query): Builder
+    {
+        $alphabeticalDirection = null;
+
+        foreach ($this->genreSorts() as [$field, $direction]) {
+            if ($field === 'work_count') {
+                $query->orderBy('products_count', $direction);
+
+                continue;
+            }
+
+            $query->orderBy('genres.title', $direction);
+            $alphabeticalDirection = $direction;
+        }
+
+        if ($alphabeticalDirection === null) {
+            $query->orderBy('genres.title');
+        }
+
+        return $query->orderBy('genres.id', $alphabeticalDirection ?? 'asc');
+    }
+
+    /**
+     * @return list<array{string, string}>
+     */
+    private function genreSorts(): array
+    {
+        $sorts = [
+            [$this->primarySortField, $this->primarySortDirection],
+        ];
+
+        if ($this->secondarySortField !== '') {
+            $sorts[] = [$this->secondarySortField, $this->secondarySortDirection];
+        }
+
+        return $sorts;
     }
 
     private function specificGroupFilterId(): ?int
@@ -1210,6 +1246,30 @@ class TagLibraryManager extends Component
      */
     private function normalizedFilterState(array $state): array
     {
+        $sortDirections = array_column(ProductIndexSortDirection::cases(), 'value');
+        $primarySortField = $this->normalizedChoice(
+            $state['primarySortField'] ?? null,
+            self::SORT_FIELDS,
+            'alphabetical',
+        );
+        $secondarySortField = $this->normalizedChoice(
+            $state['secondarySortField'] ?? null,
+            self::SORT_FIELDS,
+            '',
+        );
+
+        if ($secondarySortField === $primarySortField) {
+            $secondarySortField = '';
+        }
+
+        $secondarySortDirection = $secondarySortField === ''
+            ? 'asc'
+            : $this->normalizedChoice(
+                $state['secondarySortDirection'] ?? null,
+                $sortDirections,
+                'asc',
+            );
+
         return [
             'visibilityFilter' => $this->normalizedChoice(
                 $state['visibilityFilter'] ?? null,
@@ -1232,16 +1292,14 @@ class TagLibraryManager extends Component
                 $state['colorFilter'] ?? null,
                 self::COLOR_FILTERS,
             ),
-            'sortField' => $this->normalizedChoice(
-                $state['sortField'] ?? null,
-                self::SORT_FIELDS,
-                'alphabetical',
-            ),
-            'sortDirection' => $this->normalizedChoice(
-                $state['sortDirection'] ?? null,
-                self::SORT_DIRECTIONS,
+            'primarySortField' => $primarySortField,
+            'primarySortDirection' => $this->normalizedChoice(
+                $state['primarySortDirection'] ?? null,
+                $sortDirections,
                 'asc',
             ),
+            'secondarySortField' => $secondarySortField,
+            'secondarySortDirection' => $secondarySortDirection,
         ];
     }
 
