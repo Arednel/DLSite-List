@@ -2,6 +2,9 @@
 
 ## Development
 
+* 2026-08-24 -- 1.8.5.1 App Name
+  * Set unique APP_NAME
+
 * 2026-08-24 -- 1.8.5 Tag Library Sorting UI
   * Added primary/secondary Alphabetical and Work count sorting to All Tags with segmented Asc/Desc controls
   * Aligned filter layout, mobile spacing, help text, and close controls across Tag Library and Index
