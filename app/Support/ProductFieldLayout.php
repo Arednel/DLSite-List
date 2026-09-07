@@ -313,13 +313,6 @@ final class ProductFieldLayout
             ->all();
     }
 
-    public static function visible(array $layout, ProductField|string $field): bool
-    {
-        $field = $field instanceof ProductField ? $field->value : $field;
-
-        return (bool) data_get(Arr::first($layout, fn(array $row): bool => $row['field'] === $field), 'visible', false);
-    }
-
     public static function editable(array $layout, ProductField|string $field): bool
     {
         $field = $field instanceof ProductField ? $field->value : $field;

@@ -26,6 +26,7 @@ class OptionsGeneralTest extends TestCase
             ->assertSee('href="/options?tab=field-layouts"', false)
             ->assertSee('href="/options?tab=refetch"', false)
             ->assertSee('Index Pagination')
+            ->assertSee('Overflow')
             ->assertSee('Add/Edit Modals')
             ->assertSee('Reset All Options')
             ->assertDontSee('Index Sort Menu')

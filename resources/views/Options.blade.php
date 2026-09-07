@@ -120,6 +120,17 @@
                     <livewire:index-table-width-settings />
 
                     <h2>
+                        <i class="fa-solid fa-up-right-and-down-left-from-center fa-fw options-section-icon"
+                            aria-hidden="true"></i>
+                        {{ __('Overflow') }}
+                    </h2>
+                    <p class="option-description">
+                        {{ __('Set height limits for Notes and Tags on the Index. Content that exceeds the limit can be expanded with ‘Show all’.') }}
+                    </p>
+
+                    <livewire:index-content-overflow-settings />
+
+                    <h2>
                         <i class="fa-solid fa-layer-group fa-fw options-section-icon" aria-hidden="true"></i>
                         {{ __('Series Metadata') }}
                     </h2>

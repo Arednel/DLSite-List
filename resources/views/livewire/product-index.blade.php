@@ -158,7 +158,24 @@
                                                 </div>
 
                                                 <div class="notes">
-                                                    <div class="user-note-text">{{ $product->notes }}</div>
+                                                    @if ($contentOverflow['inline_notes']['enabled'])
+                                                        <div class="index-content-overflow" x-data="{ expanded: false }"
+                                                            style="--index-content-overflow-height: {{ $contentOverflow['inline_notes']['height'] }}">
+                                                            <div id="index-inline-notes-{{ $product->id }}"
+                                                                x-bind:class="{ 'index-content-overflow__content--collapsed': !expanded }">
+                                                    @endif
+                                                        <div class="user-note-text">{{ $product->notes }}</div>
+                                                    @if ($contentOverflow['inline_notes']['enabled'])
+                                                            </div>
+                                                            <button type="button" class="index-content-overflow__toggle"
+                                                                aria-controls="index-inline-notes-{{ $product->id }}"
+                                                                x-bind:aria-expanded="expanded.toString()" x-cloak
+                                                                x-on:click="expanded = !expanded">
+                                                                <span x-show="!expanded">{{ __('Show all') }}</span>
+                                                                <span x-show="expanded">{{ __('Show less') }}</span>
+                                                            </button>
+                                                        </div>
+                                                    @endif
                                                 </div>
                                             @break
 
@@ -190,7 +207,24 @@
 
                                             @case('notes')
                                                 <div class="notes">
-                                                    <div class="user-note-text">{{ $product->notes ?: '-' }}</div>
+                                                    @if ($contentOverflow['notes_column']['enabled'])
+                                                        <div class="index-content-overflow" x-data="{ expanded: false }"
+                                                            style="--index-content-overflow-height: {{ $contentOverflow['notes_column']['height'] }}">
+                                                            <div id="index-notes-column-{{ $product->id }}"
+                                                                x-bind:class="{ 'index-content-overflow__content--collapsed': !expanded }">
+                                                    @endif
+                                                        <div class="user-note-text">{{ $product->notes ?: '-' }}</div>
+                                                    @if ($contentOverflow['notes_column']['enabled'])
+                                                            </div>
+                                                            <button type="button" class="index-content-overflow__toggle"
+                                                                aria-controls="index-notes-column-{{ $product->id }}"
+                                                                x-bind:aria-expanded="expanded.toString()" x-cloak
+                                                                x-on:click="expanded = !expanded">
+                                                                <span x-show="!expanded">{{ __('Show all') }}</span>
+                                                                <span x-show="expanded">{{ __('Show less') }}</span>
+                                                            </button>
+                                                        </div>
+                                                    @endif
                                                 </div>
                                             @break
 
@@ -269,23 +303,40 @@
 
                                                 @case('tags')
                                                     <div class="tags">
-                                                        @foreach ($productGenres[$product->id] ?? [] as $genre)
-                                                            @if (($genre->has_background_color ?? false) || ($genre->has_font_color ?? false))
-                                                                <a @class([
-                                                                    'index-tag-chip',
-                                                                    'index-tag-chip--background-colored' =>
-                                                                        ($genre->has_background_color ?? false) === true,
-                                                                    'index-tag-chip--text-colored' =>
-                                                                        ($genre->has_font_color ?? false) === true,
-                                                                ])
-                                                                    @if (filled($genre->color_style ?? null)) style="{{ $genre->color_style }}" @endif
-                                                                    href="{{ $tagHrefPrefix }}genre={{ $genre->id }}">
-                                                                    {{ $genre->title }}</a>{{ !$loop->last ? ',' : '' }}
-                                                            @else
-                                                                <a
-                                                                    href="{{ $tagHrefPrefix }}genre={{ $genre->id }}">{{ $genre->title }}</a>{{ !$loop->last ? ',' : '' }}
-                                                            @endif
-                                                        @endforeach
+                                                        @if ($contentOverflow['tags']['enabled'])
+                                                            <div class="index-content-overflow" x-data="{ expanded: false }"
+                                                                style="--index-content-overflow-height: {{ $contentOverflow['tags']['height'] }}">
+                                                                <div id="index-tags-{{ $product->id }}"
+                                                                    x-bind:class="{ 'index-content-overflow__content--collapsed': !expanded }">
+                                                        @endif
+                                                            @foreach ($productGenres[$product->id] ?? [] as $genre)
+                                                                @if (($genre->has_background_color ?? false) || ($genre->has_font_color ?? false))
+                                                                    <a @class([
+                                                                        'index-tag-chip',
+                                                                        'index-tag-chip--background-colored' =>
+                                                                            ($genre->has_background_color ?? false) === true,
+                                                                        'index-tag-chip--text-colored' =>
+                                                                            ($genre->has_font_color ?? false) === true,
+                                                                    ])
+                                                                        @if (filled($genre->color_style ?? null)) style="{{ $genre->color_style }}" @endif
+                                                                        href="{{ $tagHrefPrefix }}genre={{ $genre->id }}">
+                                                                        {{ $genre->title }}</a>{{ !$loop->last ? ',' : '' }}
+                                                                @else
+                                                                    <a
+                                                                        href="{{ $tagHrefPrefix }}genre={{ $genre->id }}">{{ $genre->title }}</a>{{ !$loop->last ? ',' : '' }}
+                                                                @endif
+                                                            @endforeach
+                                                        @if ($contentOverflow['tags']['enabled'])
+                                                                </div>
+                                                                <button type="button" class="index-content-overflow__toggle"
+                                                                    aria-controls="index-tags-{{ $product->id }}"
+                                                                    x-bind:aria-expanded="expanded.toString()" x-cloak
+                                                                    x-on:click="expanded = !expanded">
+                                                                    <span x-show="!expanded">{{ __('Show all') }}</span>
+                                                                    <span x-show="expanded">{{ __('Show less') }}</span>
+                                                                </button>
+                                                            </div>
+                                                        @endif
                                                     </div>
                                                 @break
                                             @endswitch

@@ -8,6 +8,7 @@ use App\Enums\UiLanguage;
 use App\Livewire\AutocompleteSettings;
 use App\Livewire\AutoSeriesSettings;
 use App\Livewire\DlsiteLinkSettings;
+use App\Livewire\IndexContentOverflowSettings;
 use App\Livewire\IndexPaginationSettings;
 use App\Livewire\IndexTableWidthSettings;
 use App\Livewire\OptionalProductStatusesSettings;
@@ -848,6 +849,7 @@ class ProductMetadataSettingsTest extends TestCase
             ->assertOk()
             ->assertSeeLivewire(UiLanguageSettings::class)
             ->assertSeeLivewire(IndexPaginationSettings::class)
+            ->assertSeeLivewire(IndexContentOverflowSettings::class)
             ->assertSeeLivewire(IndexTableWidthSettings::class)
             ->assertSeeLivewire(OptionalProductStatusesSettings::class)
             ->assertDontSeeLivewire(ProductFieldLayoutSettings::class)
@@ -866,6 +868,7 @@ class ProductMetadataSettingsTest extends TestCase
             ->assertOk()
             ->assertDontSeeLivewire(UiLanguageSettings::class)
             ->assertDontSeeLivewire(IndexPaginationSettings::class)
+            ->assertDontSeeLivewire(IndexContentOverflowSettings::class)
             ->assertDontSeeLivewire(IndexTableWidthSettings::class)
             ->assertDontSeeLivewire(OptionalProductStatusesSettings::class)
             ->assertSeeLivewire(ProductFieldLayoutSettings::class)

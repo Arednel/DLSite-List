@@ -2,6 +2,11 @@
 
 ## Development
 
+* 2026-09-07 -- 1.8.6 Notes & Tags Overflow
+  * Added configurable height limits and Show all/Show less controls for Index Notes and Tags
+  * Updated README.md
+  * Code cleanup
+
 * 2026-08-24 -- 1.8.5.1 App Name
   * Set unique APP_NAME
 

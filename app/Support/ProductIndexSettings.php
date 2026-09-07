@@ -13,6 +13,11 @@ final readonly class ProductIndexSettings
      * @param  list<array{field: string, label: string, visible: bool}>  $indexSortFieldLayout
      * @param  array<string, string>  $indexSortFieldOptions
      * @param  array{mode: string, custom: string}  $tableWidth
+     * @param  array{
+     *     inline_notes: array{enabled: bool, height: string},
+     *     notes_column: array{enabled: bool, height: string},
+     *     tags: array{enabled: bool, height: string}
+     * }  $contentOverflow
      * @param  array{on_hold: bool, dropped: bool}  $optionalProductStatuses
      * @param  array{index: bool, tag_library: bool, autocomplete: bool, edit_readonly: bool, refetch: bool}  $tagColorSurfaces
      */
@@ -27,6 +32,7 @@ final readonly class ProductIndexSettings
         public array $indexSortFieldOptions,
         public array $tableWidth,
         public string $tableWidthCss,
+        public array $contentOverflow,
         public bool $searchHiddenDescriptionsEnabled,
         public bool $indexImageViewerEnabled,
         public array $optionalProductStatuses,

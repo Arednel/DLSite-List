@@ -6,6 +6,7 @@ use App\Enums\ProductField;
 use App\Enums\ProductIndexSortField;
 use App\Enums\UiLanguage;
 use App\Models\Option;
+use App\Support\ProductIndexContentOverflow;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
 use Tests\TestCase;
@@ -301,6 +302,7 @@ class OptionMetadataSettingsTest extends TestCase
         $this->assertFalse($defaults->indexImageViewerEnabled);
         $this->assertSame(Option::DEFAULT_OPTIONAL_PRODUCT_STATUSES, $defaults->optionalProductStatuses);
         $this->assertSame(Option::DEFAULT_TAG_COLOR_SURFACES, $defaults->tagColorSurfaces);
+        $this->assertSame(ProductIndexContentOverflow::DEFAULTS, $defaults->contentOverflow);
         $this->assertFalse($defaults->productFormModalEnabled);
         $this->assertFalse($defaults->dlsiteAgeAppropriateLinksEnabled);
         $this->assertSame(
@@ -353,6 +355,11 @@ class OptionMetadataSettingsTest extends TestCase
         Option::setProductFormModalEnabled(true);
         Option::setProductFormModalCompletionAction(Option::PRODUCT_FORM_MODAL_COMPLETION_REFRESH);
         Option::setDlsiteAgeAppropriateLinksEnabled(true);
+        Option::setIndexContentOverflow([
+            'inline_notes' => ['enabled' => true, 'height' => '6rem'],
+            'notes_column' => ['enabled' => false, 'height' => '120px'],
+            'tags' => ['enabled' => true, 'height' => '25vh'],
+        ]);
 
         $settings = Option::productIndexSettings();
 
@@ -381,6 +388,11 @@ class OptionMetadataSettingsTest extends TestCase
         $this->assertTrue($settings->tagColorSurfaces[Option::TAG_COLOR_SURFACE_REFETCH]);
         $this->assertTrue($settings->productFormModalEnabled);
         $this->assertTrue($settings->dlsiteAgeAppropriateLinksEnabled);
+        $this->assertSame([
+            'inline_notes' => ['enabled' => true, 'height' => '6rem'],
+            'notes_column' => ['enabled' => false, 'height' => '80px'],
+            'tags' => ['enabled' => true, 'height' => '25vh'],
+        ], $settings->contentOverflow);
         $this->assertSame(
             Option::PRODUCT_FORM_MODAL_COMPLETION_REFRESH,
             $settings->productFormModalCompletionAction,
@@ -401,6 +413,15 @@ class OptionMetadataSettingsTest extends TestCase
                 'custom' => 'calc(100%)',
             ]),
         ]);
+        Option::query()->updateOrCreate([
+            'key' => Option::INDEX_CONTENT_OVERFLOW,
+        ], [
+            'value' => json_encode([
+                'inline_notes' => ['enabled' => true, 'height' => 'calc(100%)'],
+                'notes_column' => ['enabled' => true, 'height' => '5rem'],
+                'tags' => 'invalid',
+            ]),
+        ]);
 
         $settings = Option::productIndexSettings();
 
@@ -411,6 +432,11 @@ class OptionMetadataSettingsTest extends TestCase
         $this->assertFalse($settings->indexGroupOrderingEnabled);
         $this->assertFalse($settings->searchHiddenDescriptionsEnabled);
         $this->assertFalse($settings->indexImageViewerEnabled);
+        $this->assertSame([
+            'inline_notes' => ['enabled' => true, 'height' => '80px'],
+            'notes_column' => ['enabled' => true, 'height' => '5rem'],
+            'tags' => ['enabled' => false, 'height' => '80px'],
+        ], $settings->contentOverflow);
     }
 
     public function test_reset_visible_settings_restores_index_search_and_tag_library_ordering_defaults(): void
@@ -433,6 +459,9 @@ class OptionMetadataSettingsTest extends TestCase
             'edit_readonly' => true,
             'refetch' => true,
         ]);
+        Option::setIndexContentOverflow([
+            'inline_notes' => ['enabled' => true, 'height' => '4rem'],
+        ]);
 
         Option::resetVisibleSettingsToDefault();
 
@@ -454,6 +483,7 @@ class OptionMetadataSettingsTest extends TestCase
             'edit_readonly' => false,
             'refetch' => false,
         ], Option::tagColorSurfaces());
+        $this->assertSame(ProductIndexContentOverflow::DEFAULTS, Option::indexContentOverflow());
     }
 
     public function test_index_sort_field_layout_is_normalized_when_saved_and_reset(): void
@@ -540,6 +570,7 @@ class OptionMetadataSettingsTest extends TestCase
             ], fn() => Option::resetFieldLayoutsToDefault()],
             [[Option::INDEX_SORT_FIELD_LAYOUT], fn() => Option::resetIndexSortFieldLayoutToDefault()],
             [[Option::INDEX_TABLE_WIDTH], fn() => Option::resetIndexTableWidthToDefault()],
+            [[Option::INDEX_CONTENT_OVERFLOW], fn() => Option::resetIndexContentOverflowToDefault()],
         ];
 
         foreach ($resetCases as [$keys, $reset]) {

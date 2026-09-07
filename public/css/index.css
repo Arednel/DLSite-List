@@ -429,6 +429,39 @@ a {
     white-space: pre-line;
 }
 
+.index-content-overflow {
+    min-width: 0;
+}
+
+.index-content-overflow__content--collapsed {
+    max-height: var(--index-content-overflow-height);
+    overflow: hidden;
+}
+
+.index-content-overflow__toggle {
+    display: inline-flex;
+    margin-top: 4px;
+    padding: 0;
+    border: 0;
+    background: transparent;
+    color: #DD7D7D;
+    font: inherit;
+    font-size: 11px;
+    font-weight: bold;
+    cursor: pointer;
+}
+
+.index-content-overflow__toggle:hover {
+    color: #B94F5C;
+    text-decoration: underline;
+}
+
+.index-content-overflow__toggle:focus-visible {
+    border-radius: 2px;
+    outline: 2px solid #7D6A6A;
+    outline-offset: 2px;
+}
+
 .list-table .list-table-data .data.score .product-link {
     font-size: 1.1em;
     font-weight: bold

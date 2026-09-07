@@ -1,10 +1,54 @@
 <h2 align="center">DLSite List</h2>
 
-Personal DLSite library for organizing your collection, inspired by [MyAnimeList](https://myanimelist.net)
+DLSite List is a single-user, self-hosted personal DLsite library for organizing your collection, inspired by [MyAnimeList](https://myanimelist.net)'s "Cherry Blossom" theme.
+
+It's mainly made for ASMR titles, and quite a lot of the UI uses that wording, but it can also be used with other DLsite works that have an RJ code - Games, Manga, Music etc.
+
+## Features
+
+- Fetch works directly from DLsite or add them manually.
+- Add your own tags and organize tags into groups.
+- Change existing work information and add things like current status, score, start and finish dates.
+- Filter and sort your library.
+- Image viewer for cover and sample images.
+- "Tag Library" for managing tags and tag groups.
+- Refetch existing works using current information from DLsite.
+- Configurable pagination size, search behavior, Index width, visible Index columns, column order, and other options.
+- English and Japanese UI with separate English and Japanese tag "sets". Japanese UI was mostly created using auto-translate, so quality may vary.
+
+## Screenshots
+
+### Index
+
+<p align="center">
+  <a href="docs/screenshots/index_1.png">
+    <img src="docs/screenshots/index_1.png" alt="DLSite List Index 1" width="31%">
+  </a>
+  <a href="docs/screenshots/index_2.png">
+    <img src="docs/screenshots/index_2.png" alt="DLSite List Index 2" width="31%">
+  </a>
+  <a href="docs/screenshots/index_3.png">
+    <img src="docs/screenshots/index_3.png" alt="DLSite List Index 3" width="31%">
+  </a>
+</p>
+
+### Quick Add, Options, Tag Library
+
+<p align="center">
+  <a href="docs/screenshots/quick_add_1.png">
+    <img src="docs/screenshots/quick_add_1.png" alt="Quick Add" width="31%">
+  </a>
+  <a href="docs/screenshots/options_1.png">
+    <img src="docs/screenshots/options_1.png" alt="Options" width="31%">
+  </a>
+  <a href="docs/screenshots/tag-library_1.png">
+    <img src="docs/screenshots/tag-library_1.png" alt="Tag Library" width="31%">
+  </a>
+</p>
 
 ## Quick Start (requires [Git](https://git-scm.com) and [Docker Compose](https://docs.docker.com/compose))
 
-### 1) Run those commands
+### 1) Run these commands
 
 ```bash
 git clone https://github.com/Arednel/DLSite-List.git
@@ -16,9 +60,8 @@ docker compose --env-file docker/.env.docker up --build -d
 
 ### 2) After startup
 - DLSite List available at: `http://localhost:8080`
-- phpMyAdmin available at: `http://localhost:8888` (uncomment in compose.yaml, disabled for security)
-- Authentication is disabled by default. To add username and password, open `Options -> Authentication` and `Require administrator login`.
-- The saved-work image viewer is disabled by default. Enable it under `Options -> General` to open local cover and sample images from Index thumbnails and open a loaded image at full size in a new tab.
+- Optional phpMyAdmin: http://localhost:8888 after enabling it in compose.yaml (disabled by default).
+- Authentication is disabled by default. To add username and password, open `Options -> Authentication` and turn on `Require administrator login`.
 
 ## Manual installation process
 

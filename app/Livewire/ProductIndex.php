@@ -188,6 +188,7 @@ class ProductIndex extends Component
                 ProductProgress::visibleOptions($settings->optionalProductStatuses),
             ),
             'optionalProductStatuses' => $settings->optionalProductStatuses,
+            'contentOverflow' => $settings->contentOverflow,
             'indexColumns' => $settings->indexColumns,
             'filterFields' => $settings->filterFields,
             'filterActive' => $filterQuery !== [],

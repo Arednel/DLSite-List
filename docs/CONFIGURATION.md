@@ -242,6 +242,7 @@ Current settings:
 - `custom_quick_add_field_layout`: controls Custom Create field visibility/order
 - `index_sort_field_layout`: controls Advanced Filter sort value visibility/order
 - `index_table_width`: controls the Index list/table width and top cover image width
+- `index_content_overflow`: JSON map controlling optional height limits for inline Notes, the standalone Notes column, and Tags
 
 Runtime note:
 - `App\Models\Option` normalizes stored strings into the runtime values the app uses
@@ -488,8 +489,18 @@ Index table width choices:
 
 This width is applied to the Index list/table panel, top cover image, and progress menu. Progress links are centered independently of Index Search, keep their labels intact, and contract their spacing or wrap between complete links as needed. Desktop Search uses the free space to their right without crossing the rightmost link or the table/image boundary. At mobile widths, the full Search field moves between the selected progress heading and the Filters button and shrinks to avoid either control. The top cover image keeps a capped desktop height, and product row thumbnails keep their fixed list size.
 
+Index content overflow defaults:
+
+- inline Notes beneath Title: disabled, `80px`
+- standalone Notes column: disabled, `80px`
+- Tags column: disabled, `80px`
+
+General -> Overflow saves the three switches and heights together in `options.index_content_overflow`. Disabled targets use the default height (`80px`); saving discards their previous custom heights and hidden draft edits, including invalid values. Older stored custom heights for disabled targets are also treated as `80px` when loaded. Enabled limits apply to both desktop and mobile Index layouts. Each enabled field gets a Show all/Show less control, even when its content is short or empty. Show all removes the CSS height limit; Show less restores it. Expansion is browser-local and is not persisted or sent through Livewire.
+
+Enabled targets' heights must be positive CSS lengths using `px`, `rem`, `em`, `%`, `vw`, `vh`, `vmin`, `vmax`, `svh`, `lvh`, or `dvh`. Values are trimmed and lowercased when saved. CSS functions, variables, negative/zero values, missing units, and unknown units are rejected. `%` is applied as literal CSS; because Index cells have automatic height, its result depends on the surrounding layout and may not create a useful clamp. Missing, partial, or malformed stored JSON falls back per value to the disabled/`80px` defaults.
+
 Options page tabs:
-- `General` is the default tab and contains UI Language, Index Pagination, Index Search, Image Viewer, Index Table Width, Series Metadata, Add/Edit form theme and modal behavior, Autocomplete, Tag Library settings, and Reset All Options
+- `General` is the default tab and contains UI Language, Index Pagination, Index Search, Image Viewer, Index Table Width, Overflow, Series Metadata, Add/Edit form theme and modal behavior, Autocomplete, Tag Library settings, and Reset All Options
 - `Field Layouts` is the second tab and contains Index Table Fields, Index Filter Fields, Index Sort Menu, Edit Form Fields, Quick Add Form Fields, Custom Quick Add Form Fields, and Reset All Options
 - `Authentication` contains the default-off administrator login switch, independent Cherry/Black authentication-page theme, account status, and authenticated password change
 - `Refetch` separates Refetch All Works and Refetch Selected Works into distinct vertically stacked cards, with an optional run-wide Refetch Images choice and inline help, Livewire progress and review state, shared modal confirmations for Apply Tab and Apply All, cancellation, an independent latest-run link, and an always-visible right-aligned cleanup action

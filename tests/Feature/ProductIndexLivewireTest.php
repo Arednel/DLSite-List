@@ -546,6 +546,76 @@ class ProductIndexLivewireTest extends TestCase
             ->assertSeeInOrder(['English Description', 'Japanese Description', 'Tags', 'Series']);
     }
 
+    public function test_index_content_overflow_keeps_content_without_controls_when_disabled(): void
+    {
+        Option::setIndexFieldLayout([
+            ['field' => ProductField::Notes->value, 'visible' => true],
+            ['field' => ProductField::Tags->value, 'visible' => true],
+        ]);
+        $this->createProduct(1, ['notes' => 'NOTES_WITHOUT_OVERFLOW']);
+
+        Livewire::test(ProductIndex::class)
+            ->assertSee('NOTES_WITHOUT_OVERFLOW')
+            ->assertDontSee('index-content-overflow__toggle', false);
+    }
+
+    public function test_enabled_index_content_overflow_targets_render_their_controls_and_heights(): void
+    {
+        Option::setIndexFieldLayout([
+            ['field' => ProductField::Notes->value, 'visible' => true],
+            ['field' => ProductField::Tags->value, 'visible' => true],
+        ]);
+        $product = $this->createProduct(1, ['notes' => 'INDEPENDENT_OVERFLOW_NOTES']);
+
+        Option::setIndexContentOverflow([
+            'inline_notes' => ['enabled' => true, 'height' => '41px'],
+            'notes_column' => ['enabled' => true, 'height' => '5rem'],
+            'tags' => ['enabled' => true, 'height' => '20vh'],
+        ]);
+
+        $html = Livewire::test(ProductIndex::class)->html();
+
+        $document = new \DOMDocument;
+        @$document->loadHTML('<?xml encoding="UTF-8">' . $html);
+        $xpath = new \DOMXPath($document);
+
+        $this->assertSame(3, $xpath->query('//button[contains(@class, "index-content-overflow__toggle")]')->length);
+
+        foreach (
+            [
+                'index-inline-notes-' . $product->id => '41px',
+                'index-notes-column-' . $product->id => '5rem',
+                'index-tags-' . $product->id => '20vh',
+            ] as $id => $height
+        ) {
+            $content = $xpath->query('//*[@id="' . $id . '"]')->item(0);
+            $this->assertNotNull($content);
+            $this->assertSame('--index-content-overflow-height: ' . $height, $content->parentNode->getAttribute('style'));
+            $this->assertSame(1, $xpath->query('//button[@aria-controls="' . $id . '"]')->length);
+        }
+
+        $this->assertStringContainsString('Show all', $html);
+        $this->assertStringContainsString('Show less', $html);
+    }
+
+    public function test_index_content_overflow_controls_only_render_for_enabled_targets(): void
+    {
+        Option::setIndexFieldLayout([
+            ['field' => ProductField::Notes->value, 'visible' => true],
+            ['field' => ProductField::Tags->value, 'visible' => true],
+        ]);
+        $product = $this->createProduct(1, ['notes' => 'NOTES_WITHOUT_HEIGHT_LIMIT']);
+        Option::setIndexContentOverflow([
+            'tags' => ['enabled' => true, 'height' => '80px'],
+        ]);
+
+        Livewire::test(ProductIndex::class)
+            ->assertSee('NOTES_WITHOUT_HEIGHT_LIMIT')
+            ->assertSee('aria-controls="index-tags-' . $product->id . '"', false)
+            ->assertDontSee('aria-controls="index-inline-notes-' . $product->id . '"', false)
+            ->assertDontSee('aria-controls="index-notes-column-' . $product->id . '"', false);
+    }
+
     public function test_index_layout_can_hide_image_while_title_stays_locked_visible(): void
     {
         $this->createProduct(1, [

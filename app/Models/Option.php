@@ -6,6 +6,7 @@ use App\Enums\AutocompleteOrder;
 use App\Enums\ProductIndexSortField;
 use App\Enums\UiLanguage;
 use App\Support\ProductFieldLayout;
+use App\Support\ProductIndexContentOverflow;
 use App\Support\ProductIndexSettings;
 use Illuminate\Database\Eloquent\Model;
 
@@ -70,6 +71,8 @@ class Option extends Model
     public const INDEX_SORT_FIELD_LAYOUT = 'index_sort_field_layout';
 
     public const INDEX_TABLE_WIDTH = 'index_table_width';
+
+    public const INDEX_CONTENT_OVERFLOW = 'index_content_overflow';
 
     public const INDEX_PER_PAGE_UNLIMITED = 'unlimited';
 
@@ -174,6 +177,7 @@ class Option extends Model
         self::CUSTOM_QUICK_ADD_FIELD_LAYOUT,
         self::INDEX_SORT_FIELD_LAYOUT,
         self::INDEX_TABLE_WIDTH,
+        self::INDEX_CONTENT_OVERFLOW,
     ];
 
     protected $fillable = [
@@ -622,6 +626,33 @@ class Option extends Model
         self::forget(self::INDEX_TABLE_WIDTH);
     }
 
+    /**
+     * @return array{
+     *     inline_notes: array{enabled: bool, height: string},
+     *     notes_column: array{enabled: bool, height: string},
+     *     tags: array{enabled: bool, height: string}
+     * }
+     */
+    public static function indexContentOverflow(): array
+    {
+        return ProductIndexContentOverflow::normalize(
+            self::jsonFromValue(self::valueFor(self::INDEX_CONTENT_OVERFLOW)),
+        );
+    }
+
+    public static function setIndexContentOverflow(array $settings): void
+    {
+        self::setValue(
+            self::INDEX_CONTENT_OVERFLOW,
+            json_encode(ProductIndexContentOverflow::normalize($settings), JSON_THROW_ON_ERROR),
+        );
+    }
+
+    public static function resetIndexContentOverflowToDefault(): void
+    {
+        self::forget(self::INDEX_CONTENT_OVERFLOW);
+    }
+
     public static function resetVisibleSettingsToDefault(): void
     {
         self::forget(...self::RESETTABLE_OPTIONS);
@@ -639,6 +670,7 @@ class Option extends Model
                 self::FILTER_FIELD_LAYOUT,
                 self::INDEX_SORT_FIELD_LAYOUT,
                 self::INDEX_TABLE_WIDTH,
+                self::INDEX_CONTENT_OVERFLOW,
                 self::TAG_LIBRARY_INDEX_GROUP_ORDERING_ENABLED,
                 self::TAG_COLOR_SURFACES,
                 self::PRODUCT_FORM_MODAL_ENABLED,
@@ -672,6 +704,9 @@ class Option extends Model
             indexSortFieldOptions: ProductIndexSortField::optionsFromLayout($indexSortFieldLayout),
             tableWidth: $tableWidth,
             tableWidthCss: self::indexTableWidthCssFrom($tableWidth),
+            contentOverflow: ProductIndexContentOverflow::normalize(
+                self::jsonFromValue($values->get(self::INDEX_CONTENT_OVERFLOW)),
+            ),
             searchHiddenDescriptionsEnabled: self::normalizeBoolean(
                 $values->get(self::INDEX_SEARCH_HIDDEN_DESCRIPTIONS_ENABLED),
                 false,
