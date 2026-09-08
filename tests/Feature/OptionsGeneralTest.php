@@ -58,7 +58,7 @@ class OptionsGeneralTest extends TestCase
         $this->get('/options?tab=field-layouts')
             ->assertOk()
             ->assertSee('Field Layouts')
-            ->assertSee('Index Table Fields')
+            ->assertSee('Index Table Columns')
             ->assertSee('Index Sort Menu')
             ->assertSee('Fetched EN Tags')
             ->assertDontSee('Index page size')
@@ -104,7 +104,7 @@ class OptionsGeneralTest extends TestCase
                 'Refetch All Works',
                 'Fetch every work in the library in one refetch run.',
                 'Refetch Selected Works',
-                'Search and choose only the works to include in this refetch run.',
+                'Search and choose works to include in this refetch run.',
             ])
             ->assertSee('Refetch Images')
             ->assertSee('Downloads the current cover and sample images for every selected work')

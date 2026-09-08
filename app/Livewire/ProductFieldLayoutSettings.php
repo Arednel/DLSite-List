@@ -135,8 +135,8 @@ class ProductFieldLayoutSettings extends Component
         }
 
         return collect($this->{$orderProperty})
-            ->map(fn(string $field): mixed => $this->{$fieldsProperty}[$field] ?? null)
-            ->filter(fn(mixed $row): bool => is_array($row))
+            ->map(fn (string $field): mixed => $this->{$fieldsProperty}[$field] ?? null)
+            ->filter(fn (mixed $row): bool => is_array($row))
             ->values()
             ->all();
     }
@@ -148,6 +148,7 @@ class ProductFieldLayoutSettings extends Component
         }
 
         return match ($layout) {
+            'index' => __('Shows when the work was last updated in your library.'),
             'filter' => __('Filters by when the work was last updated in your library.'),
             'sort' => __('Sorts by when the work was last updated in your library.'),
             default => null,

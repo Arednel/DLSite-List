@@ -2,6 +2,13 @@
 
 ## Development
 
+* 2026-09-08 -- 1.8.7 Field Layouts & UI Cleanup
+  * Added optional Added/Updated Date, Notes below Title control in Field Layouts
+  * Added contextual help to Field Layouts and Tag Library controls
+  * Replaced the Refetch Reject browser prompt with the shared confirmation modal
+  * Clarified Quick Add, Refetch, and field-layout wording and added an RJ code placeholder
+  * General UI Cleanup
+
 * 2026-09-07 -- 1.8.6 Notes & Tags Overflow
   * Added configurable height limits and Show all/Show less controls for Index Notes and Tags
   * Updated README.md

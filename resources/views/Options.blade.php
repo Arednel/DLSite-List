@@ -135,7 +135,7 @@
                         {{ __('Series Metadata') }}
                     </h2>
                     <p class="option-description">
-                        {{ __('Choose whether DLSite Create fills Series from the fetched title name when Series is empty.') }}
+                        {{ __('Choose whether DLSite Create fills Series from the fetched metadata when Series input field is empty.') }}
                     </p>
 
                     <livewire:auto-series-settings />
@@ -276,7 +276,7 @@
                                     <i class="fa-solid fa-list-check fa-fw" aria-hidden="true"></i>
                                     {{ __('Refetch Selected Works') }}
                                 </h3>
-                                <p>{{ __('Search and choose only the works to include in this refetch run.') }}</p>
+                                <p>{{ __('Search and choose works to include in this refetch run.') }}</p>
                             </header>
 
                             <livewire:options-work-search />

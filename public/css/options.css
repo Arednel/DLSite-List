@@ -599,12 +599,10 @@ body.options-page {
 }
 
 .options-page .field-layout-index-tags-label,
-.options-page .field-layout-lock-note,
-.options-page .field-layout-note {
+.options-page .field-layout-lock-note {
     color: var(--options-text);
 }
 
-.options-page .field-layout-note,
 .options-page .field-layout-lock-note {
     font-size: 11px;
     font-weight: normal;
@@ -874,6 +872,10 @@ body.options-page {
     color: var(--options-text);
     font-size: 12px;
     line-height: 1.25;
+}
+
+.options-page .field-layout-section h3 .fa-circle-question {
+    margin-inline-start: 7px;
 }
 
 .options-page .option-switch {

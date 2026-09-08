@@ -37,7 +37,7 @@ class OptionsRefetchLocalizationTest extends TestCase
             ->assertOk()
             ->assertSee('<html lang="ja">', false)
             ->assertSee('フィールドレイアウト')
-            ->assertSee('一覧表の項目')
+            ->assertSee('一覧表の列')
             ->assertSee('aria-label="更新日をドラッグ"', false)
             ->assertSee('編集可能');
 
@@ -123,6 +123,12 @@ class OptionsRefetchLocalizationTest extends TestCase
             ->call('askApplyAll')
             ->assertSee('未処理のすべてのタブの選択を適用しますか？')
             ->assertSee('すべてのタブを適用')
+            ->assertSee('キャンセル');
+
+        Livewire::test(OptionsRefetchReview::class, ['run' => $run])
+            ->call('askRejectOrFinish')
+            ->assertSee('この再取得を拒否しますか？')
+            ->assertSee('再取得を拒否')
             ->assertSee('キャンセル');
     }
 

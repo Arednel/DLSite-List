@@ -264,6 +264,7 @@ class FullRefetchTest extends TestCase
         $this->assertSame(RefetchRun::STATUS_REVIEW, $run->refresh()->status);
 
         Livewire::test(OptionsRefetchReview::class, ['run' => $run])
+            ->call('askRejectOrFinish')
             ->call('rejectOrFinish')
             ->assertRedirectToRoute('options.refetch.show', $run);
 
@@ -428,6 +429,7 @@ class FullRefetchTest extends TestCase
         Storage::disk('local')->put($this->stagedJsonPath($run, $product), '{"version":"new"}');
 
         Livewire::test(OptionsRefetchReview::class, ['run' => $run])
+            ->call('askRejectOrFinish')
             ->call('rejectOrFinish')
             ->assertRedirectToRoute('options.refetch.show', $run);
 

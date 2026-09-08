@@ -26,7 +26,7 @@ final class ProductFieldLayout
     ];
 
     /**
-     * @return list<array{field: string, label: string, visible: bool, editable?: bool, custom_visible?: bool, fetched_visible?: bool}>
+     * @return list<array{field: string, label: string, visible: bool, editable?: bool, notes_visible?: bool, custom_visible?: bool, fetched_visible?: bool}>
      */
     public static function normalize(mixed $layout, string $surface): array
     {
@@ -55,6 +55,7 @@ final class ProductFieldLayout
             ];
             $normalized += self::lockMetadata($field, $surface);
             $normalized += self::noteMetadata($field, $surface);
+            $normalized += self::titleMetadata($field, $surface, $row);
             $normalized += self::tagBucketMetadata($field, $surface, $row);
 
             if ($surface === self::SURFACE_EDIT) {
@@ -92,7 +93,7 @@ final class ProductFieldLayout
     public static function storageLayout(mixed $layout, string $surface): array
     {
         return collect(self::normalize($layout, $surface))
-            ->map(fn(array $row): array => Arr::except($row, ['label', 'note']))
+            ->map(fn (array $row): array => Arr::except($row, ['label', 'note']))
             ->values()
             ->all();
     }
@@ -108,6 +109,7 @@ final class ProductFieldLayout
         ];
         $row += self::lockMetadata($field, $surface);
         $row += self::noteMetadata($field, $surface);
+        $row += self::defaultTitleMetadata($field, $surface);
         $row += self::defaultTagBucketMetadata($field, $surface);
 
         if ($surface === self::SURFACE_EDIT) {
@@ -159,6 +161,20 @@ final class ProductFieldLayout
             'custom_visible' => true,
             'fetched_visible' => true,
         ];
+    }
+
+    private static function defaultTitleMetadata(ProductField $field, string $surface): array
+    {
+        return $surface === self::SURFACE_INDEX && $field === ProductField::Title
+            ? ['notes_visible' => true]
+            : [];
+    }
+
+    private static function titleMetadata(ProductField $field, string $surface, array $row): array
+    {
+        return $surface === self::SURFACE_INDEX && $field === ProductField::Title
+            ? ['notes_visible' => self::normalizeBoolean($row['notes_visible'] ?? null, true)]
+            : [];
     }
 
     private static function tagBucketMetadata(ProductField $field, string $surface, array $row): array
@@ -216,7 +232,7 @@ final class ProductFieldLayout
     public static function visibleFields(array $layout): array
     {
         return collect(self::visibleRows($layout))
-            ->map(fn(array $visibleRow): string => $visibleRow['field']->value)
+            ->map(fn (array $visibleRow): string => $visibleRow['field']->value)
             ->values()
             ->all();
     }
@@ -227,7 +243,7 @@ final class ProductFieldLayout
     public static function indexColumns(array $layout): array
     {
         return collect(self::visibleRows($layout, self::SURFACE_INDEX))
-            ->map(fn(array $visibleRow): array => self::fieldMeta(
+            ->map(fn (array $visibleRow): array => self::fieldMeta(
                 $visibleRow['field'],
                 self::SURFACE_INDEX,
             ))
@@ -263,7 +279,7 @@ final class ProductFieldLayout
     public static function filterFields(array $layout): array
     {
         return collect(self::visibleRows($layout, self::SURFACE_FILTER))
-            ->map(fn(array $visibleRow): array => Arr::only(
+            ->map(fn (array $visibleRow): array => Arr::only(
                 self::fieldMeta($visibleRow['field'], self::SURFACE_FILTER),
                 ['field', 'label', 'class'],
             ))
@@ -293,7 +309,7 @@ final class ProductFieldLayout
     private static function createFields(array $layout, string $surface): array
     {
         return collect(self::visibleRows($layout, $surface))
-            ->map(fn(array $visibleRow): array => Arr::only(
+            ->map(fn (array $visibleRow): array => Arr::only(
                 self::fieldMeta($visibleRow['field'], $surface),
                 ['field', 'label', 'class', 'contributor_role'],
             ))
@@ -307,8 +323,8 @@ final class ProductFieldLayout
     public static function editableFields(array $layout): array
     {
         return collect(self::visibleRows($layout, self::SURFACE_EDIT))
-            ->filter(fn(array $visibleRow): bool => (bool) ($visibleRow['row']['editable'] ?? false))
-            ->map(fn(array $visibleRow): string => $visibleRow['field']->value)
+            ->filter(fn (array $visibleRow): bool => (bool) ($visibleRow['row']['editable'] ?? false))
+            ->map(fn (array $visibleRow): string => $visibleRow['field']->value)
             ->values()
             ->all();
     }
@@ -317,7 +333,7 @@ final class ProductFieldLayout
     {
         $field = $field instanceof ProductField ? $field->value : $field;
 
-        return (bool) data_get(Arr::first($layout, fn(array $row): bool => $row['field'] === $field), 'editable', false);
+        return (bool) data_get(Arr::first($layout, fn (array $row): bool => $row['field'] === $field), 'editable', false);
     }
 
     public static function fetchedTagsEditable(array $layout): bool
@@ -327,7 +343,7 @@ final class ProductFieldLayout
 
     public static function visibleIndexTagBuckets(array $layout): array
     {
-        $row = Arr::first($layout, fn(array $row): bool => $row['field'] === ProductField::Tags->value);
+        $row = Arr::first($layout, fn (array $row): bool => $row['field'] === ProductField::Tags->value);
 
         return [
             'custom' => (bool) data_get($row, 'visible', false)
@@ -337,6 +353,14 @@ final class ProductFieldLayout
         ];
     }
 
+    public static function indexTitleNotesVisible(array $layout): bool
+    {
+        $row = Arr::first($layout, fn (array $row): bool => $row['field'] === ProductField::Title->value);
+
+        return (bool) data_get($row, 'visible', false)
+            && (bool) data_get($row, 'notes_visible', true);
+    }
+
     /**
      * @return list<array{field: ProductField, row: array<string, mixed>}>
      */
@@ -344,7 +368,7 @@ final class ProductFieldLayout
     {
         $allowedFieldValues = $surface === null
             ? null
-            : array_map(fn(ProductField $field): string => $field->value, self::fieldsForSurface($surface));
+            : array_map(fn (ProductField $field): string => $field->value, self::fieldsForSurface($surface));
 
         return collect($layout)
             ->map(function (mixed $row) use ($allowedFieldValues): ?array {

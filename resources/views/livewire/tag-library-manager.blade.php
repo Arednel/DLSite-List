@@ -251,6 +251,9 @@
                     <span class="tag-library-switch-thumb"></span>
                 </span>
                 <span class="tag-library-switch-text">{{ __('Enable group ordering on Index') }}</span>
+                <i class="fa-solid fa-circle-question" tabindex="0"
+                    aria-label="{{ __('About Index group ordering') }}"
+                    title="{{ __('When enabled, Index tag chips use saved group order, saved tag order inside groups, then ungrouped tags alphabetically.') }}"></i>
             </label>
             <form wire:submit.prevent="createGroup" class="tag-library-create-form tag-library-group-create-form">
                 <label for="new-group-title">{{ __('Add group') }}</label>
@@ -536,7 +539,10 @@
                                 aria-labelledby="tag-parent-settings-heading">
                                 <h4 id="tag-parent-settings-heading">{{ __('Parent tags') }}</h4>
                                 <p class="tag-library-modal-relationship-description">
-                                    {{ __('Adding this tag also adds these parent tags.') }}
+                                    <span>{{ __('Adding this tag also adds these parent tags.') }}</span>
+                                    <i class="fa-solid fa-circle-question" tabindex="0"
+                                        aria-label="{{ __('Parent tag relationship example') }}"
+                                        title="{{ __('By adding ":tag" to any work, "Parent Tag" will be added automatically.', ['tag' => $editingTagTitle]) }}"></i>
                                 </p>
 
                                 <div class="tag-library-modal-group-search-wrap">
@@ -582,7 +588,10 @@
                                 aria-labelledby="tag-child-settings-heading">
                                 <h4 id="tag-child-settings-heading">{{ __('Child tags') }}</h4>
                                 <p class="tag-library-modal-relationship-description">
-                                    {{ __('Adding one of these child tags also adds this tag.') }}
+                                    <span>{{ __('Adding one of these child tags also adds this tag.') }}</span>
+                                    <i class="fa-solid fa-circle-question" tabindex="0"
+                                        aria-label="{{ __('Child tag relationship example') }}"
+                                        title="{{ __('By adding "Child Tag" to any work, ":tag" will be added automatically.', ['tag' => $editingTagTitle]) }}"></i>
                                 </p>
 
                                 <div class="tag-library-modal-group-search-wrap">

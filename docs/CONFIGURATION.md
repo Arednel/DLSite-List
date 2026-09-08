@@ -173,7 +173,7 @@ The All Tags list has a session-only `Edit tags` mode:
 - the mode uses a switch-style toggle bound to the Livewire `tagEditMode` checkbox state
 - the All Tags filter modal uses primary and optional secondary Alphabetical/Work count sorting. Primary defaults to `Alphabetical / Asc`, Secondary defaults to `None`, a secondary field that duplicates Primary is discarded, and both direction choices reuse the Index Asc/Desc segmented buttons
 - the `Add group` field is inside the Tag Groups section header, next to group management
-- `Enable group ordering on Index` is a persisted switch in the Tag Groups section and in Options; it is off by default, so saved group order affects Index tag-chip ordering only after enabling it
+- `Enable group ordering on Index` is a persisted switch in the Tag Groups section and in Options; it is off by default, so saved group order affects Index tag-chip ordering only after enabling it. Both controls include the same help-circle explanation of grouped and ungrouped Index tag order
 - tag edit modals and Tag Group cards include separate background color and font color controls, each with a color picker, manual hex input, and Clear action; empty colors use the normal default tag style
 - manual color inputs use a muted `#000000` placeholder while an explicitly saved `#000000` value is shown as normal input text
 - the group rows and modal use switch-style toggles for tag and group Index visibility
@@ -183,7 +183,7 @@ The All Tags list has a session-only `Edit tags` mode:
 - the modal has matching searchable Parent Tags and Child Tags selectors in one column, with Parent Tags on the first row and Child Tags on the second. A tag may have multiple parents and children, but self-relations and direct or indirect cycles are rejected
 - adding a child tag during Quick Add, Edit, or Refetch apply automatically adds every missing parent and ancestor to the work as `custom`; an ancestor already attached as `fetched` keeps its fetched source and language rows
 - saving a new relation immediately applies the same ancestor rule to existing works containing its child, whether the relation was added from the child's Parent Tags list or the parent's Child Tags list
-- removing a parent/child relation does not remove parent tags already attached to works; the modal uses the same Font Awesome help-circle markup and shared title-tooltip assets as the other application pages to document this additive behavior
+- removing a parent/child relation does not remove parent tags already attached to works; the modal uses the same Font Awesome help-circle markup and shared title-tooltip assets as the other application pages to document this additive behavior, including dynamic examples beside the Parent Tags and Child Tags descriptions that use the currently open tag title
 - after a material rename, Refetch continues comparing fetched names by `title_key`: the old DLSite name is a distinct tag, while case-only DLSite variants still resolve to the renamed tag without replacing its display casing
 - existing memberships keep their current per-group order
 - newly added memberships are appended to the end of each selected group
@@ -226,7 +226,7 @@ Current settings:
 - `optional_product_statuses`: JSON map controlling the optional On Hold and Dropped progress values. Defaults to `{"on_hold":false,"dropped":false}`
 - `tag_autocomplete_order`: controls how tag autocomplete suggestions are ordered
 - `series_autocomplete_order`: controls how series autocomplete suggestions are ordered
-- `auto_series_from_title_name`: controls whether DLSite create fills an empty Series from `japanese.title_name`
+- `auto_series_from_title_name`: controls whether Quick Add fills Series from DLsite metadata when no Series is entered
 - `dlsite_age_appropriate_links_enabled`: controls whether Index image/title links use the product's stored age to choose DLSite Home or Maniax. Defaults to `false`
 - `product_form_theme`: controls the Add by RJ Code, Add Manually, and Edit Details page theme. Defaults to `black`
 - `product_form_modal_enabled`: controls whether ordinary left-clicks open Quick Add and Index Edit Details links in a modal. Defaults to `false`
@@ -272,17 +272,17 @@ Pagination built-in choices:
 The General tab also accepts a custom positive integer. `unlimited` disables Index pagination and renders every matching work.
 
 Tag editing defaults:
-- Index Table Fields show one Tags column with separate Custom Tags and current-language Fetched Tags visibility toggles; both buckets are visible by default
+- Index Table Columns shows one Tags column with separate Custom Tags and current-language Fetched Tags visibility toggles; both buckets are visible by default
 - Edit Form Fields show separate current-language Fetched Tags and Custom Tags rows in that default order; both are visible by default
 - Custom Tags editable: enabled by default in the Edit Form layout
 - Fetched Tags editable: disabled by default unless its Edit Form row enables it
 
 When Fetched Tags editing is enabled, Edit Details changes only the current UI locale's fetched bucket. Other fetched-language and custom tags remain stored unless their own editable field is submitted.
 
-Automatic Series from DLSite `title_name` default:
+Automatic Series from DLsite metadata default:
 - enabled
 
-When enabled, DLSite create fills Series from `japanese.title_name` only if the Series field is empty. Manually entered Series values win. Custom create does not use this option.
+When enabled, Quick Add fills Series from `japanese.title_name`, falling back to `english.title_name`, when no Series is entered. Manually entered Series values win. Custom Quick Add and Refetch do not use this option.
 
 DLSite age-appropriate link default:
 - disabled
@@ -295,7 +295,7 @@ Image Viewer default:
 
 - disabled
 
-When disabled, Index thumbnails use their configured DLSite destination. When enabled, Index thumbnails open the saved-image viewer. The viewer is available only while the Image field is visible under Field Layouts -> Index Table Fields; hiding that field does not change the saved setting.
+When disabled, Index thumbnails use their configured DLSite destination. When enabled, Index thumbnails open the saved-image viewer. The viewer is available only while the Image field is visible under Field Layouts -> Index Table Columns; hiding that field does not change the saved setting.
 
 The General -> Image Viewer switch is stored in `options.index_image_viewer_enabled`. Saving applies on the next Index render. Individual reset and Reset All Options restore the disabled default.
 
@@ -332,11 +332,13 @@ The modal uses a same-origin iframe and adds `modal=1` only to that iframe reque
 
 The master switch and each completion choice include question-mark help text. Saving or resetting these Livewire settings updates modal behavior immediately on the Options page.
 
-Each Field Layout block can be saved independently. Saving one block leaves unsaved changes in the other blocks intact. The bottom Save field layouts button saves all six layouts together.
+Each Field Layout block can be saved independently. Saving one block leaves unsaved changes in the other blocks intact. The bottom Save all field layouts button saves all six layouts together.
+
+The locked Index Title row includes a separate `Notes below Title` switch. It is enabled by default and controls whether each work's Notes appear beneath its title; its question-mark help circle describes that behavior. The Index Notes field also displays its separate-column explanation in a question-mark help circle instead of permanent inline text.
 
 Index field layout default order:
 - `image`
-- `title` locked visible
+- `title` locked visible, with Notes below Title enabled by default
 - `score`
 - `series`
 - `age_category`
@@ -349,12 +351,16 @@ Index field layout default order:
 - `description_japanese` hidden by default
 - `description_english` hidden by default
 - `tags` with Custom Tags and current-language Fetched Tags visible by default
-- `notes` hidden by default; Notes are already shown inside Title, and this row enables a separate column
+- `notes` hidden by default; this row independently enables a separate Notes column
 - `start_date` hidden by default
 - `end_date` hidden by default
 - `num_re_listen_times` hidden by default
 - `re_listen_value` hidden by default
 - `priority` hidden by default
+- `created_at` (Added to the site Date) hidden by default
+- `updated_at` (Updated Date) hidden by default
+
+When enabled, the two timestamp columns render their database values as `YYYY-MM-DD HH:mm`. Both headers use the existing Added Date and Updated Date Index sort fields. The Updated Date option includes a help circle explaining that it is the time when the work was last updated in the library.
 
 Edit form field layout default order:
 - `progress`
@@ -466,11 +472,13 @@ Index sort field dropdown default order:
 - `voice_actor` hidden by default
 - `author` hidden by default
 
-The Index Table Fields, Index Filter Fields, Edit Form Fields, Quick Add Form Fields, and Custom Quick Add Form Fields sections each store their own layout JSON in `options.value`. Rows can be reordered by dragging the row handle or with the Up/Down buttons, and changes are persisted on Save. Unknown or duplicate field ids are ignored, and missing known fields use surface defaults. Required fields remain visible.
+The Index Table Columns, Index Filter Fields, Edit Form Fields, Quick Add Form Fields, and Custom Quick Add Form Fields sections each store their own layout JSON in `options.value`. Rows can be reordered by dragging the row handle or with the Up/Down buttons, and changes are persisted on Save. Unknown or duplicate field ids are ignored, and missing known fields use surface defaults. Required fields remain visible.
 
-Index `tags` stores `custom_visible` and `fetched_visible`. Edit uses separate `tags` and `fetched_tags` rows so Custom Tags and current-language Fetched Tags can be ordered, shown, hidden, and made editable independently. Saved rows contain field ids and behavioral flags; localized labels and notes are derived at runtime. Index Filter Fields and Index Sort Menu do not split Tags.
+Index `title` stores `notes_visible`, defaulting to `true` when the flag is missing so existing saved layouts keep showing Notes beneath Title. Index `tags` stores `custom_visible` and `fetched_visible`. Edit uses separate `tags` and `fetched_tags` rows so Custom Tags and current-language Fetched Tags can be ordered, shown, hidden, and made editable independently. Saved rows contain field ids and behavioral flags; localized labels and notes are derived at runtime. Index Filter Fields and Index Sort Menu do not split Title or Tags.
 
 The Index Sort Menu section appears after Index Filter Fields and uses the same Options row controls to reorder and show/hide values in the Advanced Filter sort dropdowns. It only changes the dropdown presentation: valid URL sort state and sortable visible table columns keep sorting through `ProductIndexSortField`. Sortable optional Index headers include circle/creator columns, start/finish dates, total times re-listened, re-listen value, and priority when those columns are visible.
+
+Each of the six Field Layout section headings includes a help circle naming the affected Index table, Advanced Filter, Edit Details, Quick Add, or Custom Quick Add surface. The explanations cover ordering and show/hide behavior, while Edit Form Fields also explains the separate Editable switches.
 
 Create form layout note:
 - hidden Quick Add fields are not persisted from submitted form data
@@ -501,9 +509,9 @@ Enabled targets' heights must be positive CSS lengths using `px`, `rem`, `em`, `
 
 Options page tabs:
 - `General` is the default tab and contains UI Language, Index Pagination, Index Search, Image Viewer, Index Table Width, Overflow, Series Metadata, Add/Edit form theme and modal behavior, Autocomplete, Tag Library settings, and Reset All Options
-- `Field Layouts` is the second tab and contains Index Table Fields, Index Filter Fields, Index Sort Menu, Edit Form Fields, Quick Add Form Fields, Custom Quick Add Form Fields, and Reset All Options
+- `Field Layouts` is the second tab and contains Index Table Columns, Index Filter Fields, Index Sort Menu, Edit Form Fields, Quick Add Form Fields, Custom Quick Add Form Fields, and Reset All Options
 - `Authentication` contains the default-off administrator login switch, independent Cherry/Black authentication-page theme, account status, and authenticated password change
-- `Refetch` separates Refetch All Works and Refetch Selected Works into distinct vertically stacked cards, with an optional run-wide Refetch Images choice and inline help, Livewire progress and review state, shared modal confirmations for Apply Tab and Apply All, cancellation, an independent latest-run link, and an always-visible right-aligned cleanup action
+- `Refetch` separates Refetch All Works and Refetch Selected Works into distinct vertically stacked cards, with an optional run-wide Refetch Images choice and inline help, Livewire progress and review state, shared custom modal confirmations for Apply Tab, Apply All, Reject Run, and Ignore Remaining and Finish, cancellation, an independent latest-run link, and an always-visible right-aligned cleanup action
 - Refetch cleanup includes a help circle and confirmation modal. It is disabled while any run is running or cancelling, and a shared Laravel atomic lock prevents cleanup from overlapping creation of a new run or application of review changes. Cleanup commits deletion of `refetch_runs` with cascaded `refetch_work_results` before clearing every staged item below both Refetch roots while preserving the roots. If staged-file removal fails, cleanup can be run again for the remaining orphaned files; products and canonical `Works` files remain unchanged
 
 Options reset behavior:
@@ -531,7 +539,7 @@ Tag Library defaults:
 - the filter modal starts with every filter set to All/Any and sorting set to Alphabetical + Ascending; these controls are not configurable or URL-persisted
 - Index group ordering is disabled by default
 - when enabled, Index tag chips use saved group order, saved tag order inside groups, then ungrouped tags alphabetically instead of plain alphabetical title ordering
-- the Options page shows inline helper tooltips for the expanded-list, Index group-ordering, and Field Layouts Updated Date filter/sort switches
+- the Options page shows inline helper tooltips for the expanded-list, Index group-ordering, and Field Layouts Updated Date Index/filter/sort switches
 - tag background/font colors render on Index and Tag Library by default, while Autocomplete suggestions, Edit readonly tags, and Refetch review tags stay uncolored until enabled in Options. Edit readonly tag colors render inline inside the normal readonly text field.
 
 Autocomplete ordering default:

@@ -37,6 +37,7 @@ class ProductMetadataSettingsTest extends TestCase
 
         Livewire::test(AutoSeriesSettings::class)
             ->assertSet('enabled', false)
+            ->assertSee('クイック追加でシリーズが入力されていない場合、DLsiteのメタデータからシリーズを設定')
             ->set('enabled', true)
             ->call('save')
             ->assertHasNoErrors()
@@ -444,6 +445,9 @@ class ProductMetadataSettingsTest extends TestCase
     public function test_field_layout_component_hydrates_expected_locked_rows(): void
     {
         Livewire::test(ProductFieldLayoutSettings::class)
+            ->assertSet('indexFields.title.notes_visible', true)
+            ->assertSet('indexFields.created_at.visible', false)
+            ->assertSet('indexFields.updated_at.visible', false)
             ->assertSet('editFields.title.visible', true)
             ->assertSet('editFields.title.visibility_locked', true)
             ->assertSet('editFields.title.editable', true)
@@ -453,6 +457,21 @@ class ProductMetadataSettingsTest extends TestCase
             ->assertSet('customQuickAddFields.title.visibility_locked', true)
             ->assertSet('customQuickAddFields.age_category.visibility_locked', true)
             ->assertSet('customQuickAddFields.image.visibility_locked', true);
+    }
+
+    public function test_field_layout_component_saves_notes_below_title_separately(): void
+    {
+        Livewire::test(ProductFieldLayoutSettings::class)
+            ->assertSet('indexFields.title.notes_visible', true)
+            ->set('indexFields.title.notes_visible', false)
+            ->call('saveLayout', 'index')
+            ->assertHasNoErrors()
+            ->assertSet('indexFields.title.notes_visible', false)
+            ->assertSet('savedLayout', 'index');
+
+        $this->assertFalse(
+            $this->layoutRow(Option::indexFieldLayout(), ProductField::Title)['notes_visible'],
+        );
     }
 
     public function test_field_layout_component_saves_visibility_and_editability(): void
@@ -885,7 +904,7 @@ class ProductMetadataSettingsTest extends TestCase
     {
         $component = Livewire::test(ProductFieldLayoutSettings::class)
             ->assertSeeInOrder([
-                'Index Table Fields',
+                'Index Table Columns',
                 'Index Filter Fields',
                 'Index Sort Menu',
                 'Edit Form Fields',
@@ -893,16 +912,36 @@ class ProductMetadataSettingsTest extends TestCase
                 'Custom Quick Add Form Fields',
             ])
             ->assertSee('Required')
+            ->assertSee('Notes below Title')
             ->assertSee('Custom Tags')
             ->assertSee('Fetched EN Tags')
             ->assertSee('Editable')
-            ->assertSee('Save Index Table Fields')
+            ->assertSee('Save Index Table Columns')
             ->assertSee('Save Index Filter Fields')
             ->assertSee('Save Index Sort Menu')
             ->assertSee('Save Edit Form Fields')
             ->assertSee('Save Quick Add Form Fields')
             ->assertSee('Save Custom Quick Add Form Fields')
-            ->assertSee('Save field layouts')
+            ->assertSee('Save all field layouts')
+            ->assertSee('Changes the order of columns in the Index table. Turn fields on or off to show or hide their columns.')
+            ->assertSee('Changes the order of fields in the Index Filter. Turn fields on or off to show or hide their filters.')
+            ->assertSee('Changes the order of options in the Index Filter sort menus. Turn options on or off to show or hide them.')
+            ->assertSee('Changes the order of fields in the Edit Details form. Turn fields on or off to show or hide them; use Editable to allow or prevent editing.')
+            ->assertSee('Changes the order of fields in the Quick Add form. Turn fields on or off to show or hide them.')
+            ->assertSee('Changes the order of fields in the Custom Quick Add form. Turn fields on or off to show or hide them.')
+            ->assertSee(
+                'title="Shows each work&#039;s Notes beneath its title on the Index."',
+                false,
+            )
+            ->assertSee(
+                'title="Notes are already shown inside Title; enable this for a separate column."',
+                false,
+            )
+            ->assertSee(
+                'title="Shows when the work was last updated in your library."',
+                false,
+            )
+            ->assertDontSee('class="field-layout-note"', false)
             ->assertSee('Reset to default');
 
         foreach (['index', 'filter', 'sort', 'edit', 'quick_add', 'custom_quick_add'] as $layout) {
@@ -921,6 +960,9 @@ class ProductMetadataSettingsTest extends TestCase
             ->assertSee('option-switch-track', false)
             ->assertSee('wire:sort:ignore', false)
             ->assertSee('wire:model.live="indexFields.image.visible"', false)
+            ->assertSee('wire:model.live="indexFields.title.notes_visible"', false)
+            ->assertSee('wire:model.live="indexFields.created_at.visible"', false)
+            ->assertSee('wire:model.live="indexFields.updated_at.visible"', false)
             ->assertSee('wire:model.live="indexFields.tags.custom_visible"', false)
             ->assertSee('wire:model.live="indexFields.tags.fetched_visible"', false)
             ->assertSee('wire:model.live="editFields.title.editable"', false);
@@ -999,7 +1041,7 @@ class ProductMetadataSettingsTest extends TestCase
 
     public static function separateFieldLayoutSaveProvider(): iterable
     {
-        yield 'Index Table Fields' => ['index', 'indexFields', 'indexFieldLayout', 'score'];
+        yield 'Index Table Columns' => ['index', 'indexFields', 'indexFieldLayout', 'score'];
         yield 'Index Filter Fields' => ['filter', 'filterFields', 'filterFieldLayout', 'score'];
         yield 'Index Sort Menu' => ['sort', 'sortFields', 'indexSortFieldLayout', 'updated_at'];
         yield 'Edit Form Fields' => ['edit', 'editFields', 'editFieldLayout', 'notes'];

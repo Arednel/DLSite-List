@@ -133,7 +133,7 @@ class ProductController extends Controller
         $series = $this->dlsiteCreateSeriesValue($request, $validated, $visibleCreateFields, $workData);
         $sample_images = Collection::times(
             count($workData->sampleImages),
-            fn(int $position): string => "storage/Works/{$dlsite_product_id}/sample_{$position}.jpg",
+            fn (int $position): string => "storage/Works/{$dlsite_product_id}/sample_{$position}.jpg",
         )->all();
         $contributorsByRole = $this->dlsiteCreateContributorsByRole(
             $validated,
@@ -278,7 +278,7 @@ class ProductController extends Controller
         $editGenres = $this->loadEditGenresForProduct($product->getKey(), $fetchedLanguage);
         $showReadonlyGenreColors = Option::tagColorSurfaceEnabled(Option::TAG_COLOR_SURFACE_EDIT_READONLY);
         $genreColorPairs = $showReadonlyGenreColors
-            ? TagColor::effectiveColorPairsForGenreIds($editGenres->flatMap(fn(Collection $genres): Collection => $genres)->pluck('id'))
+            ? TagColor::effectiveColorPairsForGenreIds($editGenres->flatMap(fn (Collection $genres): Collection => $genres)->pluck('id'))
             : collect();
         $fetchedGenres = $this->editGenreDisplayRows(
             $editGenres->get(Genre::PIVOT_SOURCE_FETCHED, collect()),
@@ -297,7 +297,7 @@ class ProductController extends Controller
             'productFormThemeClass' => $this->productFormThemeClass(),
             'fetchedGenres' => $fetchedGenres,
             'customGenres' => $customGenres,
-            'genreFetchedInput' => $persistedFetchedInput !== '' ? $persistedFetchedInput . ', ' : '',
+            'genreFetchedInput' => $persistedFetchedInput !== '' ? $persistedFetchedInput.', ' : '',
             'genreFetchedLanguage' => $fetchedLanguage,
             'genreCustomInput' => TagInput::format($customGenres->pluck('title')),
             'showReadonlyGenreColors' => $showReadonlyGenreColors,
@@ -419,7 +419,7 @@ class ProductController extends Controller
     private function formatContributorInputs(Product $product): array
     {
         return collect($this->contributorSync->namesByRole($product))
-            ->map(fn(array $names): string => TagInput::format($names))
+            ->map(fn (array $names): string => TagInput::format($names))
             ->all();
     }
 
@@ -707,7 +707,7 @@ class ProductController extends Controller
 
     private function productFormThemeClass(): string
     {
-        return 'product-form-theme-' . Option::productFormTheme();
+        return 'product-form-theme-'.Option::productFormTheme();
     }
 
     /**
@@ -755,7 +755,7 @@ class ProductController extends Controller
         return collect($request->file('sample_images', []))
             ->values()
             ->map(function (UploadedFile $file, int $index) use ($workID): string {
-                $path = "Works/{$workID}/sample_" . ($index + 1) . '.' . $file->extension();
+                $path = "Works/{$workID}/sample_".($index + 1).'.'.$file->extension();
 
                 Storage::disk('public')->putFileAs("Works/{$workID}", $file, basename($path));
 
@@ -854,7 +854,7 @@ class ProductController extends Controller
         }
 
         return collect($submittedColumns)
-            ->mapWithKeys(fn(string $column): array => [$column => $data[$column] ?? null])
+            ->mapWithKeys(fn (string $column): array => [$column => $data[$column] ?? null])
             ->all();
     }
 
@@ -933,7 +933,7 @@ class ProductController extends Controller
     {
         return [
             'monthLabels' => collect(range(1, 12))
-                ->mapWithKeys(fn($month) => [
+                ->mapWithKeys(fn ($month) => [
                     $month => Carbon::create(2000, $month, 1)->translatedFormat('M'),
                 ])
                 ->all(),
@@ -955,7 +955,7 @@ class ProductController extends Controller
                 'genres.title',
                 'genre_product.source',
             ])
-            ->groupBy(fn(object $genre): string => $genre->source === Genre::PIVOT_SOURCE_CUSTOM
+            ->groupBy(fn (object $genre): string => $genre->source === Genre::PIVOT_SOURCE_CUSTOM
                 ? Genre::PIVOT_SOURCE_CUSTOM
                 : Genre::PIVOT_SOURCE_FETCHED);
     }

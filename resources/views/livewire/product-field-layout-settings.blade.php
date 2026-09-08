@@ -1,17 +1,20 @@
 <div>
     <form wire:submit.prevent="save" class="option-form option-form--wide">
         @foreach ([
-        'index' => ['heading' => 'Index Table Fields', 'icon' => 'table', 'order' => 'indexOrder', 'fields' => 'indexFields', 'sort' => false],
-        'filter' => ['heading' => 'Index Filter Fields', 'icon' => 'filter', 'order' => 'filterOrder', 'fields' => 'filterFields', 'sort' => false],
-        'sort' => ['heading' => 'Index Sort Menu', 'icon' => 'arrow-down-wide-short', 'order' => 'sortOrder', 'fields' => 'sortFields', 'sort' => true],
-        'edit' => ['heading' => 'Edit Form Fields', 'icon' => 'pen-to-square', 'order' => 'editOrder', 'fields' => 'editFields', 'sort' => false],
-        'quick_add' => ['heading' => 'Quick Add Form Fields', 'icon' => 'file-circle-plus', 'order' => 'quickAddOrder', 'fields' => 'quickAddFields', 'sort' => false],
-        'custom_quick_add' => ['heading' => 'Custom Quick Add Form Fields', 'icon' => 'file-pen', 'order' => 'customQuickAddOrder', 'fields' => 'customQuickAddFields', 'sort' => false],
+        'index' => ['heading' => 'Index Table Columns', 'help' => 'Changes the order of columns in the Index table. Turn fields on or off to show or hide their columns.', 'icon' => 'table', 'order' => 'indexOrder', 'fields' => 'indexFields', 'sort' => false],
+        'filter' => ['heading' => 'Index Filter Fields', 'help' => 'Changes the order of fields in the Index Filter. Turn fields on or off to show or hide their filters.', 'icon' => 'filter', 'order' => 'filterOrder', 'fields' => 'filterFields', 'sort' => false],
+        'sort' => ['heading' => 'Index Sort Menu', 'help' => 'Changes the order of options in the Index Filter sort menus. Turn options on or off to show or hide them.', 'icon' => 'arrow-down-wide-short', 'order' => 'sortOrder', 'fields' => 'sortFields', 'sort' => true],
+        'edit' => ['heading' => 'Edit Form Fields', 'help' => 'Changes the order of fields in the Edit Details form. Turn fields on or off to show or hide them; use Editable to allow or prevent editing.', 'icon' => 'pen-to-square', 'order' => 'editOrder', 'fields' => 'editFields', 'sort' => false],
+        'quick_add' => ['heading' => 'Quick Add Form Fields', 'help' => 'Changes the order of fields in the Quick Add form. Turn fields on or off to show or hide them.', 'icon' => 'file-circle-plus', 'order' => 'quickAddOrder', 'fields' => 'quickAddFields', 'sort' => false],
+        'custom_quick_add' => ['heading' => 'Custom Quick Add Form Fields', 'help' => 'Changes the order of fields in the Custom Quick Add form. Turn fields on or off to show or hide them.', 'icon' => 'file-pen', 'order' => 'customQuickAddOrder', 'fields' => 'customQuickAddFields', 'sort' => false],
     ] as $layoutProperty => $layoutConfig)
             <section class="field-layout-section">
                 <h3>
                     <i class="fa-solid fa-{{ $layoutConfig['icon'] }} fa-fw options-section-icon" aria-hidden="true"></i>
                     {{ __($layoutConfig['heading']) }}
+                    <i class="fa-solid fa-circle-question" tabindex="0"
+                        aria-label="{{ __($layoutConfig['help']) }}"
+                        title="{{ __($layoutConfig['help']) }}"></i>
                 </h3>
 
                 <div class="field-layout-list" wire:sort="reorderLayout">
@@ -34,11 +37,26 @@
                                 </div>
                             </div>
 
-                            @if (!$layoutConfig['sort'] && $layoutProperty === 'index' && $row['field'] === 'tags')
-                                <div class="field-layout-index-tags-label" wire:sort:ignore>
-                                    {{ $row['label'] }}
-                                </div>
+                            @if (!$layoutConfig['sort'] && $layoutProperty === 'index' && $row['field'] === 'title')
+                                <div class="field-layout-edit-stack" wire:sort:ignore>
+                                    <x-options.switch
+                                        wire:model.live="{{ $layoutConfig['fields'] }}.{{ $row['field'] }}.visible"
+                                        wrapper-class="field-layout-check field-layout-switch"
+                                        :disabled="$row['visibility_locked'] ?? false">
+                                        <span class="field-layout-switch-label">
+                                            {{ $row['label'] }}
+                                        </span>
+                                        <span class="field-layout-lock-note">{{ __('Required') }}</span>
+                                    </x-options.switch>
 
+                                    <x-options.switch
+                                        wire:model.live="{{ $layoutConfig['fields'] }}.{{ $row['field'] }}.notes_visible"
+                                        wrapper-class="field-layout-check field-layout-check--edit field-layout-switch"
+                                        :help="__('Shows each work\'s Notes beneath its title on the Index.')">
+                                        {{ __('Notes below Title') }}
+                                    </x-options.switch>
+                                </div>
+                            @elseif (!$layoutConfig['sort'] && $layoutProperty === 'index' && $row['field'] === 'tags')
                                 <div class="field-layout-edit-stack field-layout-index-tag-buckets" wire:sort:ignore>
                                     <x-options.switch
                                         wire:model.live="{{ $layoutConfig['fields'] }}.{{ $row['field'] }}.custom_visible"
@@ -56,12 +74,10 @@
                                 <x-options.switch
                                     wire:model.live="{{ $layoutConfig['fields'] }}.{{ $row['field'] }}.visible"
                                     wrapper-class="field-layout-check field-layout-switch" :sort-ignore="true"
-                                    :disabled="$row['visibility_locked'] ?? false" :help="$this->fieldLayoutHelp($layoutProperty, $row['field'])">
+                                    :disabled="$row['visibility_locked'] ?? false"
+                                    :help="$row['note'] ?? $this->fieldLayoutHelp($layoutProperty, $row['field'])">
                                     <span class="field-layout-switch-label">
                                         {{ $row['label'] }}
-                                        @if ($row['note'] ?? false)
-                                            <span class="field-layout-note">{{ $row['note'] }}</span>
-                                        @endif
                                     </span>
                                     @if ($row['visibility_locked'] ?? false)
                                         <span class="field-layout-lock-note">{{ __('Required') }}</span>
@@ -95,7 +111,7 @@
         @endforeach
 
         <div class="option-actions option-actions--inline">
-            <button type="submit" class="tag tag--soft tag--lg is-clickable">{{ __('Save field layouts') }}</button>
+            <button type="submit" class="tag tag--soft tag--lg is-clickable">{{ __('Save all field layouts') }}</button>
             @if ($saved && $savedLayout === 'all')
                 <span class="saved-notice">{{ __($notice) }}</span>
             @endif

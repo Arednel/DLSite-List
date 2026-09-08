@@ -26,6 +26,9 @@ class OptionsRefetchReview extends Component
     #[Locked]
     public ?string $confirmingApplyCategory = null;
 
+    #[Locked]
+    public bool $confirmingRejectOrFinish = false;
+
     public string $activeCategory;
 
     /**
@@ -92,7 +95,7 @@ class OptionsRefetchReview extends Component
             return;
         }
 
-        $this->confirmingApplyCategory = null;
+        $this->cancelConfirmation();
         $this->confirmingApplyAll = true;
     }
 
@@ -110,14 +113,25 @@ class OptionsRefetchReview extends Component
             return;
         }
 
-        $this->confirmingApplyAll = false;
+        $this->cancelConfirmation();
         $this->confirmingApplyCategory = $category->value;
     }
 
-    public function cancelApplyConfirmation(): void
+    public function askRejectOrFinish(): void
+    {
+        if (! $this->run()->canBeApplied()) {
+            return;
+        }
+
+        $this->cancelConfirmation();
+        $this->confirmingRejectOrFinish = true;
+    }
+
+    public function cancelConfirmation(): void
     {
         $this->confirmingApplyAll = false;
         $this->confirmingApplyCategory = null;
+        $this->confirmingRejectOrFinish = false;
     }
 
     public function applyTab(RefetchService $service): void
@@ -128,7 +142,7 @@ class OptionsRefetchReview extends Component
             return;
         }
 
-        $this->cancelApplyConfirmation();
+        $this->cancelConfirmation();
         $validated = $this->validate();
 
         try {
@@ -152,7 +166,7 @@ class OptionsRefetchReview extends Component
             return;
         }
 
-        $this->cancelApplyConfirmation();
+        $this->cancelConfirmation();
         $validated = $this->validate();
 
         try {
@@ -178,6 +192,12 @@ class OptionsRefetchReview extends Component
 
     public function rejectOrFinish(RefetchService $service): void
     {
+        if (! $this->confirmingRejectOrFinish) {
+            return;
+        }
+
+        $this->cancelConfirmation();
+
         try {
             $service->rejectOrFinish($this->run());
         } catch (RuntimeException $exception) {

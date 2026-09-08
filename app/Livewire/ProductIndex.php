@@ -94,7 +94,7 @@ class ProductIndex extends Component
     protected function queryString(): array
     {
         return collect(ProductIndexFilters::INPUT_KEYS)
-            ->mapWithKeys(fn(string $key): array => [$key => []])
+            ->mapWithKeys(fn (string $key): array => [$key => []])
             ->all();
     }
 
@@ -189,6 +189,7 @@ class ProductIndex extends Component
             ),
             'optionalProductStatuses' => $settings->optionalProductStatuses,
             'contentOverflow' => $settings->contentOverflow,
+            'titleNotesVisible' => $settings->titleNotesVisible,
             'indexColumns' => $settings->indexColumns,
             'filterFields' => $settings->filterFields,
             'filterActive' => $filterQuery !== [],
@@ -199,7 +200,7 @@ class ProductIndex extends Component
             'isUnlimited' => $isUnlimited,
             'totalProducts' => $products instanceof LengthAwarePaginator ? $products->total() : $products->count(),
             'tagHrefPrefix' => route('index', $tagLinkQuery, false)
-                . ($tagLinkQuery === [] ? '?' : '&'),
+                .($tagLinkQuery === [] ? '?' : '&'),
             'quickAddUrl' => route('products.create', [
                 'return_query' => $currentQuery,
             ], false),
@@ -226,7 +227,7 @@ class ProductIndex extends Component
         ]);
 
         return array_map(
-            fn(string $path): string => asset(Product::versionedImagePath($path)),
+            fn (string $path): string => asset(Product::versionedImagePath($path)),
             [
                 $product->work_image,
                 ...($product->sample_images ?? []),

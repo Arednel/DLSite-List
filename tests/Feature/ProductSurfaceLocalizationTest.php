@@ -118,7 +118,7 @@ class ProductSurfaceLocalizationTest extends TestCase
             ->post(route('products.store.custom'), [])
             ->assertRedirect(route('products.create.custom'))
             ->assertSessionHasErrors([
-                'id' => 'RJコードまたはRJコードを含むDLSiteリンクを入力してください。',
+                'id' => 'RJコードまたはRJコードを含むリンクを入力してください。',
                 'work_name' => 'The work name field is required.',
             ]);
 

@@ -47,6 +47,8 @@ class ProductFieldLayoutTest extends TestCase
                 ProductField::TotalTimesReListened,
                 ProductField::ReListenValue,
                 ProductField::Priority,
+                ProductField::CreatedAt,
+                ProductField::UpdatedAt,
             ],
             ProductFieldLayout::SURFACE_EDIT => [
                 ProductField::Progress,
@@ -163,6 +165,8 @@ class ProductFieldLayoutTest extends TestCase
         $this->assertTrue(ProductField::DescriptionEnglish->isHiddenByDefault(ProductFieldLayout::SURFACE_FILTER));
         $this->assertTrue(ProductField::StartDate->isHiddenByDefault(ProductFieldLayout::SURFACE_FILTER));
         $this->assertTrue(ProductField::Notes->isHiddenByDefault(ProductFieldLayout::SURFACE_INDEX));
+        $this->assertTrue(ProductField::CreatedAt->isHiddenByDefault(ProductFieldLayout::SURFACE_INDEX));
+        $this->assertTrue(ProductField::UpdatedAt->isHiddenByDefault(ProductFieldLayout::SURFACE_INDEX));
     }
 
     public function test_default_layout_matches_field_order_and_visibility(): void
@@ -190,6 +194,8 @@ class ProductFieldLayoutTest extends TestCase
             ProductField::TotalTimesReListened->value,
             ProductField::ReListenValue->value,
             ProductField::Priority->value,
+            ProductField::CreatedAt->value,
+            ProductField::UpdatedAt->value,
         ], collect($layout)->pluck('field')->all());
 
         $this->assertSame([
@@ -203,9 +209,38 @@ class ProductFieldLayoutTest extends TestCase
         ], ProductFieldLayout::visibleFields($layout));
 
         $this->assertTrue($layout[1]['visibility_locked']);
+        $this->assertTrue($layout[1]['notes_visible']);
+        $this->assertTrue(ProductFieldLayout::indexTitleNotesVisible($layout));
         $this->assertSame(
             'Notes are already shown inside Title; enable this for a separate column.',
             collect($layout)->firstWhere('field', ProductField::Notes->value)['note'],
+        );
+    }
+
+    public function test_index_title_notes_visibility_is_normalized_and_only_applies_to_index_title(): void
+    {
+        $hiddenNotesLayout = ProductFieldLayout::normalize([
+            ['field' => ProductField::Title->value, 'visible' => false, 'notes_visible' => false],
+            ['field' => ProductField::Notes->value, 'visible' => true, 'notes_visible' => false],
+        ], ProductFieldLayout::SURFACE_INDEX);
+        $legacyLayout = ProductFieldLayout::normalize([
+            ['field' => ProductField::Title->value, 'visible' => true],
+        ], ProductFieldLayout::SURFACE_INDEX);
+        $editLayout = ProductFieldLayout::normalize([
+            ['field' => ProductField::Title->value, 'visible' => true, 'notes_visible' => false],
+        ], ProductFieldLayout::SURFACE_EDIT);
+
+        $this->assertFalse(collect($hiddenNotesLayout)->firstWhere('field', ProductField::Title->value)['notes_visible']);
+        $this->assertFalse(ProductFieldLayout::indexTitleNotesVisible($hiddenNotesLayout));
+        $this->assertArrayNotHasKey(
+            'notes_visible',
+            collect($hiddenNotesLayout)->firstWhere('field', ProductField::Notes->value),
+        );
+        $this->assertTrue(collect($legacyLayout)->firstWhere('field', ProductField::Title->value)['notes_visible']);
+        $this->assertTrue(ProductFieldLayout::indexTitleNotesVisible($legacyLayout));
+        $this->assertArrayNotHasKey(
+            'notes_visible',
+            collect($editLayout)->firstWhere('field', ProductField::Title->value),
         );
     }
 
@@ -476,6 +511,8 @@ class ProductFieldLayoutTest extends TestCase
             ['field' => ProductField::Circle->value, 'label' => 'Circle', 'visible' => true],
             ['field' => ProductField::Score->value, 'label' => 'Score', 'visible' => true],
             ['field' => ProductField::StartDate->value, 'label' => 'Start Date', 'visible' => true],
+            ['field' => ProductField::CreatedAt->value, 'label' => 'Added to the site Date', 'visible' => true],
+            ['field' => ProductField::UpdatedAt->value, 'label' => 'Updated Date', 'visible' => true],
             ['field' => 'not_real', 'label' => 'Broken', 'visible' => true],
         ]);
 
@@ -506,6 +543,20 @@ class ProductFieldLayoutTest extends TestCase
                 'label' => 'Start Date',
                 'class' => 'start-date',
                 'sort_field' => 'start_date',
+                'contributor_role' => null,
+            ],
+            [
+                'field' => ProductField::CreatedAt->value,
+                'label' => 'Added to the site Date',
+                'class' => 'created-at',
+                'sort_field' => 'created_at',
+                'contributor_role' => null,
+            ],
+            [
+                'field' => ProductField::UpdatedAt->value,
+                'label' => 'Updated Date',
+                'class' => 'updated-at',
+                'sort_field' => 'updated_at',
                 'contributor_role' => null,
             ],
         ], $columns);

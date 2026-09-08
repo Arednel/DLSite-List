@@ -157,26 +157,28 @@
                                                     </div>
                                                 </div>
 
-                                                <div class="notes">
-                                                    @if ($contentOverflow['inline_notes']['enabled'])
-                                                        <div class="index-content-overflow" x-data="{ expanded: false }"
-                                                            style="--index-content-overflow-height: {{ $contentOverflow['inline_notes']['height'] }}">
-                                                            <div id="index-inline-notes-{{ $product->id }}"
-                                                                x-bind:class="{ 'index-content-overflow__content--collapsed': !expanded }">
-                                                    @endif
-                                                        <div class="user-note-text">{{ $product->notes }}</div>
-                                                    @if ($contentOverflow['inline_notes']['enabled'])
+                                                @if ($titleNotesVisible)
+                                                    <div class="notes">
+                                                        @if ($contentOverflow['inline_notes']['enabled'])
+                                                            <div class="index-content-overflow" x-data="{ expanded: false }"
+                                                                style="--index-content-overflow-height: {{ $contentOverflow['inline_notes']['height'] }}">
+                                                                <div id="index-inline-notes-{{ $product->id }}"
+                                                                    x-bind:class="{ 'index-content-overflow__content--collapsed': !expanded }">
+                                                        @endif
+                                                            <div class="user-note-text">{{ $product->notes }}</div>
+                                                        @if ($contentOverflow['inline_notes']['enabled'])
+                                                                </div>
+                                                                <button type="button" class="index-content-overflow__toggle"
+                                                                    aria-controls="index-inline-notes-{{ $product->id }}"
+                                                                    x-bind:aria-expanded="expanded.toString()" x-cloak
+                                                                    x-on:click="expanded = !expanded">
+                                                                    <span x-show="!expanded">{{ __('Show all') }}</span>
+                                                                    <span x-show="expanded">{{ __('Show less') }}</span>
+                                                                </button>
                                                             </div>
-                                                            <button type="button" class="index-content-overflow__toggle"
-                                                                aria-controls="index-inline-notes-{{ $product->id }}"
-                                                                x-bind:aria-expanded="expanded.toString()" x-cloak
-                                                                x-on:click="expanded = !expanded">
-                                                                <span x-show="!expanded">{{ __('Show all') }}</span>
-                                                                <span x-show="expanded">{{ __('Show less') }}</span>
-                                                            </button>
-                                                        </div>
-                                                    @endif
-                                                </div>
+                                                        @endif
+                                                    </div>
+                                                @endif
                                             @break
 
                                             @case('score')
@@ -245,6 +247,14 @@
                                             @break
 
                                             @case('priority')
+                                                {{ $productDisplayValues[$product->id][$column['field']] ?? '-' }}
+                                            @break
+
+                                            @case('created_at')
+                                                {{ $productDisplayValues[$product->id][$column['field']] ?? '-' }}
+                                            @break
+
+                                            @case('updated_at')
                                                 {{ $productDisplayValues[$product->id][$column['field']] ?? '-' }}
                                             @break
 

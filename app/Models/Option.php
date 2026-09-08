@@ -432,7 +432,7 @@ class Option extends Model
     public static function productFormModalCompletionOptions(): array
     {
         return array_map(
-            fn(string $label): string => (string) __($label),
+            fn (string $label): string => (string) __($label),
             self::PRODUCT_FORM_MODAL_COMPLETION_OPTIONS,
         );
     }
@@ -698,6 +698,7 @@ class Option extends Model
             indexFieldLayout: $indexFieldLayout,
             indexColumns: $indexColumns,
             visibleIndexFields: array_column($indexColumns, 'field'),
+            titleNotesVisible: ProductFieldLayout::indexTitleNotesVisible($indexFieldLayout),
             filterFieldLayout: $filterFieldLayout,
             filterFields: ProductFieldLayout::filterFields($filterFieldLayout),
             indexSortFieldLayout: $indexSortFieldLayout,
@@ -757,7 +758,7 @@ class Option extends Model
     public static function fixedIndexPerPageOptions(): array
     {
         return collect(self::FIXED_INDEX_PER_PAGE_OPTIONS)
-            ->mapWithKeys(fn(int $value): array => [$value => (string) $value])
+            ->mapWithKeys(fn (int $value): array => [$value => (string) $value])
             ->all();
     }
 
@@ -800,7 +801,7 @@ class Option extends Model
         }
 
         return collect(self::DEFAULT_TAG_COLOR_SURFACES)
-            ->mapWithKeys(fn(bool $default, string $surface): array => [
+            ->mapWithKeys(fn (bool $default, string $surface): array => [
                 $surface => self::normalizeBoolean($surfaces[$surface] ?? null, $default),
             ])
             ->all();

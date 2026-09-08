@@ -52,7 +52,7 @@
                     </button>
                     <i class="fa-solid fa-circle-question" tabindex="0"
                         aria-label="{{ __('About Set Overwrite for All') }}"
-                        title="{{ __('Sets each unresolved tab that contains changes to Overwrite. Changes still set to Use global choice will inherit Overwrite; explicit per-change choices remain unchanged. Resolved tabs are not changed, and nothing is applied until you confirm Apply All Tabs or apply a tab separately.') }}"></i>
+                        title="{{ __('Sets each unresolved tab that contains changes to Overwrite. Explicit per-change choices remain unchanged. Resolved tabs are not changed, and nothing is applied until you confirm Apply All Tabs or apply a tab separately.') }}"></i>
                     <button type="button" class="tag tag--gradient tag--lg is-clickable" wire:click="askApplyAll"
                         wire:loading.attr="disabled">
                         {{ __('Apply All Tabs') }}
@@ -175,8 +175,8 @@
 
         @if ($canApply)
             <div class="option-actions">
-                <button type="button" class="tag tag--outline tag--lg is-clickable" wire:click="rejectOrFinish"
-                    wire:confirm="{{ __($finishAction['confirmation']) }}" wire:loading.attr="disabled">
+                <button type="button" class="tag tag--outline tag--lg is-clickable" wire:click="askRejectOrFinish"
+                    wire:loading.attr="disabled">
                     {{ __($finishAction['label']) }}
                 </button>
             </div>
@@ -189,7 +189,7 @@
         'message' => 'Apply choices for every unresolved tab?',
         'confirmLabel' => 'Apply All Tabs',
         'confirmAction' => 'applyAll',
-        'cancelAction' => 'cancelApplyConfirmation',
+        'cancelAction' => 'cancelConfirmation',
     ])
 
     @include('livewire.partials.options-reset-confirmation-modal', [
@@ -198,6 +198,15 @@
         'message' => 'Apply and resolve this tab?',
         'confirmLabel' => 'Apply Tab',
         'confirmAction' => 'applyTab',
-        'cancelAction' => 'cancelApplyConfirmation',
+        'cancelAction' => 'cancelConfirmation',
+    ])
+
+    @include('livewire.partials.options-reset-confirmation-modal', [
+        'open' => $confirmingRejectOrFinish,
+        'modalId' => 'refetch-reject-or-finish-modal',
+        'message' => $finishAction['confirmation'],
+        'confirmLabel' => $finishAction['label'],
+        'confirmAction' => 'rejectOrFinish',
+        'cancelAction' => 'cancelConfirmation',
     ])
 </section>

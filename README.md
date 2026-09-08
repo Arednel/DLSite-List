@@ -6,44 +6,33 @@ It's mainly made for ASMR titles, and quite a lot of the UI uses that wording, b
 
 ## Features
 
-- Fetch works directly from DLsite or add them manually.
-- Add your own tags and organize tags into groups.
-- Change existing work information and add things like current status, score, start and finish dates.
-- Filter and sort your library.
-- Image viewer for cover and sample images.
-- "Tag Library" for managing tags and tag groups.
-- Refetch existing works using current information from DLsite.
-- Configurable pagination size, search behavior, Index width, visible Index columns, column order, and other options.
-- English and Japanese UI with separate English and Japanese tag "sets". Japanese UI was mostly created using auto-translate, so quality may vary.
+- Fetch work metadata directly from DLsite or add them manually.
+- Edit work information and add things like current status, score, start and finish dates, priorities and re-listens.
+- Add your own tags and organize them into groups. Add parent/child relationships, tag and tag-group colors, visibility, and Index ordering in the "Tag Library".
+- Search, filter, and sort your library.
+- View saved cover and sample images with the "Image Viewer".
+- Refetch current metadata, covers and sample images from DLsite and review changes before applying them.
+- Customize pagination, search behavior, table width, columns, Notes and Tags display, and tag ordering.
+- Configure field visibility and order for filters, sort menus, Quick Add, Custom Quick Add, and Edit forms.
+- Optional single-user authentication.
+- English and Japanese UI with separate English and Japanese fetched tag "sets". Japanese UI was mostly created using auto-translate, so quality may vary.
 
 ## Screenshots
 
 ### Index
 
 <p align="center">
-  <a href="docs/screenshots/index_1.png">
-    <img src="docs/screenshots/index_1.png" alt="DLSite List Index 1" width="31%">
-  </a>
-  <a href="docs/screenshots/index_2.png">
-    <img src="docs/screenshots/index_2.png" alt="DLSite List Index 2" width="31%">
-  </a>
-  <a href="docs/screenshots/index_3.png">
-    <img src="docs/screenshots/index_3.png" alt="DLSite List Index 3" width="31%">
-  </a>
+  <a href="docs/screenshots/index_1.png"><img src="docs/screenshots/index_1.png" alt="DLSite List Index 1" width="31%"></a>
+  <a href="docs/screenshots/index_2.png"><img src="docs/screenshots/index_2.png" alt="DLSite List Index 2" width="31%"></a>
+  <a href="docs/screenshots/index_3.png"><img src="docs/screenshots/index_3.png" alt="DLSite List Index 3" width="31%"></a>
 </p>
 
 ### Quick Add, Options, Tag Library
 
 <p align="center">
-  <a href="docs/screenshots/quick_add_1.png">
-    <img src="docs/screenshots/quick_add_1.png" alt="Quick Add" width="31%">
-  </a>
-  <a href="docs/screenshots/options_1.png">
-    <img src="docs/screenshots/options_1.png" alt="Options" width="31%">
-  </a>
-  <a href="docs/screenshots/tag-library_1.png">
-    <img src="docs/screenshots/tag-library_1.png" alt="Tag Library" width="31%">
-  </a>
+  <a href="docs/screenshots/quick_add_1.png"><img src="docs/screenshots/quick_add_1.png" alt="Quick Add" width="31%"></a>
+  <a href="docs/screenshots/options_1.png"><img src="docs/screenshots/options_1.png" alt="Options" width="31%"></a>
+  <a href="docs/screenshots/tag-library_1.png" target="_blank"><img src="docs/screenshots/tag-library_1.png" alt="Tag Library" width="31%"></a>
 </p>
 
 ## Quick Start (requires [Git](https://git-scm.com) and [Docker Compose](https://docs.docker.com/compose))
@@ -130,4 +119,4 @@ If you encounter any problems, please [file an issue](https://github.com/Arednel
 
 ## Acknowledgements
 
-- [bhrevol/dlsite-async](https://github.com/bhrevol/dlsite-async) — used to retrieve DLSite work metadata.
+- [bhrevol/dlsite-async](https://github.com/bhrevol/dlsite-async) — used to retrieve DLsite work metadata.

@@ -226,6 +226,7 @@ class OptionMetadataSettingsTest extends TestCase
         $this->assertSame(ProductField::Title->value, $layout[1]['field']);
         $this->assertTrue($layout[1]['visible']);
         $this->assertTrue($layout[1]['visibility_locked']);
+        $this->assertTrue($layout[1]['notes_visible']);
         $this->assertSame(ProductField::DescriptionJapanese->value, $layout[2]['field']);
         $this->assertTrue($layout[2]['visible']);
         $this->assertSame(ProductField::DescriptionEnglish->value, $layout[3]['field']);
@@ -296,6 +297,7 @@ class OptionMetadataSettingsTest extends TestCase
         $this->assertFalse(collect($defaults->indexSortFieldLayout)->firstWhere('field', ProductIndexSortField::Circle->value)['visible']);
         $this->assertSame(ProductField::Image->value, $defaults->indexColumns[0]['field']);
         $this->assertContains(ProductField::Title->value, $defaults->visibleIndexFields);
+        $this->assertTrue($defaults->titleNotesVisible);
         $this->assertSame(ProductField::Title->value, $defaults->filterFields[0]['field']);
         $this->assertFalse($defaults->indexGroupOrderingEnabled);
         $this->assertFalse($defaults->searchHiddenDescriptionsEnabled);
@@ -325,6 +327,7 @@ class OptionMetadataSettingsTest extends TestCase
 
         Option::setIndexPerPage(250);
         Option::setIndexFieldLayout([
+            ['field' => ProductField::Title->value, 'visible' => true, 'notes_visible' => false],
             ['field' => ProductField::DescriptionJapanese->value, 'visible' => true],
             ['field' => ProductField::DescriptionEnglish->value, 'visible' => true],
             ['field' => ProductField::Score->value, 'visible' => false],
@@ -369,6 +372,7 @@ class OptionMetadataSettingsTest extends TestCase
         $this->assertContains(ProductField::DescriptionJapanese->value, $settings->visibleIndexFields);
         $this->assertContains(ProductField::DescriptionEnglish->value, $settings->visibleIndexFields);
         $this->assertNotContains(ProductField::Score->value, $settings->visibleIndexFields);
+        $this->assertFalse($settings->titleNotesVisible);
         $filterFieldIds = collect($settings->filterFields)->pluck('field')->all();
 
         $this->assertContains(ProductField::Priority->value, $filterFieldIds);
@@ -432,6 +436,7 @@ class OptionMetadataSettingsTest extends TestCase
         $this->assertFalse($settings->indexGroupOrderingEnabled);
         $this->assertFalse($settings->searchHiddenDescriptionsEnabled);
         $this->assertFalse($settings->indexImageViewerEnabled);
+        $this->assertTrue($settings->titleNotesVisible);
         $this->assertSame([
             'inline_notes' => ['enabled' => true, 'height' => '80px'],
             'notes_column' => ['enabled' => true, 'height' => '5rem'],
@@ -553,24 +558,24 @@ class OptionMetadataSettingsTest extends TestCase
     public function test_individual_resets_remove_saved_option_rows(): void
     {
         $resetCases = [
-            [[Option::INDEX_PER_PAGE], fn() => Option::resetIndexPerPageToDefault()],
-            [[Option::INDEX_SEARCH_HIDDEN_DESCRIPTIONS_ENABLED], fn() => Option::resetIndexSearchHiddenDescriptionsEnabledToDefault()],
-            [[Option::TAG_AUTOCOMPLETE_ORDER, Option::SERIES_AUTOCOMPLETE_ORDER], fn() => Option::resetAutocompleteToDefault()],
-            [[Option::AUTO_SERIES_FROM_TITLE_NAME], fn() => Option::resetAutoSeriesFromTitleNameToDefault()],
-            [[Option::PRODUCT_FORM_THEME], fn() => Option::resetProductFormThemeToDefault()],
-            [[Option::TAG_LIBRARY_TAGS_EXPANDED_BY_DEFAULT], fn() => Option::resetTagLibraryTagsExpandedByDefaultToDefault()],
-            [[Option::TAG_LIBRARY_INDEX_GROUP_ORDERING_ENABLED], fn() => Option::resetTagLibraryIndexGroupOrderingEnabledToDefault()],
-            [[Option::TAG_COLOR_SURFACES], fn() => Option::resetTagColorSurfacesToDefault()],
+            [[Option::INDEX_PER_PAGE], fn () => Option::resetIndexPerPageToDefault()],
+            [[Option::INDEX_SEARCH_HIDDEN_DESCRIPTIONS_ENABLED], fn () => Option::resetIndexSearchHiddenDescriptionsEnabledToDefault()],
+            [[Option::TAG_AUTOCOMPLETE_ORDER, Option::SERIES_AUTOCOMPLETE_ORDER], fn () => Option::resetAutocompleteToDefault()],
+            [[Option::AUTO_SERIES_FROM_TITLE_NAME], fn () => Option::resetAutoSeriesFromTitleNameToDefault()],
+            [[Option::PRODUCT_FORM_THEME], fn () => Option::resetProductFormThemeToDefault()],
+            [[Option::TAG_LIBRARY_TAGS_EXPANDED_BY_DEFAULT], fn () => Option::resetTagLibraryTagsExpandedByDefaultToDefault()],
+            [[Option::TAG_LIBRARY_INDEX_GROUP_ORDERING_ENABLED], fn () => Option::resetTagLibraryIndexGroupOrderingEnabledToDefault()],
+            [[Option::TAG_COLOR_SURFACES], fn () => Option::resetTagColorSurfacesToDefault()],
             [[
                 Option::INDEX_FIELD_LAYOUT,
                 Option::EDIT_FIELD_LAYOUT,
                 Option::FILTER_FIELD_LAYOUT,
                 Option::QUICK_ADD_FIELD_LAYOUT,
                 Option::CUSTOM_QUICK_ADD_FIELD_LAYOUT,
-            ], fn() => Option::resetFieldLayoutsToDefault()],
-            [[Option::INDEX_SORT_FIELD_LAYOUT], fn() => Option::resetIndexSortFieldLayoutToDefault()],
-            [[Option::INDEX_TABLE_WIDTH], fn() => Option::resetIndexTableWidthToDefault()],
-            [[Option::INDEX_CONTENT_OVERFLOW], fn() => Option::resetIndexContentOverflowToDefault()],
+            ], fn () => Option::resetFieldLayoutsToDefault()],
+            [[Option::INDEX_SORT_FIELD_LAYOUT], fn () => Option::resetIndexSortFieldLayoutToDefault()],
+            [[Option::INDEX_TABLE_WIDTH], fn () => Option::resetIndexTableWidthToDefault()],
+            [[Option::INDEX_CONTENT_OVERFLOW], fn () => Option::resetIndexContentOverflowToDefault()],
         ];
 
         foreach ($resetCases as [$keys, $reset]) {

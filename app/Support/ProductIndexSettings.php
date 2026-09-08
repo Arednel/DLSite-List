@@ -26,6 +26,7 @@ final readonly class ProductIndexSettings
         public array $indexFieldLayout,
         public array $indexColumns,
         public array $visibleIndexFields,
+        public bool $titleNotesVisible,
         public array $filterFieldLayout,
         public array $filterFields,
         public array $indexSortFieldLayout,

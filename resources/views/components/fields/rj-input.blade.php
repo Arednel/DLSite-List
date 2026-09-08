@@ -7,7 +7,7 @@
     <td width="130" class="form-table-cell" valign="top">{{ __('RJ Code or Link') }}</td>
     <td class="form-table-cell">
         <strong>
-            <input id="id" name="id" class="form-control" size="65" required
+            <input id="id" name="id" class="form-control" size="65" placeholder="RJ01234567" required
                 value="{{ old('id', $value) }}">
         </strong>
         @if ($errors->has('id'))
