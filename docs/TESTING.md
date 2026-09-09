@@ -72,7 +72,7 @@ Current automated coverage includes Laravel PHPUnit and Python `unittest` tests:
 - `tests/Feature/ProductMetadataMigrationTest.php`
   - covers metadata backfill from stored DLSite JSON, duplicate English description collapse, missing/invalid JSON skip behavior, and the rule that Series is not backfilled
 - `tests/Feature/OptionsGeneralTest.php`
-  - covers General/Field Layouts/Refetch tab rendering, invalid-tab fallback, shared modal configuration, empty Refetch state, distinct all/selected Refetch cards, latest-run-only linking, and cleanup/help placement
+  - covers General/Field Layouts/Authentication/Refetch links, active-page exposure, invalid-tab fallback, shared modal configuration, empty Refetch state, distinct all/selected Refetch cards, latest-run-only linking, and cleanup/help placement
 - `tests/Feature/OptionsRefetchCleanupTest.php`
   - covers always-visible cleanup rendering through `OptionsRefetchActions`, modal confirmation and cancellation, run deletion with cascaded result removal, private/public staged-content removal with Refetch roots and canonical Works files preserved, running/cancelling unavailability, the active-run recheck after confirmation, shared lifecycle-lock exclusion, and database-first cleanup when staged-file removal fails
 - `tests/Feature/ProductImageCleanupTest.php`
@@ -202,6 +202,14 @@ The Docker test service is one-off and does not run during the normal app startu
 - In standalone and modal DLSite Quick Add, confirm the top and bottom Add work buttons and Enter reveal readable fetching-status text beneath the RJ field; spot-check both Cherry and Black themes. Its localized markup is automated.
 - Confirm native browser validation prevents an empty required RJ field from revealing the message. Both rendered Add work controls are automatically verified as enabled.
 - Confirm browser Back restores DLSite Quick Add with the message hidden. Custom Quick Add exclusion and validation/scraper error reload markup are automated.
+
+## Manual Mobile Options Navigation Checks
+
+- At 320px, 375px, and 768px widths, confirm the Options header shows one full-width disclosure button containing only the current section in larger type and that long English and Japanese labels remain readable.
+- Confirm activating the disclosure displays every section in controller order as one continuous list attached directly to the button, clearly highlights the current page, and allows each destination to be opened directly.
+- Confirm the disclosure closes through its button, an outside click, and `Escape`; `Escape` must return focus to the disclosure button.
+- Confirm the list is closed without an incorrect navigation-state flash after loading each section and that its open/closed state is not persisted across page loads.
+- At 769px and wider, confirm the disclosure button is hidden and every section link is visible in the horizontal navigation.
 
 ## Manual Add/Edit Modal Checks
 

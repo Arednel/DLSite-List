@@ -24,6 +24,7 @@ class OptionsGeneralTest extends TestCase
             ->assertSee('Options')
             ->assertSee('href="/options?tab=general"', false)
             ->assertSee('href="/options?tab=field-layouts"', false)
+            ->assertSee('href="/options?tab=authentication"', false)
             ->assertSee('href="/options?tab=refetch"', false)
             ->assertSee('Index Pagination')
             ->assertSee('Overflow')
@@ -63,6 +64,19 @@ class OptionsGeneralTest extends TestCase
             ->assertSee('Fetched EN Tags')
             ->assertDontSee('Index page size')
             ->assertDontSee('Refetch all works');
+    }
+
+    public function test_active_option_category_is_exposed_as_the_current_navigation_page(): void
+    {
+        foreach (['general', 'field-layouts', 'authentication', 'refetch'] as $tab) {
+            $response = $this->get('/options?tab=' . $tab)
+                ->assertOk()
+                ->assertSee('data-active-options-category="' . $tab . '"', false)
+                ->assertSee('href="/options?tab=' . $tab . '"', false)
+                ->assertSee('aria-current="page"', false);
+
+            $this->assertSame(1, substr_count($response->getContent(), 'aria-current="page"'));
+        }
     }
 
     public function test_invalid_options_tab_falls_back_to_general(): void

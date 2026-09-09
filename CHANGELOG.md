@@ -1,5 +1,10 @@
 # Change Log
 
+## Unreleased
+
+### Changed
+  * Replaced the mobile Options tabs with an expandable navigation list.
+
 ## Development
 
 * 2026-09-08 -- 1.8.7 Field Layouts & UI Cleanup

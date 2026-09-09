@@ -30,35 +30,34 @@
                 <h1>{{ __('Options') }}</h1>
             </header>
 
-            <nav class="options-tabs options-tab-list" aria-label="{{ __('Options sections') }}" role="tablist">
-                <a class="options-tab {{ $activeTab === 'general' ? 'is-active' : '' }}"
-                    href="{{ route('options.index', ['tab' => 'general'], false) }}" role="tab"
-                    aria-controls="general-tab-panel"
-                    aria-selected="{{ $activeTab === 'general' ? 'true' : 'false' }}">
-                    {{ __('General') }}
-                </a>
-                <a class="options-tab {{ $activeTab === 'field-layouts' ? 'is-active' : '' }}"
-                    href="{{ route('options.index', ['tab' => 'field-layouts'], false) }}" role="tab"
-                    aria-controls="field-layouts-tab-panel"
-                    aria-selected="{{ $activeTab === 'field-layouts' ? 'true' : 'false' }}">
-                    {{ __('Field Layouts') }}
-                </a>
-                <a class="options-tab {{ $activeTab === 'authentication' ? 'is-active' : '' }}"
-                    href="{{ route('options.index', ['tab' => 'authentication'], false) }}" role="tab"
-                    aria-controls="authentication-tab-panel"
-                    aria-selected="{{ $activeTab === 'authentication' ? 'true' : 'false' }}">
-                    {{ __('Authentication') }}
-                </a>
-                <a class="options-tab {{ $activeTab === 'refetch' ? 'is-active' : '' }}"
-                    href="{{ route('options.index', ['tab' => 'refetch'], false) }}" role="tab"
-                    aria-controls="refetch-tab-panel"
-                    aria-selected="{{ $activeTab === 'refetch' ? 'true' : 'false' }}">
-                    {{ __('Refetch') }}
-                </a>
+            <nav class="options-navigation" aria-label="{{ __('Options sections') }}" data-options-navigation
+                data-active-options-category="{{ $activeTab }}" x-data="{ open: false }"
+                x-on:click.outside="open = false"
+                x-on:keydown.escape.window="if (open) { open = false; $refs.toggle.focus() }">
+                <button type="button" class="options-navigation-toggle" data-options-navigation-toggle
+                    aria-label="{{ __('Options sections') }}: {{ __($optionSections[$activeTab]) }}"
+                    aria-controls="options-navigation-list" aria-expanded="false" x-bind:aria-expanded="open.toString()"
+                    x-on:click="open = ! open" x-ref="toggle">
+                    <span class="options-navigation-toggle-text">{{ __($optionSections[$activeTab]) }}</span>
+                    <span class="options-navigation-toggle-icon" aria-hidden="true"></span>
+                </button>
+
+                <ul id="options-navigation-list" class="options-navigation-list" data-options-navigation-list>
+                    @foreach ($optionSections as $tab => $label)
+                        <li class="options-navigation-item">
+                            <a class="options-navigation-link {{ $activeTab === $tab ? 'is-active' : '' }}"
+                                href="{{ route('options.index', ['tab' => $tab], false) }}"
+                                data-options-category-key="{{ $tab }}"
+                                @if ($activeTab === $tab) aria-current="page" @endif>
+                                {{ __($label) }}
+                            </a>
+                        </li>
+                    @endforeach
+                </ul>
             </nav>
 
             @if ($activeTab === 'general')
-                <section id="general-tab-panel" class="panel options-panel" role="tabpanel">
+                <section id="general-tab-panel" class="panel options-panel">
                     <h2>
                         <i class="fa-solid fa-globe fa-fw options-section-icon" aria-hidden="true"></i>
                         {{ __('UI Language') }}
@@ -195,7 +194,7 @@
             @endif
 
             @if ($activeTab === 'field-layouts')
-                <section id="field-layouts-tab-panel" class="panel options-panel" role="tabpanel">
+                <section id="field-layouts-tab-panel" class="panel options-panel">
                     <header class="options-panel-intro">
                         <h2>
                             {{ __('Field Layouts') }}
@@ -212,7 +211,7 @@
             @endif
 
             @if ($activeTab === 'authentication')
-                <section id="authentication-tab-panel" class="panel options-panel" role="tabpanel">
+                <section id="authentication-tab-panel" class="panel options-panel">
                     <h2>
                         <i class="fa-solid fa-shield-halved fa-fw options-section-icon" aria-hidden="true"></i>
                         {{ __('Administrator Authentication') }}
@@ -226,7 +225,7 @@
             @endif
 
             @if ($activeTab === 'refetch')
-                <section id="refetch-tab-panel" class="panel options-panel" role="tabpanel">
+                <section id="refetch-tab-panel" class="panel options-panel">
                     <h2>
                         <i class="fa-solid fa-arrows-rotate fa-fw options-section-icon" aria-hidden="true"></i>
                         {{ __('Refetch DLSite Data') }}

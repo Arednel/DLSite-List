@@ -8,11 +8,11 @@ use Illuminate\View\View;
 
 class OptionsController extends Controller
 {
-    private const TABS = [
-        'general',
-        'field-layouts',
-        'authentication',
-        'refetch',
+    private const SECTIONS = [
+        'general' => 'General',
+        'field-layouts' => 'Field Layouts',
+        'authentication' => 'Authentication',
+        'refetch' => 'Refetch',
     ];
 
     public function index(Request $request): View
@@ -21,6 +21,7 @@ class OptionsController extends Controller
 
         return view('Options', [
             'activeTab' => $activeTab,
+            'optionSections' => self::SECTIONS,
             ...$this->productFormModalSettings(),
         ]);
     }
@@ -29,7 +30,7 @@ class OptionsController extends Controller
     {
         $activeTab = $request->old('tab', $request->query('tab', 'general'));
 
-        return is_string($activeTab) && in_array($activeTab, self::TABS, true)
+        return is_string($activeTab) && array_key_exists($activeTab, self::SECTIONS)
             ? $activeTab
             : 'general';
     }
