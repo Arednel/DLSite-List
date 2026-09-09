@@ -1,459 +1,684 @@
 # Configuration
 
-## Environment Files
-- `.env`: local/dev runtime
-- `.env.example`: template for `.env`
-- `.env.testing`: test runtime
-- `.env.testing.example`: template for `.env.testing`
-- `docker/.env.docker`: Docker Compose runtime for `app`, `database`, and `pma` containers
-- `docker/.env.testing.docker`: Docker Compose runtime for the one-off `tests` service
+This document explains how to run and configure DLSite List.
 
-## Simple Docker Setup
-Run from the project root:
-- `docker compose --env-file docker/.env.docker up --build`
+For runtime architecture and data flow, see [ARCHITECTURE.md](ARCHITECTURE.md).  
+For test setup, commands, and the current tests, see [TESTING.md](TESTING.md).
 
-This path:
-- builds the PHP 8.3 app image from `docker/app.dockerfile`
-- installs Composer dependencies and the Python scraper venv inside the app image
-- builds the Nginx image from `docker/web.dockerfile`
-- starts MySQL 8 and phpMyAdmin (phpMyAdmin disabled for security)
-- keeps the Docker test services behind the `test` Compose profile
-- runs `php artisan migrate` through `docker/docker-app-entrypoint.sh`
-- serves `/storage/*` directly from Nginx via `docker/vhost.conf`, so `php artisan storage:link` is not required for Docker
+## Run the Application
 
-Access points:
-- App: `http://localhost:8080`
-- phpMyAdmin: `http://localhost:8888` (uncomment in compose.yaml, disabled for security)
+### Docker
 
-Docker test services are assigned to the `test` Compose profile, so they do not start during the normal app startup command.
+Docker is the recommended self-hosted setup.
 
-The app image copies `docker/.env.docker` to `.env` during build because some Laravel tooling expects `base_path('.env')` to exist. Runtime values still come from the Compose `env_file` entries, including `docker/.env.testing.docker` for the one-off `tests` service.
+From the project root run:
 
-## Required Local Setup
-1. Create `.env` from `.env.example` if it does not already exist.
-2. Install PHP dependencies:
-   - `composer install`
-3. Configure app key:
-   - `php artisan key:generate`
-4. Run migrations:
-   - `php artisan migrate`
-5. Create storage symlink:
-   - `php artisan storage:link`
-6. Create Python venv and install scraper dependencies:
-   - `python -m venv python/venv`
-   - activate venv
-   - `pip install -r python/requirements.txt`
+```bash
+docker compose --env-file docker/.env.docker up --build -d
+```
 
-## Optional Administrator Authentication
+This starts:
+- Laravel/PHP-FPM from `docker/app.dockerfile`
+- Laravel queue worker
+- Nginx from `docker/web.dockerfile`
+- MySQL 8 database
 
-Administrator authentication is disabled by default. With it disabled, application pages and actions keep their existing public behavior.
+The app container runs migrations during startup.
 
-Open `Options -> Authentication` to:
-- enable or disable administrator login
-- choose the independent `Cherry` or `Black` authentication-page theme (`Cherry` is the default)
-- see whether an administrator account exists
-- change the password after confirming the current password in an authenticated session
+After that DLSite List is available at:
 
-Authentication settings are deliberately separate from General and Field Layout settings. `Reset All Options` never changes the authentication switch or authentication-page theme.
+```text
+http://localhost:8080
+```
 
-When authentication is enabled:
-- if the `users` table is empty, every application page redirects to `/admin/setup`
-- setup stores one username exactly as entered and accepts a confirmed password using the application-wide range of 8 to 256 characters
-- after an account exists, setup cannot create another account and guests are redirected to `/login`
-- application controllers, mutations, autocomplete endpoints, and Livewire update/upload requests require the administrator session
-- `/login`, `/admin/setup` when applicable, `/forgot-password`, and active recovery pages remain public
-- directly served public and `/storage` files are not placed behind Laravel session authentication
+Docker serves `/storage/*` directly through Nginx, so `php artisan storage:link` is not required inside the Docker setup.
 
-Login usernames are case-sensitive and must exactly match the value entered during setup; passwords retain Laravel's case-sensitive hash verification. A casing mismatch uses the same generic credentials error and failed-attempt accounting as any other invalid login.
+The test database/services are behind the Compose `test` profile and do not start with the normal application command.
 
-Laravel hashes administrator passwords with Argon2id using 64 MiB memory, four iterations, and one thread. Setup, login, authenticated password change, environment recovery, and console recovery all enforce the shared 256-character maximum.
+phpMyAdmin is disabled/commented out by default. If enabled in `compose.yaml`, its configured access point is:
 
-Login allows five failed attempts per client IP during a five-minute window. The next attempt is blocked until that window expires; a successful login clears the IP's attempts. `Remember me` keeps the Laravel recaller cookie for 180 days through the `web` guard's `remember` configuration.
+```text
+http://localhost:8888
+```
 
-The login, setup, password help, and recovery pages share the saved authentication theme. Logging out invalidates the current session. The settings password form verifies the current password with Laravel's `web` guard before replacing it. Changing or resetting the password rotates the remember token; the settings password form also logs out the current browser.
+### Run Artisan Commands in Docker
 
-### Console recovery
+To run Artisan command inside the running Docker app container run:
 
-Reset the password for the single administrator:
+```bash
+docker compose --env-file docker/.env.docker exec app php artisan <command>
+```
+
+Examples:
+
+```bash
+docker compose --env-file docker/.env.docker exec app php artisan admin:reset-password
+docker compose --env-file docker/.env.docker exec app php artisan admin:reset
+docker compose --env-file docker/.env.docker exec app php artisan works:cleanup-images
+```
+
+### Local / Manual Setup
+
+Requirements:
+- PHP 8.3
+- Composer
+- MySQL 8
+- Python 3.14.6 (currently tested version) and pip
+
+From the project root:
+
+1. Copy `.env.example` to `.env`.
+2. Configure the database and other environment values.
+3. Install PHP dependencies:
+
+```bash
+composer install
+```
+
+4. Generate the application key:
+
+```bash
+php artisan key:generate
+```
+
+5. Run migrations:
+
+```bash
+php artisan migrate
+```
+
+6. Create the public storage link:
+
+```bash
+php artisan storage:link
+```
+
+7. Create the scraper python virtual environment:
+
+```bash
+python -m venv python/venv
+```
+
+8. Activate the virtual environment:
+
+Windows:
+
+```bat
+python\venv\Scripts\activate
+```
+
+Linux/macOS:
+
+```bash
+source python/venv/bin/activate
+```
+
+9. Install scraper dependencies:
+
+```bash
+pip install -r python/requirements.txt
+```
+
+10. Keep a Laravel queue worker running when using Refetch:
+
+```bash
+php artisan queue:work
+```
+
+## Recovery and Maintenance
+
+### Reset Administrator Password
+
+If administrator exists:
 
 ```bash
 php artisan admin:reset-password
 ```
 
-The command uses masked new-password and confirmation prompts. It refuses to choose an account if the table contains zero or multiple rows.
+This command:
+- prompts for a new password and confirmation without echoing the password
+- refuses to choose an account when there are zero or multiple user rows
 
-Clear every user row and return to setup without changing authentication settings:
+Docker equivalent:
+
+```bash
+docker compose --env-file docker/.env.docker exec app php artisan admin:reset-password
+```
+
+### Reset Administrator Account
+
+To delete all administrator user rows and return authentication to setup:
 
 ```bash
 php artisan admin:reset
 ```
 
-The command displays a destructive confirmation. If authentication remains enabled, the next web request opens administrator setup.
+The command requires destructive confirmation and does not disable the Authentication option.
 
-### Trusted environment recovery
+If authentication remains enabled, the next application request opens administrator setup.
 
-`ADMIN_PASSWORD_RESET` defaults to `false`. Use it only when authentication is enabled, exactly one administrator exists, and interactive console recovery is unavailable:
+Docker equivalent:
 
-1. Set `ADMIN_PASSWORD_RESET=true` in the active `.env` or `docker/.env.docker`.
-2. Restart the local PHP/web process. For Docker, recreate the app container:
+```bash
+docker compose --env-file docker/.env.docker exec app php artisan admin:reset
+```
 
-   ```bash
-   docker compose --env-file docker/.env.docker up -d --force-recreate app
-   ```
+### Trusted Environment Password Recovery
 
-3. Open any application URL and enter a confirmed new password on the forced recovery page.
-4. Remove `ADMIN_PASSWORD_RESET` or set it back to `false`.
-5. Restart the PHP/web process or recreate the Docker app container again.
+Use this only when:
+- administrator authentication is enabled
+- console recovery is unavailable
+- application is on a trusted local environment/network
 
-This boolean switch temporarily exposes a password replacement form without login. Enable it only on a trusted local network. After one reset, DLSite List consumes the recovery request and blocks all normal pages with removal/restart instructions. It will not expose the form again or resume normal login until the active process observes the flag as false after restart.
+1. Set in the active `.env` or `docker/.env.docker`:
 
-The `/forgot-password` help page contains the same recovery commands and restart warning. DLSite List does not provide email-based password reset.
+```dotenv
+ADMIN_PASSWORD_RESET=true
+```
 
-## Database Settings
-Main DB settings are in:
-- `.env` for local/manual runtime
-- `docker/.env.docker` for Docker Compose runtime
-- `docker/.env.testing.docker` for Docker Compose test runtime
+2. Restart the PHP/web process. For Docker, recreate the app container:
+
+```bash
+docker compose --env-file docker/.env.docker up -d --force-recreate app
+```
+
+3. Open the application and complete the forced password reset.
+4. Set `ADMIN_PASSWORD_RESET` back to `false`.
+5. Restart/recreate the PHP/web process again.
+
+After one recovery is consumed, normal pages remain blocked until the running process sees the flag disabled after restart.
+
+### Clean Obsolete Work Images
+
+Run:
+
+```bash
+php artisan works:cleanup-images
+```
+
+Docker:
+
+```bash
+docker compose --env-file docker/.env.docker exec app php artisan works:cleanup-images
+```
+
+The command scans existing RJ work folders and removes obsolete cover/sample images that are no longer referenced by their work.
+
+It deliberately skips:
+- orphan RJ folders without a matching work
+- unknown filenames
+- nested files
+- non-image files
+
+Normal create/update/refetch flows already perform their own image cleanup where applicable. This command is for maintenance/recovery.
+
+### Refetch Cleanup
+
+`Options -> Refetch` includes cleanup for stored Refetch runs and staged Refetch files.
+
+Cleanup:
+- disabled while Refetch status is `running` or `cancelling`
+- deletes Refetch run/result history
+- clears staged Refetch content
+- preserves works
+- preserves canonical `storage/app/Works`
+- preserves canonical `storage/app/public/Works`
+
+## Environment Files
+
+Runtime files:
+
+| File | Purpose |
+| --- | --- |
+| `.env` | Local/manual application runtime |
+| `.env.example` | Local/manual environment template |
+| `.env.testing` | Local test runtime |
+| `.env.testing.example` | Local test environment template |
+| `docker/.env.docker` | Docker application runtime |
+| `docker/.env.testing.docker` | Docker test runtime |
+
+Testing-specific configuration is documented in [TESTING.md](TESTING.md).
+
+### Application Environment
+
+Important values include:
+
+```dotenv
+APP_NAME=
+APP_ENV=
+APP_KEY=
+APP_DEBUG=
+APP_URL=
+ADMIN_PASSWORD_RESET=false
+```
+
+Generate `APP_KEY` for a local/manual setup with:
+
+```bash
+php artisan key:generate
+```
+
+`ADMIN_PASSWORD_RESET` is a recovery switch, not a normal authentication setting. Keep it `false` unless intentionally performing trusted-environment recovery.
+
+### Database
 
 Relevant variables:
-- `DB_CONNECTION`
-- `DB_HOST`
-- `DB_PORT`
-- `DB_DATABASE`
-- `DB_USERNAME`
-- `DB_PASSWORD`
 
-## Log Rotation and Retention
+```dotenv
+DB_CONNECTION=mysql
+DB_HOST=
+DB_PORT=3306
+DB_DATABASE=
+DB_USERNAME=
+DB_PASSWORD=
+```
 
-Laravel and the DLSite scraper write weekly plain-text logs under `storage/logs`:
+Docker uses `database` as the application database host.
 
-- Laravel: `laravel-YYYY-MM-DD.log`
-- Python scraper: `DLSiteScraper-YYYY-MM-DD.log`
+### Queue
 
-The date is the UTC Monday that starts the log week. A new file is created on the first write in each Monday-through-Sunday UTC week. Completed weekly files stay in place as readable archives; no scheduler, compression, or rename step is used.
+Refetch uses Laravel's database queue and job batches.
 
-`LOG_RETENTION_DAYS` controls archive retention and defaults to `90`. It must be a positive integer; missing, invalid, zero, and negative values fall back to `90`. Laravel passes the normalized value to Python scraper subprocesses, while direct Python execution applies the same default itself.
+Normal setting:
 
-Cleanup is checked lazily on every log write. An archive becomes eligible only after its complete seven-day period plus the configured retention has elapsed, so the default effective retention is 90–96 days. Cleanup considers only valid Monday-dated files for the relevant logger and ignores the active week, future dates, malformed names, unrelated logs, and legacy log filenames. An archive already removed by another process is treated as successfully cleaned. Other cleanup failures are reported to PHP system error output or Python stderr without interrupting the application or scraper write.
+```dotenv
+QUEUE_CONNECTION=database
+```
 
-MySQL engine is configured as InnoDB in:
-- `config/database.php` (`mysql.engine`)
+For a local/manual installation, keep this worker running while Refetch is in use:
 
-Tag identity uses `genres.title_key` instead of the display `genres.title` column:
-- `genres.title_key` is trimmed and Unicode case-folded by PHP
-- `genres.title_key` uses binary collation so kana variants stay distinct
-- `genres.title` keeps the user/DLSite display casing and is not the uniqueness column
-- Tag Library renames preserve the submitted display casing and update the existing tag row. A case-only rename keeps the same `title_key`; a materially different rename receives a different `title_key`
-
-The Tag Library can create manual empty tags:
-- submitting a new tag title creates a `genres` row with zero `genre_product` pivots
-- duplicate input is detected through `genres.title_key`, so case-only duplicates are not created
-- empty tags are searchable and can be opened as Index tag filters before any work uses them
-- empty tags can be deleted from the Tag Library only while they still have zero product pivots
-- attached fetched tags are listed only for the current UI language's tag bucket; other fetched-language attachments remain stored
-
-The Tag Library can organize tags into groups:
-- group titles are stored in `genre_groups.title`
-- group order is stored in `genre_groups.order`
-- group membership and per-group tag order are stored in `genre_group_genre`
-- adding a tag to a group resolves an existing `genres.title_key` match or creates a new empty tag, then attaches that group/tag membership
-- the same tag can belong to multiple groups
-- adding the same tag to the same group again does not create a duplicate membership
-- removing a tag from a group deletes only that membership and keeps the tag row plus any other group memberships
-- deleting a group deletes only that group row and its membership rows; tag rows and other memberships remain
-- `genres.hidden_on_index` hides a specific tag from Index tag chips
-- `genre_groups.hidden_on_index` hides every tag assigned to that group from Index without changing each tag's own hidden setting
-- Index tag chips sort alphabetically by tag title by default; enabling `Enable group ordering on Index` switches visible grouped tags to group order and saved tag order inside each group, then shows ungrouped tags alphabetically. In both modes, a tag is excluded from Index when it is directly hidden or belongs to any hidden group.
-- `genres.color` and `genre_groups.color` store optional `#RRGGBB` background/accent colors. `genres.text_color` and `genre_groups.text_color` store optional independent font colors. Group background/font colors override tag background/font colors independently by the same ordered membership rules used for display; inside a specific group card, that group color value wins for whichever color value it defines.
-
-The All Tags list has a session-only `Edit tags` mode:
-- when off, clicking a tag opens Index filtered by that tag
-- when on, clicking a tag opens a tag settings modal instead of navigating
-- the modal can rename the shared tag. Duplicate case-folded titles are rejected, while product sources/languages, group memberships, colors, visibility, and parent/child relations stay attached to the same tag id
-- the mode uses a switch-style toggle bound to the Livewire `tagEditMode` checkbox state
-- the All Tags filter modal uses primary and optional secondary Alphabetical/Work count sorting. Primary defaults to `Alphabetical / Asc`, Secondary defaults to `None`, a secondary field that duplicates Primary is discarded, and both direction choices reuse the Index Asc/Desc segmented buttons
-- the `Add group` field is inside the Tag Groups section header, next to group management
-- `Enable group ordering on Index` is a persisted switch in the Tag Groups section and in Options; it is off by default, so saved group order affects Index tag-chip ordering only after enabling it. Both controls include the same help-circle explanation of grouped and ungrouped Index tag order
-- tag edit modals and Tag Group cards include separate background color and font color controls, each with a color picker, manual hex input, and Clear action; empty colors use the normal default tag style
-- manual color inputs use a muted `#000000` placeholder while an explicitly saved `#000000` value is shown as normal input text
-- the group rows and modal use switch-style toggles for tag and group Index visibility
-- Tag Library switch controls share the same `tag-library-switch-*` markup/CSS classes while keeping each native checkbox and Livewire binding intact
-- the modal can search existing tag groups through a dropdown-style search field, add them as assignment plaques, and remove selected plaques before saving
-- group search results are hidden until search text is entered; selected plaques and the empty selected-groups message stay below the search field
-- the modal has matching searchable Parent Tags and Child Tags selectors in one column, with Parent Tags on the first row and Child Tags on the second. A tag may have multiple parents and children, but self-relations and direct or indirect cycles are rejected
-- adding a child tag during Quick Add, Edit, or Refetch apply automatically adds every missing parent and ancestor to the work as `custom`; an ancestor already attached as `fetched` keeps its fetched source and language rows
-- saving a new relation immediately applies the same ancestor rule to existing works containing its child, whether the relation was added from the child's Parent Tags list or the parent's Child Tags list
-- removing a parent/child relation does not remove parent tags already attached to works; the modal uses the same Font Awesome help-circle markup and shared title-tooltip assets as the other application pages to document this additive behavior, including dynamic examples beside the Parent Tags and Child Tags descriptions that use the currently open tag title
-- after a material rename, Refetch continues comparing fetched names by `title_key`: the old DLSite name is a distinct tag, while case-only DLSite variants still resolve to the renamed tag without replacing its display casing
-- existing memberships keep their current per-group order
-- newly added memberships are appended to the end of each selected group
-- Cancel, backdrop click, and Escape close the modal without persisting unsaved group plaque changes
-- tags hidden directly or assigned to any hidden group show a compact red accessible status indicator inside the All Tags chip after the tag title and before the product count; group names and group-hidden state stay available through the Group filter and tag settings modal
-
-Docker database services:
-- `database` stores normal app data in the `dbdata` Docker volume
-- `database_test` stores test data in the `dbdata_test` Docker volume and is used only by the `tests` service
-
-## Queue and Scheduler
-Refetch DLSite Data runs through Laravel's database queue and job batches, with one job per selected work.
-
-Relevant variable:
-- `QUEUE_CONNECTION=database`
-
-Required migrations create:
-- `jobs`
-- `job_batches`
-- `refetch_runs`
-- `refetch_work_results`
-
-Run the queue worker from the project root while using Refetch DLSite Data:
 ```bash
 php artisan queue:work
 ```
 
-Cancellation is cooperative. Keep the queue worker running after pressing Cancel so an active fetch can finish and queued jobs can retain cancelled-before-fetch failures on the run.
+Cancellation is cooperative. After pressing Cancel, keep the worker running so active work can finish and queued jobs can record their cancelled state.
 
-`php artisan schedule:work` is only needed if a scheduled command is added. The project does not currently register a scheduled batch-pruning command.
+### Storage, Cache, and Session
 
-## App Options
-The `options` table stores app settings as scalar string values keyed by `options.key`.
+The supplied environment templates use:
 
-Current settings:
-- `ui_language`: controls the global application UI language. Stored values are `en` and `ja`; missing or invalid values fall back to `en`
-- `index_per_page`: controls how many works the Index list renders per page
-- `index_search_hidden_descriptions_enabled`: controls whether general Index search can match Japanese and English descriptions when their Index columns are hidden
-- `index_image_viewer_enabled`: controls whether Index thumbnails open saved images while the Image column is visible. Defaults to `false`
-- `optional_product_statuses`: JSON map controlling the optional On Hold and Dropped progress values. Defaults to `{"on_hold":false,"dropped":false}`
-- `tag_autocomplete_order`: controls how tag autocomplete suggestions are ordered
-- `series_autocomplete_order`: controls how series autocomplete suggestions are ordered
-- `auto_series_from_title_name`: controls whether Quick Add fills Series from DLsite metadata when no Series is entered
-- `dlsite_age_appropriate_links_enabled`: controls whether Index image/title links use the product's stored age to choose DLSite Home or Maniax. Defaults to `false`
-- `product_form_theme`: controls the Add by RJ Code, Add Manually, and Edit Details page theme. Defaults to `black`
-- `product_form_modal_enabled`: controls whether ordinary left-clicks open Quick Add and Index Edit Details links in a modal. Defaults to `false`
-- `product_form_modal_completion_action`: controls what the host page does after a successful modal create, update, or delete. Valid values are `redirect`, `refresh`, and `close`; invalid values fall back to `redirect`
-- `tag_library_tags_expanded_by_default`: controls whether Tag Library opens with the full tag list shown
-- `tag_library_index_group_ordering_enabled`: controls whether Index tag chips use tag group order instead of plain alphabetical title ordering
-- `tag_color_surfaces`: JSON map controlling where stored tag/group background and font colors render. Defaults are `index=true`, `tag_library=true`, `autocomplete=false`, `edit_readonly=false`, and `refetch=false`.
-  The Index surface keeps its color fast path inactive until at least one tag or tag group has a saved background/font color.
-- `index_field_layout`: controls Index table field visibility/order
-- `edit_field_layout`: controls Edit Details field visibility/order/editability
-- `filter_field_layout`: controls Filter modal field visibility/order
-- `quick_add_field_layout`: controls DLSite Create field visibility/order
-- `custom_quick_add_field_layout`: controls Custom Create field visibility/order
-- `index_sort_field_layout`: controls Advanced Filter sort value visibility/order
-- `index_table_width`: controls the Index list/table width and top cover image width
-- `index_content_overflow`: JSON map controlling optional height limits for inline Notes, the standalone Notes column, and Tags
+```dotenv
+FILESYSTEM_DISK=local
+CACHE_DRIVER=file
+SESSION_DRIVER=file
+SESSION_LIFETIME=120
+```
 
-Runtime note:
-- `App\Models\Option` normalizes stored strings into the runtime values the app uses
+These are the project's supplied defaults. Work images and Refetch staging explicitly use the named `local` and `public` disks from `config/filesystems.php`; changing `FILESYSTEM_DISK` alone does not move those files to another storage backend.
 
-UI language behavior:
-- Options -> General shows an `English` / `日本語` dropdown backed by `options.ui_language`
-- English is the default; missing or invalid persisted values fall back to English, while invalid dropdown submissions are rejected
-- this is one application-wide setting shared by every browser and session, not a per-user preference
-- app-owned interface copy uses `lang/en.json` and `lang/ja.json`; page `lang` attributes, month names, labels, notices, and accessibility text follow the active locale
-- Save and individual Reset reload the General tab; Reset All reloads its originating Options tab. Notices use the destination locale
-- UI `en` selects stored fetched-tag language `en`; UI `ja` selects stored fetched-tag language `jp`
-- routes, query/API values, database values, user content, and generic Laravel/vendor validation remain unchanged
+Refetch lifecycle protection uses Laravel atomic cache locks. If `CACHE_DRIVER` is changed, use a configured cache store that supports Laravel atomic locks.
 
-Pagination default:
-- `100`
+### Logs
 
-Pagination built-in choices:
-- `10`
-- `25`
-- `50`
-- `100`
-- `250`
-- `500`
-- `1000`
-- `unlimited`
+Laravel and the DLSite scraper write weekly logs under `storage/logs`:
 
-The General tab also accepts a custom positive integer. `unlimited` disables Index pagination and renders every matching work.
+```text
+laravel-YYYY-MM-DD.log
+DLSiteScraper-YYYY-MM-DD.log
+```
 
-Tag editing defaults:
-- Index Table Columns shows one Tags column with separate Custom Tags and current-language Fetched Tags visibility toggles; both buckets are visible by default
-- Edit Form Fields show separate current-language Fetched Tags and Custom Tags rows in that default order; both are visible by default
-- Custom Tags editable: enabled by default in the Edit Form layout
-- Fetched Tags editable: disabled by default unless its Edit Form row enables it
+The filename date is the UTC Monday starting that log week.
 
-When Fetched Tags editing is enabled, Edit Details changes only the current UI locale's fetched bucket. Other fetched-language and custom tags remain stored unless their own editable field is submitted.
+Retention is configured with:
 
-Automatic Series from DLsite metadata default:
-- enabled
+```dotenv
+LOG_RETENTION_DAYS=90
+```
 
-When enabled, Quick Add fills Series from `japanese.title_name`, falling back to `english.title_name`, when no Series is entered. Manually entered Series values win. Custom Quick Add and Refetch do not use this option.
+Rules:
+- default: `90`
+- value must be a positive integer
+- missing/invalid/zero/negative values fall back to `90`
+- cleanup happens lazily during log writes
+- current week is not deleted
+- retention is based on completed whole log weeks, so a 90-day setting effectively retains an archive for 90–96 days
 
-DLSite age-appropriate link default:
-- disabled
+## Options
 
-When disabled, every Index DLSite image/title link uses `https://www.dlsite.com/maniax/work/=/product_id/{RJ}.html` without loading or evaluating the product's age. When enabled, an exact stored `ALL_AGES` value uses DLSite Home; `R15`, `R18`, missing, and malformed legacy values use Maniax. The setting does not make the Index Age column visible; Index hydrates `age_category` separately only while the setting is enabled.
+Application UI settings are stored in the `options` table and configured from `/options`.
 
-The General -> DLSite Links switch includes a question-mark tooltip describing this mapping. Saving applies to the next Index render. Individual reset and Reset All Options restore the disabled default.
+Tabs:
+- `General`
+- `Field Layouts`
+- `Authentication`
+- `Refetch`
 
-Image Viewer default:
+`Reset All Options` is available on both General and Field Layouts. Using it resets all settings from both tabs to their defaults. Authentication settings are not affected.
 
-- disabled
+### General
 
-When disabled, Index thumbnails use their configured DLSite destination. When enabled, Index thumbnails open the saved-image viewer. The viewer is available only while the Image field is visible under Field Layouts -> Index Table Columns; hiding that field does not change the saved setting.
+#### UI Language
 
-The General -> Image Viewer switch is stored in `options.index_image_viewer_enabled`. Saving applies on the next Index render. Individual reset and Reset All Options restore the disabled default.
+Default: `English`
 
-Optional product status defaults:
+Choices:
+- `English` (`en`)
+- `日本語` (`ja`)
 
+The setting is application-wide, not per browser/user.
+
+The UI language also selects the fetched-tag display bucket:
+- `en` UI -> `en` fetched tags
+- `ja` UI -> `jp` fetched tags
+
+#### Index Pagination
+
+Default: `100`
+
+Built-in choices:
+
+```text
+10
+25
+50
+100
+250
+500
+1000
+unlimited
+```
+
+A custom positive integer is also accepted.
+
+`unlimited` renders every matching work without pagination.
+
+#### Index Search
+
+`Search hidden descriptions` is disabled by default.
+
+When disabled:
+- general Index search includes Japanese Description only when that Index column is visible
+- general Index search includes English Description only when that Index column is visible
+
+When enabled:
+- general Index search can match both description languages even while their Index columns are hidden
+
+The explicit Japanese/English description filters are independent of this setting.
+
+#### Image Viewer
+
+Default: disabled.
+
+When enabled:
+- clicking an Index thumbnail opens the saved cover and sample images in "Image Viewer"
+- the viewer operates only while the Image Index field is visible
+
+Hiding the Image field does not reset the saved Image Viewer option.
+
+#### Optional Statuses
+
+Defaults:
 - On Hold: disabled
 - Dropped: disabled
 
-Both switches are independent and are saved together by General -> Optional Statuses. Enabling one makes it available in DLSite Quick Add, Custom Quick Add, Edit Details, the Index progress menu, and Advanced Filter. The order is All ASMR, Currently Listening, Completed, optional On Hold, optional Dropped, then Plan to Listen. New works still default to Plan to Listen.
+Enabling a status exposes it in:
+- DLSite Quick Add
+- Custom Quick Add
+- Edit Details
+- Index progress navigation
+- Advanced Filter
 
-Disabling a status never rewrites products. A work already stored as On Hold or Dropped remains visible in All ASMR and matching filtered results. Add, Advanced Filter, and the Index status tabs hide disabled values; Edit also hides them except when the product currently has that status, allowing it to remain selected or be changed. The switches do not add request-validation rules. The saved Edit Field Layout still controls whether the Progress row is visible.
+Disabling a status does not rewrite status of works that already use it.
 
-Advanced Filter hides disabled optional choices.
+#### Autocomplete
 
-Product form theme default:
+Controls how Tag and Series autocomplete suggestions are ordered.
+
+Tag autocomplete order:
+
+* `usage` - default; most-used matching tags are shown first
+* `first_word` - prioritizes matches at the start of the tag, then at the start of later words; usage breaks ties
+
+Series autocomplete order:
+
+* `usage` - default; most-used matching series are shown first
+* `first_word` - prioritizes matches at the start of the series name, then at the start of later words; usage breaks ties
+
+#### Automatic Series
+
+`Automatic Series from DLsite metadata` is enabled by default.
+
+When enabled, DLSite Quick Add fills Series only when the user did not enter one:
+1. `japanese.title_name`
+2. fallback `english.title_name`
+
+It does not apply to Custom Quick Add or Refetch.
+
+#### DLSite Links
+
+Age-appropriate DLSite links are disabled by default.
+
+Disabled:
+- all Index image/title DLSite links use Maniax URL
+
+Enabled:
+- exact `ALL_AGES` -> DLSite Home URL
+- `R15`, `R18`, missing, or malformed values -> Maniax URL
+
+#### Add/Edit Form Theme
+
+Default: `black`.
+
+Choices:
+- `cherry`
 - `black`
 
-Product form theme choices:
-- `cherry`: uses the same warm Cherry palette as Index, Tag Library, and Options
-- `black`: preserves the previous dark Add/Edit form style
+This theme applies to:
+- DLSite Quick Add
+- Custom Quick Add
+- Edit Details
 
-Add/Edit modal defaults:
+#### Add/Edit Modal
+
+Default:
 - disabled
-- completion action `redirect`
+- completion action: `redirect`
 
-Add/Edit modal completion choices:
-- `redirect`: navigate the host page to Laravel's calculated Index redirect, preserving its filter, page, and work-anchor behavior
-- `refresh`: close the modal and reload the page that opened it
-- `close`: close the modal without navigating or refreshing; the visible host page may remain stale until it is reloaded
+Completion choices:
+- `redirect` - navigate the host page to calculated Index return URL
+- `refresh` - close the modal and reload the page that opened it
+- `close` - close without navigation; the host page may remain stale
 
-The modal setting applies to Quick Add on Index, Options, Tag Library, and Refetch pages, and to Edit Details links on Index. It intercepts only an unmodified primary-button click. Middle-click, right-click, Ctrl/Cmd/Shift/Alt-click, links with another target, and browsers without native `<dialog>` support keep normal anchor navigation, so the same URL can still be opened as a standalone page.
+The modal applies to ordinary primary-click Quick Add/Edit navigation. Real standalone links remain available for modified/middle-click navigation.
 
-The modal uses a same-origin iframe and adds `modal=1` only to that iframe request. The marker survives switching between DLSite and Custom Create, validation redirects, and create/update/delete submissions. After a successful submission, the iframe posts Laravel's calculated redirect URL to the host page, which applies the selected completion action. The modal can also be dismissed with its Close button, Escape, or a backdrop click; Go Back/Close inside the form closes the modal without reporting a successful change. Its JavaScript fallback title comes from the localized `data-work-form-default-title` on the modal host rather than a JavaScript translation catalog.
+#### Index Table Width
 
-The master switch and each completion choice include question-mark help text. Saving or resetting these Livewire settings updates modal behavior immediately on the Options page.
+Default: `default` choice
 
-Each Field Layout block can be saved independently. Saving one block leaves unsaved changes in the other blocks intact. The bottom Save all field layouts button saves all six layouts together.
+Choices:
+- `default` - 1024px
+- `wide` - 1400px
+- `full` - 100%
+- custom width - supports `px`, `rem`, `em`, `%`, or `vw`
 
-The locked Index Title row includes a separate `Notes below Title` switch. It is enabled by default and controls whether each work's Notes appear beneath its title; its question-mark help circle describes that behavior. The Index Notes field also displays its separate-column explanation in a question-mark help circle instead of permanent inline text.
+#### Index Content Overflow
 
-Index field layout default order:
+Three independent targets:
+- Notes below Title
+- Notes column
+- Tags
+
+Defaults for each are:
+- disabled
+- `80px`
+
+Enabled accept positive values using `px`, `rem`, `em`, `%`, `vw`, `vh`, `vmin`, `vmax`, `svh`, `lvh`, or `dvh`
+
+Disabled targets are normalized back to the default `80px`.
+
+#### Tag Library
+
+Defaults:
+- "All Tags" list collapsed
+- Index tag group ordering disabled
+
+When Index tag group ordering is enabled:
+1. grouped tags follow saved group order
+2. tags within groups follow saved per-group order
+3. ungrouped tags follow alphabetically
+
+Tag/group color defaults:
+- Index - enabled;
+- Tag Library - enabled;
+- Autocomplete suggestions - disabled;
+- Edit readonly tags - disabled;
+- Refetch review tags - disabled;
+
+### Field Layouts
+
+Six layouts are configurable:
+
+1. Index Table Columns
+2. Index Filter Fields
+3. Index Sort Menu
+4. Edit Form Fields
+5. Quick Add Form Fields
+6. Custom Quick Add Form Fields
+
+Each layout can be saved independently. `Save all field layouts` saves all six.
+
+Rows can be reordered and shown/hidden where allowed. Edit rows can also expose an `Editable` setting where supported.
+
+Required fields remain visible.
+
+Index Title is locked visible but reorderable. Its independent `Notes below Title` switch is enabled by default.
+
+Index Tags has separate visibility switches for:
+- Custom Tags
+- current-language Fetched Tags
+
+Edit uses separate rows for:
+- Custom Tags
+- current-language Fetched Tags
+
+Fetched Tags are readonly by default. If made editable, editing changes only the current UI language's fetched bucket.
+
+#### Index Table Columns Default Order
+
 - `image`
-- `title` locked visible, with Notes below Title enabled by default
+- `title` - locked visible; Notes below Title enabled
 - `score`
 - `series`
 - `age_category`
 - `progress`
-- `circle` hidden by default
-- `scenario` hidden by default
-- `illustration` hidden by default
-- `voice_actor` hidden by default
-- `author` hidden by default
-- `description_japanese` hidden by default
-- `description_english` hidden by default
-- `tags` with Custom Tags and current-language Fetched Tags visible by default
-- `notes` hidden by default; this row independently enables a separate Notes column
-- `start_date` hidden by default
-- `end_date` hidden by default
-- `num_re_listen_times` hidden by default
-- `re_listen_value` hidden by default
-- `priority` hidden by default
-- `created_at` (Added to the site Date) hidden by default
-- `updated_at` (Updated Date) hidden by default
+- `circle` - hidden
+- `scenario` - hidden
+- `illustration` - hidden
+- `voice_actor` - hidden
+- `author` - hidden
+- `description_japanese` - hidden
+- `description_english` - hidden
+- `tags` - Custom and current-language Fetched Tags visible
+- `notes` - hidden
+- `start_date` - hidden
+- `end_date` - hidden
+- `num_re_listen_times` - hidden
+- `re_listen_value` - hidden
+- `priority` - hidden
+- `created_at` - hidden
+- `updated_at` - hidden
 
-When enabled, the two timestamp columns render their database values as `YYYY-MM-DD HH:mm`. Both headers use the existing Added Date and Updated Date Index sort fields. The Updated Date option includes a help circle explaining that it is the time when the work was last updated in the library.
+#### Edit Form Default Order
 
-Edit form field layout default order:
 - `progress`
 - `score`
 - `series`
-- `title` locked visible
-- `fetched_tags` shown through the current-locale `Fetched Language Tags` key (`Fetched EN Tags` in English or `取得済みJPタグ` in Japanese)
-- `tags` shown as Custom Tags
-- `notes`
-- `start_date`
-- `end_date`
-- `num_re_listen_times`
-- `re_listen_value`
-- `priority`
-- `age_category` hidden by default
-- `circle` hidden by default
-- `scenario` hidden by default
-- `illustration` hidden by default
-- `voice_actor` hidden by default
-- `author` hidden by default
-- `description_japanese` hidden by default
-- `description_english` hidden by default
-
-Filter modal field layout default order:
-- `title`
-- `score`
-- `series`
-- `age_category`
-- `progress`
-- `notes`
-- `priority`
-- `num_re_listen_times`
-- `re_listen_value`
-- `tags` shown as Custom Tags
-- `start_date` hidden by default
-- `end_date` hidden by default
-- `created_at` hidden by default
-- `updated_at` hidden by default
-- `circle` hidden by default
-- `scenario` hidden by default
-- `illustration` hidden by default
-- `voice_actor` hidden by default
-- `author` hidden by default
-- `description_japanese` hidden by default
-- `description_english` hidden by default
-
-Quick Add field layout default order:
-- `rj_code` locked visible
-- `progress`
-- `score`
-- `series`
-- `title`
-- `tags` shown as Custom Tags
-- `notes`
-- `start_date`
-- `end_date`
-- `num_re_listen_times`
-- `re_listen_value`
-- `priority`
-- `age_category` hidden by default
-- `circle` hidden by default
-- `scenario` hidden by default
-- `illustration` hidden by default
-- `voice_actor` hidden by default
-- `author` hidden by default
-- `description_japanese` hidden by default
-- `description_english` hidden by default
-
-Custom Quick Add field layout default order:
-- `rj_code` locked visible
-- `progress`
-- `score`
-- `series`
-- `title` locked visible
+- `title` - locked visible
+- `fetched_tags`
 - `tags`
 - `notes`
-- `age_category` locked visible
-- `image` locked visible
+- `start_date`
+- `end_date`
+- `num_re_listen_times`
+- `re_listen_value`
+- `priority`
+- `age_category` - hidden
+- `circle` - hidden
+- `scenario` - hidden
+- `illustration` - hidden
+- `voice_actor` - hidden
+- `author` - hidden
+- `description_japanese` - hidden
+- `description_english` - hidden
+
+#### Index Filter Default Order
+
+- `title`
+- `score`
+- `series`
+- `age_category`
+- `progress`
+- `notes`
+- `priority`
+- `num_re_listen_times`
+- `re_listen_value`
+- `tags`
+- `start_date` - hidden
+- `end_date` - hidden
+- `created_at` - hidden
+- `updated_at` - hidden
+- `circle` - hidden
+- `scenario` - hidden
+- `illustration` - hidden
+- `voice_actor` - hidden
+- `author` - hidden
+- `description_japanese` - hidden
+- `description_english` - hidden
+
+#### Quick Add Default Order
+
+- `rj_code` - locked visible
+- `progress`
+- `score`
+- `series`
+- `title`
+- `tags`
+- `notes`
+- `start_date`
+- `end_date`
+- `num_re_listen_times`
+- `re_listen_value`
+- `priority`
+- `age_category` - hidden
+- `circle` - hidden
+- `scenario` - hidden
+- `illustration` - hidden
+- `voice_actor` - hidden
+- `author` - hidden
+- `description_japanese` - hidden
+- `description_english` - hidden
+
+Hidden DLSite Quick Add metadata fields are not accepted as user overrides, but their scraped age/circle/contributor/description values are still preserved from DLsite.
+
+#### Custom Quick Add Default Order
+
+- `rj_code` - locked visible
+- `progress`
+- `score`
+- `series`
+- `title` - locked visible
+- `tags`
+- `notes`
+- `age_category` - locked visible
+- `image` - locked visible
 - `sample_images`
 - `start_date`
 - `end_date`
 - `num_re_listen_times`
 - `re_listen_value`
 - `priority`
-- `circle` hidden by default
-- `scenario` hidden by default
-- `illustration` hidden by default
-- `voice_actor` hidden by default
-- `author` hidden by default
-- `description_japanese` hidden by default
-- `description_english` hidden by default
+- `circle` - hidden
+- `scenario` - hidden
+- `illustration` - hidden
+- `voice_actor` - hidden
+- `author` - hidden
+- `description_japanese` - hidden
+- `description_english` - hidden
 
-Index sort field dropdown default order:
+Custom Quick Add has no scraper fallback. Hidden optional description rows store `null`.
+
+#### Index Sort Menu Default Order
+
 - `rj`
 - `score`
 - `series`
@@ -465,116 +690,45 @@ Index sort field dropdown default order:
 - `start_date`
 - `end_date`
 - `created_at`
-- `updated_at` hidden by default
-- `circle` hidden by default
-- `scenario` hidden by default
-- `illustration` hidden by default
-- `voice_actor` hidden by default
-- `author` hidden by default
+- `updated_at` - hidden
+- `circle` - hidden
+- `scenario` - hidden
+- `illustration` - hidden
+- `voice_actor` - hidden
+- `author` - hidden
 
-The Index Table Columns, Index Filter Fields, Edit Form Fields, Quick Add Form Fields, and Custom Quick Add Form Fields sections each store their own layout JSON in `options.value`. Rows can be reordered by dragging the row handle or with the Up/Down buttons, and changes are persisted on Save. Unknown or duplicate field ids are ignored, and missing known fields use surface defaults. Required fields remain visible.
+Hiding a value from the Index Sort Menu only removes it from that dropdown. It does not invalidate otherwise supported URL/table-header sorting.
 
-Index `title` stores `notes_visible`, defaulting to `true` when the flag is missing so existing saved layouts keep showing Notes beneath Title. Index `tags` stores `custom_visible` and `fetched_visible`. Edit uses separate `tags` and `fetched_tags` rows so Custom Tags and current-language Fetched Tags can be ordered, shown, hidden, and made editable independently. Saved rows contain field ids and behavioral flags; localized labels and notes are derived at runtime. Index Filter Fields and Index Sort Menu do not split Title or Tags.
+### Authentication
 
-The Index Sort Menu section appears after Index Filter Fields and uses the same Options row controls to reorder and show/hide values in the Advanced Filter sort dropdowns. It only changes the dropdown presentation: valid URL sort state and sortable visible table columns keep sorting through `ProductIndexSortField`. Sortable optional Index headers include circle/creator columns, start/finish dates, total times re-listened, re-listen value, and priority when those columns are visible.
+Administrator authentication is disabled by default.
 
-Each of the six Field Layout section headings includes a help circle naming the affected Index table, Advanced Filter, Edit Details, Quick Add, or Custom Quick Add surface. The explanations cover ordering and show/hide behavior, while Edit Form Fields also explains the separate Editable switches.
+`Authentication` configures:
 
-Create form layout note:
-- hidden Quick Add fields are not persisted from submitted form data
-- DLSite Create still keeps scraped DLSite metadata for hidden age, circle, creator, Japanese description, and English description rows
-- visible DLSite Create metadata rows act as manual overrides when the user enters a value
-- visible Custom Quick Add metadata rows are saved directly because custom works have no scraped fallback; hidden custom description language rows save `null`
+* administrator login enabled/disabled
+* authentication-page theme
+* authenticated password change
 
-Index table width default:
-- `default`
+Authentication theme choices:
 
-Index table width choices:
-- `default`: current 1024px list width
-- `wide`: 1400px list width
-- `full`: 100% of the available page width
-- custom CSS length or percentage, for example `1600px`, `90%`, `80vw`, `72rem`, or `64em`
+* `Cherry` - default
+* `Black`
 
-This width is applied to the Index list/table panel, top cover image, and progress menu. Progress links are centered independently of Index Search, keep their labels intact, and contract their spacing or wrap between complete links as needed. Desktop Search uses the free space to their right without crossing the rightmost link or the table/image boundary. At mobile widths, the full Search field moves between the selected progress heading and the Filters button and shrinks to avoid either control. The top cover image keeps a capped desktop height, and product row thumbnails keep their fixed list size.
+Authentication settings are not affected by `Reset All Options`.
 
-Index content overflow defaults:
+When authentication is enabled, application supports a single administrator account.
 
-- inline Notes beneath Title: disabled, `80px`
-- standalone Notes column: disabled, `80px`
-- Tags column: disabled, `80px`
+Username matching is case-sensitive. Passwords must be 8–256 characters long.
 
-General -> Overflow saves the three switches and heights together in `options.index_content_overflow`. Disabled targets use the default height (`80px`); saving discards their previous custom heights and hidden draft edits, including invalid values. Older stored custom heights for disabled targets are also treated as `80px` when loaded. Enabled limits apply to both desktop and mobile Index layouts. Each enabled field gets a Show all/Show less control, even when its content is short or empty. Show all removes the CSS height limit; Show less restores it. Expansion is browser-local and is not persisted or sent through Livewire.
+### Refetch
 
-Enabled targets' heights must be positive CSS lengths using `px`, `rem`, `em`, `%`, `vw`, `vh`, `vmin`, `vmax`, `svh`, `lvh`, or `dvh`. Values are trimmed and lowercased when saved. CSS functions, variables, negative/zero values, missing units, and unknown units are rejected. `%` is applied as literal CSS; because Index cells have automatic height, its result depends on the surrounding layout and may not create a useful clamp. Missing, partial, or malformed stored JSON falls back per value to the disabled/`80px` defaults.
+`Refetch` contains:
+- Refetch All Works
+- Refetch Selected Works
+- run-wide `Refetch Images` choice
+- progress/cancel state
+- latest-run link
+- review/apply/reject controls
+- Refetch cleanup
 
-Options page tabs:
-- `General` is the default tab and contains UI Language, Index Pagination, Index Search, Image Viewer, Index Table Width, Overflow, Series Metadata, Add/Edit form theme and modal behavior, Autocomplete, Tag Library settings, and Reset All Options
-- `Field Layouts` is the second tab and contains Index Table Columns, Index Filter Fields, Index Sort Menu, Edit Form Fields, Quick Add Form Fields, Custom Quick Add Form Fields, and Reset All Options
-- `Authentication` contains the default-off administrator login switch, independent Cherry/Black authentication-page theme, account status, and authenticated password change
-- `Refetch` separates Refetch All Works and Refetch Selected Works into distinct vertically stacked cards, with an optional run-wide Refetch Images choice and inline help, Livewire progress and review state, shared custom modal confirmations for Apply Tab, Apply All, Reject Run, and Ignore Remaining and Finish, cancellation, an independent latest-run link, and an always-visible right-aligned cleanup action
-- Refetch cleanup includes a help circle and confirmation modal. It is disabled while any run is running or cancelling, and a shared Laravel atomic lock prevents cleanup from overlapping creation of a new run or application of review changes. Cleanup commits deletion of `refetch_runs` with cascaded `refetch_work_results` before clearing every staged item below both Refetch roots while preserving the roots. If staged-file removal fails, cleanup can be run again for the remaining orphaned files; products and canonical `Works` files remain unchanged
-
-Options reset behavior:
-- each visible Options setting has a modal-confirmed `Reset to default` action
-- `Reset All Options` is shown on the General and Field Layouts tabs, opens the same Options confirmation modal, and resets settings from both tabs together
-- reset buttons are right-aligned in full-width Options action rows
-- reset confirmation modals are teleported to the document body so they stay centered in the viewport instead of inside the Options panel
-- reset confirmation modals close from Cancel, Escape, or clicking outside the modal card
-- the global reset confirmation button is disabled for 3 seconds and shows a countdown before it can be clicked
-- reset defaults are UI language `en`, pagination `100`, hidden-description search disabled, Image Viewer disabled, On Hold/Dropped disabled, table width `default`, all five default field layouts, all default Index sort dropdown values, automatic Series enabled, product form theme `black`, Add/Edit modals disabled with completion action `redirect`, Tag Library collapsed, Index group ordering disabled, and autocomplete `usage`
-- global reset does not change Authentication-tab settings, products, tags, refetch runs, legacy hidden fallback keys, or unrelated future option rows
-
-Index search defaults:
-- general Index search ignores Japanese and English descriptions while their Index columns are hidden
-- showing `description_japanese` makes general search include `products.description`
-- showing `description_english` makes general search include `products.description_english`
-- enabling `Search hidden descriptions` makes general search include both description columns even while both Index columns are hidden
-- the explicit Japanese Description filter uses the `description` query key and searches `products.description`
-- the explicit English Description filter uses the `description_english` query key and searches `products.description_english`
-
-Tag Library defaults:
-- collapsed by default
-- when enabled, `/tags` opens with the full tag list shown
-- typing in Tag Library search still opens matching results regardless of this default
-- the filter modal starts with every filter set to All/Any and sorting set to Alphabetical + Ascending; these controls are not configurable or URL-persisted
-- Index group ordering is disabled by default
-- when enabled, Index tag chips use saved group order, saved tag order inside groups, then ungrouped tags alphabetically instead of plain alphabetical title ordering
-- the Options page shows inline helper tooltips for the expanded-list, Index group-ordering, and Field Layouts Updated Date Index/filter/sort switches
-- tag background/font colors render on Index and Tag Library by default, while Autocomplete suggestions, Edit readonly tags, and Refetch review tags stay uncolored until enabled in Options. Edit readonly tag colors render inline inside the normal readonly text field.
-
-Autocomplete ordering default:
-- `usage`
-
-Autocomplete ordering choices:
-- `usage`: orders matching suggestions by attached work count and then title
-- `first_word`: shows values that start with the typed query before later-word matches, then orders each group by attached work count and title
-
-## Scraper Runtime Paths
-- Python script: `python/DLSiteScraper.py`
-- Python requirements: `python/requirements.txt`
-- Normal Add JSON output: `storage/app/Works/{RJ}.json`
-- Normal Add image output: `storage/app/public/Works/{RJ}/*`
-- Refetch staged JSON: `storage/app/Refetch/{run}/Works/{RJ}.json`
-- Refetch staged images when requested: `storage/app/public/Refetch/{run}/Works/{RJ}/*`
-
-Refetch derives these staging paths from the run and work ids when fetching and promoting files; it does not persist duplicate path columns.
-
-Scraped JSON files are also used by the product metadata backfill migration. The migration reads `storage/app/Works/{RJ}.json` when it exists and skips missing or invalid JSON without blocking the migration.
-
-Laravel supplies the work id, JSON path, log directory, and optional image directory to `DLSiteScraper.py`. Python always writes complete JP/EN JSON to that exact path, downloads images only when the image directory is present, performs no retries, and prints a structured image manifest. PHP retries failed processes or reported image failures up to five times and trusts the latest successful manifest without combining attempts or scanning image files. A successful process must return a valid manifest and valid destination JSON; existing JSON is never used as a fallback. PHP also owns review state and canonical/staged promotion. Promotion uses checked Laravel filesystem copies; a failed copy leaves the run in review with its affected tab retryable instead of marking the run Applied.
-
-Refetch and Quick Add translate only current recognized app-defined errors at display boundaries. Persisted and logged errors remain raw, and legacy messages plus unknown Python, API, exception, stdout, or stderr text are shown verbatim.
-
-## Cover and Sample Image Cleanup
-
-Run `php artisan works:cleanup-images` to remove obsolete covers and out-of-range samples (if any errors occured. Not needed for normal use).
-
-Refetch performs this cleanup automatically whenever refetched cover or sample images are applied. The command is only needed for manual cleanup.
-
-## Custom Work Upload Paths
-- Required custom cover upload output: `storage/app/public/Works/{RJ}/cover.{ext}`
-- Optional custom sample upload output: `storage/app/public/Works/{RJ}/sample_1.{ext}`, `sample_2.{ext}`, etc.
-- Custom cover and sample uploads are validated as image files up to 20 MB each.
-- Stored public paths use the existing `/storage` link format, for example `storage/Works/{RJ}/sample_1.jpg`
-- Custom cover uploads set `products.work_image` to the public path with the uploaded image extension, for example `storage/Works/{RJ}/cover.png`
-- Local/manual setup still needs `php artisan storage:link` so uploaded custom images are browser-accessible
+Refetch requires the Laravel queue worker and the application's database, storage, and cache configuration. No separate Refetch-specific environment variables are required.

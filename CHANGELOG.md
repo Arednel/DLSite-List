@@ -8,6 +8,7 @@ All notable changes to this project are documented in this file.
 
 * Replaced the mobile Options tabs with an expandable navigation list.
 * Reorganized the changelog into versioned sections grouped by change type.
+* Updated architecture, configuration, and testing documentation to match current project behavior and improve clarity
 
 ## 1.8.7 - 2026-09-08
 

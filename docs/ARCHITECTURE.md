@@ -1,426 +1,497 @@
 # Architecture
 
-## Stack
-- Backend: Laravel 12 (PHP 8.3)
-- Frontend: Blade templates, Livewire for the Index list, Options work search/settings/refetch progress and review, and plain CSS/JS
+This document describes how DLSite List works at runtime and how its major application pieces fit together.
+
+For installation, environment variables, Options settings, recovery commands, and other configuration, see [CONFIGURATION.md](CONFIGURATION.md).  
+For test commands and the current test inventory, see [TESTING.md](TESTING.md).
+
+## Main Application Flows
+
+### Index
+
+`GET /` is the main library page.
+
+1. `ProductController@index` renders `resources/views/Index.blade.php`.
+2. `app/Livewire/ProductIndex.php` owns Index state:
+   - progress/status
+   - general search
+   - field filters
+   - tag filters
+   - date ranges
+   - primary/secondary sorting
+   - pagination
+   - URL query-string state
+3. `ProductIndex` normalizes request/Livewire state through `ProductIndexFilters`.
+4. `ProductIndexResults` builds the filtered/sorted database query and selects only product columns needed by the current Index layout and runtime settings.
+5. `ProductIndexRowBuilder` converts hydrated products and contributor rows into typed presentation rows for Blade.
+6. Blade renders the saved Index field order as a desktop table or mobile cards.
+
+Index state is kept in the query string so filtered/sorted views can be linked and restored.
+
+`ProductIndexSettings` loads the Index-related `options` values in one batched lookup per render. It prepares:
+- Index field layout
+- Filter layout
+- table width
+- content overflow
+- Image Viewer state
+- Add/Edit modal state
+- optional progress-status state
+- DLSite link behavior
+
+Tag and contributor data is loaded only when the current visible fields need it.
+
+### Quick Add from DLsite
+
+`GET /create` opens DLSite Quick Add and `POST /store` creates the work.
+
+1. `StoreProductRequest` validates submitted form data.
+2. `ProductController` requests the RJ work through `DLSiteWorkFetcher`.
+3. `DLSiteWorkFetcher` calls `DLSitePythonRunner`.
+4. The PHP side invokes `python/DLSiteScraper.py` with explicit JSON/image/log destinations.
+5. PHP owns the fetch retry loop and validates the scraper result.
+6. Scraped metadata is converted by `DLSiteWorkData`.
+7. Product, tag, contributor, canonical JSON, and image data is stored.
+8. The created work returns to the appropriate Index destination.
+
+The fetcher can retry a failed DLsite fetch up to five times. Python does not own a second retry loop.
+
+The Quick Add field layout controls which user-editable override rows are submitted. Hidden DLSite metadata fields such as age, circle, contributors, and descriptions can still be populated from scraped data.
+
+### Custom Quick Add
+
+`GET /create/custom` opens manual creation and `POST /store/custom` stores it.
+
+Custom Quick Add:
+- does not call the DLsite scraper
+- requires a local cover image
+- can store optional sample images
+- uses the Custom Quick Add field layout
+- stores only submitted visible optional metadata because there is no scraped fallback
+
+Custom works still use the normal product/tag/contributor model and can participate in the library and Refetch selection workflow.
+
+### Edit and Delete
+
+`GET /edit/{product}` renders Edit Details.
+
+`POST /update/{product}`:
+- validates through `UpdateProductRequest`
+- applies only fields that the saved Edit layout allows to be edited
+- preserves hidden/read-only values
+- synchronizes tags and contributors through shared support classes
+- updates derived sort keys when relevant values change
+
+`POST /destroy/{product}` first attempts to remove the canonical JSON and public image directory, logs cleanup failures, then deletes the product row.
+
+`ReturnTarget` and product-aware return logic preserve normalized Index filters, sorting, and pagination across mutations. Create/Edit return to the affected product and its appropriate page; Delete removes the product anchor and clamps the saved page when deletion makes the previous page invalid.
+
+### Tag Library
+
+`GET /tags` renders the Tag Library shell and mounts `app/Livewire/TagLibraryManager.php`.
+
+`TagLibraryManager` owns:
+- current-language/custom tag listing
+- zero-use manual tags
+- tag search
+- empty tag creation/deletion
+- tag rename
+- Tag Groups
+- tag/group ordering
+- Index tag visibility
+- tag/group background and text colors
+- parent/child tag relationships
+- session-only Tag Library filters and sorting
+- session-only Edit Tags mode
+- links back to the Index tag filter
+
+Tag Library uses the same stored tag rows as products. Renaming a tag updates the existing tag rather than replacing it, so product attachments, group memberships, colors, and relationships remain attached.
+
+### Options
+
+`GET /options` renders one of four tabs:
+
+- `General`
+- `Field Layouts`
+- `Authentication`
+- `Refetch`
+
+Most application settings are stored in the `options` table and edited by focused Livewire settings components.
+
+Field Layouts configure six independent surfaces:
+- Index Table Columns
+- Index Filter Fields
+- Index Sort Menu
+- Edit Form Fields
+- Quick Add Form Fields
+- Custom Quick Add Form Fields
+
+`ProductField` defines which fields exist on each surface, their defaults, locks, and editability rules. `ProductFieldLayout` normalizes persisted layout rows and prepares render metadata.
+
+### Refetch DLSite Data
+
+Refetch updates scraped DLsite-owned data without immediately overwriting the existing product.
+
+1. The user starts Refetch All Works or Refetch Selected Works from Options.
+2. `RefetchService::createRun()` creates a `refetch_runs` row and one `refetch_work_results` row per selected work.
+3. Laravel creates a batch containing one `FetchProductWorkJob` per work.
+4. Each job fetches staged metadata and, when image checking is enabled, staged cover/sample images into the Refetch storage roots.
+5. `RefetchDiffBuilder` compares staged data with the canonical product data and records changes by `RefetchCategory`.
+6. `OptionsRefetchProgress` shows running/cancelling progress.
+7. `OptionsRefetchReview` lets the user choose whether to overwrite each changed category.
+8. Applying changes promotes only accepted data and images.
+9. Canonical JSON is promoted only when the accepted changes actually change the work.
+10. Obsolete images are cleaned only for works whose image state changed.
+
+Refetch has thirteen ordered review categories defined by `RefetchCategory`.
+
+Cover and sample-image changes are independent. Image promotion is guarded so a failed database update can restore the previous canonical images.
+
+Refetch creation, cleanup, and review application share a Laravel cache atomic lifecycle lock so staged files cannot be removed while another operation needs them.
+
+Cancellation is cooperative: already-running work may finish while queued jobs observe the cancelled run state.
+
+Only the newest Refetch run can be applied. Older completed runs remain available as historical/read-only review data rather than competing application states.
+
+### Authentication
+
+Administrator authentication is optional and disabled by default.
+
+When enabled:
+- an empty `users` table redirects application requests to administrator setup
+- exactly one administrator account is supported
+- guests are redirected to login
+- normal controllers, mutations, autocomplete endpoints, and Livewire update/upload requests share the same authenticated Laravel web-session boundary
+- login/setup/help/recovery routes remain available as required
+- five failed login attempts from the same client IP within five minutes trigger throttling
+- a successful login clears that IP's failed-attempt state
+- `Remember me` keeps the administrator signed in for up to 180 days
+
+Administrator password changes and resets rotate the remember token.
+
+`RequireOptionalAuthentication` runs in the web middleware stack after session startup.
+
+Files served directly from `public/` and `/storage` are not protected by Laravel session middleware.
+
+## Application Structure
+
+### Stack
+
+- Backend: Laravel 12 on PHP 8.3
+- Frontend: Blade, Livewire 4, plain CSS, and plain JavaScript
 - Database: MySQL 8
-- Scraper: `python/DLSiteScraper.py`, invoked through Laravel with explicit output destinations
 - Background work: Laravel database queues and job batches
+- Scraper: `python/DLSiteScraper.py`
+- Persistent application files: Laravel storage plus publicly served work images
 
-## Main Application Flow
-1. User opens list page (`GET /`).
-2. `ProductController@index` renders `resources/views/Index.blade.php`, then `app/Livewire/ProductIndex.php` owns list filters, sorting, pagination, and URL query state.
-3. `GET /tags` renders the self-contained Index-aligned tag library shell, then `app/Livewire/TagLibraryManager.php` owns tag search, empty tag creation/deletion, saved collapsed/expanded default state, and tag links back to the same index filter used on the list page.
-4. `GET /options` renders the General tab by default; `field-layouts`, `authentication`, and `refetch` query values render the other Options tabs.
-5. User can create/edit/delete entries through forms.
-6. Store flow (`POST /store`) validates input, asks the shared PHP fetch service for canonical JSON/images, then creates a `products` row.
-7. Custom store flow (`POST /store/custom`) validates manual input, skips scraper/network checks, stores the required local cover plus optional sample images, and creates a `products` row.
-8. Update flow (`POST /update/{id}`) validates and updates editable fields.
-9. Destroy flow (`POST /destroy/{id}`) removes DB row and related local files.
-10. Refetch DLSite Data starts one Laravel batch job per selected work, fetches complete staged snapshots, and lets each changed metadata/image category be overwritten or ignored before canonical JSON is promoted.
+Laravel remains the application boundary. Python is a scraper process invoked by Laravel, not a second web service.
 
-## Key Components
-- Routes: `routes/web.php`
-- Controller: `app/Http/Controllers/ProductController.php`
-- Options controller: `app/Http/Controllers/OptionsController.php`
-- Autocomplete controller: `app/Http/Controllers/AutocompleteController.php`
-- Authentication controller: `app/Http/Controllers/AuthenticationController.php`
-- Requests:
-  - `app/Http/Requests/StartRefetchRequest.php`
-  - `app/Http/Requests/StoreProductRequest.php`
-  - `app/Http/Requests/StoreCustomProductRequest.php`
-  - `app/Http/Requests/UpdateProductRequest.php`
-  - shared normalization/validation in `app/Http/Requests/BaseProductRequest.php`
-- Model: `app/Models/Product.php`
-- Contributor model: `app/Models/Contributor.php`
-- App option model: `app/Models/Option.php`
-- UI language enum and request middleware:
-  - `app/Enums/UiLanguage.php`
-  - `app/Http/Middleware/SetUiLocale.php`
-- Optional authentication middleware:
-  - `app/Http/Middleware/RequireOptionalAuthentication.php`
-  - it runs in the `web` group after session/locale startup, so normal web routes and Livewire update/upload requests share one protection boundary
-- Refetch models:
-  - `app/Models/RefetchRun.php`
-  - `app/Models/RefetchWorkResult.php`
-- Refetch job/support:
-  - `app/Jobs/FetchProductWorkJob.php`
-  - `app/Support/DLSite/DLSitePythonRunner.php`
-  - `app/Support/DLSite/DLSiteWorkFetcher.php`
-  - `app/Support/ProductImageCleanupService.php`
-  - `app/Support/Refetch/RefetchCleanupService.php`
-  - `app/Support/Refetch/RefetchDiffBuilder.php`
-  - `app/Support/Refetch/RefetchService.php`
-- Maintenance command:
-  - `app/Console/Commands/CleanupWorkImages.php`
-- Shared genre sync helpers:
-  - `app/Support/ProductGenreSync.php`
-  - `app/Support/GenreSyncPayload.php`
-- Shared contributor and DLSite metadata helpers:
-  - `app/Support/ProductContributorSync.php`
-  - `app/Support/DLSite/DLSiteWorkData.php`
-- Logging:
-  - `app/Logging/WeeklyRotatingFileHandler.php`
-  - `python/weekly_logging.py`
-- Product layout helpers:
-  - `app/Enums/ProductContributorRole.php`
-  - `app/Enums/ProductField.php`
-  - `app/Support/ProductFieldLayout.php`
-  - `ProductField` owns surface-specific field order, visibility locks, hidden defaults, and edit defaults; `ProductFieldLayout` normalizes stored layout rows and prepares Blade render metadata
-- Shared visible tag helper:
-  - `app/Support/VisibleGenreAttachment.php`
-- Autocomplete helpers:
-  - `app/Support/Autocomplete/AutocompleteMatcher.php`
-  - `app/Support/Autocomplete/TagAutocompleteSearch.php`
-  - `app/Support/Autocomplete/SeriesAutocompleteSearch.php`
-- Livewire components:
-  - `app/Livewire/ProductIndex.php`
-  - `app/Livewire/UiLanguageSettings.php`
-  - `app/Livewire/IndexPaginationSettings.php`
-  - `app/Livewire/AutocompleteSettings.php`
-  - `app/Livewire/ProductFieldLayoutSettings.php`
-  - `app/Livewire/AutoSeriesSettings.php`
-  - `app/Livewire/IndexTableWidthSettings.php`
-  - `app/Livewire/ProductFormModalSettings.php`
-  - `app/Livewire/OptionsWorkSearch.php`
-  - `app/Livewire/OptionsRefetchActions.php`
-  - `app/Livewire/OptionsRefetchProgress.php`
-  - `app/Livewire/OptionsRefetchReview.php`
-  - `app/Livewire/AuthenticationSettings.php`
-- Livewire shared settings concern:
-  - `app/Livewire/Concerns/ConfirmsOptionReset.php`
-- Views: `resources/views/*.blade.php`
-- Livewire views: `resources/views/livewire/*.blade.php`
-- UI field components: `resources/views/components/fields/*.blade.php`
-- UI field component classes: `app/View/Components/Fields/*.php`
-- Scripts/CSS: `public/scripts/*`, `public/css/*`
+### Routes and Controllers
 
-Shared UI note:
-- `resources/views/components/list-menu-float.blade.php` is reused by Index, Options, Tag Library, and Refetch pages
-- App-owned UI copy uses Laravel JSON source strings from `lang/en.json` and `lang/ja.json`.
-- `SetUiLocale` runs for web requests and applies the global `ui_language` option. Page shells use `app()->getLocale()` for `<html lang>`, and invalid or missing values fall back to English.
-- Blade translates fixed copy. Enums, models, layouts, and option providers return localized display labels that Blade renders directly; backed values, routes, stored data, API values, and user content remain unchanged.
-- Create/Edit month selectors use Carbon `translatedFormat('M')`, producing English abbreviations or Japanese numbered months from the same numeric option values. `PartialDateFormatter` localizes only its Year/Month/Day labels.
-- App-authored validation messages are translated at their PHP source. Generic Laravel/vendor validation messages remain unchanged.
-- desktop keeps the floating hover menu
-- mobile uses a toggle button that opens the same menu as a left-side drawer
-- authenticated sessions receive a POST logout action in the Authentication Options tab
-- the shared navigation also owns the native `<dialog>` work-form host; tightly namespaced shell styles stay in `list-menu-float.css`, while the same-origin iframe keeps Create/Edit `edit.css`, the Edit delete dialog, and host-page CSS isolated from one another
-- only unmodified primary clicks on marked Quick Add and Index Edit links are intercepted; their real `href` values remain standalone routes for middle-click, modified clicks, non-self targets, and browsers without native dialog support
-- `resources/views/Index.blade.php` hosts `ProductIndex` inside a sticky-footer page shell; the Livewire view keeps the desktop table on larger screens and switches to stacked cards on mobile so search/actions still fit
-- `resources/views/Create.blade.php` switches between DLSite create and custom create modes, renders the saved Quick Add or Custom Quick Add field layout through a configurable row component, includes the same optional metadata/creator/Japanese-description/English-description rows as the Edit form hidden by default, and keeps required create fields locked visible; `ProductController` resolves the saved `product_form_theme` into a page-level theme class for `resources/views/Create.blade.php` and `resources/views/Edit.blade.php`, which use `public/css/edit.css` for both desktop and mobile form layouts and render reusable field components from `resources/views/components/fields/*.blade.php`
-- DLSite Quick Add renders a hidden green live status beneath the RJ field. `public/scripts/dlsite-create-status.js` reveals it from the form's native `submit` event without blocking submission or disabling buttons, then hides it on `pageshow` so restored browser-history pages are not stale; Custom Quick Add does not render the status hooks or load the script
-- `app/View/Components/Fields/*.php` provides the class-based field components used by those Blade views
-- `AppServiceProvider` registers the enum-backed field component aliases used by `<x-fields.* />`
-- the progress, score, priority, and re-listen field component classes read their select options from the matching enums in `app/Enums/*.php`
-- Blade pages load CSS and JS from `public/` with `filemtime(public_path(...))` query strings for cache busting
-- `public/scripts/autocomplete-text.js` and `public/css/autocomplete.css` provide opt-in autocomplete for tag CSV fields and single-value series fields through `data-autocomplete-*` attributes
-- `resources/views/components/index/advanced-filters.blade.php` renders the index filter/sort modal; dynamic filter rows are prepared by `ProductFieldLayout` and rendered through anonymous index field components
-- `resources/views/components/index/*.blade.php` contains the reusable filter/select/radio pieces used by the index modal; configurable Index table cells render inline in the Livewire view to avoid per-cell component overhead
-- Index mobile cards place row actions after all rendered metadata fields so the edit action stays at the bottom of each work card
-- `app/Livewire/ProductIndex.php` binds filter/sort properties to the URL query string, then normalizes that state into a `ProductIndexFilters` object
-- `app/Enums/*.php` holds enum-backed filter options for progress, priority, tag match, sort fields including `Added to the site Date`, sort backend metadata, and the numeric rating scales. `ProductProgress` includes optional On Hold/Dropped cases and builds ordered, locale-aware choices filtered by their visibility switches.
-- `app/Models/Product.php` owns the Laravel 12 local scopes used by index filtering/search and keeps derived index keys in sync for RJ sorting and partial date sorting
-- `app/Support/ProductIndexResults.php` builds the filtered product query, hydrates only Index title/status base columns plus attributes needed by visible Index fields, and keeps filter/sort-only columns in SQL for default/RJ/scalar/date sorts
-- `ProductIndexResults` also prepares simple display strings for optional scalar Index cells such as partial listening dates, re-listen value, and priority so the Blade table does not call formatter or enum classes directly
-- `ProductIndex` reads page size, Index layout, Filter layout, table width, content overflow, Image Viewer, and Add/Edit modal settings through one batched `ProductIndexSettings` option lookup per render, normalizes filter state once into a local `ProductIndexFilters` value, and derives query/options/sort-icon/return/progress/tag data from that same value without component-level cache invalidation
-- `ProductIndexRowBuilder` accepts the current page's product collection and contributor query rows, then converts them into typed readonly presentation rows after all query and display-value work is complete. It validates required product id/title strings, reads optional schema-backed strings directly with null defaults for narrow hydration, uses Laravel's cast-aware attribute array conversion once per product, and prepares repeated DLSite, Edit, Series, Circle, and contributor URLs before Blade renders the table.
-- `ProductIndexSortField` owns valid sort keys, labels, SQL columns, and Advanced Filter sort dropdown layout normalization; the `index_sort_field_layout` option only changes which sort values the dropdown shows and does not disable enum-valid URL or table-header sorting
-- Advanced Filter date ranges use explicit `*_from` and `*_to` URL/query keys. Start/finish date ranges compare against the derived `start_date_sort` / `end_date_sort` `YYYYMMDD` integers, while `created_at` and `updated_at` ranges use Laravel date-only timestamp filtering.
-- Contributor sort fields order by each role's alphabetically first contributor name with nulls last. Circle sorting uses the first circle contributor name when present and falls back to `products.circle`.
-- the advanced filter modal defaults to `All tags` matching and `Desc` sort direction until the user chooses something else
-- `ProductIndexSettings` carries prepared Index columns, visible field ids, the normalized Notes-below-Title flag, Filter fields, table width CSS, normalized content-overflow targets, the default-off Image Viewer switch, and optional-status switches; `ProductIndex` only loads row-level tag/contributor data when those columns are visible, keeps genres and formatted display values grouped by product id, and sends typed product/contributor rows to Blade before configurable columns render in the saved order
-- Index tag links use one prepared URL-and-separator prefix per render, then append the `genre` query key and numeric genre id in Blade, avoiding route generation for every rendered tag link
-- Index Title and Image are part of the Index field layout; Title is locked visible but reorderable and stores an independent default-on `notes_visible` flag for its inline Notes, while Image can be hidden or reordered like the optional metadata columns. Added Date and Updated Date are hidden-by-default sortable Index columns, hydrated only when visible and formatted as `YYYY-MM-DD HH:mm`.
-- Edit Details keeps the RJ Code + Title display row fixed first, then renders the Edit field layout; the `title` layout row is locked visible and expands to the Japanese/English title inputs, while Age Category is hidden by default
-- Index creator/circle filters query normalized contributor rows, circle filters also match `products.maker_id`, the `description` filter searches Japanese description text, and the `description_english` filter searches English description text. General Index search searches each description language only when that language's Index column is visible, unless `Search hidden descriptions` is enabled.
-- `ProductContributorRole` owns the role-to-`ProductField` mapping used when Create/Edit field layouts decide whether contributor inputs are visible or editable
-- `ProductField` owns the field layout metadata for Index, Edit, Filter, Quick Add, and Custom Quick Add surfaces so layout normalization and field enum behavior stay aligned
-- Options field-layout default reset logic uses a shared option/surface map so adding another layout surface stays localized
+Routes are defined in `routes/web.php`.
+
+Main controllers:
+- `app/Http/Controllers/ProductController.php`
+- `app/Http/Controllers/OptionsController.php`
+- `app/Http/Controllers/AutocompleteController.php`
+- `app/Http/Controllers/AuthenticationController.php`
+- `app/Http/Controllers/RefetchController.php`
+
+Main form requests:
+- `app/Http/Requests/BaseProductRequest.php`
+- `app/Http/Requests/StoreProductRequest.php`
+- `app/Http/Requests/StoreCustomProductRequest.php`
+- `app/Http/Requests/UpdateProductRequest.php`
+- `app/Http/Requests/StartRefetchRequest.php`
+
+### Livewire Components
+
+Core application components include:
+
+- `ProductIndex`
+- `TagLibraryManager`
+- `OptionsWorkSearch`
+- `OptionsRefetchActions`
+- `OptionsRefetchProgress`
+- `OptionsRefetchReview`
+
+Settings components include:
+
+- `UiLanguageSettings`
+- `IndexPaginationSettings`
+- `IndexSearchSettings`
+- `IndexImageViewerSettings`
+- `IndexTableWidthSettings`
+- `IndexContentOverflowSettings`
+- `AutocompleteSettings`
+- `AutoSeriesSettings`
+- `DlsiteLinkSettings`
+- `OptionalProductStatusesSettings`
+- `ProductFormThemeSettings`
+- `ProductFormModalSettings`
+- `TagLibraryDisplaySettings`
+- `ProductFieldLayoutSettings`
+- `AuthenticationSettings`
+- `OptionsResetDefaults`
+
+Shared reset-confirmation behavior is in `app/Livewire/Concerns/ConfirmsOptionReset.php`.
+
+### Support Classes
+
+Important support boundaries include:
+
+Index:
+- `ProductIndexFilters`
+- `ProductIndexResults`
+- `ProductIndexRowBuilder`
+- `ProductIndexSettings`
+- `ProductIndexSort`
+- `ReturnTarget`
+
+Fields/UI data:
+- `ProductFieldLayout`
+- `VisibleGenreAttachment`
+- `TagColor`
+
+Tags/contributors:
+- `GenreSyncPayload`
+- `ProductGenreSync`
+- `ProductContributorSync`
+- `GenreHierarchy`
+
+DLsite:
+- `DLSitePythonRunner`
+- `DLSiteWorkFetcher`
+- `DLSiteWorkData`
+
+Refetch:
+- `RefetchService`
+- `RefetchDiffBuilder`
+- `RefetchCleanupService`
+
+Files:
+- `ProductImageCleanupService`
+
+Autocomplete:
+- `AutocompleteMatcher`
+- `TagAutocompleteSearch`
+- `SeriesAutocompleteSearch`
 
 ## Data Model
-`products` table stores:
-- DLSite identifiers and titles
-- fetched maker/circle metadata
+
+### Products
+
+`products` stores the library work and user-owned tracking data, including:
+- RJ/product identifier
+- titles
+- series
+- age category
 - Japanese and English descriptions
-- progress/listening metadata (`progress`, dates, re-listen fields, priority)
-- local image paths; `sample_images` is a JSON column cast to an array by `Product`, so Eloquent create/update calls use PHP arrays and Laravel serializes them
+- progress
+- score
+- listening dates
+- re-listen fields
+- priority
+- notes
+- local cover path
+- sample-image paths
+- legacy/fallback maker metadata where required
 
-`genres` table stores one row per tag title:
-- `title` as the display text
-- `title_key` as the unique identity key
-- `hidden_on_index`, which hides only that tag from Index tag chips
+The RJ code is the product identifier.
 
-`title_key` is built from the trimmed title with Unicode case folding, then stored with a binary collation. This keeps tag matching case-insensitive while still treating Hiragana/Katakana variants as separate tags. Tag Library rename updates the existing `genres` row, so its relationships and product pivot metadata remain intact; Eloquent's saving hook recalculates `title_key` while preserving the submitted display casing in `title`.
+`sample_images` is stored as JSON and cast to a PHP array by `Product`.
 
-`genre_groups` stores optional genre group definitions:
-- `title` as the display text
-- normalized integer `order`, used before tag order when Index tag chips render
-- `hidden_on_index`, which hides every assigned tag from Index without changing each tag's own hidden setting
+Partial start/finish dates remain the editable source of truth. Derived integer sort columns are maintained for SQL sorting:
+- `start_date_sort`
+- `end_date_sort`
 
-`genre_group_genre` is the many-to-many pivot table between `genre_groups` and `genres`:
-- `genre_group_id`
-- `genre_id`
-- normalized integer `order` for that tag inside that group
+`rj_number` is maintained for numeric RJ sorting.
 
-`genre_relations` stores the directed parent/child hierarchy between tags:
-- `parent_genre_id`
-- `child_genre_id`
-- a unique parent/child pair, with both foreign keys cascading when either tag is deleted
+### Tags
 
-`Genre::parents()` and `Genre::children()` expose the two directions as self-referencing Laravel many-to-many relationships. `GenreHierarchy` resolves every ancestor iteratively, synchronizes both sides of one edited tag, and rejects self-referencing or indirect cycles before persistence.
+Tags are normalized instead of stored as per-product text arrays.
 
-A tag can belong to multiple groups. Index tag chips sort alphabetically by tag title by default. When the persisted `Enable group ordering on Index` option is enabled, grouped tags sort by group order and saved tag order inside each group, then ungrouped tags sort alphabetically. Each multi-group tag renders once through its first visible group membership. In both modes, a tag is hidden from Index when it is directly hidden or belongs to any hidden group, even if it also belongs to visible groups.
+`genres` stores the shared tag:
+- display `title`
+- normalized unique `title_key`
+- Index visibility
+- optional background color
+- optional text color
 
-Tag Library's All Tags list defaults to primary `Alphabetical / Asc` sorting. Its filter modal reuses the Index field-select and segmented Asc/Desc direction components for primary and optional secondary sorting across Alphabetical and the current-language/custom-visible `products_count`. A secondary sort that duplicates the primary field is discarded. Work-count ties fall back to title and id when no alphabetical secondary sort is selected. All Tags sorting is independent of tag creation order, group order, and per-group pivot order; Tag Group cards continue to use their saved group and per-group tag ordering.
+`title_key` is created from the trimmed title using Unicode case folding and stored with binary collation. Case-only variants resolve to the same identity while Hiragana/Katakana variants remain distinct.
 
-`Genre::groups()` and `GenreGroup::genres()` centralize the Laravel many-to-many ordering for tag groups. They expose the pivot `id` and `order` fields, automatically maintain pivot timestamps, and apply the saved group/tag order used by Tag Group cards. Tag settings use Eloquent relationship synchronization while preserving existing per-group order and appending new memberships; deleting a group relies on the pivot foreign key's cascading delete. The same settings transaction uses Laravel's relationship-sync change set to identify newly related children, then backfills missing ancestors through an Eloquent product relationship-existence query. `Genre::visibleOnIndex()`, `Genre::hiddenOnIndex()`, `GenreGroup::visibleOnIndex()`, and `GenreGroup::hiddenOnIndex()` keep reusable index visibility rules in the models while `ProductIndexResults` keeps its raw SQL tag-chip query for page-level performance.
+`genre_product` attaches tags to products and stores the source:
+- `fetched`
+- `custom`
 
-Tag Library tag and group renames use Laravel's model-backed unique validation rule as the application-level duplicate check, with database unique indexes remaining the final constraint. Tag rename validates the case-folded `title_key` while ignoring the current tag; group rename validates `title` while ignoring the current group.
+`genre_product_languages` records which fetched language bucket supplied an attachment:
+- `jp`
+- `en`
 
-Tag and group colors are stored as nullable `#RRGGBB` strings. `genres.color` / `genre_groups.color` control the tag background/accent color, while `genres.text_color` / `genre_groups.text_color` control the font color. `app/Support/TagColor.php` normalizes colors and batches effective color-pair lookup for autocomplete, Edit readonly tags, and Refetch review tags, including one ordered group-color lookup that resolves background and font colors together. Index tag colors stay in `ProductIndexResults` so the Index can select the needed color columns or subqueries without hydrating tag relationships. Group background/font colors override tag background/font colors independently through ordered group membership; when rendering inside a specific Tag Library group card, that card's group color value wins for whichever value is set. Edit readonly tag colors render as inline text marks inside the normal readonly field container, not as separate tag plaques.
+A fetched tag can belong to both language buckets for one product. Custom attachments have no fetched-language row.
 
-`genre_product` is the many-to-many pivot table between `products` and `genres`.
-It also stores a `source` value:
-- `fetched` for scraper-provided genre attachments
-- `custom` for tags the user typed into the editable Custom Tags field
+`UiLanguage` maps:
+- UI `en` -> fetched tag language `en`
+- UI `ja` -> fetched tag language `jp`
 
-`contributors` stores normalized creator/circle names:
-- `name` as the display text
-- `name_key` as the unique identity key, using the same trimmed Unicode case-folding approach as `Genre::titleKey()`
+`VisibleGenreAttachment` defines the normal visible set as:
+- all custom tags
+- fetched tags for the selected UI language
+
+A shared JP/EN fetched attachment is rendered once.
+
+### Tag Groups
+
+`genre_groups` stores group definitions and group-level Index visibility/color/order.
+
+`genre_group_genre` stores many-to-many group membership and per-group tag order.
+
+A tag can belong to multiple groups.
+
+Index tags are alphabetical by default. When group ordering is enabled, grouped tags follow saved group/tag order and ungrouped tags follow alphabetically.
+
+A tag is excluded from Index tag chips when:
+- the tag itself is hidden, or
+- any group containing the tag is hidden
+
+### Tag Relationships
+
+`genre_relations` stores directed parent/child tag relationships.
+
+`GenreHierarchy`:
+- resolves ancestors iteratively
+- prevents self-relations
+- prevents direct and indirect cycles
+- synchronizes parent/child edits
+
+When a child tag is attached to a work, missing parents/ancestors are added as `custom` attachments. Existing fetched ancestors keep their fetched source/language data.
+
+Removing a relationship does not remove parent tags already attached to products.
+
+### Contributors
+
+`contributors` stores normalized creator/circle identities:
+- `name`
+- normalized `name_key`
 - optional `maker_id`
 
-`contributor_product` is the many-to-many pivot table between `products` and `contributors`.
-It stores a `role` value for the product-specific relationship:
+`contributor_product` stores product-specific roles:
 - `circle`
 - `scenario`
 - `voice_actor`
 - `illustration`
 - `author`
 
-`genre_product_languages` stores the fetched language buckets for each product/tag attachment:
-- `genre_product_id`
-- `language`
+`ProductContributorSync` updates one role without detaching the same contributor from another role.
 
-Current language values are `jp` and `en`, but the column is a string so future language codes can be added without changing the global genre row. Custom pivot rows do not have language rows. A fetched tag can have both `jp` and `en` rows for the same product, so titles like `ASMR` and `VTuber` remain a single `genres` row while still recording that DLSite returned the tag in both languages.
+### Refetch
 
-`UiLanguage` maps UI `en` to stored fetched-tag language `en` and UI `ja` to `jp`. `VisibleGenreAttachment` includes custom tags plus fetched tags for the selected language. Shared `en`/`jp` attachments render once.
-
-The same rule applies to Index display/search/filter/return-target checks, Edit fetched tags, and Tag Library lists, groups, counts, usage state, and Index links. Other-language tags remain stored, and empty tags remain available in Tag Library.
-
-Tag Library extends that visibility rule by also showing empty `genres` rows with zero `genre_product` pivots. These empty tags can be created manually from `/tags`, searched immediately, linked to Index filters, and deleted only while they still have no product pivots. The General Options tab controls whether the full tag list starts collapsed or expanded when `/tags` opens and whether Index tag chips use saved group order.
-
-The `/tags` Livewire manager also owns tag groups, group/tag order, and Index visibility:
-- the Tag Groups section contains the group creation form so group creation stays with group management
-- group deletion removes only that group's membership rows and the group row
-- adding a title to a group resolves an existing tag by `title_key` or creates a new empty tag before attaching the membership
-- removing a tag from a group detaches only that membership, so other group memberships remain
-- group hidden state hides every assigned tag from Index without changing each tag's own hidden setting
-- the persisted `Enable group ordering on Index` option is off by default; when enabled, Index tag chips use saved group order, saved tag order inside groups, then ungrouped tags alphabetically instead of plain alphabetical title ordering. The Tag Library and Options switches share the same help-circle explanation
-- tag background/font color editing is handled in the tag settings modal, and group background/font color editing is handled on each group card; rendering is controlled by the `tag_color_surfaces` option map
-- the All Tags list uses a fixed-layout, session-only filter modal for Index visibility, group status, specific group, empty/used state, parent/child relationship role, and the tag's own color state. Its staged values apply together, Clear leaves the separate live search unchanged, and filtering never hides or reorders Tag Group management rows
-- All Tags can apply primary and optional secondary sorting by alphabetical title or the same constrained visible-work count rendered on each tag chip. Both directions use the shared Index Asc/Desc segmented buttons; relationship filters use the self-referencing Eloquent relations, and own-color filtering intentionally ignores inherited group colors
-- the All Tags list has a session-only Edit Tags mode; normal mode keeps tag chips as Index filter links, while edit mode changes tag clicks into Livewire actions that open a teleported tag settings modal
-- the tag settings modal updates tag-level Index visibility and group memberships in one save, preserving existing pivot orders and appending newly selected memberships to the end of their groups
-- Edit Tags, Hide Tag on Index, and Hide Group on Index use shared `tag-library-switch-*` CSS/markup classes around native Livewire-bound checkboxes
-- tags hidden directly or assigned to any hidden group render a compact accessible red status indicator inside the All Tags chip, while group names and group-hidden state remain in filters, group management, and the tag settings modal
-- tag and group order values are normalized before rendering, so Tag Library and Index use normal ordered queries; Tag Library counts and visibility filters use Eloquent relationship helpers and counts for total pivots and current-language/custom-visible products
-
-`refetch_runs` stores each Options -> Refetch DLSite Data batch:
-- Laravel batch id, run status, and the run-wide `check_images` choice
+`refetch_runs` stores:
+- Laravel batch id
+- run status
+- run-wide image-check choice
 - total/processed/fetched/failed counts
 - resolved category tabs
-- started/completed/cancelled/applied/rejected timestamps
+- lifecycle timestamps
 
-`refetch_work_results` stores each work result:
-- the product id, which also represents that work's membership in the run
-- fetch status, errors, and separate cover/sample warnings
-- detected changes grouped by the thirteen `RefetchCategory` values
-- per-change apply decisions and whether each decision actually changed the work, retained as review history
+`refetch_work_results` stores:
+- product/run membership
+- fetch status/errors
+- image warnings
+- detected category changes
+- overwrite/ignore decisions
+- whether an accepted decision actually changed the work
 
-`OptionsRefetchActions` owns the Refetch tab's latest-run link and right-aligned cleanup action. Cleanup remains visible but disabled while any run is `running` or `cancelling`, requires a Livewire confirmation modal, then delegates to `RefetchCleanupService`. Cleanup, `RefetchService::createRun()`, and review apply/finish mutations acquire the same Laravel cache atomic lock, so a new running row or staged-file consumer cannot overlap cleanup. Cleanup rechecks active runs and commits deletion of `refetch_runs` first; the existing foreign-key cascade deletes their `refetch_work_results`. It then clears the contents of `storage/app/Refetch` and `storage/app/public/Refetch` while preserving both roots. A later filesystem failure can therefore leave only retryable orphaned staged files, not run records whose required files were already removed. Products and canonical `Works` files are not changed.
+Laravel queue infrastructure uses:
+- `jobs`
+- `job_batches`
 
-Queue tables:
-- `jobs` stores pending database queue jobs
-- `job_batches` stores Laravel batch metadata
+## Storage and External Process Boundary
 
-`options` stores app-level settings as scalar string values:
-- `ui_language` stores the application-wide UI locale as `en` or `ja`; missing and invalid values fall back to `en`
-- `index_per_page` controls Index pagination, defaults to `100`, accepts fixed choices (`10`, `25`, `50`, `100`, `250`, `500`, `1000`) or any positive integer, and can be set to `unlimited`
-- `index_search_hidden_descriptions_enabled` controls whether general Index search can match both description languages when their Index columns are hidden, and defaults to disabled
-- `optional_product_statuses` stores one JSON map, `{"on_hold":false,"dropped":false}`, controlling whether each optional progress value appears in forms and Index controls
-- `tag_autocomplete_order` controls tag suggestion ordering, defaults to `usage`, and can be set to `first_word`
-- `series_autocomplete_order` controls series suggestion ordering, defaults to `usage`, and can be set to `first_word`
-- `auto_series_from_title_name` controls whether Quick Add fills Series from DLsite metadata when no Series is entered, and defaults to enabled
-- `dlsite_age_appropriate_links_enabled` controls age-aware Index DLSite URLs and defaults to disabled
-- `tag_library_index_group_ordering_enabled` controls whether Index tag chips use group order, and defaults to disabled
-- `tag_color_surfaces` controls where stored tag/group background and font colors render, with Index and Tag Library enabled by default and Autocomplete/Edit readonly/Refetch disabled by default
-- `index_field_layout`, `edit_field_layout`, `filter_field_layout`, `quick_add_field_layout`, and `custom_quick_add_field_layout` store surface-specific configurable field order/visibility/editability layouts
-- `index_sort_field_layout` stores Advanced Filter sort dropdown order/visibility while leaving valid sort execution enum-backed
-- `index_table_width` controls the Index list/table width
-- `index_content_overflow` stores one normalized JSON map for the independent inline Notes, Notes column, and Tags height limits; every target defaults to disabled with an `80px` height
-- `App\Models\Option` normalizes stored scalar strings into the runtime values the app uses
+Canonical work metadata:
 
-Current repo-level Index sort-key indexes:
-- `products.id` remains the primary key
-- `products.rj_number`, `start_date_sort`, and `end_date_sort` are derived nullable integer sort keys with indexes used by Index SQL sorting
+```text
+storage/app/Works/{RJ}.json
+```
 
-Migration note:
-- legacy `products.genre`, `products.genre_english`, and `products.genre_custom` JSON columns are migrated into
-  `genres` + `genre_product` by `2026_03_16_160000_convert_product_genre_titles_to_ids.php`
-- after conversion, those legacy JSON columns are dropped
-- legacy global `genres.type` / `genres.language` metadata is migrated into product-specific
-  `genre_product_languages` rows by `2026_05_24_000000_create_genre_product_languages_table.php`
-- the `genre_product_languages` down migration restores old global metadata best-effort because one fetched title can now belong to multiple languages for the same product
-- `2026_05_26_000000_add_title_key_to_genres_table.php` moves tag uniqueness from `genres.title` to `genres.title_key`; rollback can fail if kana-distinct tags were added because the old `genres.title` unique index used MySQL's broader text collation
-- `2026_05_30_000000_create_contributors_table.php` adds normalized creator/circle metadata in `contributors` and `contributor_product`
-- `2026_05_30_000001_expand_metadata_options_columns.php` changes description and option values to nullable text so longer descriptions/layout JSON can be stored
-- `2026_05_30_000002_backfill_product_metadata_from_storage.php` reads matching `storage/app/Works/{RJ}.json` files to backfill maker/circle, descriptions, and contributor pivots; missing or invalid JSON is skipped and `series` is not backfilled
-- `2026_08_08_000001_drop_order_from_genres_table.php` removes the unused global tag order; group order remains in `genre_groups.order`, and per-group tag order remains in `genre_group_genre.order`
+Canonical public work images:
 
-Runtime note:
-- `ProductIndex` shows current-language fetched + custom genres through one lightweight grouped query from `genre_product` + `genres` + `genre_groups` for the current page only when the Tags column is visible, loads contributor pivots only when visible contributor columns need them, and passes the grouped genres plus builder-prepared contributor rows to Blade
-- `Product::dlsiteWorkUrl()` returns the existing Maniax URL immediately while age-appropriate links are disabled. When enabled, only exact `ALL_AGES` values use DLSite Home; R15, R18, null, and malformed values fall back to Maniax
-- `ProductIndex` keeps its single batched Options read and narrow product select for DLSite links. It adds `age_category` to hydration only while age-appropriate links are enabled, even when the Age column is hidden, then the row builder prepares one URL on each typed row for the image, Japanese title, and optional English title anchors without changing column visibility
-- `ProductContributorSync` syncs contributor pivots through `Product::contributorsForRole()` and Laravel's role-scoped many-to-many `sync()`, using its attached/detached/updated result to detect effective changes without a separate comparison query; replacing one creator role does not detach the same contributor from another role, effective changes touch only the selected product, and unchanged role syncs leave its Updated Date unchanged
-- index cover images are rendered from `products.work_image` only when the Image column is visible; existing local files receive the same modification-time query-string cache busting used by CSS/JS assets
-- `products.start_date` and `products.end_date` JSON remain the editable/display source of truth; their `*_sort` columns store `YYYYMMDD` integers with missing month/day as `00`
-- `ProductIndex` keeps its filter/sort state in the URL through Livewire's `queryString()` config, then normalizes that state into `app/Support/ProductIndexFilters.php`
-- `app/Support/ProductIndexFilters.php` provides the normalized filter query used by progress tabs, preserved search state, tag links, explicit Livewire query-string keys, and the visibility-affecting filter groups used by return redirects
-- Index progress navigation keeps the original static All ASMR, Currently Listening, Completed, and Plan to Listen links, inserting On Hold and Dropped between Completed and Plan to Listen only when their switches are enabled. Advanced Filter exposes the same enabled optional progress cases.
-- Stored On Hold/Dropped products remain visible in All ASMR and any matching result regardless of option state. Their Progress label is always resolved from the full enum;
-- Index genre links, tag filters, genre-backed search, return-target visibility checks, edit tag loading, and Tag Library use `VisibleGenreAttachment` for the same rule as rendered tags: custom source or the current UI language's fetched tag row
-- Index tag chips exclude tags hidden by their own `genres.hidden_on_index` flag or assigned to any hidden group. The raw Index query first checks whether any hidden groups exist and skips the hidden-group anti-join when none do, so libraries without hidden groups keep the cheaper tag query path. By default tags sort alphabetically by title; when group ordering is enabled they render each remaining grouped tag once through its first visible group membership, then render ungrouped tags after grouped tags.
-- Index tag-chip color resolution is query-based for performance: when Index colors are disabled or no tag/group colors are configured, the color columns are not selected and the group-color lookup is skipped. When enabled and at least one color exists, the query resolves tag background/font colors plus the first ordered group background/font colors. Effective color decoration is cached per unique genre id for the current page, and uncolored tags render as plain links without the colored-chip class/style path.
-- opening and closing the advanced filter modal is local Alpine state registered in `public/scripts/index-advanced-filters.js`, not Livewire state, so showing the modal does not rerun the Index query or reset draft filter values
-- Index Notes/Tags height limits use inline Blade, CSS, and Alpine toggles. Every enabled field gets Show all/Show less, even for empty content; disabled fields or pages without JavaScript show full content
-- `IndexContentOverflowSettings` uses wildcard validation and `updatedOverflow`. Disabled heights default to `80px` on reads and writes and before validation, so hidden drafts cannot block saving
-- changing advanced sort draft fields is client-side/deferred through that Alpine component until Apply, so the modal does not send requests while choosing primary/secondary sort columns
-- desktop table headers and the advanced sort modal both update the same Livewire-backed server-side sort state
-- the Index Sort Menu setting affects only the Advanced Filter sort dropdown option map; table headers and restored query-string sorts still validate and sort through `ProductIndexSortField`
-- Index pagination uses Livewire/Laravel paginator links with the project pagination view and a view-local scroll snippet to return to `#progress-menu`, keeping progress tabs, search, and Filter visible after page changes
-- switching progress tabs keeps the rest of the index request state, but intentionally drops the current `genre` filter
-- clicking a series link opens the index with only the exact `series` filter applied
-- `/autocomplete/tags` remains language-agnostic and returns all stored genre titles, including JP/EN/custom tags, regardless of the selected UI language
-- `/autocomplete/series` returns distinct non-empty series values
-- autocomplete matching uses word-prefix behavior for Latin-style text and substring matching for non-ASCII input so Japanese tag text can be found naturally
-- autocomplete search is split into small tag and series search helpers that share the same matcher/ranking logic
-- autocomplete ordering is configurable per source from Options: `usage` orders all matches by attached work count and then title; `first_word` puts values starting with the typed query before later-word matches, then orders each group by attached work count and title
-- `app/Support/ReturnTarget.php` normalizes index-only return state (`return_query`, `return_fragment`) used by create/edit/update/destroy flows and builds index URLs with Laravel URI helpers
-- successful create/update redirects prioritize showing the created/edited work on the Index: `ReturnTarget` first keeps the saved page when the work is already visible there, then avoids per-filter cleanup when the full query still matches, otherwise drops filters that would hide the work, preserves matching filters and sort state, and uses `ProductIndexResults` to calculate the correct page before appending the work anchor
-- update detects whether visibility-affecting product fields or custom tags changed before redirecting, so unchanged edits can trust the current index query unless the saved return state no longer contains the work; `maker_id` is included in that product-field check because circle filters also match maker IDs
-- destroy keeps the saved index query but clamps stale page numbers to the last valid page after deletion; storage cleanup uses Laravel storage deletes and logs cleanup failures without blocking product deletion
-- create-page Go Back ignores malformed `return_url` input, uses Laravel previous URL behavior with the Index as fallback, preserves that back URL while switching between DLSite Create and Custom Create, and restores the flashed return target after validation or scraper errors
-- modal Quick Add/Edit loads the unchanged Create/Edit routes in the shared iframe with `modal=1`; the marker is preserved by create-mode links, validation redirects, and hidden form inputs, while normal standalone requests remain unmarked
-- successful modal create, update, and delete responses render a small completion page that sends a same-origin `work-form-completed` message with Laravel's calculated redirect URL; create/update use the saved-change status, while delete identifies the removed work as `"RJ..." removed`; the host follows the redirect URL, refreshes itself, or closes according to `product_form_modal_completion_action`, while modal form cancellation sends `work-form-cancelled`
-- when Follow redirect returns modal Quick Add to the same Index path and query, the host stores the exact target for one reload; `pageshow` consumes it and moves to the newly rendered work row, while stale, malformed, unavailable-storage, and unmatched targets remain non-blocking
-- `WorkFormCompleted.blade.php` loads the dedicated, tightly scoped `work-form-completed.css` fallback styling; its responsive Cherry/Options confirmation card and top-level Continue link remain usable if parent messaging does not complete
-- the modal host accepts messages only from its iframe and the same origin, closes from its header button, Escape, or backdrop clicks, clears the iframe when closed, and restores focus to the opening link
-- Create pages read Quick Add or Custom Quick Add field layouts from Options and render only the visible rows, while keeping required RJ/custom title/age/cover rows visible even if stored option JSON tries to hide them. Their Progress select contains the three core statuses plus each enabled optional status and defaults to Plan to Listen. Hidden Create layout fields are ignored on submit; DLSite Quick Add still fetches and stores both JP and EN tag buckets, while visible Custom Tags can add submitted custom tags. Custom Quick Add saves visible custom metadata and Custom Tags directly because it has no scraper fallback, so hidden custom description language rows save `null` and hidden Custom Tags are ignored
-- create/store resolves scraped/custom titles into `genres` rows and syncs the pivot
-- DLSite create parses scraped JSON through `DLSiteWorkData`, collapses duplicate English title/description values to `null`, syncs contributor roles, and, when `auto_series_from_title_name` is enabled and no Series is entered in Quick Add, fills Series from `japanese.title_name` with `english.title_name` as a fallback
-- Edit loads custom tags plus the fetched bucket selected by the current UI language. Fetched-tag titles use the current-locale `Fetched Language Tags` translation.
-- update reads user-added genres from the form, stores them as `genre_product.source = custom`, and can reuse an existing fetched genre row while keeping it editable for that product
-- generic tag-facing APIs are `ProductField::FetchedTags` / `fetched_tags`, Edit input `genre_fetched`, Index layout `fetched_visible`, and runtime bucket `fetched`. Runtime labels follow the active locale, and saved layouts contain field ids plus behavioral flags rather than localized labels or notes.
-- Index Table Columns keeps one `tags` order row and one Tags column, but stores separate Custom Tags and generic Fetched Tags visibility flags; the Index tag cell renders only enabled buckets, and general Index search searches tags only when that Tags column is enabled
-- the Edit Form field layout uses separate `tags` and `fetched_tags` rows. Fetched-tag updates replace the selected current-language bucket while preserving other fetched languages and unsubmitted custom tags.
-- Edit Details reads the edit field layout from Options; hidden or read-only metadata/listening fields are not cleared during save because the update request only applies submitted/editable field groups, including nested `add[...]` date/re-listen/priority inputs. Its Progress select uses the same optional-status visibility switches as both Add forms and additionally includes the product's current On Hold or Dropped value. A hidden Progress layout row remains hidden.
-- Optional-status switches affect rendered choices only and do not add request-validation or product-rewrite rules.
-- `ProductController` builds the editable product update payload from a field-to-column map keyed by `ProductField`, maps Japanese and English description layout rows independently to `products.description` and `products.description_english`, removes semantically unchanged start/finish dates regardless of JSON key order, and saves the product model only when Eloquent reports an actual dirty attribute; contributor/tag syncing remains separate and applies its own effective-change timestamp rules
-- custom create stores user-uploaded covers/samples in `storage/app/public/Works/{RJ}`, saves the uploaded cover public path in `products.work_image`, and attaches custom tags through the same genre resolver used by update
-- product create/update and refetch apply use `app/Support/ProductGenreSync.php` to sync `genre_product.source` and `genre_product_languages` together; it expands every submitted fetched/custom tag to all ancestors through `GenreHierarchy`, attaches missing ancestors with `genre_product.source = custom`, and preserves fetched precedence when an ancestor is already fetched. Effective fetched/custom tag changes touch `products.updated_at`, while unchanged tag syncs leave the work's Updated Date unchanged
-- creating a parent/child relation immediately runs the same ancestor expansion for every existing work containing its child. The Tag settings relationship descriptions use shared help circles with examples built from the current tag title. Removing a relation is intentionally non-destructive: parent tags already attached to works remain until the user removes them through the normal tag editor
-- applying refetched scalar metadata, contributor roles, tags, covers, or samples updates only the selected work's `products.updated_at`; changes to shared contributor metadata do not fan out timestamps to unrelated products
-- `app/Support/GenreSyncPayload.php` keeps fetched-over-custom source precedence and builds the fetched language map used by `ProductGenreSync`
-- `app/Models/Genre.php` resolves tag titles by `title_key`, preserving the existing display title when the new input only differs by case
-- materially renamed fetched tags and their former DLSite names therefore remain distinct during Refetch, while case-only renames retain one identity and the manually selected display casing
-- Options -> Refetch DLSite Data dispatches one queued `FetchProductWorkJob` per selected product, including custom-created RJ works without a maker id
-- each job writes complete JP/EN JSON to `storage/app/Refetch/{run}/Works/{RJ}.json`; when Refetch Images is enabled, cover/samples are written under `storage/app/public/Refetch/{run}/Works/{RJ}`
-- running refetch runs can be cancelled from the progress page; cancellation changes the run from `running` to `cancelling`, cancels that run's Laravel batch, lets any already-started fetch finish, and moves the run to review after pending results become fetched or failed
-- cancelled-before-fetch work results are retained as failed history entries, while successful results completed before or during cancellation remain reviewable
-- the refetch progress panel is rendered and polled every second by Livewire while the run is active (`running` or `cancelling`); no separate JSON status route is used
-- the Options page has separate `General`, `Field Layouts`, `Authentication`, and `Refetch` pages generated from one ordered `OptionsController` section map; the controller normalizes the query or flashed old tab before rendering, and validation errors from refetch forms reopen the Refetch page
-- desktop renders every Options section link, while mobile shows the current section in a disclosure button that expands the complete ordered link list. Alpine manages only the page-local open/closed state without a Livewire request or persistence; the links keep the existing Laravel `tab` query navigation, use ordinary navigation semantics, and identify the active destination with `aria-current="page"`
-- the Refetch tab keeps its latest-run navigation separate from distinct vertically stacked Refetch All Works and Refetch Selected Works cards; persisted older runs remain accessible by direct URL
-- the review uses one enum-driven set of Titles, Descriptions, Series, Age, Circle, Maker ID, four creator-role, Tags, Cover, and Sample Images tabs; tabs without changes or unrequested images resolve automatically
-- `OptionsRefetchReview` prepares category counts, saved choices, tag details/colors, active-tab state, and Set Overwrite for All presets; its Blade view uses Livewire `wire:show`, `wire:cloak`, and bound select state without inline PHP, reuses the shared Alpine-backed confirmation modal partial, and directly loads the shared keyboard/touch tooltip stylesheet and script
-- Livewire validates the bound review choices, opens the shared body-teleported custom confirmation modal before Apply Tab, Apply All, Reject Run, or Ignore Remaining and Finish, and delegates confirmed mutations and newest-run guards to `RefetchService`
-- all global, per-change, and detailed-tag review selects reuse the same refetch control and focus styling
-- global actions default to Ignore, each value defaults to Use global choice, Set Overwrite for All only edits unresolved form presets while preserving explicit per-change choices, and Apply Tab resolves its complete category without remounting or discarding draft choices on other tabs
-- Apply All and Ignore Remaining load the fetched work results once, reuse that collection across every unresolved category, and persist the final resolved-tab list once
-- Cover and Sample Images are compared by SHA-256 content and applied independently; applying either category promotes its new files and removes recognized images no longer referenced by that work, while any failed sample download makes that work's entire Sample Images category unavailable without blocking Cover or metadata review
-- modal-confirmed Reject Run is available before any tab decision; after a tab is resolved it becomes modal-confirmed Ignore Remaining and Finish so already-applied values remain
-- successful staged files are promoted with checked same-disk copies, and staged JSON reaches `storage/app/Works/{RJ}.json` only when every tab is resolved and at least one recorded decision actually changed that work; ignored/no-op results and rejected runs leave canonical JSON unchanged, a failed required copy prevents Applied status and restores the previous resolved-tab state for retry, and staged snapshots remain stored with their runs
-- only the newest unfinished review can be changed; older unfinished reviews remain accessible by direct URL and read-only
-- fetched metadata can overwrite only its matching product metadata/category. Progress, scores, dates, notes, priority, relisten fields, and custom tags are never overwritten
-- the General tab includes an Index Pagination setting powered by Livewire and persisted in `options.index_per_page`; changing the mode can reveal the custom-value input immediately, but the setting is only persisted when Save is submitted
-- the General tab includes `OptionalProductStatusesSettings`, with independent On Hold and Dropped switches persisted together in `options.optional_product_statuses`; one Save action, individual reset confirmation, and Reset All restore both to disabled without rewriting products
-- the General tab includes Livewire autocomplete ordering settings persisted in `options.tag_autocomplete_order` and `options.series_autocomplete_order`
-- the General tab includes the global `English` / `日本語` UI Language setting plus Livewire settings for automatic Quick Add Series metadata, DLSite link behavior, Add/Edit form page theme, Add/Edit modal behavior, Index table width, and Index content overflow. Saving or individually resetting UI Language redirects for a full General-tab reload and restores its flash notice.
-- `DlsiteLinkSettings` persists the default-off age-appropriate link switch, validates it as a boolean, shows the Home/Maniax mapping in question-mark help, and participates in individual/global resets
-- `ProductFormModalSettings` persists the default-off master switch and `redirect`/`refresh`/`close` completion action, validates the action, provides question-mark help for every control, participates in individual/global resets, and dispatches a browser event after save/reset so the Options page's modal host updates immediately
-- the Field Layouts tab includes a default-on Notes-below-Title toggle inside the locked Index Title row and Custom Tags/current-language Fetched Tags visibility toggles inside one Index Tags row, keeps Index Filter Fields and Index Sort Menu unsplit, uses separate Edit Form rows for Custom Tags and current-language Fetched Tags, and gives the Updated Date Index/filter/sort controls action-specific help circles describing the library update timestamp
-- the Field Layouts tab orders its Livewire settings as Index Table Columns, Index Filter Fields, Index Sort Menu, Edit Form Fields, Quick Add Form Fields, and Custom Quick Add Form Fields; each heading has a surface-specific help circle explaining order, show/hide, and applicable editability behavior. Field layout rows use Livewire `wire:sort` drag handles plus Up/Down buttons and keep checkbox state in field-keyed maps while editing. The Notes-below-Title switch and the Index Notes separate-column explanation use shared question-mark help circles. Each block's Livewire save action persists and rehydrates only that layout so drafts in other blocks survive, while the bottom Save all field layouts action persists and rehydrates all six.
-- Options and Tag Library Livewire components keep transient notice keys untranslated and translate them once in Blade. UI Language and Reset All render their flashed notice keys after redirect, under the destination locale.
-- the General and Field Layouts tabs include right-aligned, body-teleported, modal-confirmed reset actions for each visible setting group plus a global `Reset All Options` action; modal confirm buttons use a destructive red style, modals close from Cancel/Escape/backdrop clicks, global reset adds a 3-second client-side countdown before its confirm button unlocks, restores UI Language to English with the other visible settings, and reloads the tab that initiated the reset with a flash notice while leaving product/refetch data and unrelated option rows alone
+```text
+storage/app/public/Works/{RJ}/...
+```
 
-## Image Storage and Viewer Flow
+Staged Refetch metadata:
 
-- PHP supplies every JSON/image destination to `python/DLSiteScraper.py`. Normal Add uses canonical `Works/{RJ}` locations; Refetch uses run/work-specific staging locations. `DLSiteWorkData` normalizes and case-insensitively deduplicates the scraped image list, and `ProductController` derives deterministic `storage/Works/{RJ}/sample_N.jpg` database paths from its count.
-- `products.work_image` stores the cover's public path, while `products.sample_images` stores ordered public paths through the model's array cast. Missing files keep their database positions so the presentation layer can render a missing-image state.
-- `ProductImageCleanupService` removes only unreferenced, root-level `cover.*` and `sample_N.*` image files from one existing RJ product folder. It compares each deterministic `Works/{RJ}` disk path directly with its `storage/Works/{RJ}` database path, does not recurse, and leaves unknown filenames, nested files, non-RJ folders, and orphan RJ folders untouched.
-- `works:cleanup-images` enumerates every top-level `storage/app/public/Works/RJ...` folder one by one and runs that cleanup only when a matching product exists. Applying a Refetch Cover or Sample Images category first backs up canonical destination files below the run's public `Refetch` directory, promotes the staged images, and commits the deterministic product paths and Updated Date. A failed database update restores overwritten files and removes newly promoted destinations. Only after the transaction succeeds does the shared cleanup service remove obsolete cover/sample files for that updated work; successful promotion then removes its temporary backups.
-- `2026_07_27_000000_normalize_product_sample_image_paths.php` is the final legacy-data boundary. It canonicalizes existing cover/sample paths, repairs malformed positions, preserves supported custom-upload extensions, and leaves runtime retrieval free of path normalization or filesystem checks.
-- `options.index_image_viewer_enabled` is part of the resettable Options set and is loaded with the other Index settings through `ProductIndexSettings`. `ProductIndex` combines that value with Image-column visibility into one page-wide `imageViewerEnabled` flag.
-- Blade uses that flag to choose the thumbnail's DLSite link or viewer trigger and conditionally render the `wire:ignore` dialog plus its `@assets` script. The trigger carries only the product id and display title.
-- `Product::versionedImagePath()` accepts a deterministic local public-disk image path, appends its file modification time when the file exists, and leaves a missing path unchanged. The Index row builder checks nullable cover state before calling it, and `ProductIndex::workImages()` uses it before Laravel's `asset()` helper returns cover-first viewer URLs. The viewer script invokes the owning component with `Livewire.find(...)`; optional authentication protects the Livewire request, while the resulting `/storage` files remain public static assets.
+```text
+storage/app/Refetch/{run}/Works/{RJ}.json
+```
 
-## Optional Authentication Flow
+Staged Refetch images:
 
-- `options.user_authentication_enabled` defaults to false; `options.authentication_page_theme` independently defaults to `cherry`. Neither key belongs to the global reset list.
-- The existing Laravel `web` session guard uses `users.username`, the model's built-in Argon2id hashed password cast, and `remember_token`. Argon2id uses 64 MiB memory, four iterations, one thread, and strict algorithm verification. The guard configuration sets the remember duration to 180 days, and `auth.password_max_length` supplies the shared 256-character maximum for setup, login, authenticated password change, environment recovery, and console recovery.
-- `RequireOptionalAuthentication` returns immediately while authentication is disabled, without querying recovery-consumed state. When enabled, it clears inactive recovery state and chooses setup for an empty user table, environment recovery when active, login for guests, or the requested application route for an authenticated administrator.
-- Login uses Laravel `Auth::attemptWhen` to combine normal password verification with an exact, case-sensitive username comparison. Session regeneration, intended redirects, and an IP-only `RateLimiter` key with five failures and a 300-second decay remain in the same flow.
-- The settings password flow validates the submitted current password against Laravel's `web` guard before replacement. `AuthenticateSession` detects password-hash changes for active sessions, every password replacement rotates `remember_token`, and the settings flow explicitly logs out its current browser.
-- The application creates at most one account through setup but deliberately adds no database uniqueness or one-row constraint. `admin:reset` can clear unsupported/manual extra rows; password-specific recovery refuses to select among multiple rows.
-- `ADMIN_PASSWORD_RESET=true` is considered only while normal authentication is enabled and a user exists. Middleware forces the dedicated recovery route, and the password replacement plus non-resettable consumed marker are committed atomically so a failed marker write cannot leave anonymous recovery reusable after changing the password.
-- Login, setup, help, and recovery use a shared Blade authentication layout and a small CSS-variable Cherry/Black stylesheet. No registration, email reset, password-token table, or authentication package is involved.
+```text
+storage/app/public/Refetch/{run}/Works/{RJ}/...
+```
 
-## Full Refetch Flow
+Temporary image-promotion backups:
 
-- the selected-work search on the Refetch tab is rendered by Livewire and uses Laravel query helpers for the ID/title match
-- the Refetch tab work list and queued all/selected ids use numeric RJ descending order, matching the Index default order
-- Tags supports whole-category overwrite plus detailed new/stale/custom-to-fetched JP/EN actions; custom tags are preserved and tag identity continues to use `Genre::titleKey()`
-- optional Refetch tag colors are resolved by title key in the review component and attached to each prepared tag value; Blade only renders the supplied value and colors
-- `RefetchRun` and `RefetchWorkResult` expose the state/category helpers used by the controller and both Livewire refetch components
+```text
+storage/app/public/Refetch/{run}/Backups/Works/{RJ}/...
+```
 
-## Scraper Integration
-- `app/Support/DLSite/DLSitePythonRunner.php` runs Python scripts through Laravel's Process facade with the project `python/venv`.
-- `DLSitePythonRunner` passes Laravel's normalized `LOG_RETENTION_DAYS` value into Python subprocesses.
-- Product create and Refetch use the same `DLSiteWorkFetcher`, which invokes `python/DLSiteScraper.py` up to five times through `DLSitePythonRunner`.
-- Each Python invocation performs one fetch attempt, writes complete Japanese/English JSON to the supplied path, downloads images only when an image path is supplied, and prints a downloaded/failed-image manifest.
-- PHP owns the five-attempt loop, canonical versus staged destinations, comparison, persistence, promotion, and user-visible behavior. Normal Add saves valid fetched metadata even when images remain missing, then shows their filenames in a dismissible fixed Index warning after redirect or on the modal completion page.
-- The stored JSON is also the source for metadata backfill migrations when a matching `products.rj_number` exists.
-- Custom create does not run the scraper and does not create or read scraped JSON.
-- Persisted and logged errors remain raw. Refetch and Quick Add translate only their current fixed, app-recognized errors at display boundaries; legacy messages and unknown Python, API, and exception text are shown verbatim.
+Existing canonical images are backed up before Refetch image promotion. On failure they can be restored; after successful promotion, obsolete canonical images and the temporary backup are cleaned up.
+
+The scraper is invoked with explicit output paths. Laravel validates returned manifest/JSON state instead of searching for arbitrary fallback output.
+
+`ProductImageCleanupService` removes obsolete canonical cover/sample images while preserving files still referenced by the product. The manual cleanup command uses the same storage rules.
+
+`RefetchCleanupService` deletes Refetch run records and staged content while preserving canonical products and `Works` files.
+
+## UI and Localization
+
+Application-owned UI text is stored in:
+- `lang/en.json`
+- `lang/ja.json`
+
+`SetUiLocale` applies the application-wide saved locale for web requests. Missing/invalid locale values fall back to English.
+
+Localized display labels are generated for enums, field layouts, and settings, while backed enum values, routes, query values, stored data, and user content remain stable.
+
+`resources/views/components/list-menu-float.blade.php` is shared by Index, Options, Tag Library, and Refetch pages.
+
+The shared menu also hosts the native `<dialog>` used for Add/Edit modals. Quick Add and Edit retain real `href` values; JavaScript intercepts only eligible ordinary primary clicks.
+
+The Index uses:
+- desktop table layout on larger screens
+- stacked product cards on mobile
+
+Create/Edit use class-based field components under:
+- `app/View/Components/Fields`
+- `resources/views/components/fields`
+
+Public CSS/JS assets use `filemtime()` query strings for cache busting.
+
+Autocomplete is provided by:
+- `public/scripts/autocomplete-text.js`
+- `public/css/autocomplete.css`
+- `/autocomplete/tags`
+- `/autocomplete/series`
+
+DLSite Quick Add has a browser-side fetching status. Custom Quick Add intentionally does not load or render that status behavior.
 
 ## Logging
 
-- Laravel's default stack uses a [Laravel 12 custom Monolog handler channel](https://laravel.com/docs/12.x/logging#creating-monolog-handler-channels) configured in `config/logging.php`, with locked writes to `storage/logs/laravel-{UTC Monday}.log`.
-- `python/DLSiteScraper.py` uses the dependency-free `python/weekly_logging.py` helper and writes `storage/logs/DLSiteScraper-{UTC Monday}.log`.
-- Both implementations calculate weeks and retention in UTC, rotate by selecting a new Monday-dated file on the first write of a new week, and leave completed files as plain-text archives.
-- Cleanup is checked on every write rather than scheduled. Only strictly matching Monday-dated archives are eligible, and an archive is retained until its complete week plus the configured retention period has elapsed.
-- Concurrent cleanup that finds an archive already removed is treated as successful. Other cleanup failures use PHP system error output or Python stderr rather than the application logger, preventing recursive log failures and allowing the current write to continue.
+Laravel and the Python scraper use matching weekly UTC log rotation.
 
-## Validation / Normalization Notes
-- RJ input shows the example placeholder `RJ01234567` and accepts a raw RJ code or a URL containing one.
-- `BaseProductRequest` normalizes the create/edit `add[...]` fields in `prepareForValidation()`, then runs date-part and date-order checks through the form request `after()` hook.
-- `BaseProductRequest` validates progress, score, priority, and re-listen value against the matching product enums so form input cannot drift from the UI option sets.
-- `StoreCustomProductRequest` keeps RJ-format and uniqueness validation, requires Japanese title, age category, and cover image, and validates cover/sample uploads as images up to 20 MB each.
-- form requests translate only their repository-authored RJ/date/refetch messages through JSON keys; generic Laravel/vendor validation remains outside the localization boundary
-- `StartRefetchRequest` validates all/selected scope, the run-wide image checkbox, and resolves product ids before creating a run.
-- `OptionsRefetchReview` validates category keys and global/per-change/tag actions before calling `RefetchService`; only the service decides whether the run is still applicable.
-- Custom tags are comma-separated and parsed with CSV rules:
-  - commas inside a tag are supported via quotes
-  - example: `"Junior / Senior (at work, school, etc)", Office Lady`
-- autocomplete inserts selected tag suggestions with the same CSV quote rules and appends `, ` so the next tag can be typed immediately
+- Laravel handler: `app/Logging/WeeklyRotatingFileHandler.php`
+- Python handler: `python/weekly_logging.py`
+
+Configuration of retention belongs in [CONFIGURATION.md](CONFIGURATION.md).
+
+## Maintenance Commands
+
+Project-specific Artisan commands are implemented under `app/Console/Commands`:
+
+- `admin:reset-password`
+- `admin:reset`
+- `works:cleanup-images`
+
+How and when to run them is documented in [CONFIGURATION.md](CONFIGURATION.md).
