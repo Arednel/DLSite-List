@@ -30,6 +30,11 @@
             <div class="options-modal-card">
                 <h3 id="{{ $modalId }}-title">{{ __('Are you sure?') }}</h3>
                 <p>{{ __($message) }}</p>
+                @if ($loadingMessage ?? null)
+                    <p class="option-description" role="status" wire:loading wire:target="{{ $confirmAction }}">
+                        {{ __($loadingMessage) }}
+                    </p>
+                @endif
 
                 <div class="option-actions option-actions--modal">
                     <button type="button" class="tag tag--soft tag--lg is-clickable options-modal-cancel"

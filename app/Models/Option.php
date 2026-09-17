@@ -8,11 +8,15 @@ use App\Enums\UiLanguage;
 use App\Support\ProductFieldLayout;
 use App\Support\ProductIndexContentOverflow;
 use App\Support\ProductIndexSettings;
+use Closure;
 use Illuminate\Database\Eloquent\Model;
+use InvalidArgumentException;
 
 class Option extends Model
 {
     public const UI_LANGUAGE = 'ui_language';
+
+    public const EXPORT_PART_MIB = 'export_part_mib';
 
     public const INDEX_PER_PAGE = 'index_per_page';
 
@@ -154,7 +158,33 @@ class Option extends Model
         self::CUSTOM_QUICK_ADD_FIELD_LAYOUT => ProductFieldLayout::SURFACE_CUSTOM_QUICK_ADD,
     ];
 
+    private const DEFAULT_OPTION_KEYS = [
+        self::UI_LANGUAGE,
+        self::EXPORT_PART_MIB,
+        self::INDEX_PER_PAGE,
+        self::INDEX_SEARCH_HIDDEN_DESCRIPTIONS_ENABLED,
+        self::INDEX_IMAGE_VIEWER_ENABLED,
+        self::OPTIONAL_PRODUCT_STATUSES,
+        self::TAG_AUTOCOMPLETE_ORDER,
+        self::SERIES_AUTOCOMPLETE_ORDER,
+        self::AUTO_SERIES_FROM_TITLE_NAME,
+        self::DLSITE_AGE_APPROPRIATE_LINKS_ENABLED,
+        self::PRODUCT_FORM_THEME,
+        self::USER_AUTHENTICATION_ENABLED,
+        self::AUTHENTICATION_PAGE_THEME,
+        self::ADMIN_PASSWORD_RESET_CONSUMED,
+        self::PRODUCT_FORM_MODAL_ENABLED,
+        self::PRODUCT_FORM_MODAL_COMPLETION_ACTION,
+        self::TAG_LIBRARY_TAGS_EXPANDED_BY_DEFAULT,
+        self::TAG_LIBRARY_INDEX_GROUP_ORDERING_ENABLED,
+        self::TAG_COLOR_SURFACES,
+        self::INDEX_TABLE_WIDTH,
+        self::INDEX_CONTENT_OVERFLOW,
+        self::INDEX_SORT_FIELD_LAYOUT,
+    ];
+
     private const RESETTABLE_OPTIONS = [
+        self::EXPORT_PART_MIB,
         self::UI_LANGUAGE,
         self::INDEX_PER_PAGE,
         self::INDEX_SEARCH_HIDDEN_DESCRIPTIONS_ENABLED,
@@ -185,16 +215,92 @@ class Option extends Model
         'value',
     ];
 
+    private static array $lockedReadValues = [];
+
+    /** Reuse typed getters with the actual locking-read value, not a MySQL snapshot read. */
+    public static function withLockedValue(string $key, Closure $callback): mixed
+    {
+        $value = self::query()->where('key', $key)->lockForUpdate()->value('value');
+        $previous = self::$lockedReadValues;
+        self::$lockedReadValues[$key] = $value;
+        try {
+            return $callback();
+        } finally {
+            self::$lockedReadValues = $previous;
+        }
+    }
+
+    public static function defaults(): array
+    {
+        $defaults = [];
+        foreach ([...self::DEFAULT_OPTION_KEYS, ...array_keys(self::FIELD_LAYOUT_OPTIONS)] as $key) {
+            $defaults[$key] = self::defaultFor($key);
+        }
+
+        return $defaults;
+    }
+
+    public static function defaultFor(string $key): mixed
+    {
+        if (isset(self::FIELD_LAYOUT_OPTIONS[$key])) {
+            return ProductFieldLayout::storageLayout([], self::FIELD_LAYOUT_OPTIONS[$key]);
+        }
+
+        return match ($key) {
+            self::UI_LANGUAGE => UiLanguage::English->value,
+            self::EXPORT_PART_MIB => config('transfers.default_part_mib'),
+            self::INDEX_PER_PAGE => self::DEFAULT_INDEX_PER_PAGE,
+            self::INDEX_SEARCH_HIDDEN_DESCRIPTIONS_ENABLED => false,
+            self::INDEX_IMAGE_VIEWER_ENABLED => false,
+            self::USER_AUTHENTICATION_ENABLED => false,
+            self::ADMIN_PASSWORD_RESET_CONSUMED => false,
+            self::PRODUCT_FORM_MODAL_ENABLED => false,
+            self::TAG_LIBRARY_TAGS_EXPANDED_BY_DEFAULT => false,
+            self::TAG_LIBRARY_INDEX_GROUP_ORDERING_ENABLED => false,
+            self::OPTIONAL_PRODUCT_STATUSES => self::DEFAULT_OPTIONAL_PRODUCT_STATUSES,
+            self::TAG_AUTOCOMPLETE_ORDER => AutocompleteOrder::Usage->value,
+            self::SERIES_AUTOCOMPLETE_ORDER => AutocompleteOrder::Usage->value,
+            self::AUTO_SERIES_FROM_TITLE_NAME => true,
+            self::DLSITE_AGE_APPROPRIATE_LINKS_ENABLED => false,
+            self::PRODUCT_FORM_THEME => self::PRODUCT_FORM_THEME_BLACK,
+            self::AUTHENTICATION_PAGE_THEME => self::AUTHENTICATION_PAGE_THEME_CHERRY,
+            self::PRODUCT_FORM_MODAL_COMPLETION_ACTION => self::PRODUCT_FORM_MODAL_COMPLETION_REDIRECT,
+            self::TAG_COLOR_SURFACES => self::DEFAULT_TAG_COLOR_SURFACES,
+            self::INDEX_TABLE_WIDTH => ['mode' => self::INDEX_TABLE_WIDTH_DEFAULT, 'custom' => ''],
+            self::INDEX_CONTENT_OVERFLOW => ProductIndexContentOverflow::DEFAULTS,
+            self::INDEX_SORT_FIELD_LAYOUT => ProductIndexSortField::storageLayout([]),
+            default => throw new InvalidArgumentException('Unknown option: ' . $key),
+        };
+    }
+
     public static function uiLanguage(): UiLanguage
     {
-        return UiLanguage::tryFrom((string) self::valueFor(self::UI_LANGUAGE)) ?? UiLanguage::English;
+        return UiLanguage::tryFrom((string) self::valueFor(self::UI_LANGUAGE))
+            ?? UiLanguage::from((string) self::defaultFor(self::UI_LANGUAGE));
+    }
+
+    public static function exportPartMib(): int|string
+    {
+        $value = self::valueFor(self::EXPORT_PART_MIB);
+
+        return $value === 'unlimited' ? 'unlimited' : min(self::maxExportPartMib(), max(1, (int) ($value ?? self::defaultFor(self::EXPORT_PART_MIB))));
+    }
+
+    public static function maxExportPartMib(): int
+    {
+        return intdiv(PHP_INT_MAX, 1048576);
+    }
+
+    public static function setExportPartMib(int|string $value): void
+    {
+        self::setValue(self::EXPORT_PART_MIB, (string) $value);
     }
 
     public static function setUiLanguage(UiLanguage|string $language): void
     {
         $normalized = $language instanceof UiLanguage
             ? $language
-            : (UiLanguage::tryFrom($language) ?? UiLanguage::English);
+            : (UiLanguage::tryFrom($language) ?? UiLanguage::from((string) self::defaultFor(self::UI_LANGUAGE)));
 
         self::setValue(self::UI_LANGUAGE, $normalized->value);
     }
@@ -224,7 +330,7 @@ class Option extends Model
 
     public static function indexSearchHiddenDescriptionsEnabled(): bool
     {
-        return self::booleanValueFor(self::INDEX_SEARCH_HIDDEN_DESCRIPTIONS_ENABLED, false);
+        return self::booleanValueFor(self::INDEX_SEARCH_HIDDEN_DESCRIPTIONS_ENABLED, self::defaultFor(self::INDEX_SEARCH_HIDDEN_DESCRIPTIONS_ENABLED));
     }
 
     public static function setIndexSearchHiddenDescriptionsEnabled(bool $enabled): void
@@ -239,7 +345,7 @@ class Option extends Model
 
     public static function indexImageViewerEnabled(): bool
     {
-        return self::booleanValueFor(self::INDEX_IMAGE_VIEWER_ENABLED, false);
+        return self::booleanValueFor(self::INDEX_IMAGE_VIEWER_ENABLED, self::defaultFor(self::INDEX_IMAGE_VIEWER_ENABLED));
     }
 
     public static function setIndexImageViewerEnabled(bool $enabled): void
@@ -258,7 +364,7 @@ class Option extends Model
     public static function optionalProductStatuses(): array
     {
         return self::jsonFromValue(self::valueFor(self::OPTIONAL_PRODUCT_STATUSES))
-            ?? self::DEFAULT_OPTIONAL_PRODUCT_STATUSES;
+            ?? self::defaultFor(self::OPTIONAL_PRODUCT_STATUSES);
     }
 
     public static function setOptionalProductStatuses(array $statuses): void
@@ -301,7 +407,7 @@ class Option extends Model
 
     public static function autoSeriesFromTitleName(): bool
     {
-        return self::booleanValueFor(self::AUTO_SERIES_FROM_TITLE_NAME, true);
+        return self::booleanValueFor(self::AUTO_SERIES_FROM_TITLE_NAME, self::defaultFor(self::AUTO_SERIES_FROM_TITLE_NAME));
     }
 
     public static function setAutoSeriesFromTitleName(bool $enabled): void
@@ -316,7 +422,7 @@ class Option extends Model
 
     public static function dlsiteAgeAppropriateLinksEnabled(): bool
     {
-        return self::booleanValueFor(self::DLSITE_AGE_APPROPRIATE_LINKS_ENABLED, false);
+        return self::booleanValueFor(self::DLSITE_AGE_APPROPRIATE_LINKS_ENABLED, self::defaultFor(self::DLSITE_AGE_APPROPRIATE_LINKS_ENABLED));
     }
 
     public static function setDlsiteAgeAppropriateLinksEnabled(bool $enabled): void
@@ -346,7 +452,7 @@ class Option extends Model
 
     public static function userAuthenticationEnabled(): bool
     {
-        return self::booleanValueFor(self::USER_AUTHENTICATION_ENABLED, false);
+        return self::booleanValueFor(self::USER_AUTHENTICATION_ENABLED, self::defaultFor(self::USER_AUTHENTICATION_ENABLED));
     }
 
     public static function setUserAuthenticationEnabled(bool $enabled): void
@@ -379,7 +485,7 @@ class Option extends Model
 
     public static function adminPasswordResetConsumed(): bool
     {
-        return self::booleanValueFor(self::ADMIN_PASSWORD_RESET_CONSUMED, false);
+        return self::booleanValueFor(self::ADMIN_PASSWORD_RESET_CONSUMED, self::defaultFor(self::ADMIN_PASSWORD_RESET_CONSUMED));
     }
 
     public static function setAdminPasswordResetConsumed(bool $consumed): void
@@ -403,7 +509,7 @@ class Option extends Model
 
     public static function productFormModalEnabled(): bool
     {
-        return self::booleanValueFor(self::PRODUCT_FORM_MODAL_ENABLED, false);
+        return self::booleanValueFor(self::PRODUCT_FORM_MODAL_ENABLED, self::defaultFor(self::PRODUCT_FORM_MODAL_ENABLED));
     }
 
     public static function setProductFormModalEnabled(bool $enabled): void
@@ -432,7 +538,7 @@ class Option extends Model
     public static function productFormModalCompletionOptions(): array
     {
         return array_map(
-            fn (string $label): string => (string) __($label),
+            fn(string $label): string => (string) __($label),
             self::PRODUCT_FORM_MODAL_COMPLETION_OPTIONS,
         );
     }
@@ -444,7 +550,7 @@ class Option extends Model
 
     public static function tagLibraryTagsExpandedByDefault(): bool
     {
-        return self::booleanValueFor(self::TAG_LIBRARY_TAGS_EXPANDED_BY_DEFAULT, false);
+        return self::booleanValueFor(self::TAG_LIBRARY_TAGS_EXPANDED_BY_DEFAULT, self::defaultFor(self::TAG_LIBRARY_TAGS_EXPANDED_BY_DEFAULT));
     }
 
     public static function setTagLibraryTagsExpandedByDefault(bool $expanded): void
@@ -459,7 +565,7 @@ class Option extends Model
 
     public static function tagLibraryIndexGroupOrderingEnabled(): bool
     {
-        return self::booleanValueFor(self::TAG_LIBRARY_INDEX_GROUP_ORDERING_ENABLED, false);
+        return self::booleanValueFor(self::TAG_LIBRARY_INDEX_GROUP_ORDERING_ENABLED, self::defaultFor(self::TAG_LIBRARY_INDEX_GROUP_ORDERING_ENABLED));
     }
 
     public static function setTagLibraryIndexGroupOrderingEnabled(bool $enabled): void
@@ -694,7 +800,7 @@ class Option extends Model
         $tableWidth = self::normalizeIndexTableWidth(self::jsonFromValue($values->get(self::INDEX_TABLE_WIDTH)));
 
         return new ProductIndexSettings(
-            perPage: self::normalizeIndexPerPage($values->get(self::INDEX_PER_PAGE, self::DEFAULT_INDEX_PER_PAGE)),
+            perPage: self::normalizeIndexPerPage($values->get(self::INDEX_PER_PAGE, self::defaultFor(self::INDEX_PER_PAGE))),
             indexFieldLayout: $indexFieldLayout,
             indexColumns: $indexColumns,
             visibleIndexFields: array_column($indexColumns, 'field'),
@@ -710,31 +816,31 @@ class Option extends Model
             ),
             searchHiddenDescriptionsEnabled: self::normalizeBoolean(
                 $values->get(self::INDEX_SEARCH_HIDDEN_DESCRIPTIONS_ENABLED),
-                false,
+                self::defaultFor(self::INDEX_SEARCH_HIDDEN_DESCRIPTIONS_ENABLED),
             ),
             indexImageViewerEnabled: self::normalizeBoolean(
                 $values->get(self::INDEX_IMAGE_VIEWER_ENABLED),
-                false,
+                self::defaultFor(self::INDEX_IMAGE_VIEWER_ENABLED),
             ),
             optionalProductStatuses: self::jsonFromValue($values->get(self::OPTIONAL_PRODUCT_STATUSES))
-                ?? self::DEFAULT_OPTIONAL_PRODUCT_STATUSES,
+                ?? self::defaultFor(self::OPTIONAL_PRODUCT_STATUSES),
             indexGroupOrderingEnabled: self::normalizeBoolean(
                 $values->get(self::TAG_LIBRARY_INDEX_GROUP_ORDERING_ENABLED),
-                false,
+                self::defaultFor(self::TAG_LIBRARY_INDEX_GROUP_ORDERING_ENABLED),
             ),
             tagColorSurfaces: self::normalizeTagColorSurfaces(
                 self::jsonFromValue($values->get(self::TAG_COLOR_SURFACES)),
             ),
             productFormModalEnabled: self::normalizeBoolean(
                 $values->get(self::PRODUCT_FORM_MODAL_ENABLED),
-                false,
+                self::defaultFor(self::PRODUCT_FORM_MODAL_ENABLED),
             ),
             productFormModalCompletionAction: self::normalizeProductFormModalCompletionAction(
                 $values->get(self::PRODUCT_FORM_MODAL_COMPLETION_ACTION),
             ),
             dlsiteAgeAppropriateLinksEnabled: self::normalizeBoolean(
                 $values->get(self::DLSITE_AGE_APPROPRIATE_LINKS_ENABLED),
-                false,
+                self::defaultFor(self::DLSITE_AGE_APPROPRIATE_LINKS_ENABLED),
             ),
         );
     }
@@ -749,7 +855,7 @@ class Option extends Model
             return (int) $value;
         }
 
-        return self::DEFAULT_INDEX_PER_PAGE;
+        return self::defaultFor(self::INDEX_PER_PAGE);
     }
 
     /**
@@ -758,7 +864,7 @@ class Option extends Model
     public static function fixedIndexPerPageOptions(): array
     {
         return collect(self::FIXED_INDEX_PER_PAGE_OPTIONS)
-            ->mapWithKeys(fn (int $value): array => [$value => (string) $value])
+            ->mapWithKeys(fn(int $value): array => [$value => (string) $value])
             ->all();
     }
 
@@ -796,12 +902,13 @@ class Option extends Model
      */
     private static function normalizeTagColorSurfaces(mixed $surfaces): array
     {
+        $defaults = self::defaultFor(self::TAG_COLOR_SURFACES);
         if (! is_array($surfaces)) {
-            return self::DEFAULT_TAG_COLOR_SURFACES;
+            return $defaults;
         }
 
-        return collect(self::DEFAULT_TAG_COLOR_SURFACES)
-            ->mapWithKeys(fn (bool $default, string $surface): array => [
+        return collect($defaults)
+            ->mapWithKeys(fn(bool $default, string $surface): array => [
                 $surface => self::normalizeBoolean($surfaces[$surface] ?? null, $default),
             ])
             ->all();
@@ -813,32 +920,37 @@ class Option extends Model
             return $order;
         }
 
-        return AutocompleteOrder::tryFrom((string) $order) ?? AutocompleteOrder::Usage;
+        return AutocompleteOrder::tryFrom((string) $order)
+            ?? AutocompleteOrder::from((string) self::defaultFor(self::TAG_AUTOCOMPLETE_ORDER));
     }
 
     private static function normalizeProductFormTheme(?string $theme): string
     {
         return array_key_exists((string) $theme, self::PRODUCT_FORM_THEME_OPTIONS)
             ? (string) $theme
-            : self::PRODUCT_FORM_THEME_BLACK;
+            : self::defaultFor(self::PRODUCT_FORM_THEME);
     }
 
     private static function normalizeAuthenticationPageTheme(?string $theme): string
     {
         return array_key_exists((string) $theme, self::AUTHENTICATION_PAGE_THEME_OPTIONS)
             ? (string) $theme
-            : self::AUTHENTICATION_PAGE_THEME_CHERRY;
+            : self::defaultFor(self::AUTHENTICATION_PAGE_THEME);
     }
 
     private static function normalizeProductFormModalCompletionAction(?string $action): string
     {
         return array_key_exists((string) $action, self::PRODUCT_FORM_MODAL_COMPLETION_OPTIONS)
             ? (string) $action
-            : self::PRODUCT_FORM_MODAL_COMPLETION_REDIRECT;
+            : self::defaultFor(self::PRODUCT_FORM_MODAL_COMPLETION_ACTION);
     }
 
     private static function valueFor(string $key): ?string
     {
+        if (array_key_exists($key, self::$lockedReadValues)) {
+            return self::$lockedReadValues[$key];
+        }
+
         return self::query()->where('key', $key)->value('value');
     }
 
@@ -897,11 +1009,12 @@ class Option extends Model
      */
     public static function normalizeIndexTableWidth(mixed $width): array
     {
-        $mode = is_array($width) ? (string) ($width['mode'] ?? self::INDEX_TABLE_WIDTH_DEFAULT) : (string) $width;
-        $custom = is_array($width) ? trim((string) ($width['custom'] ?? '')) : '';
+        $defaults = self::defaultFor(self::INDEX_TABLE_WIDTH);
+        $mode = is_array($width) ? (string) ($width['mode'] ?? $defaults['mode']) : (string) $width;
+        $custom = is_array($width) ? trim((string) ($width['custom'] ?? $defaults['custom'])) : $defaults['custom'];
 
         if (! array_key_exists($mode, self::INDEX_TABLE_WIDTH_OPTIONS)) {
-            $mode = self::INDEX_TABLE_WIDTH_DEFAULT;
+            $mode = $defaults['mode'];
         }
 
         if ($mode !== self::INDEX_TABLE_WIDTH_CUSTOM) {
@@ -909,8 +1022,8 @@ class Option extends Model
         }
 
         if ($mode === self::INDEX_TABLE_WIDTH_CUSTOM && ! preg_match('/^\d+(\.\d+)?(px|rem|em|%|vw)$/', $custom)) {
-            $mode = self::INDEX_TABLE_WIDTH_DEFAULT;
-            $custom = '';
+            $mode = $defaults['mode'];
+            $custom = $defaults['custom'];
         }
 
         return [

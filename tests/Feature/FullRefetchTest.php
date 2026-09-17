@@ -25,6 +25,7 @@ use Illuminate\Support\Facades\Storage;
 use Livewire\Livewire;
 use Mockery;
 use PHPUnit\Framework\Attributes\DataProvider;
+use RuntimeException;
 use Tests\TestCase;
 
 class FullRefetchTest extends TestCase
@@ -308,6 +309,7 @@ class FullRefetchTest extends TestCase
             ])),
         ])->save();
         $localDisk = Mockery::mock(Filesystem::class);
+        $localDisk->shouldReceive('exists')->with('ImagePromotions/active.json')->andReturnFalse();
         $localDisk->shouldReceive('exists')
             ->once()
             ->with($this->stagedJsonPath($run, $product))
@@ -317,7 +319,6 @@ class FullRefetchTest extends TestCase
             ->with($this->stagedJsonPath($run, $product), "Works/{$product->id}.json")
             ->andReturnFalse();
         Storage::shouldReceive('disk')
-            ->twice()
             ->with('local')
             ->andReturn($localDisk);
 
@@ -810,7 +811,7 @@ class FullRefetchTest extends TestCase
             'eloquent.updating: ' . Product::class,
             function (Product $updatingProduct) use ($product): void {
                 if ($updatingProduct->is($product)) {
-                    throw new \RuntimeException('Simulated product update failure.');
+                    throw new RuntimeException('Simulated product update failure.');
                 }
             },
         );
@@ -967,7 +968,7 @@ class FullRefetchTest extends TestCase
     }
 
     /**
-     * @return array{RefetchRun, Product, \App\Models\RefetchWorkResult}
+     * @return array{RefetchRun, Product, RefetchWorkResult}
      */
     private function reviewRun(): array
     {
@@ -978,7 +979,7 @@ class FullRefetchTest extends TestCase
         $run = app(RefetchService::class)->createRun([$product->id], false);
         $result = $run->results()->firstOrFail();
         $result->forceFill([
-            'status' => \App\Models\RefetchWorkResult::STATUS_FETCHED,
+            'status' => RefetchWorkResult::STATUS_FETCHED,
             'changes' => [
                 RefetchCategory::Titles->value => [
                     'work_name' => [

@@ -193,6 +193,36 @@ Covers the full Refetch workflow:
 - obsolete-image cleanup
 - Updated Date behavior
 
+#### `tests/Feature/LibraryTransferTest.php`
+
+Covers core transfer contracts, route/review smoke coverage, portable Options, new-work round trips, controlled downloads, and the shared library-mutation lock.
+
+#### `tests/Feature/LibraryTransferExportTest.php`
+
+Covers export selection/planning, deterministic work/image inventory, Tag Library/Options fragmentation, multipart manifests and size boundaries, work-level progress, source-change replanning, and downloads.
+
+Regression coverage injects failures after successor-job insertion in every planning phase, verifies transaction rollback and successful retry, and checks stale planning calls.
+
+#### `tests/Feature/LibraryTransferImportTest.php`
+
+Covers multipart upload/validation, missing or replacement parts, archive/path/checksum safety, bounded analysis/checkpoint retries, image validation, existing/new work analysis, and data-only continuation.
+
+#### `tests/Feature/LibraryTransferReviewTest.php`
+
+Covers Ignore/Overwrite/Merge decisions, work/tag/group/relationship/option application, stale-conflict handling, atomic work updates, image promotion/recovery, timestamps, and read-only completed reviews.
+
+Partial contributor document coverage verifies that omitted roles survive Overwrite and explicitly empty roles can still be cleared.
+
+#### `tests/Feature/LibraryTransferLifecycleTest.php`
+
+Covers supersession/cancellation, active-transfer guards, history cleanup, queued checkpoints/retries, generation and operation tokens, late callbacks, publication recovery, browser-started imports, and transfer-storage cleanup.
+
+Storage cleanup coverage holds the upload lock before database registration to verify that a sweep skips active uploads and later removes only unreferenced files.
+
+#### `tests/Feature/LibraryTransferConcurrencyTest.php`
+
+Covers stale-value detection for work fields and typed Options using two MySQL connections and an older `REPEATABLE READ` snapshot. Never run this test against production.
+
 #### `tests/Feature/GenreGroupRelationshipTest.php`
 
 Covers:
@@ -535,6 +565,7 @@ The current suite intentionally uses framework fakes for external/destructive bo
 
 - upload tests use `UploadedFile::fake()` and `Storage::fake('public')`
 - Full Refetch tests use `Bus::fake()`, `Process::fake()`, and fake storage
+- Library Import / Export tests use fake private/public storage and a fake bus where appropriate, while creating and reading real ZIP archives
 - scraper-process tests use `Process::fake()` and `Process::preventStrayProcesses()`
 - Livewire component tests use `Livewire::test()`
 - Feature tests use `RefreshDatabase`

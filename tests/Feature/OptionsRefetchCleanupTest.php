@@ -14,6 +14,7 @@ use Illuminate\Support\Facades\Storage;
 use Livewire\Livewire;
 use Mockery;
 use PHPUnit\Framework\Attributes\DataProvider;
+use RuntimeException;
 use Tests\TestCase;
 
 class OptionsRefetchCleanupTest extends TestCase
@@ -180,17 +181,18 @@ class OptionsRefetchCleanupTest extends TestCase
         $run = app(RefetchService::class)->createRun([$product->id], false);
         $run->forceFill(['status' => RefetchRun::STATUS_APPLIED])->save();
         $localDisk = Mockery::mock(FilesystemAdapter::class);
+        $localDisk->shouldReceive('exists')->once()->with('ImagePromotions/active.json')->andReturnFalse();
         $localDisk->shouldReceive('deleteDirectory')->once()->with('Refetch')->andReturnTrue();
         $localDisk->shouldReceive('makeDirectory')->once()->with('Refetch')->andReturnTrue();
         $publicDisk = Mockery::mock(FilesystemAdapter::class);
         $publicDisk->shouldReceive('deleteDirectory')->once()->with('Refetch')->andReturnFalse();
-        Storage::shouldReceive('disk')->once()->with('local')->andReturn($localDisk);
+        Storage::shouldReceive('disk')->with('local')->andReturn($localDisk);
         Storage::shouldReceive('disk')->once()->with('public')->andReturn($publicDisk);
 
         try {
             app(RefetchCleanupService::class)->cleanup();
             $this->fail('Expected refetch filesystem cleanup to fail.');
-        } catch (\RuntimeException $exception) {
+        } catch (RuntimeException $exception) {
             $this->assertSame(RefetchCleanupService::FAILED_MESSAGE, $exception->getMessage());
         }
 

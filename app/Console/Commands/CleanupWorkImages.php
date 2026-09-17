@@ -3,8 +3,11 @@
 namespace App\Console\Commands;
 
 use App\Models\Product;
+use App\Support\LibraryMutationLock;
 use App\Support\ProductImageCleanupService;
+use App\Support\ProductImagePromotion;
 use Illuminate\Console\Command;
+use Illuminate\Contracts\Cache\LockTimeoutException;
 use Illuminate\Support\Facades\Storage;
 
 class CleanupWorkImages extends Command
@@ -13,7 +16,22 @@ class CleanupWorkImages extends Command
 
     protected $description = 'Cleanup unreferenced cover and sample images from existing RJ work folders';
 
-    public function handle(ProductImageCleanupService $cleanup): int
+    public function handle(ProductImageCleanupService $cleanup, ProductImagePromotion $promotion, LibraryMutationLock $mutationLock): int
+    {
+        try {
+            return $mutationLock->run(function () use ($cleanup, $promotion): int {
+                $promotion->recover();
+
+                return $this->cleanupWorks($cleanup);
+            });
+        } catch (LockTimeoutException) {
+            $this->error('Library changes are in progress. Retry image cleanup shortly.');
+
+            return self::FAILURE;
+        }
+    }
+
+    private function cleanupWorks(ProductImageCleanupService $cleanup): int
     {
         $processed = 0;
         $removed = 0;

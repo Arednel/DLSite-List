@@ -33,6 +33,8 @@ http://localhost:8080
 
 Docker serves `/storage/*` directly through Nginx, so `php artisan storage:link` is not required inside the Docker setup.
 
+For Import / Export, the supplied Docker configuration allows individual ZIP uploads up to 256 MiB. PHP uses `upload_max_filesize = 256M` and `post_max_size = 260M`, while Nginx uses `client_max_body_size 260M`. If larger import files are needed, raise the PHP and Nginx limits together and keep the request/post limit above the file-size limit.
+
 The test database/services are behind the Compose `test` profile and do not start with the normal application command.
 
 phpMyAdmin is disabled/commented out by default. If enabled in `compose.yaml`, its configured access point is:
@@ -119,7 +121,7 @@ source python/venv/bin/activate
 pip install -r python/requirements.txt
 ```
 
-10. Keep a Laravel queue worker running when using Refetch:
+10. Keep a Laravel queue worker running when using Refetch or Import / Export:
 
 ```bash
 php artisan queue:work
@@ -277,7 +279,7 @@ Docker uses `database` as the application database host.
 
 ### Queue
 
-Refetch uses Laravel's database queue and job batches.
+Refetch and Import / Export use Laravel's database queue and job batches.
 
 Normal setting:
 
@@ -285,7 +287,7 @@ Normal setting:
 QUEUE_CONNECTION=database
 ```
 
-For a local/manual installation, keep this worker running while Refetch is in use:
+For a local/manual installation, keep this worker running while Refetch or Import / Export is in use:
 
 ```bash
 php artisan queue:work
@@ -342,6 +344,7 @@ Tabs:
 - `Field Layouts`
 - `Authentication`
 - `Refetch`
+- `Import / Export`
 
 `Reset All Options` is available on both General and Field Layouts. Using it resets all settings from both tabs to their defaults. Authentication settings are not affected.
 
@@ -732,3 +735,26 @@ Username matching is case-sensitive. Passwords must be 8–256 characters long.
 - Refetch cleanup
 
 Refetch requires the Laravel queue worker and the application's database, storage, and cache configuration. No separate Refetch-specific environment variables are required.
+
+### Import / Export
+
+`Import / Export` can transfer Works, Images, the Tag Library, and Options. See [ARCHITECTURE.md](ARCHITECTURE.md) for archive structure and runtime flow.
+
+For completed exports, `Download all` asks for a destination folder and saves every ZIP part there.
+
+#### Export Part Size
+
+* Default - `256 MiB`
+* Presets - `8`, `16`, `32`, `64`, `128`, `256`, `512`, `1024`, `2048`, `4096`, `8192 MiB`
+* Custom - supported
+* Unlimited - supported
+
+The export part-size setting is reset by `Reset All Options`.
+
+#### Docker Import Limits
+
+* PHP `upload_max_filesize` - `256M`
+* PHP `post_max_size` - `260M`
+* Nginx `client_max_body_size` - `260M`
+
+The supplied Docker configuration supports individual import ZIP parts up to `256 MiB`. Increase all relevant limits when importing larger parts.

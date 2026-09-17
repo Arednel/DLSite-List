@@ -4,11 +4,22 @@ All notable changes to this project are documented in this file.
 
 ## Unreleased
 
+### Added
+
+* Added ZIP import/export for Works, Images, Tag Library data, and Options.
+
 ### Changed
 
 * Replaced the mobile Options tabs with an expandable navigation list.
 * Reorganized the changelog into versioned sections grouped by change type.
-* Updated architecture, configuration, and testing documentation to match current project behavior and improve clarity
+* Updated architecture, configuration, and testing documentation to match current project behavior and improve clarity.
+* Updated Docker upload limits and queue timing to support large, long-running library transfers.
+
+### Fixed
+
+* Made Refetch image updates more reliable when interrupted.
+* Fixed Refetch review dropdown overflowing their cards on mobile view.
+* Configured Docker application processes to run as `www-data`, preventing shared cache and storage permission errors.
 
 ## 1.8.7 - 2026-09-08
 

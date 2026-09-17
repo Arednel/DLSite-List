@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\AuthenticationController;
 use App\Http\Controllers\AutocompleteController;
+use App\Http\Controllers\LibraryTransferController;
 use App\Http\Controllers\OptionsController;
 use App\Http\Controllers\ProductController;
 use App\Http\Controllers\RefetchController;
@@ -50,6 +51,15 @@ Route::controller(RefetchController::class)->prefix('/options/refetch')->group(f
     Route::post('/', 'start')->name('options.refetch.start');
     Route::get('/{run}', 'show')->name('options.refetch.show');
     Route::post('/{run}/cancel', 'cancel')->name('options.refetch.cancel');
+});
+
+// Library Import / Export
+Route::controller(LibraryTransferController::class)->prefix('/options/transfers')->scopeBindings()->group(function () {
+    Route::get('/{run}', 'show')->name('options.transfers.show');
+    Route::post('/{run}/parts', 'upload')->name('options.transfers.upload');
+    Route::get('/{run}/parts/{part}/download', 'download')->name('options.transfers.download');
+    Route::get('/{run}/images/{entry}', 'image')->name('options.transfers.image');
+    Route::get('/{run}/changes/{item}', 'change')->name('options.transfers.change');
 });
 
 // Autocomplete

@@ -108,12 +108,13 @@ Tag Library uses the same stored tag rows as products. Renaming a tag updates th
 
 ### Options
 
-`GET /options` renders one of four tabs:
+`GET /options` renders one of five tabs:
 
 - `General`
 - `Field Layouts`
 - `Authentication`
 - `Refetch`
+- `Import / Export`
 
 Most application settings are stored in the `options` table and edited by focused Livewire settings components.
 
@@ -144,13 +145,51 @@ Refetch updates scraped DLsite-owned data without immediately overwriting the ex
 
 Refetch has thirteen ordered review categories defined by `RefetchCategory`.
 
-Cover and sample-image changes are independent. Image promotion is guarded so a failed database update can restore the previous canonical images.
+Cover and sample-image changes are independent. Refetch uses the shared `ProductImagePromotion` boundary so interrupted image replacement can be recovered safely.
 
-Refetch creation, cleanup, and review application share a Laravel cache atomic lifecycle lock so staged files cannot be removed while another operation needs them.
+Refetch creation, cleanup, and review application use the shared `LibraryMutationLock`, which also serializes Import apply and work-image cleanup.
 
 Cancellation is cooperative: already-running work may finish while queued jobs observe the cancelled run state.
 
 Only the newest Refetch run can be applied. Older completed runs remain available as historical/read-only review data rather than competing application states.
+
+### Library Import / Export
+
+Exports can contain works, images, Tag Library data, and Options. Imports stage and analyze archive data before any library changes.
+
+The export flow is:
+
+1. `LibraryTransferService` creates the export run and selected scope.
+2. Queue work serializes portable domain data and inventories image files into `library_transfer_entries`.
+3. `TransferArchive` packs deterministic data/image ZIP parts with a `manifest.json` per part.
+4. Completed parts are validated and atomically published from private transfer storage.
+
+The import flow is:
+
+1. Uploaded ZIPs are stored under immutable private paths and inspected asynchronously.
+2. Manifests, archive-set identity, paths, checksums, media types, and the complete required data-part set are validated before analysis.
+3. Analysis maps incoming values to bounded, paginated `library_import_items` without mutating the library.
+4. Review decisions are persisted as `ignore`, `overwrite`, or `merge`.
+5. Apply rechecks current state under database and library-mutation locks, then updates approved categories in bounded batches.
+6. Imported image changes use `ProductImagePromotion` so filesystem replacement and database changes can recover safely from interruption.
+
+Transfer jobs use persisted checkpoints and operation/validation tokens so retries can resume work and stale queued jobs cannot publish or apply obsolete state. Same-direction unfinished runs are superseded, while completed runs remain historical.
+
+Each bounded export planning phase locks and rechecks the run, then commits inventory/part changes, its checkpoint, and the successor job in one database transaction. Cancellation waits for the current batch. Staged JSON paths are deterministic and can be overwritten on retry after a rollback.
+
+Partial work imports include only contributor roles explicitly present in either language document. Omitted roles are preserved; explicitly empty roles can be cleared with Overwrite.
+
+#### Archive boundary
+
+Schema v1 uses one archive-set identity across independent data and image ZIP parts. Every part contains `manifest.json`, which identifies the schema, part kind/count, scopes, and declared entries with sizes and SHA-256 checksums.
+
+Portable entries are domain-oriented:
+
+- each work is a deterministic `works/{RJ}/work.json` document using the `dlsite-async+dlsite-list` format
+- Tag Library and Options are stored as bounded JSON fragments
+- images are separate binary entries referenced by archive path, checksum, size, and media type
+
+The portable format excludes database IDs, authentication data, internal storage paths, and deployment-specific settings. Import reads explicitly declared entries rather than extracting archives wholesale, and rejects unsupported/mixed layouts, unsafe paths, undeclared or conflicting entries, and integrity mismatches before review.
 
 ### Authentication
 
@@ -195,6 +234,7 @@ Main controllers:
 - `app/Http/Controllers/AutocompleteController.php`
 - `app/Http/Controllers/AuthenticationController.php`
 - `app/Http/Controllers/RefetchController.php`
+- `app/Http/Controllers/LibraryTransferController.php`
 
 Main form requests:
 - `app/Http/Requests/BaseProductRequest.php`
@@ -202,6 +242,7 @@ Main form requests:
 - `app/Http/Requests/StoreCustomProductRequest.php`
 - `app/Http/Requests/UpdateProductRequest.php`
 - `app/Http/Requests/StartRefetchRequest.php`
+- `app/Http/Requests/LibraryTransferUploadRequest.php`
 
 ### Livewire Components
 
@@ -213,6 +254,8 @@ Core application components include:
 - `OptionsRefetchActions`
 - `OptionsRefetchProgress`
 - `OptionsRefetchReview`
+- `OptionsTransfers`
+- `OptionsTransferRun`
 
 Settings components include:
 
@@ -257,6 +300,7 @@ Tags/contributors:
 - `ProductGenreSync`
 - `ProductContributorSync`
 - `GenreHierarchy`
+- `GraphCycleValidator`
 
 DLsite:
 - `DLSitePythonRunner`
@@ -268,7 +312,20 @@ Refetch:
 - `RefetchDiffBuilder`
 - `RefetchCleanupService`
 
-Files:
+Library transfers:
+- `LibraryTransferService`
+- `TransferArchive`
+- `TransferJobDispatcher`
+- `TransferStorage`
+- `ImportReview`
+- `WorkArchiveData`
+- `LibraryData`
+- `PortableOptions`
+- `LibraryTransferCleanupService`
+
+Shared mutation/filesystem safety:
+- `LibraryMutationLock`
+- `ProductImagePromotion`
 - `ProductImageCleanupService`
 
 Autocomplete:
@@ -360,7 +417,7 @@ A tag is excluded from Index tag chips when:
 `GenreHierarchy`:
 - resolves ancestors iteratively
 - prevents self-relations
-- prevents direct and indirect cycles
+- prevents direct and indirect cycles through `GraphCycleValidator`, which Import reuses for incoming relationships
 - synchronizes parent/child edits
 
 When a child tag is attached to a work, missing parents/ancestors are added as `custom` attachments. Existing fetched ancestors keep their fetched source/language data.
@@ -405,6 +462,18 @@ Laravel queue infrastructure uses:
 - `jobs`
 - `job_batches`
 
+### Library transfers
+
+`library_transfer_runs` stores transfer direction, lifecycle/checkpoint state, archive-set identity, settings, progress, warnings, and errors.
+
+`library_transfer_parts` stores expected/uploaded ZIP parts and their validation state.
+
+`library_transfer_entries` stores the bounded archive inventory used for packing, validation, and image access without rescanning manifests.
+
+`library_import_items` stores review identity, baseline/incoming values, bounded previews, decisions, and apply results. Review state is persisted and paginated instead of being held as one Livewire payload.
+
+Transfer mapping deliberately separates portable domain values from transport metadata. `LibraryData` maps library entities, `WorkArchiveData` owns the per-work document format, and `PortableOptions` limits import/export to explicitly portable settings.
+
 ## Storage and External Process Boundary
 
 Canonical work metadata:
@@ -431,19 +500,30 @@ Staged Refetch images:
 storage/app/public/Refetch/{run}/Works/{RJ}/...
 ```
 
-Temporary image-promotion backups:
+Refetch and Import share `ProductImagePromotion` for canonical image replacement. It keeps private backups plus a durable recovery journal under:
 
 ```text
-storage/app/public/Refetch/{run}/Backups/Works/{RJ}/...
+storage/app/ImagePromotions/active.json
+storage/app/ImagePromotions/{token}/...
 ```
 
-Existing canonical images are backed up before Refetch image promotion. On failure they can be restored; after successful promotion, obsolete canonical images and the temporary backup are cleaned up.
+Recovery distinguishes committed from uncommitted replacements so an interrupted mutation can restore old files or finish post-commit cleanup before another library mutation proceeds.
 
 The scraper is invoked with explicit output paths. Laravel validates returned manifest/JSON state instead of searching for arbitrary fallback output.
 
 `ProductImageCleanupService` removes obsolete canonical cover/sample images while preserving files still referenced by the product. The manual cleanup command uses the same storage rules.
 
 `RefetchCleanupService` deletes Refetch run records and staged content while preserving canonical products and `Works` files.
+
+Private transfer files:
+
+```text
+storage/app/Transfers/{run}/...
+```
+
+`TransferStorage` owns transfer-local paths, immutable import staging, temporary archive builds, atomic publication, and safe removal of unreferenced temporary files. Transfer data remains private rather than being exposed through `/storage`.
+
+Temporary-file sweeps hold the per-run upload lock throughout reference lookup and removal, after the worker's transfer-run lock. If an upload holds the lock, optional cleanup is skipped so files awaiting database registration remain safe; later sweeps or history cleanup remove abandoned files. Uploads wait briefly when a sweep already owns the lock so a large sequential selection does not fail at the boundary between validation and cleanup.
 
 ## UI and Localization
 
@@ -455,7 +535,7 @@ Application-owned UI text is stored in:
 
 Localized display labels are generated for enums, field layouts, and settings, while backed enum values, routes, query values, stored data, and user content remain stable.
 
-`resources/views/components/list-menu-float.blade.php` is shared by Index, Options, Tag Library, and Refetch pages.
+`resources/views/components/list-menu-float.blade.php` is shared by Index, Options, Tag Library, Refetch, and transfer pages.
 
 The shared menu also hosts the native `<dialog>` used for Add/Edit modals. Quick Add and Edit retain real `href` values; JavaScript intercepts only eligible ordinary primary clicks.
 

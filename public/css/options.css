@@ -1124,6 +1124,10 @@ body.options-page {
     line-height: 1.5;
 }
 
+.options-page .refetch-scope-card .saved-notice {
+    color: #166534;
+}
+
 .options-page .refetch-tabs {
     display: flex;
     flex-wrap: wrap;
@@ -1159,6 +1163,12 @@ body.options-page {
 .options-page .refetch-change-list {
     display: grid;
     gap: 12px;
+}
+
+.options-page .refetch-change-list>.result-card>label {
+    width: auto;
+    min-width: 0;
+    max-width: 100%;
 }
 
 .options-page .refetch-tab-header {

@@ -44,9 +44,9 @@ class GenreGroup extends Model
     }
 
     #[Scope]
-    protected function ordered(Builder $query): void
+    protected function ordered(Builder $query): Builder
     {
-        $query
+        return $query
             ->orderBy('genre_groups.order')
             ->orderBy('genre_groups.title');
     }

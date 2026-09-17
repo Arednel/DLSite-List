@@ -20,6 +20,9 @@ RUN apt-get update && apt-get install -y  \
 # Use the default production configuration for PHP runtime arguments
 RUN mv "$PHP_INI_DIR/php.ini-production" "$PHP_INI_DIR/php.ini"
 
+# Configure PHP upload limits for DLSite List imports
+COPY docker/uploads.ini "$PHP_INI_DIR/conf.d/uploads.ini"
+
 # Copy the app files from the app directory.
 COPY . /var/www/dlsite_list
 
@@ -57,3 +60,5 @@ RUN chown -R www-data:www-data /var/www/dlsite_list/storage /var/www/dlsite_list
 # Copy entrypoint script
 COPY docker/docker-app-entrypoint.sh /usr/local/bin/docker-app-entrypoint.sh
 RUN chmod +x /usr/local/bin/docker-app-entrypoint.sh
+
+USER www-data:www-data

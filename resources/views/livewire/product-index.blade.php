@@ -373,7 +373,7 @@
                         </table>
 
                         @if (!$isUnlimited && $products->total() > 0)
-                            {{ $products->links('livewire.index-pagination-links') }}
+                            {{ $products->links('livewire.index-pagination-links', ['scrollTo' => 'progress-menu']) }}
                         @elseif ($isUnlimited)
                             <div class="index-pagination">
                                 <div class="index-pagination__summary">

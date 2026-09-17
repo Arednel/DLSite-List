@@ -1,0 +1,212 @@
+.transfer-ui {
+    display: grid;
+    gap: 16px;
+    min-width: 0;
+}
+
+.transfer-ui.transfer-run {
+    gap: 0;
+}
+
+.transfer-ui .transfer-progress {
+    display: grid;
+    gap: 12px;
+}
+
+.transfer-ui .transfer-upload-progress {
+    display: grid;
+    gap: 10px;
+}
+
+.transfer-ui .transfer-upload-progress>div {
+    display: grid;
+    gap: 6px;
+}
+
+.options-page .transfer-upload .file-upload-input {
+    box-sizing: border-box;
+    width: auto;
+    max-width: 100%;
+    min-height: 0;
+    padding: 2px;
+    border-color: #EE9898;
+    border-radius: 0;
+    border-style: solid;
+    border-width: 1px;
+    background-color: #FFFDF8;
+    color: #7D6A6A;
+    font-family: "lucida grande", tahoma, verdana, arial, sans-serif;
+    font-size: 11px;
+    cursor: pointer;
+    line-height: 22px;
+    justify-self: start;
+    transition: none;
+}
+
+.options-page .transfer-upload .file-upload-input::file-selector-button {
+    border: none;
+    border-radius: 2px;
+    background-color: #DD7D7D;
+    color: #FFFFFF;
+    cursor: pointer;
+    font-family: "lucida grande", tahoma, verdana, arial, sans-serif;
+    font-size: 11px;
+    margin-right: 8px;
+    padding: 4px 8px;
+}
+
+.options-page .transfer-upload .file-upload-input:hover::file-selector-button {
+    background-color: #C86E6E;
+}
+
+.options-page .transfer-upload .file-upload-input:focus {
+    border-color: #DD7D7D;
+    outline: 2px solid color-mix(in srgb, #DD7D7D 42%, transparent);
+    outline-offset: 2px;
+}
+
+.transfer-ui .transfer-upload-files {
+    display: grid;
+    gap: 6px;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+}
+
+.transfer-ui .transfer-upload-files li {
+    padding: 8px 10px;
+    border: 1px solid rgba(var(--options-border-rgb), 0.5);
+    border-radius: var(--options-radius);
+    background: rgba(var(--options-bg-rgb), 0.38);
+    color: var(--options-text);
+    font-size: 12px;
+    overflow-wrap: anywhere;
+}
+
+.transfer-ui .transfer-parts {
+    max-height: 24rem;
+    overflow: auto;
+    overflow-wrap: anywhere;
+}
+
+.options-page .transfer-ui .transfer-parts>.transfer-parts__heading {
+    font-size: 14px;
+    font-weight: 700;
+}
+
+.options-page .transfer-ui .transfer-parts>.transfer-parts__prompt {
+    font-size: 12px;
+    font-weight: 700;
+}
+
+.transfer-ui .transfer-decision-option {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.transfer-ui .transfer-decision-option .fa-circle-question {
+    color: var(--options-link);
+    cursor: help;
+}
+
+.transfer-ui .transfer-new-work-change {
+    width: auto;
+    min-width: 0;
+}
+
+.transfer-ui .option-field,
+.transfer-ui .option-field .option-control {
+    min-width: 0;
+    max-width: 100%;
+}
+
+.transfer-ui .index-pagination {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: space-between;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 0 10px;
+    color: #7D6A6A;
+    font-size: 12px;
+}
+
+.transfer-ui .index-pagination__controls {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+    gap: 6px;
+}
+
+.transfer-ui .index-pagination__controls button,
+.transfer-ui .index-pagination__ellipsis,
+.transfer-ui .index-pagination__page {
+    min-width: 34px;
+    padding: 7px 10px;
+    border: 1px solid #EE9898;
+    border-radius: 999px;
+    background-color: #FFFDF8;
+    color: #7D6A6A;
+    font-size: 12px;
+}
+
+.transfer-ui .index-pagination__controls button {
+    cursor: pointer;
+}
+
+.transfer-ui .index-pagination__controls button:hover,
+.transfer-ui .index-pagination__controls button.is-active,
+.transfer-ui .index-pagination__page.is-active {
+    background-color: #F4BFB7;
+}
+
+.transfer-ui .index-pagination__controls button:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+.transfer-ui .index-pagination__ellipsis,
+.transfer-ui .index-pagination__page {
+    box-sizing: content-box;
+    display: inline-flex;
+    justify-content: center;
+    align-items: center;
+}
+
+.transfer-ui .index-pagination__ellipsis {
+    border-color: transparent;
+}
+
+.transfer-ui [hidden] {
+    display: none !important;
+}
+
+@media (max-width: 768px) {
+    .transfer-ui .transfer-decision-option {
+        width: 100%;
+    }
+
+    .transfer-ui .transfer-decision-option .tag {
+        flex: 1;
+    }
+
+    .transfer-ui .index-pagination {
+        align-items: stretch;
+        flex-direction: column;
+    }
+
+    .transfer-ui .index-pagination__controls {
+        justify-content: center;
+    }
+
+    .options-page .transfer-upload .file-upload-input {
+        width: 100%;
+        min-height: 36px;
+        font-size: 12px;
+    }
+
+    .transfer-ui.transfer-run>.option-actions {
+        padding: 16px 12px 18px;
+    }
+}

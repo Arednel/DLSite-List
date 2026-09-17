@@ -15,7 +15,7 @@
                 </button>
             @else
                 <button type="button" wire:click="previousPage('{{ $paginator->getPageName() }}')"
-                    x-on:click="document.getElementById('progress-menu')?.scrollIntoView()"
+                    x-on:click="document.getElementById('{{ $scrollTo }}')?.scrollIntoView()"
                     wire:loading.attr="disabled">
                     {{ __('Previous') }}
                 </button>
@@ -33,9 +33,10 @@
                                 {{ $page }}
                             </span>
                         @else
-                            <button type="button" wire:key="index-page-{{ $page }}"
+                            <button type="button"
+                                wire:key="pagination-{{ $paginator->getPageName() }}-page-{{ $page }}"
                                 wire:click="gotoPage({{ $page }}, '{{ $paginator->getPageName() }}')"
-                                x-on:click="document.getElementById('progress-menu')?.scrollIntoView()"
+                                x-on:click="document.getElementById('{{ $scrollTo }}')?.scrollIntoView()"
                                 wire:loading.attr="disabled"
                                 aria-label="{{ __('Go to page :page', ['page' => $page]) }}">
                                 {{ $page }}
@@ -47,7 +48,7 @@
 
             @if ($paginator->hasMorePages())
                 <button type="button" wire:click="nextPage('{{ $paginator->getPageName() }}')"
-                    x-on:click="document.getElementById('progress-menu')?.scrollIntoView()"
+                    x-on:click="document.getElementById('{{ $scrollTo }}')?.scrollIntoView()"
                     wire:loading.attr="disabled">
                     {{ __('Next') }}
                 </button>

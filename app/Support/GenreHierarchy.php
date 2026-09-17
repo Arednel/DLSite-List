@@ -91,56 +91,23 @@ final class GenreHierarchy
             ->where('child_genre_id', '<>', $genreId)
             ->get(['parent_genre_id', 'child_genre_id'])
             ->map(fn(object $relation): array => [
-                'parent' => (int) $relation->parent_genre_id,
-                'child' => (int) $relation->child_genre_id,
+                (int) $relation->parent_genre_id,
+                (int) $relation->child_genre_id
             ])
             ->all();
 
         foreach ($parentIds as $parentId) {
-            $relations[] = ['parent' => $parentId, 'child' => $genreId];
+            $relations[] = [$parentId, $genreId];
         }
 
         foreach ($childIds as $childId) {
-            $relations[] = ['parent' => $genreId, 'child' => $childId];
+            $relations[] = [$genreId, $childId];
         }
 
-        $parentsByChild = [];
-
-        foreach ($relations as $relation) {
-            $parentsByChild[$relation['child']][] = $relation['parent'];
-        }
-
-        $visited = [];
-        $visiting = [];
-        $hasCycle = function (int $childId) use (&$hasCycle, &$visited, &$visiting, $parentsByChild): bool {
-            if (isset($visiting[$childId])) {
-                return true;
-            }
-
-            if (isset($visited[$childId])) {
-                return false;
-            }
-
-            $visiting[$childId] = true;
-
-            foreach ($parentsByChild[$childId] ?? [] as $parentId) {
-                if ($hasCycle($parentId)) {
-                    return true;
-                }
-            }
-
-            unset($visiting[$childId]);
-            $visited[$childId] = true;
-
-            return false;
-        };
-
-        foreach (array_keys($parentsByChild) as $childId) {
-            if ($hasCycle((int) $childId)) {
-                throw ValidationException::withMessages([
-                    'editingTagRelationships' => __('Parent/child tag relationships cannot contain a cycle.'),
-                ]);
-            }
+        if (! GraphCycleValidator::isAcyclic($relations)) {
+            throw ValidationException::withMessages([
+                'editingTagRelationships' => __('Parent/child tag relationships cannot contain a cycle.'),
+            ]);
         }
     }
 

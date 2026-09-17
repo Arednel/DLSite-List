@@ -2,12 +2,14 @@
 
 namespace App\Providers;
 
+use App\Support\ProductImagePromotion;
 use App\View\Components\Fields\Priority;
 use App\View\Components\Fields\ReListenValue;
 use App\View\Components\Fields\ScoreSelect;
 use App\View\Components\Fields\StatusSelect;
 use Illuminate\Support\Facades\Blade;
 use Illuminate\Support\Facades\Schema;
+use Illuminate\Support\Facades\URL;
 use Illuminate\Support\ServiceProvider;
 use Illuminate\Validation\Rules\Password;
 
@@ -18,7 +20,7 @@ class AppServiceProvider extends ServiceProvider
      */
     public function register(): void
     {
-        //
+        $this->app->scoped(ProductImagePromotion::class);
     }
 
     /**
@@ -39,7 +41,7 @@ class AppServiceProvider extends ServiceProvider
         );
 
         if (isset($_SERVER['HTTPS']) && ($_SERVER['HTTPS'] == 'on' || $_SERVER['HTTPS'] == 1) || isset($_SERVER['HTTP_X_FORWARDED_PROTO']) && $_SERVER['HTTP_X_FORWARDED_PROTO'] == 'https') {
-            \URL::forceScheme('https');
+            URL::forceScheme('https');
         }
     }
 }

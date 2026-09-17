@@ -9,16 +9,15 @@ use App\Models\Product;
 use App\Models\RefetchRun;
 use App\Models\RefetchWorkResult;
 use App\Support\DLSite\DLSiteWorkFetcher;
+use App\Support\LibraryMutationLock;
 use App\Support\ProductContributorSync;
 use App\Support\ProductGenreSync;
-use App\Support\ProductImageCleanupService;
+use App\Support\ProductImagePromotion;
 use Closure;
+use Illuminate\Contracts\Cache\LockTimeoutException;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Collection as EloquentCollection;
-use Illuminate\Contracts\Cache\LockTimeoutException;
-use Illuminate\Filesystem\FilesystemAdapter;
 use Illuminate\Support\Facades\Bus;
-use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 use RuntimeException;
@@ -53,7 +52,8 @@ final class RefetchService
         private readonly RefetchDiffBuilder $diffBuilder,
         private readonly ProductGenreSync $genreSync,
         private readonly ProductContributorSync $contributorSync,
-        private readonly ProductImageCleanupService $imageCleanup,
+        private readonly LibraryMutationLock $mutationLock,
+        private readonly ProductImagePromotion $imagePromotion,
     ) {}
 
     /**
@@ -61,10 +61,7 @@ final class RefetchService
      */
     public function createRun(array $productIds, bool $checkImages): RefetchRun
     {
-        return Cache::lock(
-            RefetchRun::LIFECYCLE_LOCK,
-            RefetchRun::LIFECYCLE_LOCK_SECONDS,
-        )->block(0, fn(): RefetchRun => DB::transaction(
+        return $this->mutationLock->run(fn(): RefetchRun => DB::transaction(
             function () use ($productIds, $checkImages): RefetchRun {
                 $run = RefetchRun::query()->create([
                     'status' => RefetchRun::STATUS_RUNNING,
@@ -357,36 +354,38 @@ final class RefetchService
                 return;
             }
 
-            $decisions = $result->decisions ?? [];
+            $this->imagePromotion->transaction(function () use ($result, $category, $changes, $actions, $globalAction, $tagActions): void {
+                $decisions = $result->decisions ?? [];
 
-            foreach ($changes as $field => $change) {
-                $action = $this->resolvedAction(
-                    data_get($actions, "{$result->getKey()}.{$field}"),
-                    $globalAction,
-                    $category === RefetchCategory::Tags,
-                );
-                $changed = false;
-
-                if ($action === self::ACTION_OVERWRITE) {
-                    $changed = $this->applyChange($result, $category, $field, $change);
-                } elseif ($action === self::ACTION_DETAILED && $category === RefetchCategory::Tags) {
-                    $changed = $this->applyDetailedTags(
-                        $result,
-                        $change,
-                        $tagActions[(string) $result->getKey()] ?? [],
+                foreach ($changes as $field => $change) {
+                    $action = $this->resolvedAction(
+                        data_get($actions, "{$result->getKey()}.{$field}"),
+                        $globalAction,
+                        $category === RefetchCategory::Tags,
                     );
+                    $changed = false;
+
+                    if ($action === self::ACTION_OVERWRITE) {
+                        $changed = $this->applyChange($result, $category, $field, $change);
+                    } elseif ($action === self::ACTION_DETAILED && $category === RefetchCategory::Tags) {
+                        $changed = $this->applyDetailedTags(
+                            $result,
+                            $change,
+                            $tagActions[(string) $result->getKey()] ?? [],
+                        );
+                    }
+
+                    $decisions[$category->value][$field] = [
+                        'action' => $action,
+                        'changed' => $changed,
+                        'tag_actions' => $action === self::ACTION_DETAILED
+                            ? ($tagActions[(string) $result->getKey()] ?? [])
+                            : null,
+                    ];
                 }
 
-                $decisions[$category->value][$field] = [
-                    'action' => $action,
-                    'changed' => $changed,
-                    'tag_actions' => $action === self::ACTION_DETAILED
-                        ? ($tagActions[(string) $result->getKey()] ?? [])
-                        : null,
-                ];
-            }
-
-            $result->forceFill(['decisions' => $decisions])->save();
+                $result->forceFill(['decisions' => $decisions])->save();
+            }, $result);
         });
     }
 
@@ -405,8 +404,7 @@ final class RefetchService
         if ($category === RefetchCategory::Cover) {
             $destination = "Works/{$product->getKey()}/cover.jpg";
 
-            return $this->promoteProductImages(
-                $result,
+            return $this->imagePromotion->promote(
                 $product,
                 [[
                     'source' => $change['staged_path'],
@@ -429,8 +427,7 @@ final class RefetchService
                 $paths[] = "storage/{$destination}";
             }
 
-            return $this->promoteProductImages(
-                $result,
+            return $this->imagePromotion->promote(
                 $product,
                 $promotions,
                 ['sample_images' => $paths],
@@ -501,86 +498,6 @@ final class RefetchService
 
             return false;
         });
-    }
-
-    /**
-     * @param  list<array{source: string, destination: string}>  $promotions
-     * @param  array<string, mixed>  $attributes
-     */
-    private function promoteProductImages(
-        RefetchWorkResult $result,
-        Product $product,
-        array $promotions,
-        array $attributes,
-    ): bool {
-        $disk = Storage::disk('public');
-        $backupDirectory = "Refetch/{$result->refetch_run_id}/Backups/Works/{$product->getKey()}";
-        $backups = [];
-
-        try {
-            foreach ($promotions as $promotion) {
-                $destination = $promotion['destination'];
-                $backup = null;
-
-                if ($disk->exists($destination)) {
-                    $backup = "{$backupDirectory}/" . basename($destination);
-                    $this->copyFile('public', $destination, $backup);
-                }
-
-                $backups[$destination] = $backup;
-            }
-
-            foreach ($promotions as $promotion) {
-                $this->copyFile(
-                    'public',
-                    $promotion['source'],
-                    $promotion['destination'],
-                );
-            }
-
-            DB::transaction(function () use ($attributes, $product): void {
-                $product->forceFill($attributes)->touch();
-            });
-        } catch (Throwable $exception) {
-            $this->restoreProductImages($disk, $backups, $backupDirectory);
-
-            throw $exception;
-        }
-
-        $this->imageCleanup->cleanup($product);
-        $disk->deleteDirectory($backupDirectory);
-
-        return true;
-    }
-
-    /**
-     * @param  array<string, string|null>  $backups
-     */
-    private function restoreProductImages(
-        FilesystemAdapter $disk,
-        array $backups,
-        string $backupDirectory,
-    ): void {
-        try {
-            foreach ($backups as $destination => $backup) {
-                if ($backup === null) {
-                    if ($disk->exists($destination) && ! $disk->delete($destination)) {
-                        throw new RuntimeException('Failed to remove promoted refetch image.');
-                    }
-
-                    continue;
-                }
-
-                $this->copyFile('public', $backup, $destination);
-            }
-
-            $disk->deleteDirectory($backupDirectory);
-        } catch (Throwable $exception) {
-            throw new RuntimeException(
-                'Failed to restore work images after refetch promotion failed.',
-                previous: $exception,
-            );
-        }
     }
 
     private function overwriteFetchedTags(Product $product, array $change): bool
@@ -754,10 +671,11 @@ final class RefetchService
     private function withLifecycleLock(Closure $callback): mixed
     {
         try {
-            return Cache::lock(
-                RefetchRun::LIFECYCLE_LOCK,
-                RefetchRun::LIFECYCLE_LOCK_SECONDS,
-            )->block(0, $callback);
+            return $this->mutationLock->run(function () use ($callback): mixed {
+                $this->imagePromotion->recover();
+
+                return $callback();
+            });
         } catch (LockTimeoutException $exception) {
             throw new RuntimeException(
                 'Refetch changes cannot be applied while another refetch action is in progress.',

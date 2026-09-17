@@ -3,10 +3,11 @@
 namespace App\Support\Refetch;
 
 use App\Models\RefetchRun;
-use Illuminate\Database\Eloquent\Builder;
+use App\Support\LibraryMutationLock;
+use App\Support\ProductImagePromotion;
 use Illuminate\Contracts\Cache\LockTimeoutException;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Filesystem\FilesystemAdapter;
-use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 use RuntimeException;
@@ -27,6 +28,11 @@ final class RefetchCleanupService
         'public',
     ];
 
+    public function __construct(
+        private readonly LibraryMutationLock $mutationLock,
+        private readonly ProductImagePromotion $promotion,
+    ) {}
+
     public function unavailable(): bool
     {
         return $this->activeRunQuery()->exists();
@@ -35,10 +41,8 @@ final class RefetchCleanupService
     public function cleanup(): void
     {
         try {
-            Cache::lock(
-                RefetchRun::LIFECYCLE_LOCK,
-                RefetchRun::LIFECYCLE_LOCK_SECONDS,
-            )->block(0, function (): void {
+            $this->mutationLock->run(function (): void {
+                $this->promotion->recover();
                 DB::transaction(function (): void {
                     if ($this->activeRunQuery()->lockForUpdate()->first(['id']) !== null) {
                         throw new RuntimeException(self::UNAVAILABLE_MESSAGE);

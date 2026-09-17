@@ -15,7 +15,11 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/7.0.1/css/all.min.css">
     <link rel="stylesheet"
         href="{{ asset('css/title-tooltips.css') }}?v={{ filemtime(public_path('css/title-tooltips.css')) }}">
+    <link rel="stylesheet"
+        href="{{ asset('css/transfers.css') }}?v={{ filemtime(public_path('css/transfers.css')) }}">
     <script src="{{ asset('scripts/title-tooltips.js') }}?v={{ filemtime(public_path('scripts/title-tooltips.js')) }}"
+        defer></script>
+    <script src="{{ asset('scripts/transfer-upload.js') }}?v={{ filemtime(public_path('scripts/transfer-upload.js')) }}"
         defer></script>
 
     @livewireStyles
@@ -221,6 +225,20 @@
                     </p>
 
                     <livewire:authentication-settings />
+                </section>
+            @endif
+
+            @if ($activeTab === 'transfers')
+                <section class="panel options-panel">
+                    <h2>
+                        <i class="fa-solid fa-right-left fa-fw options-section-icon" aria-hidden="true"></i>
+                        {{ __('Import / Export') }}
+                    </h2>
+                    <p class="option-description">
+                        {{ __('Export your library to ZIP files, or import an archive and review changes before applying them.') }}
+                    </p>
+
+                    <livewire:options-transfers />
                 </section>
             @endif
 

@@ -13,6 +13,7 @@ class OptionsController extends Controller
         'field-layouts' => 'Field Layouts',
         'authentication' => 'Authentication',
         'refetch' => 'Refetch',
+        'transfers' => 'Import / Export',
     ];
 
     public function index(Request $request): View
