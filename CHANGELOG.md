@@ -16,6 +16,7 @@ All notable changes to this project are documented in this file.
 * Updated architecture, configuration, and testing documentation to match current project behavior and improve clarity.
 * Updated Docker upload limits and queue timing to support large, long-running library transfers.
 * Updated Refetch and Import/Export review errors to use compact lists.
+* Simplified field-layout code, `AppServiceProvider` and removed legacy tests.
 
 ### Fixed
 

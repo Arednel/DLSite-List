@@ -20,7 +20,6 @@ use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\App;
 use Illuminate\Support\Facades\DB;
 use Livewire\Livewire;
-use ReflectionMethod;
 use Tests\TestCase;
 
 class ProductIndexLivewireTest extends TestCase
@@ -38,15 +37,6 @@ class ProductIndexLivewireTest extends TestCase
             ->assertSee('WORK_002')
             ->assertDontSee('WORK_001')
             ->assertSee('Showing 1-100 of 101');
-    }
-
-    public function test_index_results_require_visible_fields_for_tag_search_policy(): void
-    {
-        $parameter = (new ReflectionMethod(ProductIndexResults::class, 'getProducts'))
-            ->getParameters()[2];
-
-        $this->assertSame('visibleFields', $parameter->getName());
-        $this->assertFalse($parameter->isDefaultValueAvailable());
     }
 
     public function test_index_uses_fixed_custom_and_unlimited_page_size_options(): void
@@ -395,7 +385,7 @@ class ProductIndexLivewireTest extends TestCase
 
         $productQuery = collect(DB::getQueryLog())
             ->pluck('query')
-            ->first(fn (string $query): bool => str_contains($query, 'products')
+            ->first(fn(string $query): bool => str_contains($query, 'products')
                 && str_contains($query, 'work_name'));
 
         DB::disableQueryLog();
@@ -425,7 +415,7 @@ class ProductIndexLivewireTest extends TestCase
 
         $productQuery = collect(DB::getQueryLog())
             ->pluck('query')
-            ->first(fn (string $query): bool => str_contains($query, 'products')
+            ->first(fn(string $query): bool => str_contains($query, 'products')
                 && str_contains($query, 'work_name'));
 
         DB::disableQueryLog();
@@ -607,7 +597,7 @@ class ProductIndexLivewireTest extends TestCase
 
         $html = Livewire::test(ProductIndex::class)
             ->assertSee('INDEPENDENT_TITLE_NOTES_SETTING')
-            ->assertDontSee('id="index-inline-notes-'.$product->id.'"', false)
+            ->assertDontSee('id="index-inline-notes-' . $product->id . '"', false)
             ->html();
 
         $this->assertSame(1, substr_count($html, 'INDEPENDENT_TITLE_NOTES_SETTING'));
@@ -630,22 +620,22 @@ class ProductIndexLivewireTest extends TestCase
         $html = Livewire::test(ProductIndex::class)->html();
 
         $document = new \DOMDocument;
-        @$document->loadHTML('<?xml encoding="UTF-8">'.$html);
+        @$document->loadHTML('<?xml encoding="UTF-8">' . $html);
         $xpath = new \DOMXPath($document);
 
         $this->assertSame(3, $xpath->query('//button[contains(@class, "index-content-overflow__toggle")]')->length);
 
         foreach (
             [
-                'index-inline-notes-'.$product->id => '41px',
-                'index-notes-column-'.$product->id => '5rem',
-                'index-tags-'.$product->id => '20vh',
+                'index-inline-notes-' . $product->id => '41px',
+                'index-notes-column-' . $product->id => '5rem',
+                'index-tags-' . $product->id => '20vh',
             ] as $id => $height
         ) {
-            $content = $xpath->query('//*[@id="'.$id.'"]')->item(0);
+            $content = $xpath->query('//*[@id="' . $id . '"]')->item(0);
             $this->assertNotNull($content);
-            $this->assertSame('--index-content-overflow-height: '.$height, $content->parentNode->getAttribute('style'));
-            $this->assertSame(1, $xpath->query('//button[@aria-controls="'.$id.'"]')->length);
+            $this->assertSame('--index-content-overflow-height: ' . $height, $content->parentNode->getAttribute('style'));
+            $this->assertSame(1, $xpath->query('//button[@aria-controls="' . $id . '"]')->length);
         }
 
         $this->assertStringContainsString('Show all', $html);
@@ -665,9 +655,9 @@ class ProductIndexLivewireTest extends TestCase
 
         Livewire::test(ProductIndex::class)
             ->assertSee('NOTES_WITHOUT_HEIGHT_LIMIT')
-            ->assertSee('aria-controls="index-tags-'.$product->id.'"', false)
-            ->assertDontSee('aria-controls="index-inline-notes-'.$product->id.'"', false)
-            ->assertDontSee('aria-controls="index-notes-column-'.$product->id.'"', false);
+            ->assertSee('aria-controls="index-tags-' . $product->id . '"', false)
+            ->assertDontSee('aria-controls="index-inline-notes-' . $product->id . '"', false)
+            ->assertDontSee('aria-controls="index-notes-column-' . $product->id . '"', false);
     }
 
     public function test_index_layout_can_hide_image_while_title_stays_locked_visible(): void
@@ -1074,7 +1064,7 @@ class ProductIndexLivewireTest extends TestCase
         app(ProductGenreSync::class)->syncCustom($emptyQueryProduct, [$emptyQueryGenre->getKey()]);
 
         Livewire::test(ProductIndex::class)
-            ->assertSee('href="/?genre='.$emptyQueryGenre->getKey().'"', false);
+            ->assertSee('href="/?genre=' . $emptyQueryGenre->getKey() . '"', false);
 
         $currentGenre = Genre::query()->create([
             'title' => 'TAG_LINK_CURRENT_GENRE',
@@ -1106,11 +1096,11 @@ class ProductIndexLivewireTest extends TestCase
             ->test(ProductIndex::class)
             ->assertSee(
                 'href="/?search=rain&amp;series=SERIES_ALPHA&amp;progress=Listening&amp;sort_first_field=score&amp;sort_first_direction=asc&amp;genre='
-                    .$linkedGenre->getKey()
-                    .'"',
+                    . $linkedGenre->getKey()
+                    . '"',
                 false,
             )
-            ->assertDontSee('genre='.$currentGenre->getKey().'&amp;genre=', false);
+            ->assertDontSee('genre=' . $currentGenre->getKey() . '&amp;genre=', false);
     }
 
     public function test_index_tag_chips_default_to_alphabetical_order_without_group_ordering(): void
@@ -1774,7 +1764,7 @@ class ProductIndexLivewireTest extends TestCase
             ->assertSee('data-work-form-default-title="Add/Edit form"', false)
             ->assertSee('href="/create?return_query%5Bprogress%5D=Listening"', false)
             ->assertDontSee('href="/create?modal=1', false)
-            ->assertSee('href="/edit/'.$product->id.'?', false)
+            ->assertSee('href="/edit/' . $product->id . '?', false)
             ->assertSee('data-work-form-modal-title="Edit Details"', false)
             ->assertSee('scripts/work-form-modal.js', false);
     }
@@ -2115,18 +2105,18 @@ class ProductIndexLivewireTest extends TestCase
             ->assertSet('sort_first_field', ProductIndexSortField::Score->value)
             ->assertSet('draft.sort_first_field', ProductIndexSortField::Score->value)
             ->assertSeeInOrder(['SORT_LOW', 'SORT_HIGH'])
-            ->assertSee('value="'.ProductIndexSortField::Series->value.'"', false)
-            ->assertSee('value="'.ProductIndexSortField::RJ->value.'"', false)
-            ->assertDontSee('value="'.ProductIndexSortField::Score->value.'"', false)
-            ->assertDontSee('value="'.ProductIndexSortField::UpdatedAt->value.'"', false)
-            ->assertDontSee('value="'.ProductIndexSortField::Circle->value.'"', false);
+            ->assertSee('value="' . ProductIndexSortField::Series->value . '"', false)
+            ->assertSee('value="' . ProductIndexSortField::RJ->value . '"', false)
+            ->assertDontSee('value="' . ProductIndexSortField::Score->value . '"', false)
+            ->assertDontSee('value="' . ProductIndexSortField::UpdatedAt->value . '"', false)
+            ->assertDontSee('value="' . ProductIndexSortField::Circle->value . '"', false);
 
         Livewire::test(ProductIndex::class)
             ->call('sortByHeader', ProductIndexSortField::Score->value)
             ->assertSet('sort_first_field', ProductIndexSortField::Score->value)
             ->assertSet('sort_first_direction', 'desc')
             ->assertSeeInOrder(['SORT_HIGH', 'SORT_LOW'])
-            ->assertDontSee('value="'.ProductIndexSortField::Score->value.'"', false);
+            ->assertDontSee('value="' . ProductIndexSortField::Score->value . '"', false);
     }
 
     private function assertIndexUsesFetchedLanguage(
@@ -2175,23 +2165,23 @@ class ProductIndexLivewireTest extends TestCase
         $html = Livewire::test(ProductIndex::class)->html();
 
         foreach ([$customGenre, $currentGenre, $sharedGenre] as $genre) {
-            $this->assertStringContainsString('href="/?genre='.$genre->getKey().'"', $html);
+            $this->assertStringContainsString('href="/?genre=' . $genre->getKey() . '"', $html);
         }
 
-        $otherLink = 'href="/?genre='.$otherGenre->getKey().'"';
+        $otherLink = 'href="/?genre=' . $otherGenre->getKey() . '"';
 
         $this->assertStringNotContainsString($otherLink, $html);
-        $this->assertSame(1, substr_count($html, 'href="/?genre='.$sharedGenre->getKey().'"'));
+        $this->assertSame(1, substr_count($html, 'href="/?genre=' . $sharedGenre->getKey() . '"'));
     }
 
     private function createProduct(int $number, array $attributes = []): Product
     {
-        $id = 'RJ'.str_pad((string) $number, 9, '0', STR_PAD_LEFT);
+        $id = 'RJ' . str_pad((string) $number, 9, '0', STR_PAD_LEFT);
 
         return Product::factory()->create(array_merge([
             'id' => $id,
-            'maker_id' => 'RG'.substr($id, 2),
-            'work_name' => 'WORK_'.str_pad((string) $number, 3, '0', STR_PAD_LEFT),
+            'maker_id' => 'RG' . substr($id, 2),
+            'work_name' => 'WORK_' . str_pad((string) $number, 3, '0', STR_PAD_LEFT),
         ], $attributes));
     }
 

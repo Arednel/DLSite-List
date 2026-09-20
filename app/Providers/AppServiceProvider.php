@@ -3,11 +3,6 @@
 namespace App\Providers;
 
 use App\Support\ProductImagePromotion;
-use App\View\Components\Fields\Priority;
-use App\View\Components\Fields\ReListenValue;
-use App\View\Components\Fields\ScoreSelect;
-use App\View\Components\Fields\StatusSelect;
-use Illuminate\Support\Facades\Blade;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\URL;
 use Illuminate\Support\ServiceProvider;
@@ -28,13 +23,6 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
-        Blade::components([
-            'fields.status-select' => StatusSelect::class,
-            'fields.score-select' => ScoreSelect::class,
-            'fields.priority' => Priority::class,
-            'fields.re-listen-value' => ReListenValue::class,
-        ]);
-
         Schema::defaultStringLength(191);
         Password::defaults(
             fn() => Password::min(8)->max((int) config('auth.password_max_length')),

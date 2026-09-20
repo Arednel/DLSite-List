@@ -59,12 +59,13 @@
 
     @case('voice_actor')
     @case('author')
-        @php($contributorValue = old($field['contributor_role'], ''))
         <tr>
             <td width="130" class="form-table-cell">{{ $field['label'] }}</td>
             <td class="form-table-cell">
                 <textarea id="{{ $field['contributor_role'] }}" name="{{ $field['contributor_role'] }}" class="form-control"
-                    rows="2" cols="65">{{ is_array($contributorValue) ? implode(', ', $contributorValue) : $contributorValue }}</textarea>
+                    rows="2" cols="65">{{ is_array(old($field['contributor_role'], ''))
+                        ? implode(', ', old($field['contributor_role'], ''))
+                        : old($field['contributor_role'], '') }}</textarea>
             </td>
         </tr>
     @break

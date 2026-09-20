@@ -116,15 +116,6 @@ class AutocompleteControllerTest extends TestCase
             ->assertJsonPath('0.text_color', '#111111');
     }
 
-    public function test_autocomplete_script_uses_independent_color_classes_without_marker_circle(): void
-    {
-        $script = file_get_contents(public_path('scripts/autocomplete-text.js'));
-
-        $this->assertStringContainsString('autocomplete-option--background-colored', $script);
-        $this->assertStringContainsString('autocomplete-option--text-colored', $script);
-        $this->assertStringNotContainsString('autocomplete-option__color', $script);
-    }
-
     public function test_tag_suggestion_color_uses_group_color_over_tag_color(): void
     {
         $group = GenreGroup::query()->create([

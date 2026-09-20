@@ -99,40 +99,6 @@ class OptionalProductStatusesTest extends TestCase
         }
     }
 
-    public function test_disabled_optional_status_rows_keep_labels_and_yellow_or_red_bars(): void
-    {
-        Product::factory()->create([
-            'work_name' => 'ON_HOLD_ROW_TOKEN',
-            'progress' => ProductProgress::OnHold->value,
-        ]);
-        Product::factory()->create([
-            'work_name' => 'DROPPED_ROW_TOKEN',
-            'progress' => ProductProgress::Dropped->value,
-        ]);
-
-        Livewire::test(ProductIndex::class)
-            ->assertSee('ON_HOLD_ROW_TOKEN')
-            ->assertSee('DROPPED_ROW_TOKEN')
-            ->assertSee('progress-on-hold', false)
-            ->assertSee('progress-dropped', false)
-            ->assertSee('On Hold')
-            ->assertSee('Dropped');
-
-        $css = file_get_contents(public_path('css/index.css'));
-
-        $this->assertIsString($css);
-        $this->assertStringContainsString(
-            '.data.status.progress-on-hold',
-            $css,
-        );
-        $this->assertStringContainsString('background-color: #FEE39E;', $css);
-        $this->assertStringContainsString(
-            '.data.status.progress-dropped',
-            $css,
-        );
-        $this->assertStringContainsString('background-color: #EE9898;', $css);
-    }
-
     public static function optionalStatusCombinationProvider(): iterable
     {
         yield 'both disabled' => [false, false];

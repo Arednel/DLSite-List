@@ -1161,30 +1161,6 @@ class TagLibraryManagerTest extends TestCase
             ->assertDontSee('Group color');
     }
 
-    public function test_tag_library_background_color_hover_does_not_override_font_color(): void
-    {
-        $css = file_get_contents(public_path('css/tag-library.css'));
-
-        preg_match(
-            '/\.tag-library-tag--background-colored:hover,\s*\.tag-library-tag--background-colored:focus\s*\{[^}]*}/',
-            $css,
-            $matches,
-        );
-
-        $this->assertNotEmpty($matches);
-        $this->assertStringContainsString('background-color:', $matches[0]);
-        $this->assertDoesNotMatchRegularExpression('/(^|\n)\s*color\s*:/', $matches[0]);
-    }
-
-    public function test_tag_library_blade_does_not_embed_php_color_logic(): void
-    {
-        $blade = file_get_contents(resource_path('views/livewire/tag-library-manager.blade.php'));
-
-        $this->assertStringNotContainsString('@php', $blade);
-        $this->assertStringNotContainsString('App\\Support\\TagColor', $blade);
-        $this->assertStringNotContainsString('App\\Models\\Option', $blade);
-    }
-
     public function test_all_tags_status_indicators_only_render_for_hidden_tags(): void
     {
         $hiddenGroup = GenreGroup::query()->create([

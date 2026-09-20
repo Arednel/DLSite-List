@@ -32,7 +32,7 @@ final class ProductFieldLayout
     {
         $surface = in_array($surface, self::SURFACES, true) ? $surface : self::SURFACE_INDEX;
         $submittedRows = is_array($layout) ? $layout : [];
-        $allowedFields = self::fieldsForSurface($surface);
+        $allowedFields = ProductField::forSurface($surface);
         $rowsByField = [];
         $submittedOrder = [];
 
@@ -69,7 +69,7 @@ final class ProductFieldLayout
 
         $orderedRows = [];
 
-        foreach (self::prefixMissingFields($surface) as $field) {
+        foreach (ProductField::prefixedWhenMissing($surface) as $field) {
             if (! isset($rowsByField[$field->value])) {
                 $orderedRows[$field->value] = self::defaultRow($field, $surface);
             }
@@ -93,7 +93,7 @@ final class ProductFieldLayout
     public static function storageLayout(mixed $layout, string $surface): array
     {
         return collect(self::normalize($layout, $surface))
-            ->map(fn (array $row): array => Arr::except($row, ['label', 'note']))
+            ->map(fn(array $row): array => Arr::except($row, ['label', 'note']))
             ->values()
             ->all();
     }
@@ -196,22 +196,6 @@ final class ProductFieldLayout
             : filter_var($value, FILTER_VALIDATE_BOOL);
     }
 
-    /**
-     * @return list<ProductField>
-     */
-    private static function fieldsForSurface(string $surface): array
-    {
-        return ProductField::forSurface($surface);
-    }
-
-    /**
-     * @return list<ProductField>
-     */
-    private static function prefixMissingFields(string $surface): array
-    {
-        return ProductField::prefixedWhenMissing($surface);
-    }
-
     private static function lockMetadata(ProductField $field, string $surface): array
     {
         return $field->isVisibilityLocked($surface)
@@ -232,7 +216,7 @@ final class ProductFieldLayout
     public static function visibleFields(array $layout): array
     {
         return collect(self::visibleRows($layout))
-            ->map(fn (array $visibleRow): string => $visibleRow['field']->value)
+            ->map(fn(array $visibleRow): string => $visibleRow['field']->value)
             ->values()
             ->all();
     }
@@ -243,7 +227,7 @@ final class ProductFieldLayout
     public static function indexColumns(array $layout): array
     {
         return collect(self::visibleRows($layout, self::SURFACE_INDEX))
-            ->map(fn (array $visibleRow): array => self::fieldMeta(
+            ->map(fn(array $visibleRow): array => self::fieldMeta(
                 $visibleRow['field'],
                 self::SURFACE_INDEX,
             ))
@@ -279,7 +263,7 @@ final class ProductFieldLayout
     public static function filterFields(array $layout): array
     {
         return collect(self::visibleRows($layout, self::SURFACE_FILTER))
-            ->map(fn (array $visibleRow): array => Arr::only(
+            ->map(fn(array $visibleRow): array => Arr::only(
                 self::fieldMeta($visibleRow['field'], self::SURFACE_FILTER),
                 ['field', 'label', 'class'],
             ))
@@ -309,7 +293,7 @@ final class ProductFieldLayout
     private static function createFields(array $layout, string $surface): array
     {
         return collect(self::visibleRows($layout, $surface))
-            ->map(fn (array $visibleRow): array => Arr::only(
+            ->map(fn(array $visibleRow): array => Arr::only(
                 self::fieldMeta($visibleRow['field'], $surface),
                 ['field', 'label', 'class', 'contributor_role'],
             ))
@@ -323,8 +307,8 @@ final class ProductFieldLayout
     public static function editableFields(array $layout): array
     {
         return collect(self::visibleRows($layout, self::SURFACE_EDIT))
-            ->filter(fn (array $visibleRow): bool => (bool) ($visibleRow['row']['editable'] ?? false))
-            ->map(fn (array $visibleRow): string => $visibleRow['field']->value)
+            ->filter(fn(array $visibleRow): bool => (bool) ($visibleRow['row']['editable'] ?? false))
+            ->map(fn(array $visibleRow): string => $visibleRow['field']->value)
             ->values()
             ->all();
     }
@@ -333,7 +317,7 @@ final class ProductFieldLayout
     {
         $field = $field instanceof ProductField ? $field->value : $field;
 
-        return (bool) data_get(Arr::first($layout, fn (array $row): bool => $row['field'] === $field), 'editable', false);
+        return (bool) data_get(Arr::first($layout, fn(array $row): bool => $row['field'] === $field), 'editable', false);
     }
 
     public static function fetchedTagsEditable(array $layout): bool
@@ -343,7 +327,7 @@ final class ProductFieldLayout
 
     public static function visibleIndexTagBuckets(array $layout): array
     {
-        $row = Arr::first($layout, fn (array $row): bool => $row['field'] === ProductField::Tags->value);
+        $row = Arr::first($layout, fn(array $row): bool => $row['field'] === ProductField::Tags->value);
 
         return [
             'custom' => (bool) data_get($row, 'visible', false)
@@ -355,7 +339,7 @@ final class ProductFieldLayout
 
     public static function indexTitleNotesVisible(array $layout): bool
     {
-        $row = Arr::first($layout, fn (array $row): bool => $row['field'] === ProductField::Title->value);
+        $row = Arr::first($layout, fn(array $row): bool => $row['field'] === ProductField::Title->value);
 
         return (bool) data_get($row, 'visible', false)
             && (bool) data_get($row, 'notes_visible', true);
@@ -368,7 +352,7 @@ final class ProductFieldLayout
     {
         $allowedFieldValues = $surface === null
             ? null
-            : array_map(fn (ProductField $field): string => $field->value, self::fieldsForSurface($surface));
+            : array_map(fn(ProductField $field): string => $field->value, ProductField::forSurface($surface));
 
         return collect($layout)
             ->map(function (mixed $row) use ($allowedFieldValues): ?array {
