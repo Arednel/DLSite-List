@@ -7,6 +7,7 @@ All notable changes to this project are documented in this file.
 ### Added
 
 * Added ZIP import/export for Works, Images, Tag Library data, and Options.
+* Added paginated navigation to Refetch review categories.
 
 ### Changed
 

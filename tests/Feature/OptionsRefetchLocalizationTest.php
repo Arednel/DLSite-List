@@ -12,6 +12,7 @@ use App\Models\RefetchRun;
 use App\Models\RefetchWorkResult;
 use App\Support\Refetch\RefetchService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\App;
 use Illuminate\Support\Facades\Bus;
 use Livewire\Livewire;
 use Tests\TestCase;
@@ -106,16 +107,21 @@ class OptionsRefetchLocalizationTest extends TestCase
             ->assertSee('<title>DLSite情報を再取得</title>', false)
             ->assertSee('確認')
             ->assertSee('タイトル')
-            ->assertSee('新規JP')
-            ->assertSee('取得済みタグとして追加')
-            ->assertSee('カスタムタグに変更')
             ->assertSee('すべてを「上書き」に設定')
             ->assertSee('変更がある未処理の各タブの全体選択を「上書き」に設定します。')
             ->assertSee('すべてのタブを適用')
             ->assertSee('RAW_WORK_TITLE_TOKEN')
             ->assertSee('RAW_NEW_TITLE_TOKEN')
+            ->assertSee('UPSTREAM_RAW_ERROR_TOKEN');
+
+        App::setLocale(UiLanguage::Japanese->value);
+
+        Livewire::test(OptionsRefetchReview::class, ['run' => $run])
+            ->call('showCategory', RefetchCategory::Tags->value)
+            ->assertSee('新規JP')
+            ->assertSee('取得済みタグとして追加')
+            ->assertSee('カスタムタグに変更')
             ->assertSee('RAW_JP_TAG_TOKEN')
-            ->assertSee('UPSTREAM_RAW_ERROR_TOKEN')
             ->assertSee('value="move_to_custom"', false)
             ->assertSee('wire:model="globalActions.tags"', false);
 

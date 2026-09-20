@@ -728,7 +728,10 @@ class FullRefetchTest extends TestCase
         ])->save();
 
         $this->get(route('options.refetch.show', $run))
-            ->assertOk()
+            ->assertOk();
+
+        Livewire::test(OptionsRefetchReview::class, ['run' => $run])
+            ->call('showCategory', RefetchCategory::SampleImages->value)
             ->assertSee('refetch-preview-images', false)
             ->assertSee(asset("storage/{$stage}/sample_1.jpg"), false);
 

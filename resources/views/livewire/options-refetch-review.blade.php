@@ -60,11 +60,12 @@
                 </div>
             @endif
 
-            @foreach ($categoryReviews as $review)
-                <section id="refetch-panel-{{ $run->getKey() }}-{{ $review['value'] }}" class="refetch-tab-panel"
-                    role="tabpanel" aria-labelledby="refetch-tab-{{ $run->getKey() }}-{{ $review['value'] }}"
-                    wire:show="activeCategory === '{{ $review['value'] }}'" wire:cloak
-                    wire:key="refetch-panel-{{ $review['value'] }}">
+            @foreach ($categoryReviews as $tabReview)
+                <section id="refetch-panel-{{ $run->getKey() }}-{{ $tabReview['value'] }}" class="refetch-tab-panel"
+                    role="tabpanel" aria-labelledby="refetch-tab-{{ $run->getKey() }}-{{ $tabReview['value'] }}"
+                    wire:key="refetch-panel-{{ $tabReview['value'] }}" @if ($activeCategory !== $tabReview['value']) hidden @endif>
+                    @if ($activeCategory === $tabReview['value'])
+                        @php($review = $activeReview)
                     <header class="refetch-tab-header">
                         <div>
                             <h2>{{ $review['label'] }}</h2>
@@ -93,32 +94,30 @@
                                 ? __('Images were not requested for this run.')
                                 : __('No changes detected.') }}
                         </p>
-                    @endif
-
-                    <div class="refetch-change-list">
-                        @foreach ($review['results'] as $result)
-                            @foreach ($result['changes'] as $change)
+                    @else
+                        <div class="refetch-change-list">
+                            @foreach ($review['cards'] as $card)
                                 <article class="result-card"
-                                    wire:key="refetch-change-{{ $review['value'] }}-{{ $result['id'] }}-{{ $change['field'] }}">
+                                    wire:key="refetch-change-{{ $review['value'] }}-{{ $card['result_id'] }}-{{ $card['field'] }}">
                                     <header>
-                                        <strong>{{ $result['product_id'] }}</strong>
-                                        <span>{{ $result['work_name'] }}</span>
+                                        <strong>{{ $card['product_id'] }}</strong>
+                                        <span>{{ $card['work_name'] }}</span>
                                     </header>
-                                    <h3>{{ __($change['label']) }}</h3>
+                                    <h3>{{ __($card['label']) }}</h3>
                                     <div class="refetch-change-comparison">
                                         <div>
                                             <strong>{{ __('Current') }}</strong>
-                                            <x-options.refetch-value :value="$change['old']" :image="$review['is_image']" />
+                                            <x-options.refetch-value :value="$card['current']" :image="$review['is_image']" />
                                         </div>
                                         <div>
                                             <strong>{{ __('Refetched') }}</strong>
-                                            <x-options.refetch-value :value="$change['new']" :image="$review['is_image']" />
+                                            <x-options.refetch-value :value="$card['refetched']" :image="$review['is_image']" />
                                         </div>
                                     </div>
 
                                     @if ($review['is_tags'])
                                         <div class="refetch-tag-details">
-                                            @foreach ($change['tag_details'] as $detail)
+                                            @foreach ($card['tag_details'] as $detail)
                                                 <div>
                                                     <strong>{{ __($detail['label']) }}</strong>
                                                     <x-options.refetch-value :value="$detail['tags']" />
@@ -130,7 +129,7 @@
                                     <label>
                                         {{ __('This change') }}
                                         <select
-                                            wire:model="actions.{{ $review['value'] }}.{{ $result['id'] }}.{{ $change['field'] }}"
+                                            wire:model="actions.{{ $review['value'] }}.{{ $card['result_id'] }}.{{ $card['field'] }}"
                                             @disabled(!$canApply || $review['resolved'])>
                                             @foreach ($review['is_tags'] ? $tagChangeActionOptions : $changeActionOptions as $option)
                                                 <option value="{{ $option['value'] }}">
@@ -146,7 +145,7 @@
                                                 <label>
                                                     {{ __($tagAction['label']) }}
                                                     <select
-                                                        wire:model="tagActions.{{ $result['id'] }}.{{ $tagAction['key'] }}"
+                                                        wire:model="tagActions.{{ $card['result_id'] }}.{{ $tagAction['key'] }}"
                                                         @disabled(!$canApply || $review['resolved'])>
                                                         @foreach ($tagAction['options'] as $option)
                                                             <option value="{{ $option['value'] }}">
@@ -160,8 +159,9 @@
                                     @endif
                                 </article>
                             @endforeach
-                        @endforeach
-                    </div>
+                        </div>
+                        {{ $review['cards']->links('livewire.index-pagination-links', ['scrollTo' => 'refetch-panel-' . $run->getKey() . '-' . $review['value']]) }}
+                    @endif
 
                     @if ($canApply && !$review['resolved'] && $review['has_changes'])
                         <button type="button" class="tag tag--gradient tag--lg is-clickable"
@@ -169,19 +169,21 @@
                             {{ __('Apply Tab') }}
                         </button>
                     @endif
+                    @endif
                 </section>
             @endforeach
         </div>
 
-        @if ($canApply)
-            <div class="option-actions">
-                <button type="button" class="tag tag--outline tag--lg is-clickable" wire:click="askRejectOrFinish"
-                    wire:loading.attr="disabled">
-                    {{ __($finishAction['label']) }}
-                </button>
-            </div>
-        @endif
     </div>
+
+    @if ($canApply)
+        <div class="option-actions">
+            <button type="button" class="tag tag--outline tag--lg is-clickable" wire:click="askRejectOrFinish"
+                wire:loading.attr="disabled">
+                {{ __($finishAction['label']) }}
+            </button>
+        </div>
+    @endif
 
     @include('livewire.partials.options-reset-confirmation-modal', [
         'open' => $confirmingApplyAll,

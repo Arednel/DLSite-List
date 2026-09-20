@@ -9,14 +9,20 @@ use App\Models\RefetchRun;
 use App\Models\RefetchWorkResult;
 use App\Support\Refetch\RefetchService;
 use App\Support\TagColor;
+use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Validation\Rule;
 use Illuminate\View\View;
 use Livewire\Attributes\Locked;
 use Livewire\Component;
+use Livewire\WithPagination;
 use RuntimeException;
 
 class OptionsRefetchReview extends Component
 {
+    use WithPagination;
+
+    private const REVIEW_PAGE_SIZE = 100;
+
     #[Locked]
     public int $runId;
 
@@ -29,6 +35,7 @@ class OptionsRefetchReview extends Component
     #[Locked]
     public bool $confirmingRejectOrFinish = false;
 
+    #[Locked]
     public string $activeCategory;
 
     /**
@@ -66,6 +73,7 @@ class OptionsRefetchReview extends Component
     {
         if (RefetchCategory::tryFrom($category) !== null) {
             $this->activeCategory = $category;
+            $this->resetPage();
         }
     }
 
@@ -212,13 +220,19 @@ class OptionsRefetchReview extends Component
     public function render(): View
     {
         $run = $this->run();
-        $tagColors = $this->refetchTagColors($run);
+        $categoryReviews = $this->categoryReviews($run);
+        $activeCategory = RefetchCategory::tryFrom($this->activeCategory)
+            ?? RefetchCategory::cases()[0];
+        $tagColors = $activeCategory === RefetchCategory::Tags
+            ? $this->refetchTagColors($run)
+            : [];
 
         return view('livewire.options-refetch-review', [
             'run' => $run,
             'canApply' => $run->canBeApplied(),
             'failedResults' => $run->results->filter->isFailed(),
-            'categoryReviews' => $this->categoryReviews($run, $tagColors),
+            'categoryReviews' => $categoryReviews,
+            'activeReview' => $this->activeCategoryReview($run, $categoryReviews, $tagColors),
             'globalActionOptions' => $this->globalActionOptions(),
             'changeActionOptions' => $this->changeActionOptions(),
             'tagChangeActionOptions' => $this->tagChangeActionOptions(),
@@ -309,7 +323,6 @@ class OptionsRefetchReview extends Component
     }
 
     /**
-     * @param  array<string, array<string, mixed>>  $tagColors
      * @return list<array{
      *     value: string,
      *     label: string,
@@ -318,66 +331,107 @@ class OptionsRefetchReview extends Component
      *     has_changes: bool,
      *     is_image: bool,
      *     is_tags: bool,
-     *     results: list<array{
-     *         id: int|string,
-     *         product_id: string,
-     *         work_name: ?string,
-     *         changes: list<array{
-     *             field: string,
-     *             label: string,
-     *             old: mixed,
-     *             new: mixed,
-     *             tag_details: list<array{label: string, tags: mixed}>
-     *         }>
-     *     }>
      * }>
      */
-    private function categoryReviews(RefetchRun $run, array $tagColors): array
+    private function categoryReviews(RefetchRun $run): array
     {
         return collect(RefetchCategory::cases())
-            ->map(function (RefetchCategory $category) use ($run, $tagColors): array {
-                $results = $run->results
-                    ->map(function (RefetchWorkResult $result) use ($category, $tagColors): array {
-                        $colors = $category === RefetchCategory::Tags ? $tagColors : [];
-
-                        $changes = collect($result->changesFor($category))
-                            ->map(fn(array $change, string $field): array => [
-                                'field' => $field,
-                                'label' => (string) $change['label'],
-                                'old' => $this->prepareReviewValue($change['old'], $category->isImage(), $colors),
-                                'new' => $this->prepareReviewValue($change['new'], $category->isImage(), $colors),
-                                'tag_details' => $category === RefetchCategory::Tags
-                                    ? $this->tagDetails($change, $colors)
-                                    : [],
-                            ])
-                            ->values()
-                            ->all();
-
-                        return [
-                            'id' => $result->getKey(),
-                            'product_id' => $result->product_id,
-                            'work_name' => $result->product?->work_name,
-                            'changes' => $changes,
-                        ];
-                    })
-                    ->filter(fn(array $result): bool => $result['changes'] !== [])
-                    ->values()
-                    ->all();
+            ->map(function (RefetchCategory $category) use ($run): array {
+                $count = $run->results->sum(
+                    fn(RefetchWorkResult $result): int => count($result->changesFor($category))
+                );
 
                 return [
                     'value' => $category->value,
                     'label' => $category->label(),
-                    'count' => collect($results)->sum(
-                        fn(array $result): int => count($result['changes'])
-                    ),
+                    'count' => $count,
                     'resolved' => $run->tabResolved($category),
-                    'has_changes' => $results !== [],
+                    'has_changes' => $count > 0,
                     'is_image' => $category->isImage(),
                     'is_tags' => $category === RefetchCategory::Tags,
-                    'results' => $results,
                 ];
             })
             ->all();
+    }
+
+    /**
+     * @param  list<array{
+     *     value: string,
+     *     label: string,
+     *     count: int,
+     *     resolved: bool,
+     *     has_changes: bool,
+     *     is_image: bool,
+     *     is_tags: bool
+     * }>  $categoryReviews
+     * @param  array<string, array<string, mixed>>  $tagColors
+     * @return array{
+     *     value: string,
+     *     label: string,
+     *     count: int,
+     *     resolved: bool,
+     *     has_changes: bool,
+     *     is_image: bool,
+     *     is_tags: bool,
+     *     cards: LengthAwarePaginator
+     * }
+     */
+    private function activeCategoryReview(RefetchRun $run, array $categoryReviews, array $tagColors): array
+    {
+        $category = RefetchCategory::tryFrom($this->activeCategory)
+            ?? RefetchCategory::cases()[0];
+        $review = collect($categoryReviews)->first(
+            fn(array $review): bool => $review['value'] === $category->value
+        );
+        $colors = $category === RefetchCategory::Tags ? $tagColors : [];
+        $cards = $run->results
+            ->flatMap(function (RefetchWorkResult $result) use ($category): array {
+                return collect($result->changesFor($category))
+                    ->map(fn(array $change, string $field): array => [
+                        'result_id' => $result->getKey(),
+                        'product_id' => $result->product_id,
+                        'work_name' => $result->product?->work_name,
+                        'field' => $field,
+                        'label' => (string) $change['label'],
+                        'old' => $change['old'],
+                        'new' => $change['new'],
+                        'change' => $change,
+                    ])
+                    ->values()
+                    ->all();
+            })
+            ->values();
+        $page = $this->getPage();
+        $pageCards = $cards
+            ->forPage($page, self::REVIEW_PAGE_SIZE)
+            ->map(fn(array $card): array => [
+                'result_id' => $card['result_id'],
+                'product_id' => $card['product_id'],
+                'work_name' => $card['work_name'],
+                'field' => $card['field'],
+                'label' => $card['label'],
+                'current' => $this->prepareReviewValue($card['old'], $category->isImage(), $colors),
+                'refetched' => $this->prepareReviewValue($card['new'], $category->isImage(), $colors),
+                'tag_details' => $category === RefetchCategory::Tags
+                    ? $this->tagDetails($card['change'], $colors)
+                    : [],
+            ])
+            ->values();
+        $paginator = new LengthAwarePaginator(
+            $pageCards,
+            $cards->count(),
+            self::REVIEW_PAGE_SIZE,
+            $page,
+            [
+                'path' => request()->url(),
+                'pageName' => 'page',
+            ],
+        );
+
+        return [
+            ...$review,
+            'cards' => $paginator,
+        ];
     }
 
     /**
