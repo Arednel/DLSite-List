@@ -195,7 +195,7 @@ Covers the full Refetch workflow:
 
 #### `tests/Feature/LibraryTransferTest.php`
 
-Covers core transfer contracts, route/review smoke coverage, portable Options, new-work round trips, controlled downloads, and the shared library-mutation lock.
+Covers core transfer contracts, route/review smoke coverage, compact collapsed Export/Import error lists, portable Options, new-work round trips, controlled downloads, and the shared library-mutation lock.
 
 #### `tests/Feature/LibraryTransferExportTest.php`
 
@@ -303,7 +303,7 @@ Covers Livewire Refetch progress polling, running/cancelling state, counts, Canc
 
 #### `tests/Feature/OptionsRefetchReviewTest.php`
 
-Covers Refetch review tabs, per-change choices, bulk overwrite presets, Apply Tab/Apply All/Reject/finish confirmations, validation, read-only state, and accessible tab/tabpanel relationships. Also covers 100-change pagination, pagination by individual changes rather than works, page navigation, category-switch page resets, choice preservation across pages, and applying choices from the complete run rather than only the visible page.
+Covers Refetch review tabs, compact collapsed failed-result/warning errors, per-change choices, bulk overwrite presets, Apply Tab/Apply All/Reject/finish confirmations, validation, read-only state, and accessible tab/tabpanel relationships. Also covers 100-change pagination, pagination by individual changes rather than works, page navigation, category-switch page resets, choice preservation across pages, and applying choices from the complete run rather than only the visible page.
 
 #### `tests/Feature/OptionsWorkSearchTest.php`
 

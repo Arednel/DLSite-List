@@ -561,6 +561,47 @@ class OptionsTransferRun extends Component
         };
     }
 
+    /**
+     * @return array<string, list<string>>
+     */
+    private function displayErrors(LibraryTransferRun $run): array
+    {
+        $errors = $this->getErrorBag()->toArray();
+
+        if ($run->direction->isExport()) {
+            if (is_string($run->error) && $run->error !== '') {
+                $errors['export'][] = $run->error;
+            }
+
+            foreach ($run->warnings ?? [] as $warning) {
+                if (is_string($warning) && $warning !== '') {
+                    $errors['export'][] = $warning;
+                }
+            }
+
+            return $errors;
+        }
+
+        if (is_string($run->error) && $run->error !== '') {
+            $errors['review'][] = $run->error;
+        }
+
+        if (! $run->reviewVisible()) {
+            return $errors;
+        }
+
+        $run->items()
+            ->whereNotNull('error')
+            ->where('error', '<>', '')
+            ->orderBy('id')
+            ->get(['entity_key', 'error'])
+            ->each(function (LibraryImportItem $item) use (&$errors): void {
+                $errors['review'][] = "{$item->entity_key}: {$item->error}";
+            });
+
+        return $errors;
+    }
+
     public function render()
     {
         if ($this->initialLocale !== Option::uiLanguage()->value) {
@@ -596,6 +637,6 @@ class OptionsTransferRun extends Component
             'availableMainTabs' => $reviewData['availableMainTabs'] ?? [],
             'categories' => ImportReview::CATEGORIES,
             'newWorkCategories' => array_slice(ImportReview::CATEGORIES['works'], 1),
-        ]);
+        ])->withErrors($this->displayErrors($run));
     }
 }

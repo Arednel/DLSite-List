@@ -1466,3 +1466,30 @@ body.options-page {
         justify-content: center;
     }
 }
+
+.options-page .review-errors {
+    width: 100%;
+    margin: 0;
+    border: 1px solid rgba(var(--options-border-rgb), 0.72);
+    border-radius: var(--options-radius);
+    background: #fff9f7;
+}
+
+.options-page .review-errors summary {
+    cursor: pointer;
+    padding: 9px 10px;
+    color: var(--options-link-hover);
+    font-weight: 700;
+}
+
+.options-page .review-errors__list {
+    display: grid;
+    gap: 8px;
+    margin: 0;
+    padding: 0 10px 10px 28px;
+    color: var(--options-text);
+}
+
+.options-page .review-errors__list li {
+    line-height: 1.45;
+}

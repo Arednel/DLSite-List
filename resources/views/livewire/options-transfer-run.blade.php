@@ -19,17 +19,23 @@
                     </div>
                     <div>{{ __('Total') }} <strong>{{ $this->progressData['total'] }}</strong></div>
                 </div>
-                @if ($this->run->error)
-                    <p class="notice notice--error" role="alert">{{ $this->run->error }}</p>
+                @if ($this->run->direction->isImport())
+                    @foreach ($this->run->warnings ?? [] as $warning)
+                        <div class="notice" role="status">{{ $warning }}</div>
+                    @endforeach
                 @endif
-                @error('transfer')
-                    <p class="notice notice--error" role="alert">{{ $message }}</p>
-                @enderror
-                @foreach ($this->run->warnings ?? [] as $warning)
-                    <div class="notice" role="status">{{ $warning }}</div>
-                @endforeach
             </div>
         @endisland
+        @if ($errors->any())
+            <details class="review-errors">
+                <summary>{{ __('Errors') }} ({{ $errors->count() }})</summary>
+                <ul class="review-errors__list">
+                    @foreach ($errors->all() as $error)
+                        <li>{{ $error }}</li>
+                    @endforeach
+                </ul>
+            </details>
+        @endif
         @if ($run->status->isAwaitingConfirmation())
             <p class="option-description">
                 @if ($expected['images'] > 0)
@@ -245,9 +251,6 @@
                                 @if ($section === 'works' && $category !== 'new_works')
                                     <h3>{{ $labels[$item->metadata['field'] ?? $category] }}</h3>
                                 @endif
-                                @if ($item->error)
-                                    <div class="notice notice--error" role="alert">{{ $item->error }}</div>
-                                @endif
                                 @if ($item->metadata['warning'] ?? null)
                                     <div class="notice" role="status">{{ __($item->metadata['warning']) }}</div>
                                 @endif
@@ -332,11 +335,11 @@
                 <div class="option-actions">
                     @if ($run->status->isCancellable())
                         <button class="tag tag--outline tag--md is-clickable" type="button"
-                    wire:click="ask('cancel')">{{ $run->direction->isImport() ? __('Cancel Import') : __('Cancel Export') }}</button>
+                            wire:click="ask('cancel')">{{ $run->direction->isImport() ? __('Cancel Import') : __('Cancel Export') }}</button>
                     @endif
                     @if (!$run->busy())
                         <button class="tag tag--soft tag--md is-clickable" type="button"
-                    wire:click="ask('cleanup')">{{ $run->direction->isImport() ? __('Clean up this Import') : __('Clean up this Export') }}</button>
+                            wire:click="ask('cleanup')">{{ $run->direction->isImport() ? __('Clean up this Import') : __('Clean up this Export') }}</button>
                     @endif
                 </div>
             @endif

@@ -34,6 +34,26 @@ class OptionsRefetchReviewTest extends TestCase
             );
     }
 
+    public function test_failed_results_and_warnings_use_the_collapsed_error_list(): void
+    {
+        [$run,, $result] = $this->reviewRun();
+        $result->forceFill([
+            'status' => RefetchWorkResult::STATUS_FAILED,
+            'error' => 'Refetch failed.',
+            'warnings' => [[
+                'key' => 'Sample image download failed after five attempts: :images',
+                'replace' => ['images' => 'sample_8.jpg'],
+            ]],
+        ])->save();
+
+        Livewire::test(OptionsRefetchReview::class, ['run' => $run->fresh()])
+            ->assertSee('Errors (2)')
+            ->assertSee("{$result->product_id}: Refetch failed.")
+            ->assertSee("{$result->product_id}: Sample image download failed after five attempts: sample_8.jpg")
+            ->assertSee('<details class="review-errors">', false)
+            ->assertHasNoErrors();
+    }
+
     public function test_review_paginates_changes_and_resets_when_switching_categories(): void
     {
         [$run] = $this->reviewRunWithTitleChanges(101);

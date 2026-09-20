@@ -1,22 +1,14 @@
 <section class="panel options-panel">
     @if ($errors->any())
-        <div class="notice notice--error">{{ $errors->first() }}</div>
+        <details class="review-errors">
+            <summary>{{ __('Errors') }} ({{ $errors->count() }})</summary>
+            <ul class="review-errors__list">
+                @foreach ($errors->all() as $error)
+                    <li>{{ $error }}</li>
+                @endforeach
+            </ul>
+        </details>
     @endif
-
-    @foreach ($failedResults as $result)
-        <div class="notice notice--error">
-            <strong>{{ $result->product_id }}</strong>: {{ $result->displayError() }}
-        </div>
-    @endforeach
-
-    @foreach ($run->results as $result)
-        @foreach ($result->warnings ?? [] as $warning)
-            <div class="notice">
-                <strong>{{ $result->product_id }}</strong>:
-                {{ __($warning['key'], $warning['replace'] ?? []) }}
-            </div>
-        @endforeach
-    @endforeach
 
     @if (!$canApply && $run->isReview())
         <div class="notice">{{ __('A newer refetch run exists. This run is read-only.') }}</div>
@@ -66,109 +58,110 @@
                     wire:key="refetch-panel-{{ $tabReview['value'] }}" @if ($activeCategory !== $tabReview['value']) hidden @endif>
                     @if ($activeCategory === $tabReview['value'])
                         @php($review = $activeReview)
-                    <header class="refetch-tab-header">
-                        <div>
-                            <h2>{{ $review['label'] }}</h2>
-                            @if ($review['resolved'])
-                                <span class="tag tag--soft tag--sm">{{ __('Resolved') }}</span>
+                        <header class="refetch-tab-header">
+                            <div>
+                                <h2>{{ $review['label'] }}</h2>
+                                @if ($review['resolved'])
+                                    <span class="tag tag--soft tag--sm">{{ __('Resolved') }}</span>
+                                @endif
+                            </div>
+
+                            @if ($review['has_changes'])
+                                <label>
+                                    {{ __('Global choice') }}
+                                    <select wire:model="globalActions.{{ $review['value'] }}"
+                                        @disabled(!$canApply || $review['resolved'])>
+                                        @foreach ($globalActionOptions as $option)
+                                            <option value="{{ $option['value'] }}">
+                                                {{ __($option['label']) }}
+                                            </option>
+                                        @endforeach
+                                    </select>
+                                </label>
                             @endif
-                        </div>
+                        </header>
 
-                        @if ($review['has_changes'])
-                            <label>
-                                {{ __('Global choice') }}
-                                <select wire:model="globalActions.{{ $review['value'] }}" @disabled(!$canApply || $review['resolved'])>
-                                    @foreach ($globalActionOptions as $option)
-                                        <option value="{{ $option['value'] }}">
-                                            {{ __($option['label']) }}
-                                        </option>
-                                    @endforeach
-                                </select>
-                            </label>
+                        @if (!$review['has_changes'])
+                            <p class="empty-state">
+                                {{ $review['is_image'] && !$run->check_images
+                                    ? __('Images were not requested for this run.')
+                                    : __('No changes detected.') }}
+                            </p>
+                        @else
+                            <div class="refetch-change-list">
+                                @foreach ($review['cards'] as $card)
+                                    <article class="result-card"
+                                        wire:key="refetch-change-{{ $review['value'] }}-{{ $card['result_id'] }}-{{ $card['field'] }}">
+                                        <header>
+                                            <strong>{{ $card['product_id'] }}</strong>
+                                            <span>{{ $card['work_name'] }}</span>
+                                        </header>
+                                        <h3>{{ __($card['label']) }}</h3>
+                                        <div class="refetch-change-comparison">
+                                            <div>
+                                                <strong>{{ __('Current') }}</strong>
+                                                <x-options.refetch-value :value="$card['current']" :image="$review['is_image']" />
+                                            </div>
+                                            <div>
+                                                <strong>{{ __('Refetched') }}</strong>
+                                                <x-options.refetch-value :value="$card['refetched']" :image="$review['is_image']" />
+                                            </div>
+                                        </div>
+
+                                        @if ($review['is_tags'])
+                                            <div class="refetch-tag-details">
+                                                @foreach ($card['tag_details'] as $detail)
+                                                    <div>
+                                                        <strong>{{ __($detail['label']) }}</strong>
+                                                        <x-options.refetch-value :value="$detail['tags']" />
+                                                    </div>
+                                                @endforeach
+                                            </div>
+                                        @endif
+
+                                        <label>
+                                            {{ __('This change') }}
+                                            <select
+                                                wire:model="actions.{{ $review['value'] }}.{{ $card['result_id'] }}.{{ $card['field'] }}"
+                                                @disabled(!$canApply || $review['resolved'])>
+                                                @foreach ($review['is_tags'] ? $tagChangeActionOptions : $changeActionOptions as $option)
+                                                    <option value="{{ $option['value'] }}">
+                                                        {{ __($option['label']) }}
+                                                    </option>
+                                                @endforeach
+                                            </select>
+                                        </label>
+
+                                        @if ($review['is_tags'])
+                                            <div class="review-actions review-actions--compact">
+                                                @foreach ($tagActionFields as $tagAction)
+                                                    <label>
+                                                        {{ __($tagAction['label']) }}
+                                                        <select
+                                                            wire:model="tagActions.{{ $card['result_id'] }}.{{ $tagAction['key'] }}"
+                                                            @disabled(!$canApply || $review['resolved'])>
+                                                            @foreach ($tagAction['options'] as $option)
+                                                                <option value="{{ $option['value'] }}">
+                                                                    {{ __($option['label']) }}
+                                                                </option>
+                                                            @endforeach
+                                                        </select>
+                                                    </label>
+                                                @endforeach
+                                            </div>
+                                        @endif
+                                    </article>
+                                @endforeach
+                            </div>
+                            {{ $review['cards']->links('livewire.index-pagination-links', ['scrollTo' => 'refetch-panel-' . $run->getKey() . '-' . $review['value']]) }}
                         @endif
-                    </header>
 
-                    @if (!$review['has_changes'])
-                        <p class="empty-state">
-                            {{ $review['is_image'] && !$run->check_images
-                                ? __('Images were not requested for this run.')
-                                : __('No changes detected.') }}
-                        </p>
-                    @else
-                        <div class="refetch-change-list">
-                            @foreach ($review['cards'] as $card)
-                                <article class="result-card"
-                                    wire:key="refetch-change-{{ $review['value'] }}-{{ $card['result_id'] }}-{{ $card['field'] }}">
-                                    <header>
-                                        <strong>{{ $card['product_id'] }}</strong>
-                                        <span>{{ $card['work_name'] }}</span>
-                                    </header>
-                                    <h3>{{ __($card['label']) }}</h3>
-                                    <div class="refetch-change-comparison">
-                                        <div>
-                                            <strong>{{ __('Current') }}</strong>
-                                            <x-options.refetch-value :value="$card['current']" :image="$review['is_image']" />
-                                        </div>
-                                        <div>
-                                            <strong>{{ __('Refetched') }}</strong>
-                                            <x-options.refetch-value :value="$card['refetched']" :image="$review['is_image']" />
-                                        </div>
-                                    </div>
-
-                                    @if ($review['is_tags'])
-                                        <div class="refetch-tag-details">
-                                            @foreach ($card['tag_details'] as $detail)
-                                                <div>
-                                                    <strong>{{ __($detail['label']) }}</strong>
-                                                    <x-options.refetch-value :value="$detail['tags']" />
-                                                </div>
-                                            @endforeach
-                                        </div>
-                                    @endif
-
-                                    <label>
-                                        {{ __('This change') }}
-                                        <select
-                                            wire:model="actions.{{ $review['value'] }}.{{ $card['result_id'] }}.{{ $card['field'] }}"
-                                            @disabled(!$canApply || $review['resolved'])>
-                                            @foreach ($review['is_tags'] ? $tagChangeActionOptions : $changeActionOptions as $option)
-                                                <option value="{{ $option['value'] }}">
-                                                    {{ __($option['label']) }}
-                                                </option>
-                                            @endforeach
-                                        </select>
-                                    </label>
-
-                                    @if ($review['is_tags'])
-                                        <div class="review-actions review-actions--compact">
-                                            @foreach ($tagActionFields as $tagAction)
-                                                <label>
-                                                    {{ __($tagAction['label']) }}
-                                                    <select
-                                                        wire:model="tagActions.{{ $card['result_id'] }}.{{ $tagAction['key'] }}"
-                                                        @disabled(!$canApply || $review['resolved'])>
-                                                        @foreach ($tagAction['options'] as $option)
-                                                            <option value="{{ $option['value'] }}">
-                                                                {{ __($option['label']) }}
-                                                            </option>
-                                                        @endforeach
-                                                    </select>
-                                                </label>
-                                            @endforeach
-                                        </div>
-                                    @endif
-                                </article>
-                            @endforeach
-                        </div>
-                        {{ $review['cards']->links('livewire.index-pagination-links', ['scrollTo' => 'refetch-panel-' . $run->getKey() . '-' . $review['value']]) }}
-                    @endif
-
-                    @if ($canApply && !$review['resolved'] && $review['has_changes'])
-                        <button type="button" class="tag tag--gradient tag--lg is-clickable"
-                            wire:click="askApplyTab('{{ $review['value'] }}')" wire:loading.attr="disabled">
-                            {{ __('Apply Tab') }}
-                        </button>
-                    @endif
+                        @if ($canApply && !$review['resolved'] && $review['has_changes'])
+                            <button type="button" class="tag tag--gradient tag--lg is-clickable"
+                                wire:click="askApplyTab('{{ $review['value'] }}')" wire:loading.attr="disabled">
+                                {{ __('Apply Tab') }}
+                            </button>
+                        @endif
                     @endif
                 </section>
             @endforeach

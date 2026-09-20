@@ -129,6 +129,21 @@ class LibraryTransferTest extends TestCase
         $this->assertSame($normal, $portable, 'Every normal UI option needs an explicit portable classification.');
     }
 
+    public function test_import_item_errors_use_the_collapsed_error_list(): void
+    {
+        Product::factory()->create(['id' => 'RJ123456']);
+        $export = $this->exported(['works']);
+        $run = $this->imported($export);
+        $item = $run->items()->firstOrFail();
+        $item->update(['error' => 'Imported value is invalid.']);
+
+        Livewire::test(OptionsTransferRun::class, ['run' => $run->fresh()])
+            ->assertSee('Errors (1)')
+            ->assertSee("{$item->entity_key}: Imported value is invalid.")
+            ->assertSee('<details class="review-errors">', false)
+            ->assertHasNoErrors();
+    }
+
     public function test_options_page_and_run_review_render_with_refetch_choice_labels(): void
     {
         Product::factory()->create(['id' => 'RJ123456']);
@@ -139,9 +154,16 @@ class LibraryTransferTest extends TestCase
         $export = $this->exported(['works', 'options']);
         $this->assertSame(LibraryTransferRunStatus::Ready, $export->status);
         $export->update(['warnings' => ['RJ123456: sample image 2 is incomplete.']]);
+        Livewire::test(OptionsTransferRun::class, ['run' => $export->fresh()])
+            ->assertSee('Errors (1)')
+            ->assertSee('RJ123456: sample image 2 is incomplete.')
+            ->assertHasNoErrors();
         $this->get(route('options.transfers.show', $export))->assertOk()
             ->assertSee($export->parts()->first()->filename)
-            ->assertSee('<div class="notice" role="status">RJ123456: sample image 2 is incomplete.</div>', false)
+            ->assertSee('Errors (1)')
+            ->assertSee('RJ123456: sample image 2 is incomplete.')
+            ->assertSee('<details class="review-errors">', false)
+            ->assertDontSee('<div class="notice" role="status">RJ123456: sample image 2 is incomplete.</div>', false)
             ->assertSee('css/options.css', false)
             ->assertSee('css/transfers.css', false)
             ->assertSee('css/title-tooltips.css', false)

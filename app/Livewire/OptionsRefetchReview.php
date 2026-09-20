@@ -230,7 +230,6 @@ class OptionsRefetchReview extends Component
         return view('livewire.options-refetch-review', [
             'run' => $run,
             'canApply' => $run->canBeApplied(),
-            'failedResults' => $run->results->filter->isFailed(),
             'categoryReviews' => $categoryReviews,
             'activeReview' => $this->activeCategoryReview($run, $categoryReviews, $tagColors),
             'globalActionOptions' => $this->globalActionOptions(),
@@ -238,7 +237,37 @@ class OptionsRefetchReview extends Component
             'tagChangeActionOptions' => $this->tagChangeActionOptions(),
             'tagActionFields' => $this->tagActionFields(),
             'finishAction' => $this->finishAction($run),
-        ]);
+        ])->withErrors($this->displayErrors($run));
+    }
+
+    /**
+     * @return array<string, list<string>>
+     */
+    private function displayErrors(RefetchRun $run): array
+    {
+        $errors = $this->getErrorBag()->toArray();
+
+        foreach ($run->results as $result) {
+            if ($result->isFailed()) {
+                $message = $result->displayError();
+
+                if ($message !== null && $message !== '') {
+                    $errors['review'][] = "{$result->product_id}: {$message}";
+                }
+            }
+
+            foreach ($result->warnings ?? [] as $warning) {
+                $key = (string) ($warning['key'] ?? '');
+                $replace = is_array($warning['replace'] ?? null) ? $warning['replace'] : [];
+                $message = $key !== '' ? __($key, $replace) : '';
+
+                if (is_string($message) && $message !== '') {
+                    $errors['review'][] = "{$result->product_id}: {$message}";
+                }
+            }
+        }
+
+        return $errors;
     }
 
     /**
