@@ -633,7 +633,7 @@ class OptionsRefetchReview extends Component
     }
 
     /**
-     * @return array{label: string, confirmation: string}
+     * @return array{label: string, confirmation: string, loading: string}
      */
     private function finishAction(RefetchRun $run): array
     {
@@ -641,10 +641,12 @@ class OptionsRefetchReview extends Component
             ? [
                 'label' => 'Ignore Remaining and Finish',
                 'confirmation' => 'Ignore every unresolved tab and finish this run?',
+                'loading' => 'Finishing refetch review...',
             ]
             : [
                 'label' => 'Reject Run',
                 'confirmation' => 'Reject this refetch run?',
+                'loading' => 'Rejecting refetch run...',
             ];
     }
 

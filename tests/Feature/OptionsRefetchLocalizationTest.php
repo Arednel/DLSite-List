@@ -129,12 +129,14 @@ class OptionsRefetchLocalizationTest extends TestCase
             ->call('askApplyAll')
             ->assertSee('未処理のすべてのタブの選択を適用しますか？')
             ->assertSee('すべてのタブを適用')
+            ->assertSee('すべてのタブを適用しています...')
             ->assertSee('キャンセル');
 
         Livewire::test(OptionsRefetchReview::class, ['run' => $run])
             ->call('askRejectOrFinish')
             ->assertSee('この再取得を拒否しますか？')
             ->assertSee('再取得を拒否')
+            ->assertSee('再取得を拒否しています...')
             ->assertSee('キャンセル');
     }
 

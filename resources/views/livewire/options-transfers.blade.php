@@ -140,6 +140,9 @@
                 <div class="option-actions">
                     <button type="button" class="tag tag--gradient tag--lg is-clickable" wire:click="export"
                         wire:loading.attr="disabled">{{ __('Export') }}</button>
+                    <p class="option-description" role="status" wire:loading wire:target="export">
+                        {{ __('Starting export...') }}
+                    </p>
                 </div>
             @endif
         </section>

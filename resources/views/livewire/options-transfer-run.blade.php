@@ -163,6 +163,10 @@
                                 <i class="fa-solid fa-circle-question" tabindex="0"
                                     aria-label="{{ __('About :decision', ['decision' => __($label)]) }}"
                                     title="{{ $decisionHelp[$decision] }}"></i>
+                                <span class="option-description" role="status" wire:loading
+                                    wire:target="decideMany('{{ $decision }}', true)">
+                                    {{ __($decisionLoading[$decision]) }}
+                                </span>
                             </div>
                         @endforeach
                         <div class="transfer-decision-option">
@@ -348,9 +352,10 @@
     @include('livewire.partials.options-reset-confirmation-modal', [
         'open' => $confirmation !== null,
         'modalId' => 'transfer-confirm',
-        'message' => $this->confirmationMessage,
+        'message' => $confirmationAction['confirmation'],
         'confirmLabel' => 'Continue',
         'confirmAction' => 'confirm',
         'cancelAction' => 'cancelConfirmation',
+        'loadingMessage' => $confirmationAction['loading'],
     ])
 </div>

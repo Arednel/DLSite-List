@@ -31,5 +31,6 @@
         'confirmLabel' => 'Clean up refetch data',
         'confirmAction' => 'cleanup',
         'cancelAction' => 'cancelCleanup',
+        'loadingMessage' => 'Cleaning up refetch data...',
     ])
 </div>

@@ -9,6 +9,7 @@ All notable changes to this project are documented in this file.
 * Added ZIP import/export for Works, Images, Tag Library data, and Options.
 * Added background bulk DLSite works Import.
 * Added paginated navigation to Refetch review categories.
+* Added inline loading status text to long-running actions.
 
 ### Changed
 

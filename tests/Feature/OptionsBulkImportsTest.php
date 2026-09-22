@@ -247,6 +247,9 @@ class OptionsBulkImportsTest extends TestCase
             ->call('askCleanup')
             ->assertSet('confirmingCleanup', true)
             ->assertSee('Permanently delete all Bulk Import history?')
+            ->assertSee('Cleaning up Bulk Import history...')
+            ->assertSee('wire:loading', false)
+            ->assertSee('wire:target="cleanup"', false)
             ->call('cleanup')
             ->assertSet('confirmingCleanup', false)
             ->assertSet('cleanupNotice', 'Bulk Import history cleaned up.');

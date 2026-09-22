@@ -594,6 +594,9 @@ class TagLibraryManagerTest extends TestCase
 
         Livewire::test(TagLibraryManager::class)
             ->call('openTagSettings', $tag->getKey())
+            ->assertSee('Saving tag settings...')
+            ->assertSee('wire:loading', false)
+            ->assertSee('wire:target="saveTagSettings"', false)
             ->set('editingTagTitle', '  ReNamed Display TAG  ')
             ->call('saveTagSettings')
             ->assertHasNoErrors()

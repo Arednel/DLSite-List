@@ -184,6 +184,7 @@
         'confirmLabel' => 'Apply All Tabs',
         'confirmAction' => 'applyAll',
         'cancelAction' => 'cancelConfirmation',
+        'loadingMessage' => 'Applying all tabs...',
     ])
 
     @include('livewire.partials.options-reset-confirmation-modal', [
@@ -193,6 +194,7 @@
         'confirmLabel' => 'Apply Tab',
         'confirmAction' => 'applyTab',
         'cancelAction' => 'cancelConfirmation',
+        'loadingMessage' => 'Applying tab...',
     ])
 
     @include('livewire.partials.options-reset-confirmation-modal', [
@@ -202,5 +204,6 @@
         'confirmLabel' => $finishAction['label'],
         'confirmAction' => 'rejectOrFinish',
         'cancelAction' => 'cancelConfirmation',
+        'loadingMessage' => $finishAction['loading'],
     ])
 </section>

@@ -41,6 +41,9 @@ class LibraryTransferLifecycleTest extends TestCase
 
         $component = Livewire::test(OptionsTransfers::class)
             ->assertSet('sizeChoice', '256')
+            ->assertSee('Starting export...')
+            ->assertSee('wire:loading', false)
+            ->assertSee('wire:target="export"', false)
             ->assertSee('1024 MiB')
             ->assertSee('8192 MiB')
             ->set('scopes', ['works', 'images', 'options'])
@@ -255,13 +258,15 @@ class LibraryTransferLifecycleTest extends TestCase
 
     public function test_archive_parts_are_hidden_while_an_import_is_processing_or_showing_review(): void
     {
-        foreach ([
-            LibraryTransferRunStatus::Analyzing,
-            LibraryTransferRunStatus::Applying,
-            LibraryTransferRunStatus::Review,
-            LibraryTransferRunStatus::Completed,
-            LibraryTransferRunStatus::CompletedWithWarnings,
-        ] as $status) {
+        foreach (
+            [
+                LibraryTransferRunStatus::Analyzing,
+                LibraryTransferRunStatus::Applying,
+                LibraryTransferRunStatus::Review,
+                LibraryTransferRunStatus::Completed,
+                LibraryTransferRunStatus::CompletedWithWarnings,
+            ] as $status
+        ) {
             $run = LibraryTransferRun::create([
                 'direction' => LibraryTransferDirection::Import,
                 'status' => $status,
@@ -347,7 +352,8 @@ class LibraryTransferLifecycleTest extends TestCase
             ->assertSet('confirmingCleanup', true)
             ->assertSee('Permanently delete all transfer history, archives, and staged files?')
             ->assertSee('Cleaning up transfer history...')
-            ->assertSee('wire:loading wire:target="cleanup"', false)
+            ->assertSee('wire:loading', false)
+            ->assertSee('wire:target="cleanup"', false)
             ->call('cleanup')
             ->assertHasNoErrors('cleanup')
             ->assertSet('confirmingCleanup', false)

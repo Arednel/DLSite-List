@@ -680,6 +680,10 @@
                         @endif
                     </fieldset>
 
+                    <p role="status" wire:loading wire:target="saveTagSettings">
+                        {{ __('Saving tag settings...') }}
+                    </p>
+
                     <div class="tag-library-modal-actions">
                         <button type="button" class="tag-library-modal-cancel" wire:click="closeTagSettings">
                             {{ __('Cancel') }}

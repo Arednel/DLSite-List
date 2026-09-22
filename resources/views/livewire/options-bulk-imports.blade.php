@@ -41,5 +41,6 @@
         'confirmLabel' => 'Clean up Bulk Import history',
         'confirmAction' => 'cleanup',
         'cancelAction' => 'cancelCleanup',
+        'loadingMessage' => 'Cleaning up Bulk Import history...',
     ])
 </div>

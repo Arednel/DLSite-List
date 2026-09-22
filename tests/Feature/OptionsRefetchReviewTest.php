@@ -61,10 +61,12 @@ class OptionsRefetchReviewTest extends TestCase
         $component = Livewire::test(OptionsRefetchReview::class, ['run' => $run])
             ->assertSee('Showing 1-100 of 101')
             ->assertSee('New Title for ', false)
-            ->assertViewHas('activeReview', fn(array $review): bool =>
+            ->assertViewHas(
+                'activeReview',
+                fn(array $review): bool =>
                 $review['cards']->count() === 100
-                && $review['cards']->total() === 101
-                && $review['cards']->currentPage() === 1
+                    && $review['cards']->total() === 101
+                    && $review['cards']->currentPage() === 1
             );
 
         $component
@@ -72,10 +74,12 @@ class OptionsRefetchReviewTest extends TestCase
             ->assertSet('paginators.page', 2)
             ->assertSee('Showing 101-101 of 101')
             ->assertSee('New Title for ', false)
-            ->assertViewHas('activeReview', fn(array $review): bool =>
+            ->assertViewHas(
+                'activeReview',
+                fn(array $review): bool =>
                 $review['cards']->count() === 1
-                && $review['cards']->total() === 101
-                && $review['cards']->currentPage() === 2
+                    && $review['cards']->total() === 101
+                    && $review['cards']->currentPage() === 2
             );
 
         $component
@@ -94,17 +98,21 @@ class OptionsRefetchReviewTest extends TestCase
 
         Livewire::test(OptionsRefetchReview::class, ['run' => $run])
             ->assertSee('Showing 1-100 of 102')
-            ->assertViewHas('activeReview', fn(array $review): bool =>
+            ->assertViewHas(
+                'activeReview',
+                fn(array $review): bool =>
                 $review['count'] === 102
-                && $review['cards']->count() === 100
-                && $review['cards']->total() === 102
+                    && $review['cards']->count() === 100
+                    && $review['cards']->total() === 102
             )
             ->call('nextPage')
             ->assertSee('Showing 101-102 of 102')
-            ->assertViewHas('activeReview', fn(array $review): bool =>
+            ->assertViewHas(
+                'activeReview',
+                fn(array $review): bool =>
                 $review['cards']->count() === 2
-                && $review['cards']->total() === 102
-                && $review['cards']->currentPage() === 2
+                    && $review['cards']->total() === 102
+                    && $review['cards']->currentPage() === 2
             );
     }
 
@@ -158,6 +166,9 @@ class OptionsRefetchReviewTest extends TestCase
             )
             ->call('nextPage')
             ->call('askApplyTab', RefetchCategory::Titles->value)
+            ->assertSee('Applying tab...')
+            ->assertSee('wire:loading', false)
+            ->assertSee('wire:target="applyTab"', false)
             ->call('applyTab')
             ->assertNoRedirect();
 
@@ -395,7 +406,7 @@ class OptionsRefetchReviewTest extends TestCase
 
         $productsById = $products->keyBy('id');
         $orderedProducts = $run->load('results.product')->results
-            ->map(fn (RefetchWorkResult $result): Product => $productsById->get($result->product_id))
+            ->map(fn(RefetchWorkResult $result): Product => $productsById->get($result->product_id))
             ->values();
 
         return [$run, $orderedProducts];

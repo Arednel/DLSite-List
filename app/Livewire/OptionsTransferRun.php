@@ -265,7 +265,7 @@ class OptionsTransferRun extends Component
     {
         try {
             $callback();
-            unset($this->run, $this->reviewData, $this->confirmationMessage);
+            unset($this->run, $this->reviewData);
         } catch (LockTimeoutException | RuntimeException $exception) {
             $this->addError('transfer', $exception->getMessage() ?: __('A transfer operation is in progress. Retry shortly.'));
         }
@@ -278,7 +278,6 @@ class OptionsTransferRun extends Component
         $this->confirmation = $choice->value;
         $this->confirmationSection = $choice === LibraryTransferAction::Apply && ! $all ? $this->section : null;
         $this->confirmationCategory = $choice === LibraryTransferAction::Apply && ! $all ? $this->category : null;
-        unset($this->confirmationMessage);
     }
 
     public function cancelConfirmation(): void
@@ -286,7 +285,6 @@ class OptionsTransferRun extends Component
         $this->confirmation = null;
         $this->confirmationSection = null;
         $this->confirmationCategory = null;
-        unset($this->confirmationMessage);
     }
 
     public function confirm(LibraryTransferService $service): void
@@ -311,7 +309,6 @@ class OptionsTransferRun extends Component
                 $this->progressPercent,
                 $this->partData,
                 $this->reviewData,
-                $this->confirmationMessage,
             );
             if ($action === LibraryTransferAction::Cancel) {
                 $this->dispatch('transfer-cancelled', runId: $this->runId);
@@ -405,6 +402,11 @@ class OptionsTransferRun extends Component
             ? $this->newWorkCategoryCounts($run, array_slice($categories['works'], 1))
             : [];
         $decisionOptions = ['ignore' => 'Ignore', 'overwrite' => 'Overwrite', 'merge' => 'Merge'];
+        $decisionLoading = [
+            'ignore' => 'Setting all review choices to Ignore...',
+            'overwrite' => 'Setting all review choices to Overwrite...',
+            'merge' => 'Setting all review choices to Merge...',
+        ];
         $decisionHelp = [
             'ignore' => __('Ignore keeps current library data and skips the imported changes.'),
             'overwrite' => __('Overwrite replaces values included in the archive. For Options, absent keys reset to defaults. For group lists, groups absent from the archive are deleted while their tags and work attachments remain.'),
@@ -417,7 +419,7 @@ class OptionsTransferRun extends Component
             ->keys()
             ->all();
 
-        return compact('counts', 'items', 'labels', 'newWorkChanges', 'newWorkCounts', 'previews', 'decisionOptions', 'decisionHelp') + [
+        return compact('counts', 'items', 'labels', 'newWorkChanges', 'newWorkCounts', 'previews', 'decisionOptions', 'decisionLoading', 'decisionHelp') + [
             'section' => $this->section,
             'category' => $this->category,
             'tabDecisionOptions' => $this->category === 'new_works'
@@ -554,23 +556,51 @@ class OptionsTransferRun extends Component
         ];
     }
 
-    #[Computed]
-    public function confirmationMessage(): string
+    /**
+     * @return array{confirmation: string, loading: ?string}
+     */
+    private function confirmationAction(LibraryTransferRun $run): array
     {
-        $run = $this->run;
-
         return match ($this->confirmation) {
-            'cleanup' => __('Remove this transfer history, archives and staged files? Saved library data is retained.'),
-            'without_images' => __('Continue with data only? All images will be excluded from this import, including uploaded image parts.'),
-            'continue_export' => __('Build :count individual ZIP files?', ['count' => $run->total]),
+            'cleanup' => [
+                'confirmation' => 'Remove this transfer history, archives and staged files? Saved library data is retained.',
+                'loading' => 'Cleaning up transfer...',
+            ],
+            'without_images' => [
+                'confirmation' => 'Continue with data only? All images will be excluded from this import, including uploaded image parts.',
+                'loading' => 'Continuing without images...',
+            ],
+            'continue_export' => [
+                'confirmation' => __('Build :count individual ZIP files?', ['count' => $run->total]),
+                'loading' => 'Preparing export...',
+            ],
             'apply' => $this->confirmationSection === null
-                ? __('Apply choices for every unresolved tab?')
-                : __('Apply and resolve this tab?'),
-            'retry' => __('Retry the interrupted background operation from its saved checkpoint?'),
-            'refresh' => __('Refresh failed/conflicting changes against current local data and reset their choices to Ignore?'),
-            default => $run->direction->isImport()
-                ? __('Cancel this Import? Already applied changes are retained.')
-                : __('Cancel this Export? Already applied changes are retained.'),
+                ? [
+                    'confirmation' => 'Apply choices for every unresolved tab?',
+                    'loading' => 'Applying all tabs...',
+                ]
+                : [
+                    'confirmation' => 'Apply and resolve this tab?',
+                    'loading' => 'Applying tab...',
+                ],
+            'retry' => [
+                'confirmation' => 'Retry the interrupted background operation from its saved checkpoint?',
+                'loading' => 'Retrying transfer...',
+            ],
+            'refresh' => [
+                'confirmation' => 'Refresh failed/conflicting changes against current local data and reset their choices to Ignore?',
+                'loading' => 'Refreshing conflicts...',
+            ],
+            'cancel' => [
+                'confirmation' => $run->direction->isImport()
+                    ? 'Cancel this Import? Already applied changes are retained.'
+                    : 'Cancel this Export? Already applied changes are retained.',
+                'loading' => 'Cancelling transfer...',
+            ],
+            default => [
+                'confirmation' => '',
+                'loading' => null,
+            ],
         };
     }
 
@@ -643,6 +673,7 @@ class OptionsTransferRun extends Component
             'section' => $reviewData['section'] ?? $this->section,
             'category' => $reviewData['category'] ?? $this->category,
             'decisionOptions' => $reviewData['decisionOptions'] ?? null,
+            'decisionLoading' => $reviewData['decisionLoading'] ?? [],
             'decisionHelp' => $reviewData['decisionHelp'] ?? [],
             'tabDecisionOptions' => $reviewData['tabDecisionOptions'] ?? null,
             'mainTabs' => $this->mainTabs(),
@@ -650,6 +681,7 @@ class OptionsTransferRun extends Component
             'availableMainTabs' => $reviewData['availableMainTabs'] ?? [],
             'categories' => ImportReview::CATEGORIES,
             'newWorkCategories' => array_slice(ImportReview::CATEGORIES['works'], 1),
+            'confirmationAction' => $this->confirmationAction($run),
         ])->withErrors($this->displayErrors($run));
     }
 }
