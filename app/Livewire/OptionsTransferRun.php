@@ -85,7 +85,7 @@ class OptionsTransferRun extends Component
         $this->category = $category;
         $this->resetPage();
         unset($this->reviewData);
-        $this->js("document.getElementById('transfer-review-panel')?.scrollIntoView({ block: 'start' })");
+        $this->scrollToActiveReviewTab();
     }
 
     /** @return array<string, array{label: string, section: string, categories: list<string>}> */
@@ -236,7 +236,7 @@ class OptionsTransferRun extends Component
         $this->newWorkCategory = $category;
         $this->resetPage();
         unset($this->reviewData);
-        $this->js("document.getElementById('transfer-review-panel')?.scrollIntoView({ block: 'start' })");
+        $this->scrollToActiveReviewTab();
     }
 
     public function decide(int $id, string $decision, ImportReview $review): void
@@ -457,11 +457,22 @@ class OptionsTransferRun extends Component
                 $this->section = $tab['section'];
                 $this->category = $tab['category'];
                 $this->resetPage();
-                $this->js("document.getElementById('transfer-review-panel')?.scrollIntoView({ block: 'start' })");
+                $this->scrollToActiveReviewTab();
 
                 return;
             }
         }
+    }
+
+    private function scrollToActiveReviewTab(): void
+    {
+        $targetId = match (true) {
+            $this->category === 'new_works' => 'new-work-tab-' . $this->newWorkCategory,
+            $this->section === 'options' => 'transfer-main-tab-options',
+            default => 'transfer-category-tab-' . $this->section . '-' . $this->category,
+        };
+
+        $this->js("document.getElementById('{$targetId}')?.scrollIntoView({ block: 'nearest', inline: 'nearest' })");
     }
 
     /** @param list<string> $categories */
