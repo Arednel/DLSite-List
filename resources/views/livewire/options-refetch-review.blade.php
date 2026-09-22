@@ -24,7 +24,7 @@
                 <button id="refetch-tab-{{ $run->getKey() }}-{{ $review['value'] }}" type="button" role="tab"
                     aria-selected="{{ $activeCategory === $review['value'] ? 'true' : 'false' }}"
                     aria-controls="refetch-panel-{{ $run->getKey() }}-{{ $review['value'] }}"
-                    wire:click.preserve-scroll="showCategory('{{ $review['value'] }}')" wire:loading.attr="disabled"
+                    wire:click="showCategory('{{ $review['value'] }}')" wire:loading.attr="disabled"
                     wire:key="refetch-tab-{{ $review['value'] }}" @class([
                         'is-active' => $activeCategory === $review['value'],
                         'is-resolved' => $review['resolved'],

@@ -74,6 +74,7 @@ class OptionsRefetchReview extends Component
         if (RefetchCategory::tryFrom($category) !== null) {
             $this->activeCategory = $category;
             $this->resetPage();
+            $this->js("document.getElementById('refetch-panel-{$this->runId}-{$category}')?.scrollIntoView({ block: 'start' })");
         }
     }
 

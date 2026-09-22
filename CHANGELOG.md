@@ -25,6 +25,7 @@ All notable changes to this project are documented in this file.
 * Made Refetch image updates more reliable when interrupted.
 * Fixed Refetch review dropdown overflowing their cards on mobile view.
 * Configured Docker application processes to run as `www-data`, preventing shared cache and storage permission errors.
+* Fixed scroll position issues when switching between refetch review tabs.
 
 ## 1.8.7 - 2026-09-08
 

@@ -85,6 +85,7 @@ class OptionsTransferRun extends Component
         $this->category = $category;
         $this->resetPage();
         unset($this->reviewData);
+        $this->js("document.getElementById('transfer-review-panel')?.scrollIntoView({ block: 'start' })");
     }
 
     /** @return array<string, array{label: string, section: string, categories: list<string>}> */
@@ -235,6 +236,7 @@ class OptionsTransferRun extends Component
         $this->newWorkCategory = $category;
         $this->resetPage();
         unset($this->reviewData);
+        $this->js("document.getElementById('transfer-review-panel')?.scrollIntoView({ block: 'start' })");
     }
 
     public function decide(int $id, string $decision, ImportReview $review): void
