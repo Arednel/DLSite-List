@@ -367,7 +367,7 @@ Covers metadata-backfill behavior when canonical work JSON is missing or invalid
 #### `tests/Feature/ProductMetadataSettingsTest.php`
 
 Covers metadata-related UI settings:
-- field layouts
+- field layouts, including collapsed section rendering
 - automatic Series
 - DLSite links
 - Add/Edit form theme

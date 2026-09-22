@@ -601,9 +601,13 @@ class ProductMetadataSettingsTest extends TestCase
     {
         App::setLocale(UiLanguage::Japanese->value);
 
-        Livewire::test(ProductFieldLayoutSettings::class)
+        $component = Livewire::test(ProductFieldLayoutSettings::class);
+        $indexFieldCount = count($component->get('indexOrder'));
+
+        $component
             ->assertSet('editFields.fetched_tags.label', '取得済みJPタグ')
             ->assertSee('取得済みJPタグ')
+            ->assertSee("{$indexFieldCount} 項目")
             ->assertDontSee('Fetched EN Tags');
     }
 
@@ -961,6 +965,30 @@ class ProductMetadataSettingsTest extends TestCase
             $component->assertSee(
                 "wire:click.preserve-scroll=\"saveLayout('{$layout}')\"",
                 false,
+            );
+        }
+    }
+
+    public function test_field_layout_sections_render_collapsed_by_default(): void
+    {
+        $html = Livewire::test(ProductFieldLayoutSettings::class)->html();
+
+        preg_match_all('/<details\b[^>]*>/i', $html, $detailMatches);
+
+        $collapsibleDetails = array_values(array_filter(
+            $detailMatches[0],
+            static fn(string $tag): bool => str_contains($tag, 'field-layout-collapsible'),
+        ));
+
+        $this->assertCount(7, $collapsibleDetails);
+        $this->assertSame(7, substr_count($html, 'class="field-layout-summary"'));
+
+        foreach ($collapsibleDetails as $detailsTag) {
+            $this->assertStringContainsString('wire:ignore.self', $detailsTag);
+            $this->assertSame(
+                0,
+                preg_match('/\sopen(?:\s|=|>)/i', $detailsTag),
+                'Field layout sections should render collapsed by default.',
             );
         }
     }

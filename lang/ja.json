@@ -437,6 +437,7 @@
     "Filters by when the work was last updated in your library.": "ライブラリ内で作品が最後に更新された日時で絞り込みます。",
     "Shows when the work was last updated in your library.": "ライブラリ内で作品が最後に更新された日時を表示します。",
     "Sorts by when the work was last updated in your library.": "ライブラリ内で作品が最後に更新された日時で並べ替えます。",
+    ":count field|:count fields": ":count 項目|:count 項目",
     "Save all field layouts": "すべてのフィールドレイアウトを保存",
     "Save :layout": ":layoutを保存",
     "Field layout saved.": "フィールドレイアウトを保存しました。",

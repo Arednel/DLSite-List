@@ -19,6 +19,7 @@ All notable changes to this project are documented in this file.
 * Updated Refetch and Import/Export review errors to use compact lists.
 * Simplified field-layout code, `AppServiceProvider` and removed legacy tests.
 * Improved DLSite Quick Add reliability with atomic metadata persistence and better import failure handling.
+* Made Field Layout sections collapsible and collapsed by default.
 
 ### Fixed
 
