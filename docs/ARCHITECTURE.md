@@ -45,12 +45,12 @@ Tag and contributor data is loaded only when the current visible fields need it.
 `GET /create` opens DLSite Quick Add and `POST /store` creates the work.
 
 1. `StoreProductRequest` validates submitted form data.
-2. `ProductController` requests the RJ work through `DLSiteWorkFetcher`.
-3. `DLSiteWorkFetcher` calls `DLSitePythonRunner`.
-4. The PHP side invokes `python/DLSiteScraper.py` with explicit JSON/image/log destinations.
+2. `ProductController` builds a `DLSiteProductImportInput` snapshot from the validated values and Quick Add layout.
+3. `DLSiteProductImporter` requests the RJ work through `DLSiteWorkFetcher`.
+4. `DLSiteWorkFetcher` calls `DLSitePythonRunner`, which invokes `python/DLSiteScraper.py` with explicit JSON/image/log destinations.
 5. PHP owns the fetch retry loop and validates the scraper result.
-6. Scraped metadata is converted by `DLSiteWorkData`.
-7. Product, tag, contributor, canonical JSON, and image data is stored.
+6. Scraped metadata is converted by `DLSiteWorkData`; explicit visible Quick Add values override the fetched values where supported.
+7. `DLSiteProductImporter` creates the Product and synchronizes tags/contributors.
 8. The created work returns to the appropriate Index destination.
 
 The fetcher can retry a failed DLsite fetch up to five times. Python does not own a second retry loop.
@@ -69,6 +69,20 @@ Custom Quick Add:
 - stores only submitted visible optional metadata because there is no scraped fallback
 
 Custom works still use the normal product/tag/contributor model and can participate in the library and Refetch selection workflow.
+
+### Bulk Import
+
+`GET /create/bulk` opens Bulk Import and `POST /store/bulk` starts a background run.
+
+1. `StartBulkImportRequest` extracts, normalizes, de-duplicates, and validates up to 500 RJ codes plus the shared form values.
+2. `BulkImportService` snapshots the input, creates the run/items, and dispatches sequential `ImportBulkWorkJob` jobs on the database queue.
+3. Each item skips an existing product or uses the shared `DLSiteProductImporter`; expected DLsite work failures are recorded per item while unexpected failures stop the run.
+4. `FinishBulkImportRunJob` reconciles counts and completes the run.
+5. `OptionsBulkImports` paginates history and cleanup, while `BulkImportRunCard` updates only queued/running runs.
+
+Product creation and genre/contributor synchronization use the same transactional import path as Quick Add.
+
+Bulk Import history cleanup deletes all persisted run/item history and is unavailable while a run is active.
 
 ### Edit and Delete
 
@@ -108,22 +122,24 @@ Tag Library uses the same stored tag rows as products. Renaming a tag updates th
 
 ### Options
 
-`GET /options` renders one of five tabs:
+`GET /options` renders one of six tabs:
 
 - `General`
 - `Field Layouts`
 - `Authentication`
 - `Refetch`
 - `Import / Export`
+- `Bulk Imports`
 
 Most application settings are stored in the `options` table and edited by focused Livewire settings components.
 
-Field Layouts configure six independent surfaces:
+Field Layouts configure seven independent layouts:
 - Index Table Columns
 - Index Filter Fields
 - Index Sort Menu
 - Edit Form Fields
 - Quick Add Form Fields
+- Bulk Import Form Fields
 - Custom Quick Add Form Fields
 
 `ProductField` defines which fields exist on each surface, their defaults, locks, and editability rules. `ProductFieldLayout` normalizes persisted layout rows and prepares render metadata.
@@ -235,6 +251,7 @@ Main controllers:
 - `app/Http/Controllers/AuthenticationController.php`
 - `app/Http/Controllers/RefetchController.php`
 - `app/Http/Controllers/LibraryTransferController.php`
+- `app/Http/Controllers/BulkImportController.php`
 
 Main form requests:
 - `app/Http/Requests/BaseProductRequest.php`
@@ -243,6 +260,7 @@ Main form requests:
 - `app/Http/Requests/UpdateProductRequest.php`
 - `app/Http/Requests/StartRefetchRequest.php`
 - `app/Http/Requests/LibraryTransferUploadRequest.php`
+- `app/Http/Requests/StartBulkImportRequest.php`
 
 ### Livewire Components
 
@@ -256,6 +274,8 @@ Core application components include:
 - `OptionsRefetchReview`
 - `OptionsTransfers`
 - `OptionsTransferRun`
+- `OptionsBulkImports`
+- `BulkImportRunCard`
 
 Settings components include:
 
@@ -306,6 +326,14 @@ DLsite:
 - `DLSitePythonRunner`
 - `DLSiteWorkFetcher`
 - `DLSiteWorkData`
+- `DLSiteProductImportInput`
+- `DLSiteProductImporter`
+
+Bulk import:
+- `BulkImportService`
+- `BulkImportCleanupService`
+- `ImportBulkWorkJob`
+- `FinishBulkImportRunJob`
 
 Refetch:
 - `RefetchService`
@@ -462,6 +490,12 @@ Laravel queue infrastructure uses:
 - `jobs`
 - `job_batches`
 
+### Bulk Import
+
+`bulk_import_runs` stores the shared-input snapshot, lifecycle state, aggregate counts, timestamps, and run-level errors.
+
+`bulk_import_items` stores ordered product ids with per-item state, warning/error text, and timestamps.
+
 ### Library transfers
 
 `library_transfer_runs` stores transfer direction, lifecycle/checkpoint state, archive-set identity, settings, progress, warnings, and errors.
@@ -555,7 +589,7 @@ Autocomplete is provided by:
 - `/autocomplete/tags`
 - `/autocomplete/series`
 
-DLSite Quick Add has a browser-side fetching status. Custom Quick Add intentionally does not load or render that status behavior.
+DLSite Quick Add has a browser-side fetching status. Custom Quick Add and Bulk Import do not use it; Bulk Import reports queue progress from Options instead.
 
 ## Logging
 

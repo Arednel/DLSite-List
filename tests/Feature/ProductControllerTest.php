@@ -170,37 +170,37 @@ class ProductControllerTest extends TestCase
         ]);
         $this->attachGenres($noise, [$noiseGenre, $noiseCustomGenre]);
 
-        $this->get('/?search='.strtolower($target->id))
+        $this->get('/?search=' . strtolower($target->id))
             ->assertOk()
             ->assertSee($target->work_name)
             ->assertDontSee($noise->work_name);
 
-        $this->get('/?search='.strtolower($jpToken))
+        $this->get('/?search=' . strtolower($jpToken))
             ->assertOk()
             ->assertSee($target->work_name)
             ->assertDontSee($noise->work_name);
 
-        $this->get('/?search='.strtolower($enToken))
+        $this->get('/?search=' . strtolower($enToken))
             ->assertOk()
             ->assertSee($target->work_name_english)
             ->assertDontSee($noise->work_name_english);
 
-        $this->get('/?search='.strtolower($seriesToken))
+        $this->get('/?search=' . strtolower($seriesToken))
             ->assertOk()
             ->assertSee($target->series)
             ->assertDontSee($noise->series);
 
-        $this->get('/?search='.strtolower($genreToken))
+        $this->get('/?search=' . strtolower($genreToken))
             ->assertOk()
             ->assertSee($target->work_name)
             ->assertDontSee($noise->work_name);
 
-        $this->get('/?search='.strtolower($customToken))
+        $this->get('/?search=' . strtolower($customToken))
             ->assertOk()
             ->assertSee($target->work_name)
             ->assertDontSee($noise->work_name);
 
-        $this->get('/?search='.strtolower($hiddenJapaneseGenre->title))
+        $this->get('/?search=' . strtolower($hiddenJapaneseGenre->title))
             ->assertOk()
             ->assertDontSee($hiddenJapanese->work_name);
     }
@@ -257,12 +257,12 @@ class ProductControllerTest extends TestCase
             'work_name' => 'GENRE_ID_NOISE_TOKEN',
         ]);
 
-        $this->get('/?genre='.$sharedGenre->getKey())
+        $this->get('/?genre=' . $sharedGenre->getKey())
             ->assertOk()
             ->assertSee($matching->work_name)
             ->assertDontSee($noise->work_name);
 
-        $this->get('/?genre='.$hiddenJapaneseGenre->getKey())
+        $this->get('/?genre=' . $hiddenJapaneseGenre->getKey())
             ->assertOk()
             ->assertDontSee($hiddenJapanese->work_name);
     }
@@ -596,7 +596,7 @@ class ProductControllerTest extends TestCase
             ->assertSee('href="/create"', false)
             ->assertDontSee('hero__back', false);
 
-        $this->get('/?genre='.$sharedLanguageGenre->getKey())
+        $this->get('/?genre=' . $sharedLanguageGenre->getKey())
             ->assertOk()
             ->assertSee($firstProduct->work_name)
             ->assertDontSee($japaneseOnlyProduct->work_name);
@@ -903,6 +903,56 @@ class ProductControllerTest extends TestCase
             ->assertDontSee('href="http://localhost/create"', false);
     }
 
+    #[DataProvider('unexpectedQuickAddFetchFailures')]
+    public function test_create_returns_to_the_form_after_unexpected_fetch_failures(
+        bool $modal,
+        bool $invalidManifest,
+    ): void {
+        Storage::fake('local');
+        Storage::fake('public');
+        $message = $invalidManifest
+            ? 'DLSite work fetch returned an invalid manifest.'
+            : 'Temporary network failure';
+        Process::fake([
+            '*' => $invalidManifest
+                ? Process::result(output: 'invalid manifest')
+                : Process::result(errorOutput: "  {$message}\n", exitCode: 1),
+        ])->preventStrayProcesses();
+        $createUrl = $modal ? '/create?modal=1' : '/create';
+
+        $this->from($createUrl)
+            ->post('/store', [
+                'id' => 'RJ000000406',
+                'notes' => 'Keep my entered notes',
+                'modal' => $modal ? '1' : '0',
+                'return_url' => 'http://localhost/tags',
+            ])
+            ->assertRedirect($createUrl)
+            ->assertSessionHasErrors(['id' => $message])
+            ->assertSessionHasInput('id', 'RJ000000406')
+            ->assertSessionHasInput('notes', 'Keep my entered notes')
+            ->assertSessionHasInput('return_url', 'http://localhost/tags');
+
+        $this->get($createUrl)
+            ->assertOk()
+            ->assertSee($message)
+            ->assertSee('Keep my entered notes')
+            ->assertSee('name="return_url" value="http://localhost/tags"', false);
+
+        $this->assertDatabaseMissing('products', ['id' => 'RJ000000406']);
+        Process::assertRanTimes(fn(): bool => true, $invalidManifest ? 1 : 5);
+    }
+
+    public static function unexpectedQuickAddFetchFailures(): array
+    {
+        return [
+            'standalone scraper failure' => [false, false],
+            'modal scraper failure' => [true, false],
+            'standalone invalid manifest' => [false, true],
+            'modal invalid manifest' => [true, true],
+        ];
+    }
+
     public function test_create_translates_only_recognized_scraper_errors_using_the_current_locale(): void
     {
         Option::setUiLanguage(UiLanguage::Japanese);
@@ -949,22 +999,22 @@ class ProductControllerTest extends TestCase
         $response->assertOk();
 
         foreach (ProductProgress::visibleOptions() as $value => $label) {
-            $response->assertSee('value="'.e($value).'"', false);
+            $response->assertSee('value="' . e($value) . '"', false);
             $response->assertSee($label);
         }
 
         foreach (ProductScore::options() as $value => $label) {
-            $response->assertSee('value="'.e($value).'"', false);
+            $response->assertSee('value="' . e($value) . '"', false);
             $response->assertSee($label);
         }
 
         foreach (ProductPriority::options() as $value => $label) {
-            $response->assertSee('value="'.e($value).'"', false);
+            $response->assertSee('value="' . e($value) . '"', false);
             $response->assertSee($label);
         }
 
         foreach (ProductReListenValue::options() as $value => $label) {
-            $response->assertSee('value="'.e($value).'"', false);
+            $response->assertSee('value="' . e($value) . '"', false);
             $response->assertSee($label);
         }
     }
@@ -1022,7 +1072,7 @@ class ProductControllerTest extends TestCase
             ->assertDontSee('name="return_route"', false)
             ->assertSee('name="return_query[progress]"', false)
             ->assertSee('name="return_fragment"', false)
-            ->assertSee('href="/?progress=Listening#'.$product->id.'"', false)
+            ->assertSee('href="/?progress=Listening#' . $product->id . '"', false)
             ->assertDontSee('name="redirect"', false);
     }
 
@@ -1249,8 +1299,8 @@ class ProductControllerTest extends TestCase
 
         $this->get("/edit/{$product->id}?return_query[progress]=Listening")
             ->assertOk()
-            ->assertSee('name="return_fragment" value="'.$product->id.'"', false)
-            ->assertSee('href="/?progress=Listening#'.$product->id.'"', false);
+            ->assertSee('name="return_fragment" value="' . $product->id . '"', false)
+            ->assertSee('href="/?progress=Listening#' . $product->id . '"', false);
     }
 
     public function test_edit_prefills_comma_custom_tags_as_quoted_csv(): void
@@ -1295,7 +1345,7 @@ class ProductControllerTest extends TestCase
         if ($editable) {
             $response
                 ->assertSee('name="genre_fetched"', false)
-                ->assertSee('name="genre_fetched_language" value="'.$expectedFetchedLanguage.'"', false);
+                ->assertSee('name="genre_fetched_language" value="' . $expectedFetchedLanguage . '"', false);
         } else {
             $response
                 ->assertDontSee('name="genre_fetched"', false)
@@ -1773,7 +1823,7 @@ class ProductControllerTest extends TestCase
     public function test_store_extracts_rj_from_url_before_validation(): void
     {
         $existing = Product::factory()->create();
-        $urlInput = 'https://www.dlsite.com/maniax/work/=/product_id/'.strtolower($existing->id).'.html';
+        $urlInput = 'https://www.dlsite.com/maniax/work/=/product_id/' . strtolower($existing->id) . '.html';
 
         $response = $this->from('/create')->post('/store', [
             'id' => $urlInput,
@@ -1920,7 +1970,7 @@ class ProductControllerTest extends TestCase
             );
 
         $this->assertDatabaseHas('products', ['id' => $workId]);
-        Process::assertRanTimes(fn (): bool => true, 5);
+        Process::assertRanTimes(fn(): bool => true, 5);
     }
 
     public function test_store_uses_visible_quick_add_metadata_overrides_and_preserves_hidden_scraped_metadata(): void
@@ -2191,7 +2241,7 @@ class ProductControllerTest extends TestCase
         ]);
 
         $response->assertSessionHasNoErrors();
-        $response->assertRedirect('/#'.$workId);
+        $response->assertRedirect('/#' . $workId);
 
         $this->assertTrue(Storage::disk('public')->exists("Works/{$workId}/cover.png"));
         $this->assertTrue(Storage::disk('public')->exists("Works/{$workId}/sample_1.jpg"));
@@ -3444,12 +3494,12 @@ class ProductControllerTest extends TestCase
             'page' => '2',
         ];
 
-        $this->get('/?'.http_build_query($returnQuery))
+        $this->get('/?' . http_build_query($returnQuery))
             ->assertOk()
             ->assertSee($product->work_name)
             ->assertDontSee('WORKFLOW_LISTENING_SCORE_ONE');
 
-        $this->get("/edit/{$product->id}?".http_build_query([
+        $this->get("/edit/{$product->id}?" . http_build_query([
             'return_query' => $returnQuery,
             'return_fragment' => $product->id,
         ]))
@@ -3829,7 +3879,7 @@ class ProductControllerTest extends TestCase
 
     private function uniqueToken(string $prefix): string
     {
-        return $prefix.'_'.random_int(100000, 999999);
+        return $prefix . '_' . random_int(100000, 999999);
     }
 
     private function expectedPythonExecutable(): string

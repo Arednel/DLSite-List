@@ -453,6 +453,8 @@ class ProductMetadataSettingsTest extends TestCase
             ->assertSet('editFields.title.editable', true)
             ->assertSet('quickAddFields.rj_code.visible', true)
             ->assertSet('quickAddFields.rj_code.visibility_locked', true)
+            ->assertSet('bulkImportFields.rj_code.visible', true)
+            ->assertSet('bulkImportFields.rj_code.visibility_locked', true)
             ->assertSet('customQuickAddFields.rj_code.visibility_locked', true)
             ->assertSet('customQuickAddFields.title.visibility_locked', true)
             ->assertSet('customQuickAddFields.age_category.visibility_locked', true)
@@ -485,6 +487,7 @@ class ProductMetadataSettingsTest extends TestCase
             ->set('editFields.tags.visible', true)
             ->set('editFields.fetched_tags.editable', true)
             ->set('quickAddFields.notes.visible', false)
+            ->set('bulkImportFields.notes.visible', false)
             ->set('customQuickAddFields.sample_images.visible', false)
             ->call('save')
             ->assertHasNoErrors()
@@ -499,6 +502,7 @@ class ProductMetadataSettingsTest extends TestCase
         $this->assertFalse($this->layoutRow(Option::editFieldLayout(), ProductField::Notes)['visible']);
         $this->assertTrue($this->layoutRow(Option::editFieldLayout(), ProductField::FetchedTags)['editable']);
         $this->assertFalse($this->layoutRow(Option::quickAddFieldLayout(), ProductField::Notes)['visible']);
+        $this->assertFalse($this->layoutRow(Option::bulkImportFieldLayout(), ProductField::Notes)['visible']);
         $this->assertFalse($this->layoutRow(Option::customQuickAddFieldLayout(), ProductField::SampleImages)['visible']);
     }
 
@@ -611,6 +615,7 @@ class ProductMetadataSettingsTest extends TestCase
         $editOrder = $this->moveFieldToPosition($component->get('editOrder'), ProductField::Tags, 0);
         $filterOrder = $this->moveFieldToPosition($component->get('filterOrder'), ProductField::VoiceActor, 0);
         $quickAddOrder = $this->moveFieldToPosition($component->get('quickAddOrder'), ProductField::Priority, 1);
+        $bulkImportOrder = $this->moveFieldToPosition($component->get('bulkImportOrder'), ProductField::Notes, 1);
         $customQuickAddOrder = $this->moveFieldToPosition(
             $component->get('customQuickAddOrder'),
             ProductField::SampleImages,
@@ -622,6 +627,7 @@ class ProductMetadataSettingsTest extends TestCase
             ->set('editOrder', $editOrder)
             ->set('filterOrder', $filterOrder)
             ->set('quickAddOrder', $quickAddOrder)
+            ->set('bulkImportOrder', $bulkImportOrder)
             ->set('customQuickAddOrder', $customQuickAddOrder)
             ->call('save')
             ->assertHasNoErrors()
@@ -631,6 +637,7 @@ class ProductMetadataSettingsTest extends TestCase
         $this->assertSame(ProductField::Tags->value, Option::editFieldLayout()[0]['field']);
         $this->assertSame(ProductField::VoiceActor->value, Option::filterFieldLayout()[0]['field']);
         $this->assertSame(ProductField::Priority->value, Option::quickAddFieldLayout()[1]['field']);
+        $this->assertSame(ProductField::Notes->value, Option::bulkImportFieldLayout()[1]['field']);
         $this->assertSame(ProductField::SampleImages->value, Option::customQuickAddFieldLayout()[1]['field']);
     }
 
@@ -700,15 +707,18 @@ class ProductMetadataSettingsTest extends TestCase
         Livewire::test(ProductFieldLayoutSettings::class)
             ->set('editFields.title.visible', false)
             ->set('quickAddFields.rj_code.visible', false)
+            ->set('bulkImportFields.rj_code.visible', false)
             ->set('customQuickAddFields.title.visible', false)
             ->call('save')
             ->assertHasNoErrors()
             ->assertSet('editFields.title.visible', true)
             ->assertSet('quickAddFields.rj_code.visible', true)
+            ->assertSet('bulkImportFields.rj_code.visible', true)
             ->assertSet('customQuickAddFields.title.visible', true);
 
         $this->assertTrue($this->layoutRow(Option::editFieldLayout(), ProductField::Title)['visible']);
         $this->assertTrue($this->layoutRow(Option::quickAddFieldLayout(), ProductField::RjCode)['visible']);
+        $this->assertTrue($this->layoutRow(Option::bulkImportFieldLayout(), ProductField::RjCode)['visible']);
         $this->assertTrue($this->layoutRow(Option::customQuickAddFieldLayout(), ProductField::Title)['visible']);
     }
 
@@ -909,6 +919,7 @@ class ProductMetadataSettingsTest extends TestCase
                 'Index Sort Menu',
                 'Edit Form Fields',
                 'Quick Add Form Fields',
+                'Bulk Import Form Fields',
                 'Custom Quick Add Form Fields',
             ])
             ->assertSee('Required')
@@ -921,6 +932,7 @@ class ProductMetadataSettingsTest extends TestCase
             ->assertSee('Save Index Sort Menu')
             ->assertSee('Save Edit Form Fields')
             ->assertSee('Save Quick Add Form Fields')
+            ->assertSee('Save Bulk Import Form Fields')
             ->assertSee('Save Custom Quick Add Form Fields')
             ->assertSee('Save all field layouts')
             ->assertSee('Changes the order of columns in the Index table. Turn fields on or off to show or hide their columns.')
@@ -928,6 +940,7 @@ class ProductMetadataSettingsTest extends TestCase
             ->assertSee('Changes the order of options in the Index Filter sort menus. Turn options on or off to show or hide them.')
             ->assertSee('Changes the order of fields in the Edit Details form. Turn fields on or off to show or hide them; use Editable to allow or prevent editing.')
             ->assertSee('Changes the order of fields in the Quick Add form. Turn fields on or off to show or hide them.')
+            ->assertSee('Changes the order of shared fields in the Bulk Import form. Values entered in visible fields are applied to every imported work.')
             ->assertSee('Changes the order of fields in the Custom Quick Add form. Turn fields on or off to show or hide them.')
             ->assertSee(
                 'title="Shows each work&#039;s Notes beneath its title on the Index."',
@@ -1046,6 +1059,7 @@ class ProductMetadataSettingsTest extends TestCase
         yield 'Index Sort Menu' => ['sort', 'sortFields', 'indexSortFieldLayout', 'updated_at'];
         yield 'Edit Form Fields' => ['edit', 'editFields', 'editFieldLayout', 'notes'];
         yield 'Quick Add Form Fields' => ['quick_add', 'quickAddFields', 'quickAddFieldLayout', 'notes'];
+        yield 'Bulk Import Form Fields' => ['bulk_import', 'bulkImportFields', 'bulkImportFieldLayout', 'notes'];
         yield 'Custom Quick Add Form Fields' => [
             'custom_quick_add',
             'customQuickAddFields',

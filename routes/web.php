@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\AuthenticationController;
+use App\Http\Controllers\BulkImportController;
 use App\Http\Controllers\AutocompleteController;
 use App\Http\Controllers\LibraryTransferController;
 use App\Http\Controllers\OptionsController;
@@ -51,6 +52,12 @@ Route::controller(RefetchController::class)->prefix('/options/refetch')->group(f
     Route::post('/', 'start')->name('options.refetch.start');
     Route::get('/{run}', 'show')->name('options.refetch.show');
     Route::post('/{run}/cancel', 'cancel')->name('options.refetch.cancel');
+});
+
+// Bulk works Import
+Route::controller(BulkImportController::class)->group(function () {
+    Route::get('/create/bulk', 'create')->name('products.create.bulk');
+    Route::post('/store/bulk', 'store')->name('products.store.bulk');
 });
 
 // Library Import / Export

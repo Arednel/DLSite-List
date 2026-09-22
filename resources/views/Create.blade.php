@@ -22,7 +22,9 @@
         <div class="wrapper">
             <div id="contentWrapper">
                 <div>
-                    <h1 class="form-page-title">{{ $isCustomCreate ? __('Add Manually') : __('Add by RJ Code') }}</h1>
+                    <h1 class="form-page-title">
+                        {{ $isBulkImport ? __('Bulk Import') : ($isCustomCreate ? __('Add Manually') : __('Add by RJ Code')) }}
+                    </h1>
                 </div>
 
                 <div id="content">
@@ -31,23 +33,27 @@
                             <tr>
                                 <td>
                                     <div class="dialog-title dialog-header">
-                                        {{ $isCustomCreate ? __('Add Manually') : __('Add by RJ Code') }}
+                                        {{ $isBulkImport ? __('Bulk Import') : ($isCustomCreate ? __('Add Manually') : __('Add by RJ Code')) }}
                                     </div>
                                     <div class="dialog-body">
                                         <div class="create-mode-switch">
                                             <a href="{{ route('products.create', $returnParameters, false) }}"
-                                                class="form-button ignore-visited-link {{ !$isCustomCreate ? 'is-active' : '' }}">
+                                                class="form-button ignore-visited-link {{ !$isCustomCreate && !$isBulkImport ? 'is-active' : '' }}">
                                                 {{ __('DLSite Create') }}
                                             </a>
                                             <a href="{{ route('products.create.custom', $returnParameters, false) }}"
-                                                class="form-button margin-left-8 ignore-visited-link {{ $isCustomCreate ? 'is-active' : '' }}">
+                                                class="form-button margin-left-8 ignore-visited-link {{ $isCustomCreate && !$isBulkImport ? 'is-active' : '' }}">
                                                 {{ __('Custom Create') }}
+                                            </a>
+                                            <a href="{{ route('products.create.bulk', $returnParameters, false) }}"
+                                                class="form-button margin-left-8 ignore-visited-link {{ $isBulkImport ? 'is-active' : '' }}">
+                                                {{ __('Bulk Import') }}
                                             </a>
                                         </div>
                                         <form name="edit_work" method="post" id="main-form"
-                                            action="{{ $isCustomCreate ? route('products.store.custom') : route('products.store') }}"
+                                            action="{{ $isBulkImport ? route('products.store.bulk') : ($isCustomCreate ? route('products.store.custom') : route('products.store')) }}"
                                             @if ($isCustomCreate) enctype="multipart/form-data" @endif
-                                            @if (!$isCustomCreate) data-dlsite-fetch-form @endif>
+                                            @if (!$isCustomCreate && !$isBulkImport) data-dlsite-fetch-form @endif>
                                             @csrf
                                             @if ($isModal)
                                                 <input type="hidden" name="modal" value="1">
@@ -60,21 +66,25 @@
                                             <div id="top-submit-buttons"
                                                 class="margin-top-8 margin-bottom-8 dialog-submit-row">
                                                 <input type="submit" class="form-button submit-button"
-                                                    value="{{ __('Add work') }}">
+                                                    value="{{ $isBulkImport ? __('Start Bulk Import') : __('Add work') }}">
                                             </div>
                                             <table class="form-fields-table" cellpadding="5" cellspacing="0"
                                                 width="100%">
                                                 <tbody>
                                                     @foreach ($quickAddFields as $field)
-                                                        <x-fields.create-configurable-row :field="$field"
-                                                            :is-custom-create="$isCustomCreate" :age-category-options="$ageCategoryOptions" :month-labels="$monthLabels"
-                                                            :days="$days" :years="$years" :progress-options="$progressOptions" />
+                                                        @if ($isBulkImport && ($field['field'] ?? null) === \App\Enums\ProductField::RjCode->value)
+                                                            <x-fields.bulk-rj-code-row />
+                                                        @else
+                                                            <x-fields.create-configurable-row :field="$field"
+                                                                :is-custom-create="$isCustomCreate" :age-category-options="$ageCategoryOptions" :month-labels="$monthLabels"
+                                                                :days="$days" :years="$years" :progress-options="$progressOptions" />
+                                                        @endif
                                                     @endforeach
                                                 </tbody>
                                             </table>
                                             <div class="margin-top-8 margin-bottom-8 dialog-submit-row">
                                                 <input type="submit" class="form-button submit-button"
-                                                    value="{{ __('Add work') }}">
+                                                    value="{{ $isBulkImport ? __('Start Bulk Import') : __('Add work') }}">
                                             </div>
                                         </form>
 
@@ -106,7 +116,7 @@
 </script>
 <script src="{{ asset('scripts/work-form-frame.js') }}?v={{ filemtime(public_path('scripts/work-form-frame.js')) }}">
 </script>
-@if (!$isCustomCreate)
+@if (!$isCustomCreate && !$isBulkImport)
     <script
         src="{{ asset('scripts/dlsite-create-status.js') }}?v={{ filemtime(public_path('scripts/dlsite-create-status.js')) }}">
     </script>

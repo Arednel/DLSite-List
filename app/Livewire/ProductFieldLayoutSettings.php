@@ -20,6 +20,7 @@ class ProductFieldLayoutSettings extends Component
         'sort',
         'edit',
         'quick_add',
+        'bulk_import',
         'custom_quick_add',
     ];
 
@@ -28,6 +29,7 @@ class ProductFieldLayoutSettings extends Component
         'editOrder',
         'filterOrder',
         'quickAddOrder',
+        'bulkImportOrder',
         'customQuickAddOrder',
         'sortOrder',
     ];
@@ -37,6 +39,7 @@ class ProductFieldLayoutSettings extends Component
         'editFields',
         'filterFields',
         'quickAddFields',
+        'bulkImportFields',
         'customQuickAddFields',
         'sortFields',
     ];
@@ -49,6 +52,8 @@ class ProductFieldLayoutSettings extends Component
 
     public array $quickAddOrder = [];
 
+    public array $bulkImportOrder = [];
+
     public array $customQuickAddOrder = [];
 
     public array $sortOrder = [];
@@ -60,6 +65,8 @@ class ProductFieldLayoutSettings extends Component
     public array $filterFields = [];
 
     public array $quickAddFields = [];
+
+    public array $bulkImportFields = [];
 
     public array $customQuickAddFields = [];
 
@@ -135,8 +142,8 @@ class ProductFieldLayoutSettings extends Component
         }
 
         return collect($this->{$orderProperty})
-            ->map(fn (string $field): mixed => $this->{$fieldsProperty}[$field] ?? null)
-            ->filter(fn (mixed $row): bool => is_array($row))
+            ->map(fn(string $field): mixed => $this->{$fieldsProperty}[$field] ?? null)
+            ->filter(fn(mixed $row): bool => is_array($row))
             ->values()
             ->all();
     }
@@ -221,6 +228,11 @@ class ProductFieldLayoutSettings extends Component
                     $this->layoutFromState($this->quickAddOrder, $this->quickAddFields),
                 );
                 break;
+            case 'bulk_import':
+                Option::setBulkImportFieldLayout(
+                    $this->layoutFromState($this->bulkImportOrder, $this->bulkImportFields),
+                );
+                break;
             case 'custom_quick_add':
                 Option::setCustomQuickAddFieldLayout(
                     $this->layoutFromState($this->customQuickAddOrder, $this->customQuickAddFields),
@@ -250,6 +262,9 @@ class ProductFieldLayoutSettings extends Component
                 break;
             case 'quick_add':
                 [$this->quickAddOrder, $this->quickAddFields] = $this->stateFromLayout(Option::quickAddFieldLayout());
+                break;
+            case 'bulk_import':
+                [$this->bulkImportOrder, $this->bulkImportFields] = $this->stateFromLayout(Option::bulkImportFieldLayout());
                 break;
             case 'custom_quick_add':
                 [$this->customQuickAddOrder, $this->customQuickAddFields] = $this->stateFromLayout(

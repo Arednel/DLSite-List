@@ -252,6 +252,10 @@ class OptionMetadataSettingsTest extends TestCase
             ['field' => ProductField::RjCode->value, 'visible' => false],
             ['field' => 'not_real', 'visible' => true],
         ]);
+        Option::setBulkImportFieldLayout([
+            ['field' => ProductField::Notes->value, 'visible' => false],
+            ['field' => ProductField::RjCode->value, 'visible' => false],
+        ]);
         Option::setCustomQuickAddFieldLayout([
             ['field' => ProductField::RjCode->value, 'visible' => false],
             ['field' => ProductField::Title->value, 'visible' => false],
@@ -261,6 +265,7 @@ class OptionMetadataSettingsTest extends TestCase
         ]);
 
         $quickAddLayout = Option::quickAddFieldLayout();
+        $bulkImportLayout = Option::bulkImportFieldLayout();
         $customQuickAddLayout = Option::customQuickAddFieldLayout();
 
         $rjRow = collect($quickAddLayout)->firstWhere('field', ProductField::RjCode->value);
@@ -268,6 +273,8 @@ class OptionMetadataSettingsTest extends TestCase
         $this->assertTrue($rjRow['visible']);
         $this->assertTrue($rjRow['visibility_locked']);
         $this->assertFalse(collect($quickAddLayout)->firstWhere('field', ProductField::Notes->value)['visible']);
+        $this->assertTrue(collect($bulkImportLayout)->firstWhere('field', ProductField::RjCode->value)['visible']);
+        $this->assertFalse(collect($bulkImportLayout)->firstWhere('field', ProductField::Notes->value)['visible']);
         $this->assertTrue(collect($customQuickAddLayout)->firstWhere('field', ProductField::Title->value)['visible']);
         $this->assertTrue(collect($customQuickAddLayout)->firstWhere('field', ProductField::AgeCategory->value)['visible']);
         $this->assertTrue(collect($customQuickAddLayout)->firstWhere('field', ProductField::Image->value)['visible']);
@@ -276,6 +283,7 @@ class OptionMetadataSettingsTest extends TestCase
         Option::resetFieldLayoutsToDefault();
 
         $this->assertDatabaseMissing('options', ['key' => Option::QUICK_ADD_FIELD_LAYOUT]);
+        $this->assertDatabaseMissing('options', ['key' => Option::BULK_IMPORT_FIELD_LAYOUT]);
         $this->assertDatabaseMissing('options', ['key' => Option::CUSTOM_QUICK_ADD_FIELD_LAYOUT]);
         $this->assertSame(
             ProductField::RjCode->value,
@@ -283,8 +291,43 @@ class OptionMetadataSettingsTest extends TestCase
         );
         $this->assertSame(
             ProductField::RjCode->value,
+            Option::bulkImportFieldLayout()[0]['field'],
+        );
+        $this->assertSame(
+            ProductField::RjCode->value,
             Option::customQuickAddFieldLayout()[0]['field'],
         );
+    }
+
+    public function test_bulk_import_layout_uses_quick_add_canonical_defaults_without_copying_saved_layout(): void
+    {
+        $defaultQuickAddLayout = Option::quickAddFieldLayout();
+        $defaultBulkImportLayout = Option::bulkImportFieldLayout();
+
+        $this->assertSame($defaultQuickAddLayout, $defaultBulkImportLayout);
+
+        Option::setQuickAddFieldLayout([
+            ['field' => ProductField::Notes->value, 'visible' => false],
+        ]);
+
+        $this->assertFalse(collect(Option::quickAddFieldLayout())->firstWhere('field', ProductField::Notes->value)['visible']);
+        $this->assertTrue(collect(Option::bulkImportFieldLayout())->firstWhere('field', ProductField::Notes->value)['visible']);
+        $this->assertDatabaseMissing('options', ['key' => Option::BULK_IMPORT_FIELD_LAYOUT]);
+    }
+
+    public function test_bulk_import_layout_is_independent_after_it_is_saved(): void
+    {
+        Option::setQuickAddFieldLayout([
+            ['field' => ProductField::Notes->value, 'visible' => false],
+        ]);
+        Option::setBulkImportFieldLayout(Option::quickAddFieldLayout());
+
+        Option::setQuickAddFieldLayout([
+            ['field' => ProductField::Notes->value, 'visible' => true],
+        ]);
+
+        $this->assertTrue(collect(Option::quickAddFieldLayout())->firstWhere('field', ProductField::Notes->value)['visible']);
+        $this->assertFalse(collect(Option::bulkImportFieldLayout())->firstWhere('field', ProductField::Notes->value)['visible']);
     }
 
     public function test_product_index_settings_default_and_saved_values_are_normalized(): void
@@ -558,24 +601,25 @@ class OptionMetadataSettingsTest extends TestCase
     public function test_individual_resets_remove_saved_option_rows(): void
     {
         $resetCases = [
-            [[Option::INDEX_PER_PAGE], fn () => Option::resetIndexPerPageToDefault()],
-            [[Option::INDEX_SEARCH_HIDDEN_DESCRIPTIONS_ENABLED], fn () => Option::resetIndexSearchHiddenDescriptionsEnabledToDefault()],
-            [[Option::TAG_AUTOCOMPLETE_ORDER, Option::SERIES_AUTOCOMPLETE_ORDER], fn () => Option::resetAutocompleteToDefault()],
-            [[Option::AUTO_SERIES_FROM_TITLE_NAME], fn () => Option::resetAutoSeriesFromTitleNameToDefault()],
-            [[Option::PRODUCT_FORM_THEME], fn () => Option::resetProductFormThemeToDefault()],
-            [[Option::TAG_LIBRARY_TAGS_EXPANDED_BY_DEFAULT], fn () => Option::resetTagLibraryTagsExpandedByDefaultToDefault()],
-            [[Option::TAG_LIBRARY_INDEX_GROUP_ORDERING_ENABLED], fn () => Option::resetTagLibraryIndexGroupOrderingEnabledToDefault()],
-            [[Option::TAG_COLOR_SURFACES], fn () => Option::resetTagColorSurfacesToDefault()],
+            [[Option::INDEX_PER_PAGE], fn() => Option::resetIndexPerPageToDefault()],
+            [[Option::INDEX_SEARCH_HIDDEN_DESCRIPTIONS_ENABLED], fn() => Option::resetIndexSearchHiddenDescriptionsEnabledToDefault()],
+            [[Option::TAG_AUTOCOMPLETE_ORDER, Option::SERIES_AUTOCOMPLETE_ORDER], fn() => Option::resetAutocompleteToDefault()],
+            [[Option::AUTO_SERIES_FROM_TITLE_NAME], fn() => Option::resetAutoSeriesFromTitleNameToDefault()],
+            [[Option::PRODUCT_FORM_THEME], fn() => Option::resetProductFormThemeToDefault()],
+            [[Option::TAG_LIBRARY_TAGS_EXPANDED_BY_DEFAULT], fn() => Option::resetTagLibraryTagsExpandedByDefaultToDefault()],
+            [[Option::TAG_LIBRARY_INDEX_GROUP_ORDERING_ENABLED], fn() => Option::resetTagLibraryIndexGroupOrderingEnabledToDefault()],
+            [[Option::TAG_COLOR_SURFACES], fn() => Option::resetTagColorSurfacesToDefault()],
             [[
                 Option::INDEX_FIELD_LAYOUT,
                 Option::EDIT_FIELD_LAYOUT,
                 Option::FILTER_FIELD_LAYOUT,
                 Option::QUICK_ADD_FIELD_LAYOUT,
+                Option::BULK_IMPORT_FIELD_LAYOUT,
                 Option::CUSTOM_QUICK_ADD_FIELD_LAYOUT,
-            ], fn () => Option::resetFieldLayoutsToDefault()],
-            [[Option::INDEX_SORT_FIELD_LAYOUT], fn () => Option::resetIndexSortFieldLayoutToDefault()],
-            [[Option::INDEX_TABLE_WIDTH], fn () => Option::resetIndexTableWidthToDefault()],
-            [[Option::INDEX_CONTENT_OVERFLOW], fn () => Option::resetIndexContentOverflowToDefault()],
+            ], fn() => Option::resetFieldLayoutsToDefault()],
+            [[Option::INDEX_SORT_FIELD_LAYOUT], fn() => Option::resetIndexSortFieldLayoutToDefault()],
+            [[Option::INDEX_TABLE_WIDTH], fn() => Option::resetIndexTableWidthToDefault()],
+            [[Option::INDEX_CONTENT_OVERFLOW], fn() => Option::resetIndexContentOverflowToDefault()],
         ];
 
         foreach ($resetCases as [$keys, $reset]) {

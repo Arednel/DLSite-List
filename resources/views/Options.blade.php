@@ -242,6 +242,20 @@
                 </section>
             @endif
 
+            @if ($activeTab === 'bulk-imports')
+                <section id="bulk-imports-tab-panel" class="panel options-panel">
+                    <h2>
+                        <i class="fa-solid fa-layer-group fa-fw options-section-icon" aria-hidden="true"></i>
+                        {{ __('Bulk Imports') }}
+                    </h2>
+                    <p class="option-description">
+                        {{ __('View background Bulk Import progress, skipped works, failures, and image warnings.') }}
+                    </p>
+
+                    <livewire:options-bulk-imports />
+                </section>
+            @endif
+
             @if ($activeTab === 'refetch')
                 <section id="refetch-tab-panel" class="panel options-panel">
                     <h2>

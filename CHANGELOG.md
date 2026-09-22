@@ -7,6 +7,7 @@ All notable changes to this project are documented in this file.
 ### Added
 
 * Added ZIP import/export for Works, Images, Tag Library data, and Options.
+* Added background bulk DLSite works Import.
 * Added paginated navigation to Refetch review categories.
 
 ### Changed
@@ -17,6 +18,7 @@ All notable changes to this project are documented in this file.
 * Updated Docker upload limits and queue timing to support large, long-running library transfers.
 * Updated Refetch and Import/Export review errors to use compact lists.
 * Simplified field-layout code, `AppServiceProvider` and removed legacy tests.
+* Improved DLSite Quick Add reliability with atomic metadata persistence and better import failure handling.
 
 ### Fixed
 

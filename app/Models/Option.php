@@ -70,6 +70,8 @@ class Option extends Model
 
     public const QUICK_ADD_FIELD_LAYOUT = 'quick_add_field_layout';
 
+    public const BULK_IMPORT_FIELD_LAYOUT = 'bulk_import_field_layout';
+
     public const CUSTOM_QUICK_ADD_FIELD_LAYOUT = 'custom_quick_add_field_layout';
 
     public const INDEX_SORT_FIELD_LAYOUT = 'index_sort_field_layout';
@@ -155,6 +157,7 @@ class Option extends Model
         self::EDIT_FIELD_LAYOUT => ProductFieldLayout::SURFACE_EDIT,
         self::FILTER_FIELD_LAYOUT => ProductFieldLayout::SURFACE_FILTER,
         self::QUICK_ADD_FIELD_LAYOUT => ProductFieldLayout::SURFACE_QUICK_ADD,
+        self::BULK_IMPORT_FIELD_LAYOUT => ProductFieldLayout::SURFACE_BULK_IMPORT,
         self::CUSTOM_QUICK_ADD_FIELD_LAYOUT => ProductFieldLayout::SURFACE_CUSTOM_QUICK_ADD,
     ];
 
@@ -204,6 +207,7 @@ class Option extends Model
         self::EDIT_FIELD_LAYOUT,
         self::FILTER_FIELD_LAYOUT,
         self::QUICK_ADD_FIELD_LAYOUT,
+        self::BULK_IMPORT_FIELD_LAYOUT,
         self::CUSTOM_QUICK_ADD_FIELD_LAYOUT,
         self::INDEX_SORT_FIELD_LAYOUT,
         self::INDEX_TABLE_WIDTH,
@@ -642,6 +646,14 @@ class Option extends Model
     /**
      * @return list<array{field: string, label: string, visible: bool}>
      */
+    public static function bulkImportFieldLayout(): array
+    {
+        return self::fieldLayout(self::BULK_IMPORT_FIELD_LAYOUT, ProductFieldLayout::SURFACE_BULK_IMPORT);
+    }
+
+    /**
+     * @return list<array{field: string, label: string, visible: bool}>
+     */
     public static function customQuickAddFieldLayout(): array
     {
         return self::fieldLayout(
@@ -672,6 +684,11 @@ class Option extends Model
     public static function setQuickAddFieldLayout(array $layout): void
     {
         self::setFieldLayout(self::QUICK_ADD_FIELD_LAYOUT, ProductFieldLayout::SURFACE_QUICK_ADD, $layout);
+    }
+
+    public static function setBulkImportFieldLayout(array $layout): void
+    {
+        self::setFieldLayout(self::BULK_IMPORT_FIELD_LAYOUT, ProductFieldLayout::SURFACE_BULK_IMPORT, $layout);
     }
 
     public static function setCustomQuickAddFieldLayout(array $layout): void

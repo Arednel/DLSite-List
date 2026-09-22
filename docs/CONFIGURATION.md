@@ -121,7 +121,7 @@ source python/venv/bin/activate
 pip install -r python/requirements.txt
 ```
 
-10. Keep a Laravel queue worker running when using Refetch or Import / Export:
+10. Keep a Laravel queue worker running when using Refetch, Bulk Import, or Import / Export:
 
 ```bash
 php artisan queue:work
@@ -279,7 +279,7 @@ Docker uses `database` as the application database host.
 
 ### Queue
 
-Refetch and Import / Export use Laravel's database queue and job batches.
+Refetch, Bulk Import, and Import / Export use Laravel's database queue.
 
 Normal setting:
 
@@ -287,13 +287,13 @@ Normal setting:
 QUEUE_CONNECTION=database
 ```
 
-For a local/manual installation, keep this worker running while Refetch or Import / Export is in use:
+For a local/manual installation, keep this worker running while Refetch, Bulk Import, or Import / Export is in use:
 
 ```bash
 php artisan queue:work
 ```
 
-Cancellation is cooperative. After pressing Cancel, keep the worker running so active work can finish and queued jobs can record their cancelled state.
+Refetch and Import / Export cancellation is cooperative. After pressing Cancel, keep the worker running so active work can finish and queued jobs can record their cancelled state.
 
 ### Storage, Cache, and Session
 
@@ -308,7 +308,7 @@ SESSION_LIFETIME=120
 
 These are the project's supplied defaults. Work images and Refetch staging explicitly use the named `local` and `public` disks from `config/filesystems.php`; changing `FILESYSTEM_DISK` alone does not move those files to another storage backend.
 
-Refetch lifecycle protection uses Laravel atomic cache locks. If `CACHE_DRIVER` is changed, use a configured cache store that supports Laravel atomic locks.
+Refetch and Bulk Import lifecycle protection use Laravel atomic cache locks. If `CACHE_DRIVER` is changed, use a configured cache store that supports Laravel atomic locks.
 
 ### Logs
 
@@ -345,6 +345,7 @@ Tabs:
 - `Authentication`
 - `Refetch`
 - `Import / Export`
+- `Bulk Imports`
 
 `Reset All Options` is available on both General and Field Layouts. Using it resets all settings from both tabs to their defaults. Authentication settings are not affected.
 
@@ -529,16 +530,17 @@ Tag/group color defaults:
 
 ### Field Layouts
 
-Six layouts are configurable:
+Seven layouts are configurable:
 
 1. Index Table Columns
 2. Index Filter Fields
 3. Index Sort Menu
 4. Edit Form Fields
 5. Quick Add Form Fields
-6. Custom Quick Add Form Fields
+6. Bulk Import Form Fields
+7. Custom Quick Add Form Fields
 
-Each layout can be saved independently. `Save all field layouts` saves all six.
+Each layout can be saved independently. `Save all field layouts` saves all seven.
 
 Rows can be reordered and shown/hidden where allowed. Edit rows can also expose an `Editable` setting where supported.
 
@@ -653,6 +655,29 @@ Fetched Tags are readonly by default. If made editable, editing changes only the
 
 Hidden DLSite Quick Add metadata fields are not accepted as user overrides, but their scraped age/circle/contributor/description values are still preserved from DLsite.
 
+#### Bulk Import Default Order
+
+- `rj_code` - locked visible
+- `progress`
+- `score`
+- `series`
+- `title`
+- `tags`
+- `notes`
+- `start_date`
+- `end_date`
+- `num_re_listen_times`
+- `re_listen_value`
+- `priority`
+- `age_category` - hidden
+- `circle` - hidden
+- `scenario` - hidden
+- `illustration` - hidden
+- `voice_actor` - hidden
+- `author` - hidden
+- `description_japanese` - hidden
+- `description_english` - hidden
+
 #### Custom Quick Add Default Order
 
 - `rj_code` - locked visible
@@ -758,3 +783,9 @@ The export part-size setting is reset by `Reset All Options`.
 * Nginx `client_max_body_size` - `260M`
 
 The supplied Docker configuration supports individual import ZIP parts up to `256 MiB`. Increase all relevant limits when importing larger parts.
+
+### Bulk Imports
+
+`Options -> Bulk Imports` shows Bulk Import history, 10 runs per page. Active runs update independently and show the current RJ code, progress counts, warnings, and errors; completed and failed runs remain static.
+
+Cleanup permanently deletes all Bulk Import history and is unavailable while a run is queued or running.

@@ -193,6 +193,14 @@ Covers the full Refetch workflow:
 - obsolete-image cleanup
 - Updated Date behavior
 
+#### `tests/Feature/BulkImportTest.php`
+
+Covers Bulk Import parsing/validation, shared-input snapshots, queued item processing, skips/failures, transactional persistence, and run completion.
+
+#### `tests/Feature/OptionsBulkImportsTest.php`
+
+Covers Bulk Import history, progress/errors, 10-run pagination, cleanup, stable Livewire identity, and active-run-only polling.
+
 #### `tests/Feature/LibraryTransferTest.php`
 
 Covers core transfer contracts, route/review smoke coverage, compact collapsed Export/Import error lists, portable Options, new-work round trips, controlled downloads, and the shared library-mutation lock.
@@ -315,7 +323,7 @@ Covers the main product HTTP workflows:
 - Index filtering/sorting/display
 - Create/Edit field layouts
 - hidden/read-only field preservation
-- DLSite Quick Add fetch/store/error behavior
+- DLSite Quick Add fetch/store/error behavior, unexpected scraper/manifest failures returning to standalone/modal forms with input preserved, and shared importer regression coverage
 - Custom Quick Add uploads
 - tag/contributor synchronization
 - metadata and partial-date updates
@@ -509,7 +517,7 @@ Covers server-rendered Add/Edit modal completion fallback output and conditional
 #### DLSite Support
 
 `tests/Unit/Support/DLSite/DLSitePythonRunnerTest.php`
-- Covers Laravel Process command construction, explicit output destinations, venv executable, timeout behavior, and log-retention environment.
+- Covers Laravel Process command construction, explicit output destinations, venv executable, unlimited timeout behavior, and log-retention environment.
 
 `tests/Unit/Support/DLSite/DLSiteWorkDataTest.php`
 - Covers shared scraped metadata extraction for titles/descriptions/creators/maker data, English fallback behavior, product ids, and missing-id errors.
@@ -565,8 +573,9 @@ The current suite intentionally uses framework fakes for external/destructive bo
 
 - upload tests use `UploadedFile::fake()` and `Storage::fake('public')`
 - Full Refetch tests use `Bus::fake()`, `Process::fake()`, and fake storage
+- Bulk Import tests use `Bus::fake()`, `Process::fake()`, fake storage, and direct queued-job execution for item-state contracts
 - Library Import / Export tests use fake private/public storage and a fake bus where appropriate, while creating and reading real ZIP archives
-- scraper-process tests use `Process::fake()` and `Process::preventStrayProcesses()`
+- scraper-process tests use `Process::fake()` and `Process::preventStrayProcesses()`, including the existing unlimited runner timeout behavior and exit-code failure classification
 - Livewire component tests use `Livewire::test()`
 - Feature tests use `RefreshDatabase`
 

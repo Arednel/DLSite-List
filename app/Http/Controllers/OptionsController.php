@@ -14,6 +14,7 @@ class OptionsController extends Controller
         'authentication' => 'Authentication',
         'refetch' => 'Refetch',
         'transfers' => 'Import / Export',
+        'bulk-imports' => 'Bulk Imports',
     ];
 
     public function index(Request $request): View

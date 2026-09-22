@@ -21,13 +21,34 @@ abstract class BaseProductRequest extends FormRequest
 
     protected function normalizeRjIdInput(): void
     {
-        $id = $this->input('id');
+        $codes = $this->extractRjCodes($this->input('id'));
 
-        if (is_string($id) && preg_match('/RJ\d+/i', $id, $matches)) {
+        if ($codes !== []) {
             $this->merge([
-                'id' => strtoupper($matches[0]),
+                'id' => $codes[0],
             ]);
         }
+    }
+
+    /**
+     * @return list<string>
+     */
+    protected function extractRjCodes(mixed $value): array
+    {
+        if (! is_string($value) || $value === '') {
+            return [];
+        }
+
+        preg_match_all('/RJ\d+/i', $value, $matches);
+
+        $codes = [];
+
+        foreach ($matches[0] ?? [] as $match) {
+            $code = strtoupper($match);
+            $codes[$code] ??= $code;
+        }
+
+        return array_values($codes);
     }
 
     protected function commonRules(): array

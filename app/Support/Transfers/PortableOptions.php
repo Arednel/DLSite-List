@@ -41,6 +41,7 @@ final class PortableOptions
         Option::EDIT_FIELD_LAYOUT,
         Option::FILTER_FIELD_LAYOUT,
         Option::QUICK_ADD_FIELD_LAYOUT,
+        Option::BULK_IMPORT_FIELD_LAYOUT,
         Option::CUSTOM_QUICK_ADD_FIELD_LAYOUT,
     ];
 
@@ -56,6 +57,7 @@ final class PortableOptions
             Option::EDIT_FIELD_LAYOUT => 'edit',
             Option::FILTER_FIELD_LAYOUT => 'filter',
             Option::QUICK_ADD_FIELD_LAYOUT => 'quick_add',
+            Option::BULK_IMPORT_FIELD_LAYOUT => 'bulk_import',
             Option::CUSTOM_QUICK_ADD_FIELD_LAYOUT => 'custom_quick_add',
         ];
     }

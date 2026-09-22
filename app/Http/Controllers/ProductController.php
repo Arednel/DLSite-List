@@ -16,9 +16,10 @@ use App\Http\Requests\UpdateProductRequest;
 use App\Models\Genre;
 use App\Models\Option;
 use App\Models\Product;
-use App\Support\DLSite\DLSiteFetchResult;
-use App\Support\DLSite\DLSiteWorkData;
-use App\Support\DLSite\DLSiteWorkFetcher;
+use App\Support\DLSite\DLSiteProductAlreadyExistsException;
+use App\Support\DLSite\DLSiteProductImportException;
+use App\Support\DLSite\DLSiteProductImporter;
+use App\Support\DLSite\DLSiteProductImportInput;
 use App\Support\PartialDateFormatter;
 use App\Support\ProductContributorSync;
 use App\Support\ProductFieldLayout;
@@ -38,7 +39,6 @@ use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\URL;
 use Illuminate\Validation\ValidationException;
 use Illuminate\View\View;
-use RuntimeException;
 
 class ProductController extends Controller
 {
@@ -90,105 +90,36 @@ class ProductController extends Controller
     /**
      * Store a newly created resource in storage.
      */
-    public function store(StoreProductRequest $request, DLSiteWorkFetcher $workFetcher)
+    public function store(StoreProductRequest $request, DLSiteProductImporter $importer)
     {
         $validated = $request->validated();
 
-        // Get RJ Code
-        $workID = $validated['id'];
-
-        $fetchResult = $this->fetchDLSiteWork($workID, $workFetcher);
-        $workData = $fetchResult->workData;
-
-        $visibleCreateFields = ProductFieldLayout::visibleFields(Option::quickAddFieldLayout());
-
-        $dlsite_product_id = $workData->productId;
-        [$work_name, $work_name_english] = $this->dlsiteCreateTitleValues($request, $validated, $visibleCreateFields, $workData);
-        [$circle, $maker_id] = $this->dlsiteCreateCircleValues($request, $validated, $visibleCreateFields, $workData);
-
-        $age_category = $this->dlsiteCreateTextOverride(
-            $request,
-            $validated,
-            $visibleCreateFields,
-            ProductField::AgeCategory,
-            'age_category',
-            $workData->ageCategory,
-        );
-        $work_image = "storage/Works/{$dlsite_product_id}/cover.jpg";
-        $genre = $workData->japaneseGenres;
-        $genre_english = $workData->englishGenres;
-        $genre_custom = $this->createFieldVisible($visibleCreateFields, ProductField::Tags)
-            ? ($validated['genre_custom'] ?? [])
-            : [];
-
-        [$description, $description_english] = $this->dlsiteCreateDescriptionValues(
-            $request,
-            $validated,
-            $visibleCreateFields,
-            $workData,
-        );
-        $notes = $this->createFieldSubmitted($request, $visibleCreateFields, ProductField::Notes, 'notes')
-            ? ($validated['notes'] ?? null)
-            : null;
-        $series = $this->dlsiteCreateSeriesValue($request, $validated, $visibleCreateFields, $workData);
-        $sample_images = Collection::times(
-            count($workData->sampleImages),
-            fn (int $position): string => "storage/Works/{$dlsite_product_id}/sample_{$position}.jpg",
-        )->all();
-        $contributorsByRole = $this->dlsiteCreateContributorsByRole(
-            $validated,
-            $visibleCreateFields,
-            $workData,
-            $circle,
-        );
-
-        $data = [
-            'id' => $dlsite_product_id,
-            'maker_id' => $maker_id,
-            'work_name' => $work_name,
-            'work_name_english' => $work_name_english,
-            'age_category' => $age_category,
-            'circle' => $circle,
-            'work_image' => $work_image,
-            'description' => $description,
-            'description_english' => $description_english,
-            'notes' => $notes,
-            'series' => $series,
-            'sample_images' => $sample_images,
-            'score' => $this->createFieldSubmitted($request, $visibleCreateFields, ProductField::Score, 'score')
-                ? ($validated['score'] ?? null)
-                : null,
-            'progress' => $this->createFieldSubmitted($request, $visibleCreateFields, ProductField::Progress, 'progress')
-                ? ($validated['progress'] ?? null)
-                : null,
-            'start_date' => $this->createFieldSubmitted($request, $visibleCreateFields, ProductField::StartDate, 'add.start_date')
-                ? ($validated['start_date'] ?? null)
-                : null,
-            'end_date' => $this->createFieldSubmitted($request, $visibleCreateFields, ProductField::FinishDate, 'add.finish_date')
-                ? ($validated['end_date'] ?? null)
-                : null,
-            'num_re_listen_times' => $this->createFieldSubmitted($request, $visibleCreateFields, ProductField::TotalTimesReListened, 'add.num_re_listen_times')
-                ? ($validated['num_re_listen_times'] ?? null)
-                : null,
-            're_listen_value' => $this->createFieldSubmitted($request, $visibleCreateFields, ProductField::ReListenValue, 'add.re_listen_value')
-                ? ($validated['re_listen_value'] ?? null)
-                : null,
-            'priority' => $this->createFieldSubmitted($request, $visibleCreateFields, ProductField::Priority, 'add.priority')
-                ? ($validated['priority'] ?? null)
-                : null,
-        ];
-
-        $product = Product::create($data);
-        $this->syncProductGenres($product, $genre, $genre_english, $genre_custom);
-        $this->contributorSync->sync($product, $contributorsByRole, $maker_id);
+        try {
+            $result = $importer->import(
+                $validated['id'],
+                DLSiteProductImportInput::fromRequest(
+                    $request,
+                    $validated,
+                    Option::quickAddFieldLayout(),
+                ),
+            );
+        } catch (DLSiteProductAlreadyExistsException) {
+            throw ValidationException::withMessages([
+                'id' => __('Work with this RJ code is already in your library'),
+            ]);
+        } catch (DLSiteProductImportException $exception) {
+            throw ValidationException::withMessages([
+                'id' => $exception->displayMessage(),
+            ]);
+        }
 
         $returnTarget = ReturnTarget::fromRequest($request)
-            ->forProduct($product);
+            ->forProduct($result->product);
 
         return $this->productMutationResponse(
             $request,
             $returnTarget->toUrl(),
-            $fetchResult->imageFailureMessage(),
+            $result->warning,
         );
     }
 
@@ -278,7 +209,7 @@ class ProductController extends Controller
         $editGenres = $this->loadEditGenresForProduct($product->getKey(), $fetchedLanguage);
         $showReadonlyGenreColors = Option::tagColorSurfaceEnabled(Option::TAG_COLOR_SURFACE_EDIT_READONLY);
         $genreColorPairs = $showReadonlyGenreColors
-            ? TagColor::effectiveColorPairsForGenreIds($editGenres->flatMap(fn (Collection $genres): Collection => $genres)->pluck('id'))
+            ? TagColor::effectiveColorPairsForGenreIds($editGenres->flatMap(fn(Collection $genres): Collection => $genres)->pluck('id'))
             : collect();
         $fetchedGenres = $this->editGenreDisplayRows(
             $editGenres->get(Genre::PIVOT_SOURCE_FETCHED, collect()),
@@ -297,7 +228,7 @@ class ProductController extends Controller
             'productFormThemeClass' => $this->productFormThemeClass(),
             'fetchedGenres' => $fetchedGenres,
             'customGenres' => $customGenres,
-            'genreFetchedInput' => $persistedFetchedInput !== '' ? $persistedFetchedInput.', ' : '',
+            'genreFetchedInput' => $persistedFetchedInput !== '' ? $persistedFetchedInput . ', ' : '',
             'genreFetchedLanguage' => $fetchedLanguage,
             'genreCustomInput' => TagInput::format($customGenres->pluck('title')),
             'showReadonlyGenreColors' => $showReadonlyGenreColors,
@@ -312,7 +243,7 @@ class ProductController extends Controller
             'returnFragment' => $returnTarget->fragment,
             'returnUrl' => $returnTarget->toUrl(),
             'ageCategoryOptions' => ProductAgeCategory::options(),
-            ...$this->buildDateFieldOptions(),
+            ...self::buildDateFieldOptions(),
         ]);
     }
 
@@ -392,34 +323,10 @@ class ProductController extends Controller
         );
     }
 
-    private function fetchDLSiteWork(
-        string $workID,
-        DLSiteWorkFetcher $workFetcher,
-    ): DLSiteFetchResult {
-        try {
-            return $workFetcher->fetch(
-                $workID,
-                Storage::disk('local')->path("Works/{$workID}.json"),
-                Storage::disk('public')->path("Works/{$workID}"),
-            );
-        } catch (RuntimeException $exception) {
-            $message = trim($exception->getMessage());
-
-            throw ValidationException::withMessages([
-                'id' => match ($message) {
-                    'GeoBlocked DLSite work',
-                    'This work was deleted or could not be found on DLSite',
-                    'This work could not be found on DLSite' => __($message),
-                    default => $message,
-                },
-            ]);
-        }
-    }
-
     private function formatContributorInputs(Product $product): array
     {
         return collect($this->contributorSync->namesByRole($product))
-            ->map(fn (array $names): string => TagInput::format($names))
+            ->map(fn(array $names): string => TagInput::format($names))
             ->all();
     }
 
@@ -437,151 +344,6 @@ class ProductController extends Controller
         ];
     }
 
-    /**
-     * @return array{0: ?string, 1: ?string}
-     */
-    private function dlsiteCreateTitleValues(
-        StoreProductRequest $request,
-        array $data,
-        array $visibleFields,
-        DLSiteWorkData $workData,
-    ): array {
-        if (! $this->createFieldVisible($visibleFields, ProductField::Title)) {
-            return [$workData->workName, $workData->englishWorkName];
-        }
-
-        $workName = $request->wasSubmitted('work_name') && filled($data['work_name'] ?? null)
-            ? $data['work_name']
-            : $workData->workName;
-        $englishWorkName = $request->wasSubmitted('work_name_english') && filled($data['work_name_english'] ?? null)
-            ? $data['work_name_english']
-            : $workData->englishWorkName;
-
-        return [$workName, $englishWorkName === $workName ? null : $englishWorkName];
-    }
-
-    /**
-     * @return array{0: ?string, 1: ?string}
-     */
-    private function dlsiteCreateCircleValues(
-        StoreProductRequest $request,
-        array $data,
-        array $visibleFields,
-        DLSiteWorkData $workData,
-    ): array {
-        $circle = $this->dlsiteCreateTextOverride(
-            $request,
-            $data,
-            $visibleFields,
-            ProductField::Circle,
-            'circle',
-            $workData->circle,
-        );
-        $makerId = $this->dlsiteCreateTextOverride(
-            $request,
-            $data,
-            $visibleFields,
-            ProductField::Circle,
-            'maker_id',
-            $workData->makerId,
-        );
-
-        return [$circle, $makerId];
-    }
-
-    private function dlsiteCreateTextOverride(
-        StoreProductRequest $request,
-        array $data,
-        array $visibleFields,
-        ProductField $field,
-        string $key,
-        ?string $default,
-    ): ?string {
-        if (! $this->createFieldSubmitted($request, $visibleFields, $field, $key)) {
-            return $default;
-        }
-
-        return filled($data[$key] ?? null) ? $data[$key] : $default;
-    }
-
-    private function dlsiteCreateSeriesValue(
-        StoreProductRequest $request,
-        array $data,
-        array $visibleFields,
-        DLSiteWorkData $workData,
-    ): ?string {
-        if (
-            $this->createFieldSubmitted($request, $visibleFields, ProductField::Series, 'series')
-            && filled($data['series'] ?? null)
-        ) {
-            return $data['series'];
-        }
-
-        return Option::autoSeriesFromTitleName() ? $workData->autoSeries() : null;
-    }
-
-    /**
-     * @return array{0: ?string, 1: ?string}
-     */
-    private function dlsiteCreateDescriptionValues(
-        StoreProductRequest $request,
-        array $data,
-        array $visibleFields,
-        DLSiteWorkData $workData,
-    ): array {
-        $description = $this->dlsiteCreateTextOverride(
-            $request,
-            $data,
-            $visibleFields,
-            ProductField::DescriptionJapanese,
-            'description',
-            $workData->description,
-        );
-        $englishDescription = $this->dlsiteCreateTextOverride(
-            $request,
-            $data,
-            $visibleFields,
-            ProductField::DescriptionEnglish,
-            'description_english',
-            $workData->englishDescription,
-        );
-
-        return [
-            $description,
-            $englishDescription === $description ? null : $englishDescription,
-        ];
-    }
-
-    /**
-     * @return array<string, list<string>>
-     */
-    private function dlsiteCreateContributorsByRole(
-        array $data,
-        array $visibleFields,
-        DLSiteWorkData $workData,
-        ?string $circle,
-    ): array {
-        $contributors = $workData->contributorsByRole;
-        $contributors[ProductContributorRole::Circle->value] = filled($circle) ? [$circle] : [];
-
-        foreach (ProductContributorRole::cases() as $role) {
-            if ($role === ProductContributorRole::Circle) {
-                continue;
-            }
-
-            $field = $role->productField();
-
-            if ($this->createFieldVisible($visibleFields, $field) && ($data[$role->value] ?? []) !== []) {
-                $contributors[$role->value] = array_values($data[$role->value]);
-            }
-        }
-
-        return $contributors;
-    }
-
-    /**
-     * @return array{0: ?string, 1: ?string}
-     */
     private function customCreateCircleValues(
         StoreCustomProductRequest $request,
         array $data,
@@ -691,6 +453,7 @@ class ProductController extends Controller
 
         return view('Create', [
             'isCustomCreate' => $isCustomCreate,
+            'isBulkImport' => false,
             'isModal' => $request->boolean('modal'),
             'productFormThemeClass' => $this->productFormThemeClass(),
             'quickAddFields' => $isCustomCreate
@@ -701,13 +464,13 @@ class ProductController extends Controller
             'returnParameters' => $returnParameters,
             'ageCategoryOptions' => ProductAgeCategory::options(),
             'progressOptions' => ProductProgress::visibleOptions(Option::optionalProductStatuses()),
-            ...$this->buildDateFieldOptions(),
+            ...self::buildDateFieldOptions(),
         ]);
     }
 
     private function productFormThemeClass(): string
     {
-        return 'product-form-theme-'.Option::productFormTheme();
+        return 'product-form-theme-' . Option::productFormTheme();
     }
 
     /**
@@ -755,7 +518,7 @@ class ProductController extends Controller
         return collect($request->file('sample_images', []))
             ->values()
             ->map(function (UploadedFile $file, int $index) use ($workID): string {
-                $path = "Works/{$workID}/sample_".($index + 1).'.'.$file->extension();
+                $path = "Works/{$workID}/sample_" . ($index + 1) . '.' . $file->extension();
 
                 Storage::disk('public')->putFileAs("Works/{$workID}", $file, basename($path));
 
@@ -854,7 +617,7 @@ class ProductController extends Controller
         }
 
         return collect($submittedColumns)
-            ->mapWithKeys(fn (string $column): array => [$column => $data[$column] ?? null])
+            ->mapWithKeys(fn(string $column): array => [$column => $data[$column] ?? null])
             ->all();
     }
 
@@ -929,11 +692,13 @@ class ProductController extends Controller
         return $changed;
     }
 
-    private function buildDateFieldOptions(): array
+
+    /** @return array{monthLabels: array<int, string>, days: list<int>, years: list<int>} */
+    public static function buildDateFieldOptions(): array
     {
         return [
             'monthLabels' => collect(range(1, 12))
-                ->mapWithKeys(fn ($month) => [
+                ->mapWithKeys(fn(int $month): array => [
                     $month => Carbon::create(2000, $month, 1)->translatedFormat('M'),
                 ])
                 ->all(),
@@ -955,7 +720,7 @@ class ProductController extends Controller
                 'genres.title',
                 'genre_product.source',
             ])
-            ->groupBy(fn (object $genre): string => $genre->source === Genre::PIVOT_SOURCE_CUSTOM
+            ->groupBy(fn(object $genre): string => $genre->source === Genre::PIVOT_SOURCE_CUSTOM
                 ? Genre::PIVOT_SOURCE_CUSTOM
                 : Genre::PIVOT_SOURCE_FETCHED);
     }

@@ -3,6 +3,7 @@
 namespace Tests\Unit\Support\DLSite;
 
 use App\Support\DLSite\DLSiteWorkFetcher;
+use App\Support\DLSite\DLSiteWorkUnavailableException;
 use Illuminate\Process\FakeProcessResult;
 use Illuminate\Support\Facades\Process;
 use Illuminate\Support\Facades\Storage;
@@ -120,6 +121,24 @@ class DLSiteWorkFetcherTest extends TestCase
 
         $this->expectException(RuntimeException::class);
         $this->expectExceptionMessage('Fetch failed.');
+
+        try {
+            app(DLSiteWorkFetcher::class)->fetch('RJ123456', $jsonPath);
+        } finally {
+            Process::assertRanTimes(fn(): bool => true, DLSiteWorkFetcher::MAX_ATTEMPTS);
+        }
+    }
+
+    public function test_exit_code_two_is_classified_as_an_unavailable_work_after_retries(): void
+    {
+        Storage::fake('local');
+        $jsonPath = Storage::disk('local')->path('Works/RJ123456.json');
+        Process::fake([
+            '*' => Process::result(errorOutput: 'GeoBlocked DLSite work', exitCode: 2),
+        ])->preventStrayProcesses();
+
+        $this->expectException(DLSiteWorkUnavailableException::class);
+        $this->expectExceptionMessage('GeoBlocked DLSite work');
 
         try {
             app(DLSiteWorkFetcher::class)->fetch('RJ123456', $jsonPath);

@@ -26,6 +26,8 @@ class OptionsGeneralTest extends TestCase
             ->assertSee('href="/options?tab=field-layouts"', false)
             ->assertSee('href="/options?tab=authentication"', false)
             ->assertSee('href="/options?tab=refetch"', false)
+            ->assertSee('href="/options?tab=transfers"', false)
+            ->assertSee('href="/options?tab=bulk-imports"', false)
             ->assertSee('Index Pagination')
             ->assertSee('Overflow')
             ->assertSee('Add/Edit Modals')
@@ -68,7 +70,7 @@ class OptionsGeneralTest extends TestCase
 
     public function test_active_option_category_is_exposed_as_the_current_navigation_page(): void
     {
-        foreach (['general', 'field-layouts', 'authentication', 'refetch'] as $tab) {
+        foreach (['general', 'field-layouts', 'authentication', 'refetch', 'transfers', 'bulk-imports'] as $tab) {
             $response = $this->get('/options?tab=' . $tab)
                 ->assertOk()
                 ->assertSee('data-active-options-category="' . $tab . '"', false)

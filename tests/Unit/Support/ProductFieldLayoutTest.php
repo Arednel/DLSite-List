@@ -143,6 +143,9 @@ class ProductFieldLayoutTest extends TestCase
             ],
         ];
 
+        $expectedOrders[ProductFieldLayout::SURFACE_BULK_IMPORT] =
+            $expectedOrders[ProductFieldLayout::SURFACE_QUICK_ADD];
+
         foreach ($expectedOrders as $surface => $fields) {
             $this->assertSame($fields, ProductField::forSurface($surface));
         }
@@ -156,10 +159,12 @@ class ProductFieldLayoutTest extends TestCase
         $this->assertTrue(ProductField::Title->isVisibilityLocked(ProductFieldLayout::SURFACE_EDIT));
         $this->assertTrue(ProductField::Title->isEditableByDefault(ProductFieldLayout::SURFACE_EDIT));
         $this->assertTrue(ProductField::RjCode->isVisibilityLocked(ProductFieldLayout::SURFACE_QUICK_ADD));
+        $this->assertTrue(ProductField::RjCode->isVisibilityLocked(ProductFieldLayout::SURFACE_BULK_IMPORT));
         $this->assertTrue(ProductField::Image->isVisibilityLocked(ProductFieldLayout::SURFACE_CUSTOM_QUICK_ADD));
 
         $this->assertTrue(ProductField::AgeCategory->isHiddenByDefault(ProductFieldLayout::SURFACE_EDIT));
         $this->assertTrue(ProductField::AgeCategory->isHiddenByDefault(ProductFieldLayout::SURFACE_QUICK_ADD));
+        $this->assertTrue(ProductField::AgeCategory->isHiddenByDefault(ProductFieldLayout::SURFACE_BULK_IMPORT));
         $this->assertFalse(ProductField::AgeCategory->isHiddenByDefault(ProductFieldLayout::SURFACE_CUSTOM_QUICK_ADD));
         $this->assertTrue(ProductField::DescriptionJapanese->isHiddenByDefault(ProductFieldLayout::SURFACE_FILTER));
         $this->assertTrue(ProductField::DescriptionEnglish->isHiddenByDefault(ProductFieldLayout::SURFACE_FILTER));
@@ -388,6 +393,10 @@ class ProductFieldLayoutTest extends TestCase
             ProductField::Priority->value,
         ], ProductFieldLayout::visibleFields($layout));
         $this->assertTrue($layout[0]['visibility_locked']);
+        $this->assertSame(
+            $layout,
+            ProductFieldLayout::normalize(null, ProductFieldLayout::SURFACE_BULK_IMPORT),
+        );
     }
 
     public function test_custom_quick_add_defaults_match_create_form_order_and_visibility(): void

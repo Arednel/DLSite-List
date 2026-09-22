@@ -6,14 +6,14 @@
         'sort' => ['heading' => 'Index Sort Menu', 'help' => 'Changes the order of options in the Index Filter sort menus. Turn options on or off to show or hide them.', 'icon' => 'arrow-down-wide-short', 'order' => 'sortOrder', 'fields' => 'sortFields', 'sort' => true],
         'edit' => ['heading' => 'Edit Form Fields', 'help' => 'Changes the order of fields in the Edit Details form. Turn fields on or off to show or hide them; use Editable to allow or prevent editing.', 'icon' => 'pen-to-square', 'order' => 'editOrder', 'fields' => 'editFields', 'sort' => false],
         'quick_add' => ['heading' => 'Quick Add Form Fields', 'help' => 'Changes the order of fields in the Quick Add form. Turn fields on or off to show or hide them.', 'icon' => 'file-circle-plus', 'order' => 'quickAddOrder', 'fields' => 'quickAddFields', 'sort' => false],
+        'bulk_import' => ['heading' => 'Bulk Import Form Fields', 'help' => 'Changes the order of shared fields in the Bulk Import form. Values entered in visible fields are applied to every imported work.', 'icon' => 'layer-group', 'order' => 'bulkImportOrder', 'fields' => 'bulkImportFields', 'sort' => false],
         'custom_quick_add' => ['heading' => 'Custom Quick Add Form Fields', 'help' => 'Changes the order of fields in the Custom Quick Add form. Turn fields on or off to show or hide them.', 'icon' => 'file-pen', 'order' => 'customQuickAddOrder', 'fields' => 'customQuickAddFields', 'sort' => false],
     ] as $layoutProperty => $layoutConfig)
             <section class="field-layout-section">
                 <h3>
                     <i class="fa-solid fa-{{ $layoutConfig['icon'] }} fa-fw options-section-icon" aria-hidden="true"></i>
                     {{ __($layoutConfig['heading']) }}
-                    <i class="fa-solid fa-circle-question" tabindex="0"
-                        aria-label="{{ __($layoutConfig['help']) }}"
+                    <i class="fa-solid fa-circle-question" tabindex="0" aria-label="{{ __($layoutConfig['help']) }}"
                         title="{{ __($layoutConfig['help']) }}"></i>
                 </h3>
 
@@ -41,8 +41,7 @@
                                 <div class="field-layout-edit-stack" wire:sort:ignore>
                                     <x-options.switch
                                         wire:model.live="{{ $layoutConfig['fields'] }}.{{ $row['field'] }}.visible"
-                                        wrapper-class="field-layout-check field-layout-switch"
-                                        :disabled="$row['visibility_locked'] ?? false">
+                                        wrapper-class="field-layout-check field-layout-switch" :disabled="$row['visibility_locked'] ?? false">
                                         <span class="field-layout-switch-label">
                                             {{ $row['label'] }}
                                         </span>
@@ -74,8 +73,7 @@
                                 <x-options.switch
                                     wire:model.live="{{ $layoutConfig['fields'] }}.{{ $row['field'] }}.visible"
                                     wrapper-class="field-layout-check field-layout-switch" :sort-ignore="true"
-                                    :disabled="$row['visibility_locked'] ?? false"
-                                    :help="$row['note'] ?? $this->fieldLayoutHelp($layoutProperty, $row['field'])">
+                                    :disabled="$row['visibility_locked'] ?? false" :help="$row['note'] ?? $this->fieldLayoutHelp($layoutProperty, $row['field'])">
                                     <span class="field-layout-switch-label">
                                         {{ $row['label'] }}
                                     </span>
@@ -111,7 +109,8 @@
         @endforeach
 
         <div class="option-actions option-actions--inline">
-            <button type="submit" class="tag tag--soft tag--lg is-clickable">{{ __('Save all field layouts') }}</button>
+            <button type="submit"
+                class="tag tag--soft tag--lg is-clickable">{{ __('Save all field layouts') }}</button>
             @if ($saved && $savedLayout === 'all')
                 <span class="saved-notice">{{ __($notice) }}</span>
             @endif

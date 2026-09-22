@@ -238,7 +238,7 @@ enum ProductField: string
                 'editable_by_default' => [],
                 'prefix_missing' => [self::Title],
             ],
-            'quick_add' => [
+            'quick_add', 'bulk_import' => [
                 'fields' => [
                     self::RjCode,
                     self::Progress,

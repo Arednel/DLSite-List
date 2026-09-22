@@ -51,7 +51,17 @@ final class DLSiteWorkFetcher
             }
         }
 
-        return $lastFetch ?? throw new RuntimeException($this->failureMessage($lastResult));
+        if ($lastFetch !== null) {
+            return $lastFetch;
+        }
+
+        $message = $this->failureMessage($lastResult);
+
+        if ($lastResult?->exitCode() === 2) {
+            throw new DLSiteWorkUnavailableException($message);
+        }
+
+        throw new RuntimeException($message);
     }
 
     /**

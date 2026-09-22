@@ -1289,6 +1289,83 @@ body.options-page {
     border-color: transparent;
 }
 
+.options-page .review-errors {
+    box-sizing: border-box;
+    width: 100%;
+    max-width: 100%;
+    min-width: 0;
+    margin: 0;
+    border: 1px solid rgba(var(--options-border-rgb), 0.72);
+    border-radius: var(--options-radius);
+    background: #fff9f7;
+}
+
+.options-page .bulk-import-run>.review-errors {
+    width: auto;
+}
+
+.options-page .review-errors summary {
+    display: list-item;
+    min-width: 0;
+    cursor: pointer;
+    padding: 9px 10px;
+    color: var(--options-link-hover);
+    font-weight: 700;
+    overflow-wrap: anywhere;
+}
+
+.options-page .review-errors__list {
+    box-sizing: border-box;
+    display: grid;
+    gap: 8px;
+    max-width: 100%;
+    min-width: 0;
+    margin: 0;
+    padding: 0 10px 10px 28px;
+    color: var(--options-text);
+}
+
+.options-page .review-errors__list li {
+    min-width: 0;
+    line-height: 1.45;
+    overflow-wrap: anywhere;
+}
+
+.options-page .bulk-import-ui,
+.options-page .bulk-import-runs,
+.options-page .bulk-import-run-group {
+    display: grid;
+    gap: 12px;
+}
+
+.options-page .bulk-import-run-group,
+.options-page .bulk-import-run {
+    min-width: 0;
+}
+
+.options-page .bulk-import-run {
+    scroll-margin-top: 16px;
+}
+
+.options-page .bulk-import-run__header {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+}
+
+.options-page .bulk-import-run__header>div {
+    display: inline-flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 8px;
+}
+
+.options-page .bulk-import-summary {
+    margin-top: 0;
+}
+
 @media (max-width: 768px) {
     .options-shell {
         width: 100%;
@@ -1465,31 +1542,4 @@ body.options-page {
     .options-page .index-pagination__controls {
         justify-content: center;
     }
-}
-
-.options-page .review-errors {
-    width: 100%;
-    margin: 0;
-    border: 1px solid rgba(var(--options-border-rgb), 0.72);
-    border-radius: var(--options-radius);
-    background: #fff9f7;
-}
-
-.options-page .review-errors summary {
-    cursor: pointer;
-    padding: 9px 10px;
-    color: var(--options-link-hover);
-    font-weight: 700;
-}
-
-.options-page .review-errors__list {
-    display: grid;
-    gap: 8px;
-    margin: 0;
-    padding: 0 10px 10px 28px;
-    color: var(--options-text);
-}
-
-.options-page .review-errors__list li {
-    line-height: 1.45;
 }

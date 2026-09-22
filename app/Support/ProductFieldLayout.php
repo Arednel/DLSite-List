@@ -15,6 +15,8 @@ final class ProductFieldLayout
 
     public const SURFACE_QUICK_ADD = 'quick_add';
 
+    public const SURFACE_BULK_IMPORT = 'bulk_import';
+
     public const SURFACE_CUSTOM_QUICK_ADD = 'custom_quick_add';
 
     public const SURFACES = [
@@ -22,6 +24,7 @@ final class ProductFieldLayout
         self::SURFACE_EDIT,
         self::SURFACE_FILTER,
         self::SURFACE_QUICK_ADD,
+        self::SURFACE_BULK_IMPORT,
         self::SURFACE_CUSTOM_QUICK_ADD,
     ];
 
@@ -123,7 +126,7 @@ final class ProductFieldLayout
     {
         if (
             $field === ProductField::Tags
-            && in_array($surface, [self::SURFACE_EDIT, self::SURFACE_QUICK_ADD, self::SURFACE_CUSTOM_QUICK_ADD], true)
+            && in_array($surface, [self::SURFACE_EDIT, self::SURFACE_QUICK_ADD, self::SURFACE_BULK_IMPORT, self::SURFACE_CUSTOM_QUICK_ADD], true)
         ) {
             return __('Custom Tags');
         }
@@ -277,6 +280,14 @@ final class ProductFieldLayout
     public static function quickAddFields(array $layout): array
     {
         return self::createFields($layout, self::SURFACE_QUICK_ADD);
+    }
+
+    /**
+     * @return list<array{field: string, label: string, class: string, contributor_role: ?string}>
+     */
+    public static function bulkImportFields(array $layout): array
+    {
+        return self::createFields($layout, self::SURFACE_BULK_IMPORT);
     }
 
     /**
