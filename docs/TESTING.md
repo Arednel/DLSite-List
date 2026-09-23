@@ -195,7 +195,7 @@ Covers the full Refetch workflow:
 
 #### `tests/Feature/BulkImportTest.php`
 
-Covers Bulk Import parsing/validation, shared-input snapshots, queued item processing, skips/failures, transactional persistence, and run completion.
+Covers Bulk Import parsing/validation, shared-input snapshots, queued item processing, skips/failures, transactional persistence (including failed completion writes, worker interruption before commit, and stale item/run state), and run completion.
 
 #### `tests/Feature/OptionsBulkImportsTest.php`
 

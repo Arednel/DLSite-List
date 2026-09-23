@@ -8,6 +8,7 @@ use App\Models\Genre;
 use App\Models\Product;
 use App\Support\ProductContributorSync;
 use App\Support\ProductGenreSync;
+use Closure;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
@@ -21,8 +22,12 @@ final class DLSiteProductImporter
         private readonly ProductContributorSync $contributorSync,
     ) {}
 
-    public function import(string $workId, DLSiteProductImportInput $input): DLSiteProductImportResult
-    {
+    /** The optional completion callback runs inside the product creation transaction. */
+    public function import(
+        string $workId,
+        DLSiteProductImportInput $input,
+        ?Closure $onCreated = null,
+    ): DLSiteProductImportResult {
         try {
             $fetchResult = $this->workFetcher->fetch(
                 $workId,
@@ -66,6 +71,8 @@ final class DLSiteProductImporter
             $englishDescription,
             $contributorsByRole,
             $customGenres,
+            $onCreated,
+            $fetchResult,
         ): Product {
             $product = Product::query()->createOrFirst(
                 ['id' => $productId],
@@ -125,6 +132,9 @@ final class DLSiteProductImporter
             ], Genre::resolveIdsFromTitles($customGenres));
 
             $this->contributorSync->sync($product, $contributorsByRole, $makerId);
+
+            // Bulk Import records completion in the same transaction as product creation.
+            $onCreated?->__invoke($fetchResult->imageFailureMessage());
 
             return $product;
         });

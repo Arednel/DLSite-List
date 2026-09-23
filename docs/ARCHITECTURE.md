@@ -80,7 +80,9 @@ Custom works still use the normal product/tag/contributor model and can particip
 4. `FinishBulkImportRunJob` reconciles counts and completes the run.
 5. `OptionsBulkImports` paginates history and cleanup, while `BulkImportRunCard` updates only queued/running runs.
 
-Product creation and genre/contributor synchronization use the same transactional import path as Quick Add.
+Product creation, genre/contributor synchronization, and successful Bulk item completion/count updates commit in one database transaction. A worker interruption before commit rolls them back so a redelivered job can retry. A normal completion exception fails the run through queue failure handling rather than automatically retrying.
+
+If the item or run is no longer eligible for successful completion, product creation rolls back instead of committing without a matching `Imported` result.
 
 Bulk Import history cleanup deletes all persisted run/item history and is unavailable while a run is active.
 

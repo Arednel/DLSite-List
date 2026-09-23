@@ -16,6 +16,7 @@ use Illuminate\Foundation\Queue\Queueable;
 use Illuminate\Queue\Middleware\WithoutOverlapping;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
+use RuntimeException;
 use Throwable;
 
 class ImportBulkWorkJob implements ShouldQueue
@@ -64,9 +65,13 @@ class ImportBulkWorkJob implements ShouldQueue
         }
 
         try {
-            $result = $importer->import(
+            $importer->import(
                 $item->product_id,
                 DLSiteProductImportInput::fromSnapshot($item->run->input_snapshot),
+                fn(?string $warning) => $this->finish(
+                    BulkImportItemStatus::Imported,
+                    warning: $warning,
+                ),
             );
         } catch (DLSiteProductAlreadyExistsException) {
             $this->finish(
@@ -87,11 +92,6 @@ class ImportBulkWorkJob implements ShouldQueue
 
             return;
         }
-
-        $this->finish(
-            BulkImportItemStatus::Imported,
-            warning: $result->warning,
-        );
     }
 
     public function failed(?Throwable $exception): void
@@ -175,10 +175,20 @@ class ImportBulkWorkJob implements ShouldQueue
             $item = BulkImportItem::query()->lockForUpdate()->find($this->itemId);
 
             if (! $item || $item->status->isTerminal()) {
+                if ($status === BulkImportItemStatus::Imported) {
+                    throw new RuntimeException('Bulk Import item is no longer importing.');
+                }
+
                 return;
             }
 
             $run = BulkImportRun::query()->lockForUpdate()->findOrFail($item->bulk_import_run_id);
+
+            if ($status === BulkImportItemStatus::Imported && (
+                $item->status !== BulkImportItemStatus::Importing || ! $run->status->isActive()
+            )) {
+                throw new RuntimeException('Bulk Import item or run is no longer active.');
+            }
 
             $item->forceFill([
                 'status' => $status,

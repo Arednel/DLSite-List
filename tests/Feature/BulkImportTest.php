@@ -7,6 +7,7 @@ use App\Enums\BulkImportRunStatus;
 use App\Enums\ProductField;
 use App\Jobs\FinishBulkImportRunJob;
 use App\Jobs\ImportBulkWorkJob;
+use App\Models\BulkImportItem;
 use App\Models\BulkImportRun;
 use App\Models\Genre;
 use App\Models\Product;
@@ -23,6 +24,7 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Process;
 use Illuminate\Support\Facades\Storage;
+use PHPUnit\Framework\Attributes\DataProvider;
 use RuntimeException;
 use Tests\TestCase;
 
@@ -302,6 +304,152 @@ class BulkImportTest extends TestCase
         $this->assertSame(BulkImportItemStatus::Failed, $item->status);
         $this->assertSame(BulkImportRunStatus::Failed, $run->status);
         $this->assertNotSame('Already in library.', $item->error);
+    }
+
+    public function test_completion_database_failure_rolls_back_product_and_fails_the_run(): void
+    {
+        Storage::fake('local');
+        Storage::fake('public');
+        Process::fake([
+            '*' => Process::result(output: '{"failed_images":[]}'),
+        ])->preventStrayProcesses();
+
+        $rjCode = 'RJ000000306';
+        Storage::disk('local')->put(
+            "Works/{$rjCode}.json",
+            json_encode($this->scrapedWorkPayload($rjCode), JSON_THROW_ON_ERROR),
+        );
+        [$run, $item] = $this->createRunItem($rjCode);
+        $job = new ImportBulkWorkJob($item->id);
+        $event = 'eloquent.updating: ' . BulkImportItem::class;
+
+        Event::listen($event, function (BulkImportItem $updating): void {
+            if ($updating->status === BulkImportItemStatus::Imported) {
+                DB::table('bulk_import_missing_table')->insert(['id' => 1]);
+            }
+        });
+
+        try {
+            try {
+                $job->handle(app(DLSiteProductImporter::class));
+                $this->fail('Expected the completion write to fail.');
+            } catch (QueryException $exception) {
+                // With maxExceptions=1, the queue fails the job rather than retrying it.
+                $job->failed($exception);
+            }
+        } finally {
+            Event::forget($event);
+        }
+
+        $this->assertDatabaseMissing('products', ['id' => $rjCode]);
+        $this->assertSame(BulkImportItemStatus::Failed, $item->fresh()->status);
+        $this->assertSame(BulkImportRunStatus::Failed, $run->fresh()->status);
+        $this->assertSame(1, $run->fresh()->processed_count);
+        $this->assertSame(1, $run->fresh()->failed_count);
+        $this->assertSame(0, $run->fresh()->imported_count);
+    }
+
+    public function test_worker_interruption_before_commit_rolls_back_product_and_can_be_retried(): void
+    {
+        Storage::fake('local');
+        Storage::fake('public');
+        Process::fake([
+            '*' => Process::result(output: '{"failed_images":[]}'),
+        ])->preventStrayProcesses();
+
+        $rjCode = 'RJ000000307';
+        Storage::disk('local')->put(
+            "Works/{$rjCode}.json",
+            json_encode($this->scrapedWorkPayload($rjCode), JSON_THROW_ON_ERROR),
+        );
+        [$run, $item] = $this->createRunItem($rjCode);
+        $job = new ImportBulkWorkJob($item->id);
+        $event = 'eloquent.updated: ' . BulkImportItem::class;
+
+        Event::listen($event, function (BulkImportItem $updated): void {
+            if ($updated->status === BulkImportItemStatus::Imported) {
+                throw new RuntimeException('Simulated worker interruption before commit.');
+            }
+        });
+
+        try {
+            try {
+                $job->handle(app(DLSiteProductImporter::class));
+                $this->fail('Expected the simulated interruption.');
+            } catch (RuntimeException $exception) {
+                $this->assertSame('Simulated worker interruption before commit.', $exception->getMessage());
+                // A worker disappearing does not invoke the ordinary queue failure callback.
+            }
+        } finally {
+            Event::forget($event);
+        }
+
+        $this->assertDatabaseMissing('products', ['id' => $rjCode]);
+        $this->assertSame(BulkImportItemStatus::Importing, $item->fresh()->status);
+        $this->assertSame(BulkImportRunStatus::Running, $run->fresh()->status);
+        $this->assertSame(0, $run->fresh()->processed_count);
+
+        $job->handle(app(DLSiteProductImporter::class));
+
+        $this->assertDatabaseHas('products', ['id' => $rjCode]);
+        $this->assertSame(BulkImportItemStatus::Imported, $item->fresh()->status);
+        $this->assertSame(1, $run->fresh()->processed_count);
+        $this->assertSame(1, $run->fresh()->imported_count);
+        $this->assertSame(0, $run->fresh()->skipped_count);
+    }
+
+    public static function invalidSuccessfulCompletionStates(): array
+    {
+        return [
+            'item already terminal' => ['item'],
+            'run no longer active' => ['run'],
+        ];
+    }
+
+    #[DataProvider('invalidSuccessfulCompletionStates')]
+    public function test_successful_import_rolls_back_if_item_or_run_is_no_longer_active(string $changed): void
+    {
+        Storage::fake('local');
+        Storage::fake('public');
+        Process::fake([
+            '*' => Process::result(output: '{"failed_images":[]}'),
+        ])->preventStrayProcesses();
+
+        $rjCode = $changed === 'item' ? 'RJ000000308' : 'RJ000000309';
+        Storage::disk('local')->put(
+            "Works/{$rjCode}.json",
+            json_encode($this->scrapedWorkPayload($rjCode), JSON_THROW_ON_ERROR),
+        );
+        [$run, $item] = $this->createRunItem($rjCode);
+        $job = new ImportBulkWorkJob($item->id);
+        $event = 'eloquent.created: ' . Product::class;
+
+        Event::listen($event, function () use ($changed, $run, $item): void {
+            // Simulate another path changing the state after the initial eligibility check.
+            if ($changed === 'item') {
+                DB::table('bulk_import_items')->where('id', $item->id)
+                    ->update(['status' => BulkImportItemStatus::Failed->value]);
+            } else {
+                DB::table('bulk_import_runs')->where('id', $run->id)
+                    ->update(['status' => BulkImportRunStatus::Failed->value]);
+            }
+        });
+
+        try {
+            try {
+                $job->handle(app(DLSiteProductImporter::class));
+                $this->fail('Expected stale successful completion to fail.');
+            } catch (RuntimeException $exception) {
+                $this->assertStringContainsString('Bulk Import item', $exception->getMessage());
+            }
+        } finally {
+            Event::forget($event);
+        }
+
+        $this->assertDatabaseMissing('products', ['id' => $rjCode]);
+        $this->assertSame(BulkImportItemStatus::Importing, $item->fresh()->status);
+        $this->assertSame(BulkImportRunStatus::Running, $run->fresh()->status);
+        $this->assertSame(0, $run->fresh()->processed_count);
     }
 
     public function test_timeout_failure_marks_the_item_and_run_failed(): void
