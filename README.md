@@ -6,16 +6,25 @@ It's mainly made for ASMR titles, and quite a lot of the UI uses that wording, b
 
 ## Features
 
-- Fetch work metadata directly from DLsite or add them manually.
-- Edit work information and add things like current status, score, start and finish dates, priorities and re-listens.
-- Add your own tags and organize them into groups. Add parent/child relationships, tag and tag-group colors, visibility, and Index ordering in the "Tag Library".
-- Search, filter, and sort your library.
-- View saved cover and sample images with the "Image Viewer".
-- Refetch current metadata, covers and sample images from DLsite and review changes before applying them.
-- Customize pagination, search behavior, table width, columns, Notes and Tags display, and tag ordering.
-- Configure field visibility and order for filters, sort menus, Quick Add, Custom Quick Add, and Edit forms.
-- Optional single-user authentication.
-- English and Japanese UI with separate English and Japanese fetched tag "sets". Japanese UI was mostly created using auto-translate, so quality may vary.
+### ☰ Library Management
+
+- **Add works:** Fetch metadata from DLsite, import multiple DLsite works at once, or create custom entries with your own details and images.
+- **Edit works:** Edit work information and add details like current status, score, start and finish dates, priorities, and re-listens.
+- **Tag Library:** Add your own tags and organize them into groups. Add parent/child relationships, customize tag and group colors, control visibility, and change their order on the Index.
+- **Search and Filter:** Search, filter, and sort your library.
+- **Image Viewer:** View saved covers and sample images.
+
+### ⇄ Updates & Transfers
+
+- **Refetch:** Check DLsite for updated metadata, covers, and sample images, and review changes before applying them.
+- **Import and Export:** Export and Import your entire library or only selected Works, Images, Tag Library data, and Options using multipart ZIP files. Review imported changes before applying them.
+
+### ⚙ Customization & Settings
+
+- **Display options:** Customize pagination, search behavior, table width, columns, and how Notes and Tags are displayed.
+- **Field layouts:** Configure field visibility and order for filters, sort menus, add and edit forms.
+- **Authentication:** Optional single-user authentication.
+- **Languages:** English and Japanese UI with separate fetched tags for each language. The Japanese UI is mostly auto-translated, so quality may vary.
 
 ## Screenshots
 

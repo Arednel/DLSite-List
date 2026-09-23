@@ -4,6 +4,10 @@ All notable changes to this project are documented in this file.
 
 ## Unreleased
 
+## 1.9.0 - 2026-09-23
+
+*Library Import/Export & DLsite Bulk Import*
+
 ### Added
 
 * Added ZIP import/export for Works, Images, Tag Library data, and Options.
