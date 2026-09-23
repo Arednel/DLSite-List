@@ -199,7 +199,7 @@ Covers Bulk Import parsing/validation, shared-input snapshots, queued item proce
 
 #### `tests/Feature/OptionsBulkImportsTest.php`
 
-Covers Bulk Import history, progress/errors, 10-run pagination, cleanup, stable Livewire identity, and active-run-only polling.
+Covers Bulk Import history, progress/errors, imported-work titles and fallback RJ codes, 10-run pagination, cleanup, stable Livewire identity, and active-run-only polling.
 
 #### `tests/Feature/LibraryTransferTest.php`
 

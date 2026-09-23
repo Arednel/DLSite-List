@@ -818,6 +818,7 @@
     "About RJ code extraction": "RJコードの抽出について",
     "Paste RJ codes or links. All occurrences of RJ followed by numbers are imported, e.g. RJ123456.": "RJコードまたはリンクを貼り付けてください。「RJ」に続く数字（例：RJ123456）がすべてインポートされます。",
     "Bulk Imports": "一括インポート",
+    "Imported works": "インポート済み作品",
     "Clean up Bulk Import history": "一括インポート履歴をクリーンアップ",
     "Cleaning up Bulk Import history...": "一括インポート履歴をクリーンアップしています...",
     "About Bulk Import cleanup": "一括インポートのクリーンアップについて",

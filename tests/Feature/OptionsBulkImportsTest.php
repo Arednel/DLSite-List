@@ -9,6 +9,7 @@ use App\Livewire\BulkImportRunCard;
 use App\Livewire\OptionsBulkImports;
 use App\Models\BulkImportRun;
 use App\Models\Option;
+use App\Models\Product;
 use App\Support\BulkImport\BulkImportCleanupService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Cache;
@@ -80,6 +81,98 @@ class OptionsBulkImportsTest extends TestCase
             ->assertSee('wire:poll.visible.2s="refreshRun"', false)
             ->assertSee('wire:key="bulk-import-run-' . $run->id . '"', false)
             ->assertSee('wire:key="bulk-import-issue-', false);
+    }
+
+    public function test_imported_works_list_uses_current_titles_and_falls_back_to_rj_codes(): void
+    {
+        $run = BulkImportRun::create([
+            'status' => BulkImportRunStatus::Completed,
+            'input_snapshot' => [],
+            'total_count' => 4,
+            'processed_count' => 4,
+            'imported_count' => 2,
+            'skipped_count' => 1,
+            'failed_count' => 1,
+            'completed_at' => now(),
+        ]);
+        Product::factory()->create([
+            'id' => 'RJ000000800',
+            'work_name' => 'Evening Tea & Rain',
+        ]);
+        $run->items()->createMany([
+            [
+                'position' => 1,
+                'product_id' => 'RJ000000800',
+                'status' => BulkImportItemStatus::Imported,
+                'completed_at' => now(),
+            ],
+            [
+                'position' => 2,
+                'product_id' => 'RJ000000802',
+                'status' => BulkImportItemStatus::Failed,
+                'error' => 'DLSite import failed.',
+                'completed_at' => now(),
+            ],
+            [
+                'position' => 3,
+                'product_id' => 'RJ000000801',
+                'status' => BulkImportItemStatus::Imported,
+                'completed_at' => now(),
+            ],
+            [
+                'position' => 4,
+                'product_id' => 'RJ000000804',
+                'status' => BulkImportItemStatus::Skipped,
+                'completed_at' => now(),
+            ],
+        ]);
+
+        Livewire::test(BulkImportRunCard::class, ['runId' => $run->id])
+            ->assertSeeInOrder([
+                'Errors (1)',
+                'Imported works (2)',
+                'RJ000000800',
+                'Evening Tea & Rain',
+                'RJ000000801',
+            ])
+            ->assertSee('<details class="review-errors imported-works">', false)
+            ->assertSee('<div>Imported<strong>2</strong></div>', false)
+            ->assertDontSee('RJ000000804');
+    }
+
+    public function test_active_run_refresh_displays_newly_imported_works(): void
+    {
+        $run = BulkImportRun::create([
+            'status' => BulkImportRunStatus::Running,
+            'input_snapshot' => [],
+            'total_count' => 2,
+            'started_at' => now(),
+        ]);
+
+        $component = Livewire::test(BulkImportRunCard::class, ['runId' => $run->id])
+            ->assertDontSee('Imported works (');
+
+        Product::factory()->create([
+            'id' => 'RJ000000805',
+            'work_name' => 'Forest Library',
+        ]);
+        $run->items()->create([
+            'position' => 1,
+            'product_id' => 'RJ000000805',
+            'status' => BulkImportItemStatus::Imported,
+            'completed_at' => now(),
+        ]);
+        $run->update([
+            'processed_count' => 1,
+            'imported_count' => 1,
+        ]);
+
+        $component->call('refreshRun')
+            ->assertSeeInOrder([
+                'Imported works (1)',
+                'RJ000000805',
+                'Forest Library',
+            ]);
     }
 
     public function test_history_translates_known_errors_and_preserves_stored_warning_text(): void

@@ -818,6 +818,7 @@
     "About RJ code extraction": "About RJ code extraction",
     "Paste RJ codes or links. All occurrences of RJ followed by numbers are imported, e.g. RJ123456.": "Paste RJ codes or links. All occurrences of RJ followed by numbers are imported, e.g. RJ123456.",
     "Bulk Imports": "Bulk Imports",
+    "Imported works": "Imported works",
     "Clean up Bulk Import history": "Clean up Bulk Import history",
     "Cleaning up Bulk Import history...": "Cleaning up Bulk Import history...",
     "About Bulk Import cleanup": "About Bulk Import cleanup",

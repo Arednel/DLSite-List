@@ -1436,6 +1436,16 @@ body.options-page {
     overflow-wrap: anywhere;
 }
 
+.options-page .bulk-import-run>.imported-works {
+    border-color: #A6E7C4;
+    background: #DCFCE7;
+}
+
+.options-page .bulk-import-run>.imported-works>summary,
+.options-page .bulk-import-run>.imported-works>.review-errors__list {
+    color: #166534;
+}
+
 .options-page .bulk-import-ui,
 .options-page .bulk-import-runs,
 .options-page .bulk-import-run-group {

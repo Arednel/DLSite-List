@@ -2,6 +2,7 @@
 
 namespace App\Livewire;
 
+use App\Enums\BulkImportItemStatus;
 use App\Models\BulkImportItem;
 use App\Models\BulkImportRun;
 use Illuminate\Support\Collection;
@@ -48,12 +49,24 @@ class BulkImportRunCard extends Component
             ->with('currentItem')
             ->findOrFail($this->runId);
         $issues = $this->issuesForRun($run);
+        $importedWorks = $this->importedWorksForRun($run);
 
         return view('livewire.bulk-import-run-card', [
             'run' => $run,
             'issues' => $issues,
+            'importedWorks' => $importedWorks,
             'issueCount' => $issues->count() + ($run->error ? 1 : 0),
         ]);
+    }
+
+    /** @return Collection<int, BulkImportItem> */
+    private function importedWorksForRun(BulkImportRun $run): Collection
+    {
+        return $run->items()
+            ->where('status', BulkImportItemStatus::Imported)
+            ->with('product:id,work_name')
+            ->orderBy('position')
+            ->get();
     }
 
     /** @return Collection<int, BulkImportItem> */

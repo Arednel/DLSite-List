@@ -33,6 +33,11 @@ class BulkImportItem extends Model
         return $this->belongsTo(BulkImportRun::class, 'bulk_import_run_id');
     }
 
+    public function product(): BelongsTo
+    {
+        return $this->belongsTo(Product::class, 'product_id');
+    }
+
     public function displayError(): ?string
     {
         if ($this->error === null) {

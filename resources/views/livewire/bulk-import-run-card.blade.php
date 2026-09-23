@@ -58,5 +58,20 @@
                 </ul>
             </details>
         @endif
+
+        @if ($importedWorks->isNotEmpty())
+            <details class="review-errors imported-works">
+                <summary>{{ __('Imported works') }} ({{ $importedWorks->count() }})</summary>
+                <ul class="review-errors__list">
+                    @foreach ($importedWorks as $item)
+                        <li wire:key="bulk-import-imported-{{ $item->getKey() }}">
+                            {{ $item->product_id }}@if ($item->product?->work_name)
+                                - {{ $item->product->work_name }}
+                            @endif
+                        </li>
+                    @endforeach
+                </ul>
+            </details>
+        @endif
     </article>
 </div>
