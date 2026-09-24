@@ -2,7 +2,7 @@
 
 DLSite List is a single-user, self-hosted personal DLsite library for organizing your collection, inspired by [MyAnimeList](https://myanimelist.net)'s "Cherry Blossom" theme.
 
-It's mainly made for ASMR titles, and quite a lot of the UI uses that wording, but it can also be used with other DLsite works that have an RJ code - Games, Manga, Music etc.
+It supports DLsite works that have an RJ code - Games, Manga, Music, etc.
 
 ## Features
 
@@ -23,6 +23,7 @@ It's mainly made for ASMR titles, and quite a lot of the UI uses that wording, b
 
 - **Display options:** Customize pagination, search behavior, table width, columns, and how Notes and Tags are displayed.
 - **Field layouts:** Configure field visibility and order for filters, sort menus, add and edit forms.
+- **UI Wording**: Choose general or content-focused UI wording for listening, reading, games, video, music, and artwork.
 - **Authentication:** Optional single-user authentication.
 - **Languages:** English and Japanese UI with separate fetched tags for each language. The Japanese UI is mostly auto-translated, so quality may vary.
 

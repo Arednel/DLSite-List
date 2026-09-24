@@ -4,6 +4,10 @@ All notable changes to this project are documented in this file.
 
 ## Unreleased
 
+## 1.10.0 - 2026-09-25
+
+*UI Wording & Library Import Improvements*
+
 ### Added
 
 * Added a UI Wording setting with General, Listening, Reading, Games, Video, Music, and Artwork options.
