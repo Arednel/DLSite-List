@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use App\Enums\ProductAgeCategory;
 use App\Enums\ProductProgress;
 use App\Enums\UiLanguage;
 use App\Livewire\ProductIndex;
@@ -39,8 +40,9 @@ class LocalizedPhpUiTest extends TestCase
 
         Livewire::withQueryParams(['progress' => ProductProgress::Listening->value])
             ->test(ProductIndex::class)
-            ->assertSee('聴取中')
-            ->assertSee('progress-listening on', false)
+            ->assertViewHas('progressHeading', ProductProgress::Listening->label())
+            ->assertSee(ProductProgress::Listening->label())
+            ->assertViewHas('activeProgress', ProductProgress::Listening->value)
             ->assertSet('progress', ProductProgress::Listening->value);
     }
 
@@ -54,8 +56,8 @@ class LocalizedPhpUiTest extends TestCase
         ]);
 
         Livewire::test(ProductIndex::class)
-            ->assertSee('全年齢')
-            ->assertSee('聴取中');
+            ->assertSee(ProductAgeCategory::from('ALL_AGES')->label())
+            ->assertSee(ProductProgress::Listening->label());
 
         $this->assertSame('ALL_AGES', $product->refresh()->age_category);
         $this->assertSame(ProductProgress::Listening->value, $product->progress);

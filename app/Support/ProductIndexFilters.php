@@ -188,7 +188,7 @@ final readonly class ProductIndexFilters
 
     public function progressHeading(): string
     {
-        return $this->progress?->label() ?? __('All ASMR');
+        return $this->progress?->label() ?? app(ContentTerminology::class)->allWorks();
     }
 
     public function hasActiveFilters(): bool

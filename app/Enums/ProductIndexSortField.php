@@ -3,6 +3,7 @@
 namespace App\Enums;
 
 use App\Enums\Concerns\ProvidesOptions;
+use App\Support\ContentTerminology;
 
 enum ProductIndexSortField: string
 {
@@ -35,8 +36,8 @@ enum ProductIndexSortField: string
             self::AgeCategory => __('Age'),
             self::Progress => __('Progress'),
             self::Priority => __('Priority'),
-            self::TotalTimesReListened => __('Total Times Re-listened'),
-            self::ReListenValue => __('Re-listen Value'),
+            self::TotalTimesReListened => app(ContentTerminology::class)->repeatCount(),
+            self::ReListenValue => app(ContentTerminology::class)->repeatValue(),
             self::StartDate => __('Start Date'),
             self::FinishDate => __('Finish Date'),
             self::AddedToTheSiteDate => __('Added to the site Date'),

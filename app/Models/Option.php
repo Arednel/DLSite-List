@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use App\Enums\AutocompleteOrder;
+use App\Enums\ContentFocus;
 use App\Enums\ProductIndexSortField;
 use App\Enums\UiLanguage;
 use App\Support\ProductFieldLayout;
@@ -15,6 +16,8 @@ use InvalidArgumentException;
 class Option extends Model
 {
     public const UI_LANGUAGE = 'ui_language';
+
+    public const CONTENT_FOCUS = 'content_focus';
 
     public const EXPORT_PART_MIB = 'export_part_mib';
 
@@ -163,6 +166,7 @@ class Option extends Model
 
     private const DEFAULT_OPTION_KEYS = [
         self::UI_LANGUAGE,
+        self::CONTENT_FOCUS,
         self::EXPORT_PART_MIB,
         self::INDEX_PER_PAGE,
         self::INDEX_SEARCH_HIDDEN_DESCRIPTIONS_ENABLED,
@@ -189,6 +193,7 @@ class Option extends Model
     private const RESETTABLE_OPTIONS = [
         self::EXPORT_PART_MIB,
         self::UI_LANGUAGE,
+        self::CONTENT_FOCUS,
         self::INDEX_PER_PAGE,
         self::INDEX_SEARCH_HIDDEN_DESCRIPTIONS_ENABLED,
         self::INDEX_IMAGE_VIEWER_ENABLED,
@@ -252,6 +257,7 @@ class Option extends Model
 
         return match ($key) {
             self::UI_LANGUAGE => UiLanguage::English->value,
+            self::CONTENT_FOCUS => ContentFocus::General->value,
             self::EXPORT_PART_MIB => config('transfers.default_part_mib'),
             self::INDEX_PER_PAGE => self::DEFAULT_INDEX_PER_PAGE,
             self::INDEX_SEARCH_HIDDEN_DESCRIPTIONS_ENABLED => false,
@@ -283,6 +289,12 @@ class Option extends Model
             ?? UiLanguage::from((string) self::defaultFor(self::UI_LANGUAGE));
     }
 
+    public static function contentFocus(): ContentFocus
+    {
+        return ContentFocus::tryFrom((string) self::valueFor(self::CONTENT_FOCUS))
+            ?? ContentFocus::from((string) self::defaultFor(self::CONTENT_FOCUS));
+    }
+
     public static function exportPartMib(): int|string
     {
         $value = self::valueFor(self::EXPORT_PART_MIB);
@@ -312,6 +324,20 @@ class Option extends Model
     public static function resetUiLanguageToDefault(): void
     {
         self::forget(self::UI_LANGUAGE);
+    }
+
+    public static function setContentFocus(ContentFocus|string $focus): void
+    {
+        $normalized = $focus instanceof ContentFocus
+            ? $focus
+            : (ContentFocus::tryFrom($focus) ?? ContentFocus::from((string) self::defaultFor(self::CONTENT_FOCUS)));
+
+        self::setValue(self::CONTENT_FOCUS, $normalized->value);
+    }
+
+    public static function resetContentFocusToDefault(): void
+    {
+        self::forget(self::CONTENT_FOCUS);
     }
 
     public static function indexPerPage(): int|string

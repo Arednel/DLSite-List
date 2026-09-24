@@ -97,14 +97,14 @@
 
     @case('num_re_listen_times')
         <div class="filter-widget num-re-listen-times">
-            <label class="widget-header" for="filter_num_re_listen_times">{{ __('Total Times Re-listened') }}</label>
+            <label class="widget-header" for="filter_num_re_listen_times">{{ $field['label'] }}</label>
             <input id="filter_num_re_listen_times" type="number" min="0" name="num_re_listen_times"
                 wire:model="draft.num_re_listen_times" placeholder="{{ __('Exact value') }}">
         </div>
     @break
 
     @case('re_listen_value')
-        <x-index.filter-select id="filter_re_listen_value" name="re_listen_value" label="Re-listen Value" :options="$filterOptions['re_listen_values']"
+        <x-index.filter-select id="filter_re_listen_value" name="re_listen_value" :label="$field['label']" :options="$filterOptions['re_listen_values']"
             placeholder="Any value" wire:model="draft.re_listen_value" />
     @break
 

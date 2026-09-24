@@ -3,6 +3,7 @@
 namespace App\Support\Transfers;
 
 use App\Enums\AutocompleteOrder;
+use App\Enums\ContentFocus;
 use App\Enums\ProductIndexSortField;
 use App\Enums\UiLanguage;
 use App\Models\Option;
@@ -19,6 +20,7 @@ final class PortableOptions
 {
     private const PORTABLE_KEYS = [
         Option::UI_LANGUAGE,
+        Option::CONTENT_FOCUS,
         Option::INDEX_PER_PAGE,
         Option::INDEX_SEARCH_HIDDEN_DESCRIPTIONS_ENABLED,
         Option::INDEX_IMAGE_VIEWER_ENABLED,
@@ -111,6 +113,7 @@ final class PortableOptions
     {
         return match ($key) {
             Option::UI_LANGUAGE => ['value' => ['required', Rule::enum(UiLanguage::class)]],
+            Option::CONTENT_FOCUS => ['value' => ['required', Rule::enum(ContentFocus::class)]],
             Option::INDEX_PER_PAGE => [
                 'value' => [
                     'required',

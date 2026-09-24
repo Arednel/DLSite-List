@@ -2,6 +2,7 @@
 
 namespace Tests\Unit\Models;
 
+use App\Enums\ContentFocus;
 use App\Enums\ProductField;
 use App\Enums\ProductIndexSortField;
 use App\Enums\UiLanguage;
@@ -44,6 +45,28 @@ class OptionMetadataSettingsTest extends TestCase
 
         $this->assertSame(UiLanguage::English, Option::uiLanguage());
         $this->assertDatabaseMissing('options', ['key' => Option::UI_LANGUAGE]);
+    }
+
+    public function test_content_focus_defaults_to_general_and_can_be_saved_and_reset(): void
+    {
+        $this->assertSame(ContentFocus::General, Option::contentFocus());
+
+        Option::setContentFocus(ContentFocus::Listening);
+
+        $this->assertSame(ContentFocus::Listening, Option::contentFocus());
+        $this->assertDatabaseHas('options', [
+            'key' => Option::CONTENT_FOCUS,
+            'value' => ContentFocus::Listening->value,
+        ]);
+
+        Option::setContentFocus('unsupported');
+
+        $this->assertSame(ContentFocus::General, Option::contentFocus());
+
+        Option::resetContentFocusToDefault();
+
+        $this->assertSame(ContentFocus::General, Option::contentFocus());
+        $this->assertDatabaseMissing('options', ['key' => Option::CONTENT_FOCUS]);
     }
 
     public function test_auto_series_defaults_to_enabled_and_can_be_saved(): void
@@ -489,6 +512,7 @@ class OptionMetadataSettingsTest extends TestCase
 
     public function test_reset_visible_settings_restores_index_search_and_tag_library_ordering_defaults(): void
     {
+        Option::setContentFocus(ContentFocus::Listening);
         Option::setTagLibraryIndexGroupOrderingEnabled(true);
         Option::setIndexSearchHiddenDescriptionsEnabled(true);
         Option::setIndexImageViewerEnabled(true);
@@ -513,6 +537,8 @@ class OptionMetadataSettingsTest extends TestCase
 
         Option::resetVisibleSettingsToDefault();
 
+        $this->assertSame(ContentFocus::General, Option::contentFocus());
+        $this->assertDatabaseMissing('options', ['key' => Option::CONTENT_FOCUS]);
         $this->assertFalse(Option::tagLibraryIndexGroupOrderingEnabled());
         $this->assertFalse(Option::indexSearchHiddenDescriptionsEnabled());
         $this->assertFalse(Option::indexImageViewerEnabled());

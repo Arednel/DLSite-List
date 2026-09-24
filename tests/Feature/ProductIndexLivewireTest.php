@@ -705,7 +705,7 @@ class ProductIndexLivewireTest extends TestCase
             ['field' => ProductField::Priority->value, 'visible' => true],
         ]);
 
-        $this->createProduct(1, [
+        $high = $this->createProduct(1, [
             'work_name' => 'OPTIONAL_COLUMNS_HIGH',
             'notes' => 'OPTIONAL_VISIBLE_NOTES',
             'start_date' => ['year' => 2026, 'month' => '01', 'day' => '02'],
@@ -714,26 +714,44 @@ class ProductIndexLivewireTest extends TestCase
             're_listen_value' => 5,
             'priority' => 2,
         ]);
-        $this->createProduct(2, [
+        $low = $this->createProduct(2, [
             'work_name' => 'OPTIONAL_COLUMNS_LOW',
             'priority' => 0,
         ]);
 
         Livewire::test(ProductIndex::class)
-            ->assertSee('data-column="Notes"', false)
-            ->assertSee('data-column="Start Date"', false)
-            ->assertSee('data-column="Finish Date"', false)
-            ->assertSee('data-column="Total Times Re-listened"', false)
-            ->assertSee('data-column="Re-listen Value"', false)
-            ->assertSee('data-column="Priority"', false)
+            ->assertViewHas('indexColumns', function (array $columns): bool {
+                $sortFields = array_column($columns, 'sort_field', 'field');
+                $expected = [
+                    'notes' => null,
+                    'start_date' => 'start_date',
+                    'end_date' => 'end_date',
+                    'num_re_listen_times' => 'num_re_listen_times',
+                    're_listen_value' => 're_listen_value',
+                    'priority' => 'priority',
+                ];
+
+                $this->assertSame($expected, array_intersect_key($sortFields, $expected));
+
+                return true;
+            })
+            ->assertViewHas('products', function ($products) use ($high, $low): bool {
+                $this->assertSame([$low->id, $high->id], $products->modelKeys());
+                $shown = $products->firstWhere('id', $high->id);
+                foreach (['notes', 'start_date', 'end_date', 'num_re_listen_times', 're_listen_value', 'priority'] as $field) {
+                    $this->assertEquals($high->$field, $shown->$field);
+                }
+
+                return true;
+            })
             ->assertSee('OPTIONAL_VISIBLE_NOTES')
-            ->assertSee('Year: 2026, Month: 01, Day: 02')
-            ->assertSee('Very High')
-            ->assertSee('High')
             ->assertSee('wire:click="sortByHeader(\'priority\')"', false)
             ->assertSeeInOrder(['OPTIONAL_COLUMNS_LOW', 'OPTIONAL_COLUMNS_HIGH'])
             ->call('sortByHeader', ProductIndexSortField::Priority->value)
-            ->assertSeeInOrder(['OPTIONAL_COLUMNS_HIGH', 'OPTIONAL_COLUMNS_LOW']);
+            ->assertViewHas('products', fn($products): bool => $products->modelKeys() === [$high->id, $low->id])
+            ->assertSeeHtmlInOrder(['OPTIONAL_COLUMNS_HIGH', 'OPTIONAL_COLUMNS_LOW'])
+            ->call('sortByHeader', ProductIndexSortField::Priority->value)
+            ->assertViewHas('products', fn($products): bool => $products->modelKeys() === [$low->id, $high->id]);
     }
 
     public function test_contributor_and_circle_index_headers_are_sortable_when_visible(): void

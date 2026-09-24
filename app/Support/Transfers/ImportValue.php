@@ -9,6 +9,7 @@ use App\Enums\ProductReListenValue;
 use App\Enums\ProductScore;
 use App\Models\LibraryImportItem;
 use App\Models\Product;
+use App\Support\ContentTerminology;
 use Illuminate\Support\Arr;
 
 /** Bounded, human-readable values for the shared Refetch presenter. */
@@ -16,28 +17,28 @@ final class ImportValue
 {
     public static function label(string $key): string
     {
-        return __(match ($key) {
-            'work_name' => 'Japanese Title',
-            'work_name_english' => 'English Title',
-            'description' => 'Japanese Description',
-            'description_english' => 'English Description',
-            'maker_id', 'maker' => 'Maker ID',
-            'age_category' => 'Age',
-            'rj_code' => 'RJ code',
-            'tag-library' => 'Tag Library',
-            'jp' => 'Japanese',
-            'en' => 'English',
-            'scenario' => 'Scenario Author',
-            'voice_actor' => 'Voice Actor',
-            'illustration' => 'Illustration Author',
-            'custom_tags' => 'Custom Tags',
-            'end_date' => 'Finish Date',
-            'num_re_listen_times' => 'Total Times Re-listened',
-            're_listen_value' => 'Re-listen Value',
-            'memberships' => 'Tags in Groups',
-            'relationships' => 'Parent Tags',
-            default => ucwords(str_replace('_', ' ', $key)),
-        });
+        return match ($key) {
+            'work_name' => __('Japanese Title'),
+            'work_name_english' => __('English Title'),
+            'description' => __('Japanese Description'),
+            'description_english' => __('English Description'),
+            'maker_id', 'maker' => __('Maker ID'),
+            'age_category' => __('Age'),
+            'rj_code' => __('RJ code'),
+            'tag-library' => __('Tag Library'),
+            'jp' => __('Japanese'),
+            'en' => __('English'),
+            'scenario' => __('Scenario Author'),
+            'voice_actor' => __('Voice Actor'),
+            'illustration' => __('Illustration Author'),
+            'custom_tags' => __('Custom Tags'),
+            'end_date' => __('Finish Date'),
+            'num_re_listen_times' => app(ContentTerminology::class)->repeatCount(),
+            're_listen_value' => app(ContentTerminology::class)->repeatValue(),
+            'memberships' => __('Tags in Groups'),
+            'relationships' => __('Parent Tags'),
+            default => __(ucwords(str_replace('_', ' ', $key))),
+        };
     }
 
     public static function preview(LibraryImportItem $item, string $attribute): array

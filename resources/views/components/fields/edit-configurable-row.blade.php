@@ -171,17 +171,17 @@
 
     @case('num_re_listen_times')
         @if ($field['editable'])
-            <x-fields.num-re-listen-times :value="$product->num_re_listen_times" />
+            <x-fields.num-re-listen-times :value="$product->num_re_listen_times" :label="$field['label']" />
         @else
-            <x-fields.readonly-text :label="__('Total Times Re-listened')" :value="$readonlyFieldValues['num_re_listen_times'] ?? null" :long="false" />
+            <x-fields.readonly-text :label="$field['label']" :value="$readonlyFieldValues['num_re_listen_times'] ?? null" :long="false" />
         @endif
     @break
 
     @case('re_listen_value')
         @if ($field['editable'])
-            <x-fields.re-listen-value :value="$product->re_listen_value" />
+            <x-fields.re-listen-value :value="$product->re_listen_value" :label="$field['label']" />
         @else
-            <x-fields.readonly-text :label="__('Re-listen Value')" :value="$readonlyFieldValues['re_listen_value'] ?? null" :long="false" />
+            <x-fields.readonly-text :label="$field['label']" :value="$readonlyFieldValues['re_listen_value'] ?? null" :long="false" />
         @endif
     @break
 

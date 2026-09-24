@@ -107,11 +107,11 @@
     @break
 
     @case('num_re_listen_times')
-        <x-fields.num-re-listen-times />
+        <x-fields.num-re-listen-times :label="$field['label']" />
     @break
 
     @case('re_listen_value')
-        <x-fields.re-listen-value />
+        <x-fields.re-listen-value :label="$field['label']" />
     @break
 
     @case('priority')

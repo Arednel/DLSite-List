@@ -3,9 +3,11 @@
 namespace Tests\Feature;
 
 use App\Enums\AutocompleteOrder;
+use App\Enums\ContentFocus;
 use App\Enums\ProductField;
 use App\Enums\UiLanguage;
 use App\Livewire\AutocompleteSettings;
+use App\Livewire\ContentTerminologySettings;
 use App\Livewire\AutoSeriesSettings;
 use App\Livewire\DlsiteLinkSettings;
 use App\Livewire\IndexContentOverflowSettings;
@@ -29,6 +31,95 @@ use Tests\TestCase;
 class ProductMetadataSettingsTest extends TestCase
 {
     use RefreshDatabase;
+
+    #[DataProvider('wordingPreviewProvider')]
+    public function test_wording_preview_follows_selection_and_locale_and_only_saves_on_submit(
+        UiLanguage $language,
+        string $generalRepeatCount,
+        string $listeningRepeatCount,
+        string $generalScore,
+        string $listeningScore,
+    ): void {
+        Option::setUiLanguage($language);
+        App::setLocale($language->value);
+        Option::setContentFocus(ContentFocus::General);
+
+        $component = Livewire::test(ContentTerminologySettings::class)
+            ->assertSet('focus', ContentFocus::General->value)
+            ->assertSeeText([$generalRepeatCount, $generalScore])
+            ->assertDontSeeText([$listeningRepeatCount, $listeningScore])
+            ->assertViewHas('previewRows', fn(array $rows): bool => in_array(
+                ['general' => $generalScore, 'selected' => $generalScore],
+                $rows,
+                true,
+            ));
+
+        $component
+            ->set('focus', ContentFocus::Listening->value)
+            ->assertSeeText([$generalRepeatCount, $listeningRepeatCount, $generalScore, $listeningScore])
+            ->assertViewHas('previewRows', fn(array $rows): bool => in_array(
+                ['general' => $generalScore, 'selected' => $listeningScore],
+                $rows,
+                true,
+            ));
+
+        $this->assertSame(ContentFocus::General, Option::contentFocus());
+
+        $component
+            ->call('save')
+            ->assertHasNoErrors()
+            ->assertRedirectToRoute('options.index', ['tab' => 'general']);
+
+        $this->assertSame(ContentFocus::Listening, Option::contentFocus());
+
+        $component = Livewire::test(ContentTerminologySettings::class)
+            ->assertSet('focus', ContentFocus::Listening->value)
+            ->assertSeeText([$generalRepeatCount, $listeningRepeatCount, $generalScore, $listeningScore])
+            ->set('focus', ContentFocus::General->value)
+            ->assertSeeText([$generalRepeatCount, $generalScore])
+            ->assertDontSeeText([$listeningRepeatCount, $listeningScore]);
+
+        $this->assertSame(ContentFocus::Listening, Option::contentFocus());
+
+        $component
+            ->call('save')
+            ->assertHasNoErrors()
+            ->assertRedirectToRoute('options.index', ['tab' => 'general']);
+
+        $this->assertSame(ContentFocus::General, Option::contentFocus());
+    }
+
+    public static function wordingPreviewProvider(): array
+    {
+        return [
+            'English' => [UiLanguage::English, 'Total Times Repeated', 'Total Times Re-listened', '(6) Fine', '(6) Nice'],
+            'Japanese' => [UiLanguage::Japanese, '繰り返し回数', '再聴回数', '(6) まあまあ', '(6) 良好'],
+        ];
+    }
+
+    public function test_wording_setting_rejects_unknown_focus(): void
+    {
+        Livewire::test(ContentTerminologySettings::class)
+            ->set('focus', 'not-a-focus')
+            ->call('save')
+            ->assertHasErrors(['focus']);
+
+        $this->assertSame(ContentFocus::General, Option::contentFocus());
+    }
+
+    public function test_wording_setting_resets_to_general_default(): void
+    {
+        Option::setContentFocus(ContentFocus::Listening);
+
+        Livewire::test(ContentTerminologySettings::class)
+            ->assertSet('focus', ContentFocus::Listening->value)
+            ->call('askResetToDefault')
+            ->call('resetToDefault')
+            ->assertRedirectToRoute('options.index', ['tab' => 'general']);
+
+        $this->assertSame(ContentFocus::General, Option::contentFocus());
+        $this->assertDatabaseMissing('options', ['key' => Option::CONTENT_FOCUS]);
+    }
 
     public function test_auto_series_setting_hydrates_from_option_and_saves_changes(): void
     {
@@ -809,6 +900,7 @@ class ProductMetadataSettingsTest extends TestCase
         Option::setTagAutocompleteOrder(AutocompleteOrder::FirstWord);
         Option::setSeriesAutocompleteOrder(AutocompleteOrder::FirstWord);
         Option::setUiLanguage(UiLanguage::Japanese);
+        Option::setContentFocus(ContentFocus::Listening);
         Option::query()->create([
             'key' => 'unrelated_option',
             'value' => 'keep-me',
@@ -849,6 +941,8 @@ class ProductMetadataSettingsTest extends TestCase
         $this->assertSame(AutocompleteOrder::Usage, Option::tagAutocompleteOrder());
         $this->assertSame(AutocompleteOrder::Usage, Option::seriesAutocompleteOrder());
         $this->assertSame(UiLanguage::English, Option::uiLanguage());
+        $this->assertSame(ContentFocus::General, Option::contentFocus());
+        $this->assertDatabaseMissing('options', ['key' => Option::CONTENT_FOCUS]);
         $this->assertSame(ProductField::Image->value, Option::indexFieldLayout()[0]['field']);
         $this->assertTrue(Option::indexFieldLayout()[0]['visible']);
         $this->assertTrue($this->layoutRow(Option::indexFieldLayout(), ProductField::Title)['visibility_locked']);
@@ -881,6 +975,7 @@ class ProductMetadataSettingsTest extends TestCase
         $this->get('/options')
             ->assertOk()
             ->assertSeeLivewire(UiLanguageSettings::class)
+            ->assertSeeLivewire(ContentTerminologySettings::class)
             ->assertSeeLivewire(IndexPaginationSettings::class)
             ->assertSeeLivewire(IndexContentOverflowSettings::class)
             ->assertSeeLivewire(IndexTableWidthSettings::class)
@@ -900,6 +995,7 @@ class ProductMetadataSettingsTest extends TestCase
         $this->get('/options?tab=field-layouts')
             ->assertOk()
             ->assertDontSeeLivewire(UiLanguageSettings::class)
+            ->assertDontSeeLivewire(ContentTerminologySettings::class)
             ->assertDontSeeLivewire(IndexPaginationSettings::class)
             ->assertDontSeeLivewire(IndexContentOverflowSettings::class)
             ->assertDontSeeLivewire(IndexTableWidthSettings::class)

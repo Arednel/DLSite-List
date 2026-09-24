@@ -365,6 +365,22 @@ The UI language also selects the fetched-tag display bucket:
 - `en` UI -> `en` fetched tags
 - `ja` UI -> `jp` fetched tags
 
+#### UI Wording
+
+Default: `General` (`general`)
+
+Choices:
+
+* `General` (`general`)
+* `Listening (Voice / ASMR / Voice Dramas)` (`listening`)
+* `Reading (Manga / Comics / Light Novels / Novels / Books)` (`reading`)
+* `Games (Games, PC Games)` (`games`)
+* `Video (Anime / Videos)` (`video`)
+* `Music (Music)` (`music`)
+* `Artwork (CG)` (`artwork`)
+
+Controls which UI wording profile is used in the interface.
+
 #### Index Pagination
 
 Default: `100`

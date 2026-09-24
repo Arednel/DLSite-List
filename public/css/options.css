@@ -1481,6 +1481,88 @@ body.options-page {
     margin-top: 0;
 }
 
+/* UI wording preview */
+.options-page .terminology-preview {
+    margin-top: 2px;
+}
+
+.options-page .terminology-review {
+    box-sizing: border-box;
+    width: 100%;
+    max-width: 100%;
+    min-width: 0;
+    margin: 0;
+    border: 1px solid rgba(var(--options-border-rgb), 0.72);
+    border-radius: var(--options-radius);
+    background: rgba(var(--options-surface-rgb), 0.78);
+    overflow: hidden;
+}
+
+.options-page .terminology-review>summary {
+    min-width: 0;
+    cursor: pointer;
+    padding: 9px 10px;
+    color: var(--options-text);
+    font-size: 11px;
+    font-weight: 700;
+    overflow-wrap: anywhere;
+}
+
+.options-page .terminology-review>summary:hover {
+    background: rgba(var(--options-hover-surface-rgb), 0.55);
+}
+
+.options-page .terminology-review>summary:focus-visible {
+    outline: 2px solid rgba(var(--options-accent-rgb), 0.45);
+    outline-offset: -2px;
+}
+
+.options-page .terminology-review>summary .fa-circle-question {
+    margin-left: 4px;
+    color: var(--options-link);
+    cursor: help;
+}
+
+.options-page .terminology-review__body {
+    border-top: 1px solid rgba(var(--options-border-rgb), 0.48);
+}
+
+.options-page .terminology-review-list {
+    margin: 0;
+    padding: 0;
+    list-style: none;
+}
+
+.options-page .terminology-review-list li {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    gap: 5px;
+    padding: 7px 11px;
+    border-bottom: 1px solid rgba(var(--options-border-rgb), 0.38);
+    color: var(--options-text);
+    font-size: 11px;
+    line-height: 1.45;
+}
+
+.options-page .terminology-review-list li:last-child {
+    border-bottom: 0;
+}
+
+.options-page .terminology-review-list .term-before {
+    color: rgba(var(--options-text-rgb), 0.76);
+}
+
+.options-page .terminology-review-list .term-after {
+    color: var(--options-text);
+    font-weight: 700;
+}
+
+.options-page .terminology-review-list .term-inline-arrow {
+    color: rgba(var(--options-text-rgb), 0.48);
+    font-weight: 700;
+}
+
 @media (max-width: 768px) {
     .options-shell {
         width: 100%;

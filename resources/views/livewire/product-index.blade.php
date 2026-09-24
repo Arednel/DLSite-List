@@ -18,14 +18,14 @@
                         'progress-all',
                         'on' => $activeProgress === null,
                     ])>
-                        {{ __('All ASMR') }}</a>
+                        {{ $allWorksLabel }}</a>
                     <a href="{{ route('index', array_merge($allProgressQuery, ['progress' => 'Listening']), false) }}"
                         @class([
                             'progress-button',
                             'progress-listening',
                             'on' => $activeProgress === 'Listening',
                         ])>
-                        {{ __('Currently Listening') }}</a>
+                        {{ $currentProgressLabel }}</a>
                     <a href="{{ route('index', array_merge($allProgressQuery, ['progress' => 'Completed']), false) }}"
                         @class([
                             'progress-button',
@@ -57,7 +57,7 @@
                             'progress-plan-to-listen',
                             'on' => $activeProgress === 'Plan to Listen',
                         ])>
-                        {{ __('Plan to Listen') }}</a>
+                        {{ $plannedProgressLabel }}</a>
                 </div>
 
                 <x-index.search class="search-container--desktop" data-index-search="desktop" />

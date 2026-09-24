@@ -87,16 +87,20 @@ class OptionalProductStatusesTest extends TestCase
         $this->assertIndexControlVisibility($component->html(), ProductProgress::OnHold, $onHoldEnabled);
         $this->assertIndexControlVisibility($component->html(), ProductProgress::Dropped, $droppedEnabled);
 
-        if ($onHoldEnabled && $droppedEnabled) {
-            $component->assertSeeInOrder([
-                'All ASMR',
-                'Currently Listening',
-                'Completed',
-                'On Hold',
-                'Dropped',
-                'Plan to Listen',
-            ]);
+        $expectedStatuses = ['Listening', 'Completed'];
+        if ($onHoldEnabled) {
+            $expectedStatuses[] = 'On Hold';
         }
+        if ($droppedEnabled) {
+            $expectedStatuses[] = 'Dropped';
+        }
+        $expectedStatuses[] = 'Plan to Listen';
+
+        $component->assertViewHas('filterOptions', fn(array $options): bool => array_keys($options['progress']) === $expectedStatuses);
+        $component->assertSeeHtmlInOrder(array_map(
+            fn(string $status): string => 'href="' . route('index', ['progress' => $status], false) . '"',
+            $expectedStatuses,
+        ));
     }
 
     public static function optionalStatusCombinationProvider(): iterable

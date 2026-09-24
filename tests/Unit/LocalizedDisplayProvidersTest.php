@@ -2,11 +2,13 @@
 
 namespace Tests\Unit;
 
+use App\Enums\ContentFocus;
 use App\Enums\ProductField;
 use App\Enums\ProductIndexSortField;
 use App\Enums\ProductProgress;
 use App\Enums\UiLanguage;
 use App\Models\Option;
+use App\Support\ContentTerminology;
 use App\Support\PartialDateFormatter;
 use App\Support\ProductFieldLayout;
 use Illuminate\Support\Facades\App;
@@ -23,6 +25,8 @@ class LocalizedDisplayProvidersTest extends TestCase
 
     public function test_representative_display_labels_follow_the_locale_without_changing_backed_values(): void
     {
+        $this->app->instance(ContentTerminology::class, new ContentTerminology(ContentFocus::Listening));
+
         App::setLocale(UiLanguage::English->value);
         $this->assertSame('Plan to Listen', ProductProgress::PlanToListen->label());
         $this->assertSame('On Hold', ProductProgress::OnHold->label());
@@ -42,6 +46,61 @@ class LocalizedDisplayProvidersTest extends TestCase
         $this->assertSame('Dropped', ProductProgress::Dropped->value);
         $this->assertSame('fetched_tags', ProductField::FetchedTags->value);
         $this->assertSame('rj', ProductIndexSortField::RJ->value);
+    }
+
+
+    public function test_content_focus_options_use_dlsite_specific_category_examples_in_both_languages(): void
+    {
+        App::setLocale(UiLanguage::English->value);
+        $this->assertSame([
+            'general' => 'General',
+            'listening' => 'Listening (Voice / ASMR / Voice Dramas)',
+            'reading' => 'Reading (Manga / Comics / Light Novels / Novels / Books)',
+            'games' => 'Games (Games, PC Games)',
+            'video' => 'Video (Anime / Videos)',
+            'music' => 'Music (Music)',
+            'artwork' => 'Artwork (CG)',
+        ], ContentFocus::options());
+
+        App::setLocale(UiLanguage::Japanese->value);
+        $this->assertSame([
+            'general' => '一般',
+            'listening' => '聴取（ボイス・ASMR / ドラマCD）',
+            'reading' => '読書（マンガ / コミック / ラノベ / 小説 / 一般書籍）',
+            'games' => 'ゲーム（ゲーム、PCソフト）',
+            'video' => '動画（アニメ / 動画）',
+            'music' => '音楽（音楽）',
+            'artwork' => 'アートワーク（CG）',
+        ], ContentFocus::options());
+    }
+
+    public function test_content_focus_profiles_change_only_their_presentation_wording(): void
+    {
+        App::setLocale(UiLanguage::English->value);
+
+        $expectations = [
+            ContentFocus::General->value => ['All Works', 'In Progress', 'Planned', 'Total Times Repeated', 'Repeat Value'],
+            ContentFocus::Listening->value => ['All ASMR', 'Listening', 'Plan to Listen', 'Total Times Re-listened', 'Re-listen Value'],
+            ContentFocus::Reading->value => ['All Works', 'Reading', 'Plan to Read', 'Total Times Re-read', 'Re-read Value'],
+            ContentFocus::Games->value => ['All Games', 'Playing', 'Plan to Play', 'Total Times Replayed', 'Replay Value'],
+            ContentFocus::Video->value => ['All Videos', 'Watching', 'Plan to Watch', 'Total Times Rewatched', 'Rewatch Value'],
+            ContentFocus::Music->value => ['All Music', 'Listening', 'Plan to Listen', 'Total Times Re-listened', 'Re-listen Value'],
+            ContentFocus::Artwork->value => ['All Artwork', 'Viewing', 'Plan to View', 'Total Times Revisited', 'Revisit Value'],
+        ];
+
+        foreach (ContentFocus::cases() as $focus) {
+            $terminology = new ContentTerminology($focus);
+            [$allWorks, $active, $planned, $repeatCount, $repeatValue] = $expectations[$focus->value];
+
+            $this->assertSame($allWorks, $terminology->allWorks());
+            $this->assertSame($active, $terminology->progress(ProductProgress::Listening));
+            $this->assertSame($planned, $terminology->progress(ProductProgress::PlanToListen));
+            $this->assertSame($repeatCount, $terminology->repeatCount());
+            $this->assertSame($repeatValue, $terminology->repeatValue());
+        }
+
+        $this->assertSame('Listening', ProductProgress::Listening->value);
+        $this->assertSame('Plan to Listen', ProductProgress::PlanToListen->value);
     }
 
     public function test_option_display_providers_translate_copy_but_keep_values_and_theme_brands_stable(): void

@@ -217,7 +217,7 @@ Covers multipart upload/validation, missing or replacement parts, archive/path/c
 
 #### `tests/Feature/LibraryTransferReviewTest.php`
 
-Covers Ignore/Overwrite/Merge decisions, work/tag/group/relationship/option application, stale-conflict handling, atomic work updates, image promotion/recovery, timestamps, and read-only completed reviews.
+Covers Ignore/Overwrite/Merge decisions, work/tag/group/relationship/option application, stale-conflict handling, atomic work updates, image promotion/recovery, timestamps, and read-only completed reviews. Work-review navigation checks category identifiers and the items returned when switching repeat-field tabs.
 
 Partial contributor document coverage verifies that omitted roles survive Overwrite and explicitly empty roles can still be cleared.
 
@@ -268,7 +268,7 @@ Covers localized copy in the shared floating/drawer navigation and shared menu U
 
 Covers localized PHP-rendered display state, including:
 - localized month labels with stable numeric values
-- localized Progress display with stable state values
+- Progress display delegated to localized labels, with stable selection and active-filter values
 - localized Age/Progress enum display without changing stored/backed values
 
 #### `tests/Feature/OptionalProductStatusesTest.php`
@@ -321,7 +321,7 @@ Covers selected-work Refetch search, RJ-desc ordering, and preservation of selec
 
 Covers the main product HTTP workflows:
 - Index filtering/sorting/display
-- Create/Edit field layouts
+- Create/Edit field order using submitted input names, product binding, and return-navigation data
 - hidden/read-only field preservation
 - DLSite Quick Add fetch/store/error behavior, unexpected scraper/manifest failures returning to standalone/modal forms with input preserved, and shared importer regression coverage
 - Custom Quick Add uploads
@@ -349,7 +349,7 @@ Covers the Livewire Index:
 - sort behavior
 - narrow hydration
 - batched settings
-- field visibility/order
+- field visibility/order, optional-column sort mappings, and hydrated values independent of UI wording
 - timestamps
 - DLSite links
 - Image Viewer
@@ -374,7 +374,8 @@ Covers metadata-related UI settings:
 - Add/Edit modal
 - Index table width
 - overflow settings
-- reset behavior
+- UI wording profile previews in English and Japanese, selection changes without saving, persistence after submission, and reset behavior
+- other general/field-layout reset behavior
 
 #### `tests/Feature/ProductSortKeysTest.php`
 
@@ -388,6 +389,7 @@ Covers localization across Index/Create/Edit product surfaces, including:
 - delete confirmation
 - modal completion behavior
 - validation messages
+- content-focus UI wording on Index/filter/status/score surfaces without changing stored status values
 
 #### `tests/Feature/QuickAddFetchStatusTest.php`
 
@@ -468,7 +470,7 @@ Covers server-rendered Add/Edit modal completion fallback output and conditional
 - Covers normalized tag identity/display casing, Hiragana/Katakana distinction, and inverse parent/child relationships.
 
 `tests/Unit/Models/OptionMetadataSettingsTest.php`
-- Covers Option defaults, normalization, persistence, reset behavior, and batched metadata/Index settings.
+- Covers Option defaults, normalization, persistence, reset behavior, content-focus persistence, and batched metadata/Index settings.
 
 `tests/Unit/Models/ProductDLSiteUrlTest.php`
 - Covers default Maniax URLs and enabled age-aware Home/Maniax mapping.

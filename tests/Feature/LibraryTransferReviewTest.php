@@ -148,7 +148,7 @@ class LibraryTransferReviewTest extends TestCase
     public function test_options_merge_preserves_absent_subkeys_and_overwrite_resets_absent_portable_keys(): void
     {
         $export = $this->exported(['options']);
-        $this->rewriteData($export->parts()->first(), fn ($records) => [['key' => Option::OPTIONAL_PRODUCT_STATUSES, 'value' => ['on_hold' => true]]]);
+        $this->rewriteData($export->parts()->first(), fn($records) => [['key' => Option::OPTIONAL_PRODUCT_STATUSES, 'value' => ['on_hold' => true]]]);
         Option::setOptionalProductStatuses(['on_hold' => false, 'dropped' => true]);
         Option::setIndexImageViewerEnabled(true);
         Option::setExportPartMib(8192);
@@ -360,36 +360,48 @@ class LibraryTransferReviewTest extends TestCase
         Product::factory()->create(['id' => 'RJ123456']);
         $this->saveImage('Works/RJ123456/cover.jpg');
         $run = $this->imported($this->exported(['works', 'images']));
-        $expectedCategories = array_values(array_diff(ImportReview::CATEGORIES['works'], ['new_works']));
+        $expectedCategories = [
+            'titles',
+            'descriptions',
+            'series',
+            'age',
+            'circle',
+            'maker',
+            'scenario',
+            'voice_actor',
+            'illustration',
+            'author',
+            'tags',
+            'cover',
+            'sample_images',
+            'notes',
+            'score',
+            'progress',
+            'start_date',
+            'end_date',
+            'num_re_listen_times',
+            're_listen_value',
+            'priority',
+            'custom_tags',
+        ];
         $actualCategories = $run->items()->where('section', 'works')->distinct()->pluck('category')->all();
 
         $this->assertEqualsCanonicalizing($expectedCategories, $actualCategories);
         $this->get(route('options.transfers.show', $run))
             ->assertOk()
-            ->assertSeeInOrder([
-                'Titles',
-                'Descriptions',
-                'Series',
-                'Age',
-                'Circle',
-                'Maker ID',
-                'Scenario Author',
-                'Voice Actor',
-                'Illustration Author',
-                'Author',
-                'Tags',
-                'Cover',
-                'Sample Images',
-                'Notes',
-                'Score',
-                'Progress',
-                'Start Date',
-                'Finish Date',
-                'Total Times Re-listened',
-                'Re-listen Value',
-                'Priority',
-                'Custom Tags',
-            ]);
+            ->assertSeeInOrder(array_map(
+                fn(string $category): string => 'id="transfer-category-tab-works-' . $category . '"',
+                $expectedCategories,
+            ), false);
+
+        $component = Livewire::test(OptionsTransferRun::class, ['run' => $run]);
+        foreach (['num_re_listen_times', 're_listen_value'] as $category) {
+            $component->call('tab', 'works', $category)
+                ->assertSet('section', 'works')
+                ->assertSet('category', $category)
+                ->assertViewHas('items', fn($items): bool => $items->isNotEmpty()
+                    && $items->every(fn($item): bool => $item->section === 'works' && $item->category === $category));
+        }
     }
 
     public function test_applying_one_contributor_tab_preserves_other_roles(): void
@@ -421,13 +433,16 @@ class LibraryTransferReviewTest extends TestCase
         $product = Product::factory()->create(['id' => 'RJ123456']);
         $contributors = app(ProductContributorSync::class);
         $original = [
-            'circle' => ['Local Circle'], 'scenario' => ['Local Scenario'],
-            'voice_actor' => ['Local Voice'], 'illustration' => ['Local Illustrator'], 'author' => ['Local Author'],
+            'circle' => ['Local Circle'],
+            'scenario' => ['Local Scenario'],
+            'voice_actor' => ['Local Voice'],
+            'illustration' => ['Local Illustrator'],
+            'author' => ['Local Author'],
         ];
         $contributors->sync($product, $original);
         foreach ([['Incoming Voice'], []] as $voices) {
             $export = $this->exported();
-            $this->rewriteWorkData($export->parts()->first(), fn () => [
+            $this->rewriteWorkData($export->parts()->first(), fn() => [
                 'japanese' => ['product_id' => $product->id, 'work_name' => $product->work_name],
                 'english' => ['voice_actor' => $voices],
             ]);
@@ -518,15 +533,18 @@ class LibraryTransferReviewTest extends TestCase
         foreach ([false, true] as $committed) {
             $token = bin2hex(random_bytes(16));
             $destination = 'Works/RJ123456/cover.png';
-            $backup = 'ImagePromotions/'.$token.'/'.$destination;
+            $backup = 'ImagePromotions/' . $token . '/' . $destination;
             Storage::disk('local')->put($backup, 'old image');
             Storage::disk('public')->put($destination, 'new image');
             Storage::disk('local')->put('ImagePromotions/active.json', json_encode([
-                'token' => $token, 'owner' => 'import', 'id' => $item->id,
-                'entries' => [['destination' => $destination, 'backup' => $backup]], 'products' => [$product->id],
+                'token' => $token,
+                'owner' => 'import',
+                'id' => $item->id,
+                'entries' => [['destination' => $destination, 'backup' => $backup]],
+                'products' => [$product->id],
             ], JSON_THROW_ON_ERROR));
             $item->update(['result' => $committed ? ['_image_promotion' => $token] : []]);
-            app(LibraryMutationLock::class)->run(fn () => app(ProductImagePromotion::class)->recover());
+            app(LibraryMutationLock::class)->run(fn() => app(ProductImagePromotion::class)->recover());
             $this->assertSame($committed ? 'new image' : 'old image', Storage::disk('public')->get($destination));
             $this->assertFalse(Storage::disk('local')->exists('ImagePromotions/active.json'));
         }
@@ -537,8 +555,11 @@ class LibraryTransferReviewTest extends TestCase
         $token = bin2hex(random_bytes(16));
         $destination = 'Works/RJ123456/cover.png';
         Storage::disk('local')->put('ImagePromotions/active.json', json_encode([
-            'token' => $token, 'owner' => 'import', 'id' => 0, 'products' => ['RJ123456'],
-            'entries' => [['destination' => $destination, 'backup' => 'ImagePromotions/'.$token.'/'.$destination]],
+            'token' => $token,
+            'owner' => 'import',
+            'id' => 0,
+            'products' => ['RJ123456'],
+            'entries' => [['destination' => $destination, 'backup' => 'ImagePromotions/' . $token . '/' . $destination]],
         ], JSON_THROW_ON_ERROR));
         $mutated = false;
         try {
@@ -602,7 +623,7 @@ class LibraryTransferReviewTest extends TestCase
     public function test_malformed_option_layout_is_quarantined_instead_of_crashing_analysis(): void
     {
         $export = $this->exported(['options']);
-        $this->rewriteData($export->parts()->firstOrFail(), fn ($records) => [
+        $this->rewriteData($export->parts()->firstOrFail(), fn($records) => [
             ['key' => Option::INDEX_FIELD_LAYOUT, 'value' => [['field' => ['invalid']]]],
             ['key' => Option::UI_LANGUAGE, 'value' => 'en'],
         ]);

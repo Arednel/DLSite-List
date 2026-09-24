@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use App\Enums\ContentFocus;
 use App\Enums\ProductProgress;
 use App\Enums\UiLanguage;
 use App\Livewire\ProductIndex;
@@ -37,6 +38,34 @@ class ProductSurfaceLocalizationTest extends TestCase
         $this->assertStringContainsString('<html lang="en">', $completed);
     }
 
+    public function test_general_content_focus_changes_ui_wording_without_mutating_internal_values(): void
+    {
+        Option::setContentFocus(ContentFocus::General);
+        $product = Product::factory()->create([
+            'progress' => ProductProgress::Listening->value,
+        ]);
+
+        $html = $this->get('/?progress=Listening')
+            ->assertOk()
+            ->assertSee('href="/?progress=Listening"', false)
+            ->assertSee('All Works')
+            ->assertSee('Currently In Progress')
+            ->assertSee('Planned')
+            ->assertSee('Total Times Repeated')
+            ->assertSee('Repeat Value')
+            ->assertSee('(6) Fine')
+            ->assertSee('(4) Bad')
+            ->assertSee('(3) Very Bad')
+            ->assertSee('(2) Horrible')
+            ->assertSee('(1) Appalling')
+            ->assertDontSee('All ASMR')
+            ->assertDontSee('Currently Listening')
+            ->getContent();
+
+        $this->assertStringContainsString('In Progress', $html);
+        $this->assertSame(ProductProgress::Listening->value, $product->refresh()->progress);
+    }
+
     public function test_saved_japanese_localizes_index_copy_accessibility_and_context_without_mutating_values(): void
     {
         Option::setUiLanguage(UiLanguage::Japanese);
@@ -56,7 +85,7 @@ class ProductSurfaceLocalizationTest extends TestCase
             ->assertSee('data-work-form-modal-title="作品情報を編集"', false)
             ->getContent();
 
-        $this->assertStringContainsString('聴取中', $html);
+        $this->assertStringContainsString(ProductProgress::Listening->label(), $html);
         $this->assertSame(ProductProgress::Listening->value, $product->refresh()->progress);
 
         $this->get('/?search=NO_LOCALIZATION_MATCH')

@@ -10,6 +10,7 @@ use App\Enums\ProductProgress;
 use App\Models\GenreGroup;
 use App\Models\Option;
 use App\Models\Product;
+use App\Support\ContentTerminology;
 use App\Support\ProductFieldLayout;
 use App\Support\ProductIndexFilters;
 use App\Support\ProductIndexResults;
@@ -94,7 +95,7 @@ class ProductIndex extends Component
     protected function queryString(): array
     {
         return collect(ProductIndexFilters::INPUT_KEYS)
-            ->mapWithKeys(fn (string $key): array => [$key => []])
+            ->mapWithKeys(fn(string $key): array => [$key => []])
             ->all();
     }
 
@@ -178,6 +179,8 @@ class ProductIndex extends Component
             $currentQuery,
         );
 
+        $terminology = app(ContentTerminology::class);
+
         return view('livewire.product-index', [
             'products' => $products,
             'productRows' => $productRows,
@@ -195,12 +198,15 @@ class ProductIndex extends Component
             'filterActive' => $filterQuery !== [],
             'hasCurrentTagFilter' => $filters->genre !== '',
             'progressHeading' => $filters->progressHeading(),
+            'allWorksLabel' => $terminology->allWorks(),
+            'currentProgressLabel' => $terminology->currentProgress(),
+            'plannedProgressLabel' => $terminology->progress(ProductProgress::PlanToListen),
             'activeProgress' => $filters->progress?->value,
             'allProgressQuery' => $filters->toQueryWithout(['progress', 'genre']),
             'isUnlimited' => $isUnlimited,
             'totalProducts' => $products instanceof LengthAwarePaginator ? $products->total() : $products->count(),
             'tagHrefPrefix' => route('index', $tagLinkQuery, false)
-                .($tagLinkQuery === [] ? '?' : '&'),
+                . ($tagLinkQuery === [] ? '?' : '&'),
             'quickAddUrl' => route('products.create', [
                 'return_query' => $currentQuery,
             ], false),
@@ -227,7 +233,7 @@ class ProductIndex extends Component
         ]);
 
         return array_map(
-            fn (string $path): string => asset(Product::versionedImagePath($path)),
+            fn(string $path): string => asset(Product::versionedImagePath($path)),
             [
                 $product->work_image,
                 ...($product->sample_images ?? []),

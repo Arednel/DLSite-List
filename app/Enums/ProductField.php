@@ -3,6 +3,7 @@
 namespace App\Enums;
 
 use App\Enums\Concerns\ProvidesOptions;
+use App\Support\ContentTerminology;
 
 enum ProductField: string
 {
@@ -57,8 +58,8 @@ enum ProductField: string
             self::Notes => __('Notes'),
             self::StartDate => __('Start Date'),
             self::FinishDate => __('Finish Date'),
-            self::TotalTimesReListened => __('Total Times Re-listened'),
-            self::ReListenValue => __('Re-listen Value'),
+            self::TotalTimesReListened => app(ContentTerminology::class)->repeatCount(),
+            self::ReListenValue => app(ContentTerminology::class)->repeatValue(),
             self::Priority => __('Priority'),
             self::CreatedAt => __('Added to the site Date'),
             self::UpdatedAt => __('Updated Date'),

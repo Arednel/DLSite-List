@@ -73,6 +73,16 @@
                     <livewire:ui-language-settings />
 
                     <h2>
+                        <i class="fa-solid fa-shapes fa-fw options-section-icon" aria-hidden="true"></i>
+                        {{ __('UI Wording') }}
+                    </h2>
+                    <p class="option-description">
+                        {{ __('Choose the UI wording profile used throughout the application. This only changes displayed text; your saved data and status values stay the same.') }}
+                    </p>
+
+                    <livewire:content-terminology-settings />
+
+                    <h2>
                         <i class="fa-solid fa-list-ol fa-fw options-section-icon" aria-hidden="true"></i>
                         {{ __('Index Pagination') }}
                     </h2>

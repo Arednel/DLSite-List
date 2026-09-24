@@ -135,6 +135,14 @@ Tag Library uses the same stored tag rows as products. Renaming a tag updates th
 
 Most application settings are stored in the `options` table and edited by focused Livewire settings components.
 
+UI wording is a presentation-only setting. `ContentFocus` defines the selected UI wording profile (`general`, `listening`, `reading`, `games`, `video`, `music`, or `artwork`), and the request-scoped `ContentTerminology` service resolves focus-sensitive labels through Laravel translations.
+
+Focus profiles only define UI wording that differs from `General`; any missing profile-specific term automatically falls back to the `General` wording.
+
+The setting does not change stored or internal values. Status values such as `Listening` and `Plan to Listen`, score values, repeat-field keys, URL query parameters, and transfer/database formats remain unchanged.
+
+Enums and field-label presenters delegate only focus-sensitive labels to `ContentTerminology`; all other interface text continues to use normal Laravel translations directly.
+
 Field Layouts configure seven independent layouts:
 - Index Table Columns
 - Index Filter Fields

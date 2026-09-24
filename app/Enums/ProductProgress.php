@@ -3,6 +3,7 @@
 namespace App\Enums;
 
 use App\Enums\Concerns\ProvidesOptions;
+use App\Support\ContentTerminology;
 
 enum ProductProgress: string
 {
@@ -16,13 +17,7 @@ enum ProductProgress: string
 
     public function label(): string
     {
-        return match ($this) {
-            self::Listening => __('Listening'),
-            self::Completed => __('Completed'),
-            self::OnHold => __('On Hold'),
-            self::Dropped => __('Dropped'),
-            self::PlanToListen => __('Plan to Listen'),
-        };
+        return app(ContentTerminology::class)->progress($this);
     }
 
     /**

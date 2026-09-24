@@ -9,6 +9,7 @@ use App\Enums\ProductProgress;
 use App\Enums\ProductReListenValue;
 use App\Enums\ProductScore;
 use App\Enums\UiLanguage;
+use App\Livewire\ProductIndex;
 use App\Livewire\TagLibraryManager;
 use App\Models\Genre;
 use App\Models\Option;
@@ -22,6 +23,7 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Process;
 use Illuminate\Support\Facades\Storage;
+use Livewire\Livewire;
 use Mockery;
 use PHPUnit\Framework\Attributes\DataProvider;
 use Tests\TestCase;
@@ -213,9 +215,16 @@ class ProductControllerTest extends TestCase
 
         $this->get('/?age_category=NOT_VALID&progress=NOT_VALID_EITHER')
             ->assertOk()
-            ->assertSee('All ASMR')
             ->assertSee($alpha->work_name)
             ->assertSee($beta->work_name);
+
+        Livewire::withQueryParams(['age_category' => 'NOT_VALID', 'progress' => 'NOT_VALID_EITHER'])
+            ->test(ProductIndex::class)
+            ->assertSet('age_category', '')
+            ->assertSet('progress', '')
+            ->assertViewHas('filterActive', false)
+            ->assertViewHas('products', fn($products): bool => $products->pluck('id')->sort()->values()->all()
+                === collect([$alpha->id, $beta->id])->sort()->values()->all());
     }
 
     public function test_index_displays_titles_from_related_genres(): void
@@ -672,21 +681,20 @@ class ProductControllerTest extends TestCase
         $this->get('/create')
             ->assertOk()
             ->assertSeeInOrder([
-                'RJ Code or Link',
-                'Status',
-                'Your Score',
-                'Series',
-                'Japanese Title',
-                'English Title',
-                'Custom Tags',
-                'Notes',
-                'Start Date',
-                'Finish Date',
-                'Total Times',
-                'Re-listened',
-                'Re-listen Value',
-                'Priority',
-            ]);
+                'name="id"',
+                'name="progress"',
+                'name="score"',
+                'name="series"',
+                'name="work_name"',
+                'name="work_name_english"',
+                'name="genre_custom"',
+                'name="notes"',
+                'name="add[start_date][month]"',
+                'name="add[finish_date][month]"',
+                'name="add[num_re_listen_times]"',
+                'name="add[re_listen_value]"',
+                'name="add[priority]"',
+            ], false);
     }
 
     public function test_custom_create_default_field_layout_order_matches_existing_form(): void
@@ -694,24 +702,23 @@ class ProductControllerTest extends TestCase
         $this->get('/create/custom')
             ->assertOk()
             ->assertSeeInOrder([
-                'RJ Code or Link',
-                'Status',
-                'Your Score',
-                'Series',
-                'Japanese Title',
-                'English Title',
-                'Custom Tags',
-                'Notes',
-                'Age Category',
-                'Cover Image',
-                'Sample Images',
-                'Start Date',
-                'Finish Date',
-                'Total Times',
-                'Re-listened',
-                'Re-listen Value',
-                'Priority',
-            ]);
+                'name="id"',
+                'name="progress"',
+                'name="score"',
+                'name="series"',
+                'name="work_name"',
+                'name="work_name_english"',
+                'name="genre_custom"',
+                'name="notes"',
+                'name="age_category"',
+                'name="work_image"',
+                'name="sample_images[]"',
+                'name="add[start_date][month]"',
+                'name="add[finish_date][month]"',
+                'name="add[num_re_listen_times]"',
+                'name="add[re_listen_value]"',
+                'name="add[priority]"',
+            ], false);
     }
 
     public function test_quick_add_layout_can_hide_optional_fields_and_keep_required_rj_visible(): void
@@ -1040,30 +1047,27 @@ class ProductControllerTest extends TestCase
 
         $this->get("/edit/{$product->id}?{$query}")
             ->assertOk()
-            ->assertSee('class="product-form-theme-black"', false)
-            ->assertDontSee('class="dark-mode"', false)
-            ->assertSee('Edit Details')
-            ->assertSee('value="Save changes"', false)
-            ->assertSee('width=device-width, initial-scale=1', false)
-            ->assertSee('css/title-tooltips.css', false)
-            ->assertSee('scripts/title-tooltips.js', false)
+            ->assertViewIs('Edit')
+            ->assertViewHas('product', fn(Product $shown): bool => $shown->is($product))
+            ->assertViewHas('returnQuery', ['progress' => ProductProgress::Listening->value])
+            ->assertViewHas('returnFragment', $product->id)
+            ->assertSee('action="' . route('products.update', $product) . '"', false)
             ->assertSee($product->id)
             ->assertSee($product->work_name)
             ->assertSee($product->work_name_english)
             ->assertSeeInOrder([
-                'RJ Code + Title',
-                'Status',
-                'Your Score',
-                'Series',
-                'Japanese Title',
-                'English Title',
-                'Custom Tags',
-                'Notes',
-                'Start Date',
-                'Finish Date',
-                'Total Times',
-                'Re-listen Value',
-                'Priority',
+                'name="progress"',
+                'name="score"',
+                'name="series"',
+                'name="work_name"',
+                'name="work_name_english"',
+                'name="genre_custom"',
+                'name="notes"',
+                'name="add[start_date][month]"',
+                'name="add[finish_date][month]"',
+                'name="add[num_re_listen_times]"',
+                'name="add[re_listen_value]"',
+                'name="add[priority]"',
             ], false)
             ->assertDontSee('name="age_category"', false)
             ->assertSee('Sleep Guidance EN')

@@ -2,6 +2,8 @@
 
 namespace App\Providers;
 
+use App\Models\Option;
+use App\Support\ContentTerminology;
 use App\Support\ProductImagePromotion;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\URL;
@@ -16,6 +18,10 @@ class AppServiceProvider extends ServiceProvider
     public function register(): void
     {
         $this->app->scoped(ProductImagePromotion::class);
+        $this->app->scoped(
+            ContentTerminology::class,
+            fn() => new ContentTerminology(Option::contentFocus()),
+        );
     }
 
     /**

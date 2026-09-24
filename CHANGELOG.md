@@ -4,6 +4,10 @@ All notable changes to this project are documented in this file.
 
 ## Unreleased
 
+### Added
+
+* Added a UI Wording setting with General, Listening, Reading, Games, Video, Music, and Artwork options.
+
 ## 1.9.0 - 2026-09-23
 
 *Library Import/Export & DLsite Bulk Import*
