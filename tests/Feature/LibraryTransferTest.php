@@ -94,6 +94,41 @@ class LibraryTransferTest extends TestCase
         Option::defaultFor('unknown-option');
     }
 
+    public function test_import_image_preview_paths_do_not_persist_the_application_host(): void
+    {
+        config(['app.url' => 'http://192.168.1.1:8080']);
+
+        $preview = ImportValue::previewValue(
+            ['files' => [['entry_id' => 8443]]],
+            'cover',
+            'cover',
+            5,
+        );
+
+        $this->assertSame(['/options/transfers/5/images/8443'], $preview['value']);
+        $encoded = json_encode($preview, JSON_THROW_ON_ERROR);
+        $this->assertStringNotContainsString('localhost', $encoded);
+        $this->assertStringNotContainsString('192.168.1.1', $encoded);
+    }
+
+    public function test_import_previews_show_all_images_and_array_items(): void
+    {
+        $files = array_map(
+            fn(int $entryId): array => ['entry_id' => $entryId],
+            range(1, 12),
+        );
+        $images = ImportValue::previewValue(['files' => $files], 'sample_images', 'sample_images', 5);
+
+        $this->assertCount(12, $images['value']);
+        $this->assertFalse($images['truncated']);
+
+        $values = array_map(fn(int $number): string => "Value {$number}", range(1, 75));
+        $preview = ImportValue::previewValue($values, 'custom_tags', 'custom_tags', 5);
+
+        $this->assertCount(75, $preview['value']);
+        $this->assertFalse($preview['truncated']);
+    }
+
     public function test_item_and_value_preview_paths_are_identical(): void
     {
         $item = new LibraryImportItem([

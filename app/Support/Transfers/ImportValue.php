@@ -12,7 +12,7 @@ use App\Models\Product;
 use App\Support\ContentTerminology;
 use Illuminate\Support\Arr;
 
-/** Bounded, human-readable values for the shared Refetch presenter. */
+/** Human-readable values for the shared Refetch presenter. */
 final class ImportValue
 {
     public static function label(string $key): string
@@ -56,7 +56,7 @@ final class ImportValue
     {
         if (in_array($category, ['cover', 'sample_images'], true)) {
             $paths = $baseline ? ($value['references'] ?? []) : array_map(
-                fn($file) => route('options.transfers.image', [$runId, $file['entry_id']]),
+                fn($file) => route('options.transfers.image', [$runId, $file['entry_id']], absolute: false),
                 $value['files'] ?? [],
             );
             $paths = is_array($paths) ? $paths : array_filter([$paths]);
@@ -64,13 +64,10 @@ final class ImportValue
                 $paths = array_map(Product::versionedImagePath(...), $paths);
             }
 
-            return ['value' => array_slice($paths, 0, 8), 'image' => true, 'truncated' => count($paths) > 8];
+            return ['value' => $paths, 'image' => true, 'truncated' => false];
         }
-        $budget = 250;
-        $truncated = false;
-        $display = self::display($value, $field, $budget, $truncated);
 
-        return ['value' => $display, 'image' => false, 'truncated' => $truncated];
+        return ['value' => self::display($value, $field), 'image' => false, 'truncated' => false];
     }
 
     /** @return list<string> */
@@ -138,13 +135,8 @@ final class ImportValue
         return $changes;
     }
 
-    private static function display(mixed $value, string $field, int &$budget, bool &$truncated): mixed
+    private static function display(mixed $value, string $field): mixed
     {
-        if (--$budget < 0) {
-            $truncated = true;
-
-            return '…';
-        }
         if (is_bool($value)) {
             return $value ? __('Yes') : __('No');
         }
@@ -160,12 +152,6 @@ final class ImportValue
             return $enum::tryFrom($value)?->label() ?? (string) $value;
         }
         if (! is_array($value)) {
-            if (is_string($value) && mb_strlen($value) > 4096) {
-                $truncated = true;
-
-                return mb_substr($value, 0, 4096) . '…';
-            }
-
             return $value;
         }
         if ($value !== [] && array_diff(array_keys($value), ['year', 'month', 'day']) === []) {
@@ -174,14 +160,10 @@ final class ImportValue
         $result = [];
         $list = array_is_list($value);
         foreach ($value as $key => $entry) {
-            if ($budget <= 0 || count($result) >= 50) {
-                $truncated = true;
-                break;
-            }
             if ($list && ! is_array($entry)) {
-                $result[] = ['value' => self::display($entry, $field, $budget, $truncated)];
+                $result[] = ['value' => self::display($entry, $field)];
             } else {
-                $result[$list ? __('Item :number', ['number' => $key + 1]) : self::label((string) $key)] = self::display($entry, (string) $key, $budget, $truncated);
+                $result[$list ? __('Item :number', ['number' => $key + 1]) : self::label((string) $key)] = self::display($entry, (string) $key);
             }
         }
 

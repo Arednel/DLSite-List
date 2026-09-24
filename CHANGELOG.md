@@ -8,6 +8,15 @@ All notable changes to this project are documented in this file.
 
 * Added a UI Wording setting with General, Listening, Reading, Games, Video, Music, and Artwork options.
 
+### Changed
+
+* Library Import review cards now show complete values and all image previews instead of truncating long strings, large arrays, or image lists.
+* Library Import images previews now use lazy loading.
+
+### Fixed
+
+* Fixed Library Import image previews storing the queue worker host, which could make imported covers and sample images point to `localhost` on another server.
+
 ## 1.9.0 - 2026-09-23
 
 *Library Import/Export & DLsite Bulk Import*

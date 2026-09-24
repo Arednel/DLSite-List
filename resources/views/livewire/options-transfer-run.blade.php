@@ -271,11 +271,6 @@
                                                 <div>
                                                     <strong>{{ __('Imported') }}</strong>
                                                     <x-options.refetch-value :value="$change['preview']['value']" :image="$change['preview']['image']" />
-                                                    @if ($change['preview']['truncated'])
-                                                        <p><a
-                                                                href="{{ route('options.transfers.change', [$run, $item]) }}">{{ __('Preview truncated. Download complete change JSON before approving.') }}</a>
-                                                        </p>
-                                                    @endif
                                                 </div>
                                             </div>
                                         </div>
@@ -291,11 +286,6 @@
                                             <div>
                                                 <strong>{{ __($label) }}</strong>
                                                 <x-options.refetch-value :value="$preview['value']" :image="$preview['image']" />
-                                                @if ($preview['truncated'])
-                                                    <p><a
-                                                            href="{{ route('options.transfers.change', [$run, $item]) }}">{{ __('Preview truncated. Download complete change JSON before approving.') }}</a>
-                                                    </p>
-                                                @endif
                                             </div>
                                         @endforeach
                                     </div>

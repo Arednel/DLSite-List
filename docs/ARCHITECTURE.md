@@ -514,7 +514,7 @@ Laravel queue infrastructure uses:
 
 `library_transfer_entries` stores the bounded archive inventory used for packing, validation, and image access without rescanning manifests.
 
-`library_import_items` stores review identity, baseline/incoming values, bounded previews, decisions, and apply results. Review state is persisted and paginated instead of being held as one Livewire payload.
+`library_import_items` stores review identity, baseline/incoming values, complete human-readable previews, decisions, and apply results. Review state is persisted and paginated instead of being held as one Livewire payload. Imported image previews persist application-relative transfer image routes rather than environment-specific hosts, so the review UI resolves them against the current server when rendered.
 
 Transfer mapping deliberately separates portable domain values from transport metadata. `LibraryData` maps library entities, `WorkArchiveData` owns the per-work document format, and `PortableOptions` limits import/export to explicitly portable settings.
 

@@ -1,14 +1,14 @@
 @props(['value', 'image' => false])
 
 @if ($image && is_string($value) && $value !== '')
-    <img class="refetch-preview-image" src="{{ asset($value) }}" alt="">
+    <img class="refetch-preview-image" src="{{ asset($value) }}" alt="" loading="lazy">
 @elseif ($image && is_array($value))
     @if ($value === [])
         <span class="empty-state">{{ __('None') }}</span>
     @else
         <div class="refetch-preview-images">
             @foreach ($value as $path)
-                <img class="refetch-preview-image" src="{{ asset($path) }}" alt="">
+                <img class="refetch-preview-image" src="{{ asset($path) }}" alt="" loading="lazy">
             @endforeach
         </div>
     @endif

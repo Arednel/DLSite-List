@@ -320,13 +320,15 @@ class LibraryTransferReviewTest extends TestCase
         $this->assertFalse($run->items()->whereIn('category', ['cover', 'sample_images'])->exists());
     }
 
-    public function test_large_reviews_are_bounded_but_complete_change_json_remains_available(): void
+    public function test_large_reviews_show_complete_values_and_change_json_remains_available(): void
     {
         $description = str_repeat('Detailed text. ', 3000);
         Product::factory()->create(['description' => $description]);
         $run = $this->imported($this->exported());
         Livewire::test(OptionsTransferRun::class, ['run' => $run])->call('tab', 'works', 'descriptions')
-            ->assertSee('Preview truncated.')->assertDontSee($description);
+            ->assertDontSee('Preview truncated.')
+            ->assertDontSee('Download complete change JSON before approving.')
+            ->assertSee($description);
         $item = $run->items()->where('metadata->field', 'description')->first();
         $response = $this->get(route('options.transfers.change', [$run, $item]))->assertOk();
         $this->assertSame($description, $response->json('incoming'));
