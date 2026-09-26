@@ -4,6 +4,7 @@ namespace App\Support\Refetch;
 
 use App\Enums\ProductContributorRole;
 use App\Enums\RefetchCategory;
+use App\Jobs\FetchProductWorkJob;
 use App\Models\Genre;
 use App\Models\Product;
 use App\Models\RefetchRun;
@@ -25,6 +26,8 @@ use Throwable;
 
 final class RefetchService
 {
+    public const FETCH_PROCESS_TIMEOUT_SECONDS = 590;
+
     public const ACTION_INHERIT = 'inherit';
 
     public const ACTION_IGNORE = 'ignore';
@@ -47,6 +50,8 @@ final class RefetchService
 
     public const CANCELLED_BEFORE_FETCH_MESSAGE = 'Refetch was cancelled before this work was fetched.';
 
+    public const QUEUE_FAILURE_MESSAGE = 'Refetch could not finish this work because its background job failed.';
+
     public function __construct(
         private readonly DLSiteWorkFetcher $fetcher,
         private readonly RefetchDiffBuilder $diffBuilder,
@@ -62,33 +67,61 @@ final class RefetchService
     public function createRun(array $productIds, bool $checkImages): RefetchRun
     {
         return $this->mutationLock->run(fn(): RefetchRun => DB::transaction(
-            function () use ($productIds, $checkImages): RefetchRun {
-                $run = RefetchRun::query()->create([
-                    'status' => RefetchRun::STATUS_RUNNING,
-                    'check_images' => $checkImages,
-                    'resolved_tabs' => [],
-                    'total_count' => count($productIds),
-                    'processed_count' => 0,
-                    'fetched_count' => 0,
-                    'failed_count' => 0,
-                    'started_at' => now(),
-                ]);
-
-                $run->results()->createMany(
-                    collect($productIds)
-                        ->map(fn(string $productId): array => [
-                            'product_id' => $productId,
-                            'status' => RefetchWorkResult::STATUS_PENDING,
-                            'changes' => [],
-                            'decisions' => [],
-                            'warnings' => [],
-                        ])
-                        ->all()
-                );
-
-                return $run;
-            }
+            fn(): RefetchRun => $this->createPendingRun($productIds, $checkImages),
         ));
+    }
+
+    /**
+     * @param  list<string>  $productIds
+     */
+    public function startRun(array $productIds, bool $checkImages): RefetchRun
+    {
+        return $this->mutationLock->run(fn(): RefetchRun => DB::transaction(function () use ($productIds, $checkImages): RefetchRun {
+            $run = $this->createPendingRun($productIds, $checkImages);
+            $batch = Bus::batch(
+                collect($productIds)
+                    ->map(fn(string $productId): FetchProductWorkJob => new FetchProductWorkJob($run->getKey(), $productId))
+                    ->all(),
+            )
+                ->name("Refetch works #{$run->getKey()}")
+                ->allowFailures()
+                ->dispatch();
+
+            $run->forceFill(['batch_id' => $batch->id])->save();
+
+            return $run;
+        }));
+    }
+
+    /**
+     * @param  list<string>  $productIds
+     */
+    private function createPendingRun(array $productIds, bool $checkImages): RefetchRun
+    {
+        $run = RefetchRun::query()->create([
+            'status' => RefetchRun::STATUS_RUNNING,
+            'check_images' => $checkImages,
+            'resolved_tabs' => [],
+            'total_count' => count($productIds),
+            'processed_count' => 0,
+            'fetched_count' => 0,
+            'failed_count' => 0,
+            'started_at' => now(),
+        ]);
+
+        $run->results()->createMany(
+            collect($productIds)
+                ->map(fn(string $productId): array => [
+                    'product_id' => $productId,
+                    'status' => RefetchWorkResult::STATUS_PENDING,
+                    'changes' => [],
+                    'decisions' => [],
+                    'warnings' => [],
+                ])
+                ->all(),
+        );
+
+        return $run;
     }
 
     public function fetchAndRecordResult(RefetchWorkResult $result): void
@@ -113,6 +146,7 @@ final class RefetchService
                 $result->product_id,
                 Storage::disk('local')->path($jsonPath),
                 $imageDirectory === null ? null : Storage::disk('public')->path($imageDirectory),
+                self::FETCH_PROCESS_TIMEOUT_SECONDS,
             );
 
             $warnings = [];
@@ -153,11 +187,19 @@ final class RefetchService
 
     public function recordFailedResult(RefetchWorkResult $result, string $error): void
     {
-        $result->forceFill([
-            'status' => RefetchWorkResult::STATUS_FAILED,
-            'error' => $error,
-        ])->save();
+        $updated = RefetchWorkResult::query()
+            ->whereKey($result->getKey())
+            ->where('status', RefetchWorkResult::STATUS_PENDING)
+            ->update([
+                'status' => RefetchWorkResult::STATUS_FAILED,
+                'error' => $error,
+            ]);
 
+        if ($updated === 0) {
+            return;
+        }
+
+        $result->refresh();
         $this->refreshRunProgress($result->run()->firstOrFail());
     }
 

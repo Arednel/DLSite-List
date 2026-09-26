@@ -237,6 +237,7 @@
     "Fetched": "取得済み",
     "Skipped": "スキップ",
     "Refetch was cancelled before this work was fetched.": "この作品を取得する前に再取得がキャンセルされました。",
+    "Refetch could not finish this work because its background job failed.": "バックグラウンドジョブが失敗したため、この作品の再取得を完了できませんでした。",
     "This work was removed from your library before it could be refetched.": "この作品は再取得される前にライブラリから削除されました。",
     "DLSite fetch failed.": "DLSite情報の取得に失敗しました。",
     "GeoBlocked DLSite work": "地域制限によりアクセスできないDLSite作品",

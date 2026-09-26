@@ -159,8 +159,8 @@ Field Layouts configure seven independent layouts:
 Refetch updates scraped DLsite-owned data without immediately overwriting the existing product.
 
 1. The user starts Refetch All Works or Refetch Selected Works from Options.
-2. `RefetchService::createRun()` creates a `refetch_runs` row and one `refetch_work_results` row per selected work.
-3. Laravel creates a batch containing one `FetchProductWorkJob` per work.
+2. `RefetchService::startRun()` creates a `refetch_runs` row and one `refetch_work_results` row per selected work.
+3. Laravel creates a batch containing one `FetchProductWorkJob` per work. Run creation and queue dispatch are committed atomically under the library mutation lock.
 4. Each job fetches staged metadata and, when image checking is enabled, staged cover/sample images into the Refetch storage roots.
 5. `RefetchDiffBuilder` compares staged data with the canonical product data and records changes by `RefetchCategory`.
 6. `OptionsRefetchProgress` shows running/cancelling progress.
@@ -176,6 +176,8 @@ Cover and sample-image changes are independent. Refetch uses the shared `Product
 Refetch creation, cleanup, and review application use the shared `LibraryMutationLock`, which also serializes Import apply and work-image cleanup.
 
 Cancellation is cooperative: already-running work may finish while queued jobs observe the cancelled run state.
+
+Refetch batches now continue after individual job failures. Permanently failed jobs reconcile still-pending results without overwriting terminal states. Each Refetch work has a 600-second queue timeout, with a 590-second scraper-process timeout so hung fetches normally fail back into PHP first.
 
 Only the newest Refetch run can be applied. Older completed runs remain available as historical/read-only review data rather than competing application states.
 

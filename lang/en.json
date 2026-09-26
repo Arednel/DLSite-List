@@ -238,6 +238,7 @@
     "Fetched": "Fetched",
     "Skipped": "Skipped",
     "Refetch was cancelled before this work was fetched.": "Refetch was cancelled before this work was fetched.",
+    "Refetch could not finish this work because its background job failed.": "Refetch could not finish this work because its background job failed.",
     "This work was removed from your library before it could be refetched.": "This work was removed from your library before it could be refetched.",
     "DLSite fetch failed.": "DLSite fetch failed.",
     "GeoBlocked DLSite work": "GeoBlocked DLSite work",

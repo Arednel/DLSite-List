@@ -3,6 +3,7 @@
 namespace Tests\Unit\Support\DLSite;
 
 use App\Support\DLSite\DLSitePythonRunner;
+use App\Support\Refetch\RefetchService;
 use Illuminate\Contracts\Process\ProcessResult;
 use Illuminate\Process\PendingProcess;
 use Illuminate\Support\Facades\Process;
@@ -18,26 +19,29 @@ class DLSitePythonRunnerTest extends TestCase
             '*' => Process::result(),
         ])->preventStrayProcesses();
 
+        $jsonPath = storage_path('framework/testing/work.json');
+        $imagePath = storage_path('framework/testing/images');
+
         $result = app(DLSitePythonRunner::class)->fetchWork(
             'RJ123456',
-            'C:\staging\work.json',
-            'C:\staging\images',
+            $jsonPath,
+            $imagePath,
         );
 
         $this->assertInstanceOf(ProcessResult::class, $result);
 
-        Process::assertRan(function (PendingProcess $process): bool {
+        Process::assertRan(function (PendingProcess $process) use ($jsonPath, $imagePath): bool {
             return $process->command === [
                 $this->expectedPythonExecutable(),
                 base_path('python/DLSiteScraper.py'),
                 '--work-id',
                 'RJ123456',
                 '--json-output',
-                'C:\staging\work.json',
+                $jsonPath,
                 '--log-directory',
                 storage_path('logs'),
                 '--image-output',
-                'C:\staging\images',
+                $imagePath,
             ] && $process->environment === [
                 'LOG_RETENTION_DAYS' => '45',
             ] && $process->timeout === null;
@@ -52,22 +56,42 @@ class DLSitePythonRunnerTest extends TestCase
             '*' => Process::result(),
         ])->preventStrayProcesses();
 
-        app(DLSitePythonRunner::class)->fetchWork('RJ654321', 'C:\staging\work.json');
+        $jsonPath = storage_path('framework/testing/work.json');
 
-        Process::assertRan(function (PendingProcess $process): bool {
+        app(DLSitePythonRunner::class)->fetchWork('RJ654321', $jsonPath);
+
+        Process::assertRan(function (PendingProcess $process) use ($jsonPath): bool {
             return $process->command === [
                 $this->expectedPythonExecutable(),
                 base_path('python/DLSiteScraper.py'),
                 '--work-id',
                 'RJ654321',
                 '--json-output',
-                'C:\staging\work.json',
+                $jsonPath,
                 '--log-directory',
                 storage_path('logs'),
             ] && $process->environment === [
                 'LOG_RETENTION_DAYS' => '90',
             ] && $process->timeout === null;
         });
+    }
+
+    public function test_it_uses_an_explicit_timeout_when_requested(): void
+    {
+        Process::fake([
+            '*' => Process::result(),
+        ])->preventStrayProcesses();
+
+        app(DLSitePythonRunner::class)->fetchWork(
+            'RJ123456',
+            storage_path('framework/testing/work.json'),
+            null,
+            RefetchService::FETCH_PROCESS_TIMEOUT_SECONDS,
+        );
+
+        Process::assertRan(
+            fn(PendingProcess $process): bool => $process->timeout === RefetchService::FETCH_PROCESS_TIMEOUT_SECONDS,
+        );
     }
 
     private function expectedPythonExecutable(): string

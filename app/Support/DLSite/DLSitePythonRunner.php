@@ -12,6 +12,7 @@ class DLSitePythonRunner
         string $workId,
         string $jsonPath,
         ?string $imageDirectory = null,
+        ?int $timeoutSeconds = null,
     ): ProcessResult {
         $arguments = [
             '--work-id',
@@ -27,15 +28,19 @@ class DLSitePythonRunner
             $arguments[] = $imageDirectory;
         }
 
-        return $this->runScript('DLSiteScraper.py', $arguments);
+        return $this->runScript('DLSiteScraper.py', $arguments, $timeoutSeconds);
     }
 
     /**
      * @param  list<string>  $arguments
      */
-    private function runScript(string $script, array $arguments): ProcessResult
+    private function runScript(string $script, array $arguments, ?int $timeoutSeconds = null): ProcessResult
     {
-        return Process::forever()
+        $process = $timeoutSeconds === null
+            ? Process::forever()
+            : Process::timeout($timeoutSeconds);
+
+        return $process
             ->env([
                 'LOG_RETENTION_DAYS' => (string) WeeklyRotatingFileHandler::normalizeRetentionDays(
                     config('logging.retention_days'),

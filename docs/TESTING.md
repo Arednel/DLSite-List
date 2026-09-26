@@ -193,6 +193,10 @@ Covers the full Refetch workflow:
 - obsolete-image cleanup
 - Updated Date behavior
 
+#### `tests/Feature/RefetchQueueFailureTest.php`
+
+Covers Refetch queue failure recovery, cancellation, continued processing after individual failures, idempotent failure handling, transactional rollback, lifecycle locking, and legacy cancelled-batch recovery. Also verifies the 600-second per-work timeout, fail-on-timeout behavior, and that it remains below the queue retry window.
+
 #### `tests/Feature/BulkImportTest.php`
 
 Covers Bulk Import parsing/validation, shared-input snapshots, queued item processing, skips/failures, transactional persistence (including failed completion writes, worker interruption before commit, and stale item/run state), and run completion.
@@ -577,7 +581,7 @@ The current suite intentionally uses framework fakes for external/destructive bo
 - Full Refetch tests use `Bus::fake()`, `Process::fake()`, and fake storage
 - Bulk Import tests use `Bus::fake()`, `Process::fake()`, fake storage, and direct queued-job execution for item-state contracts
 - Library Import / Export tests use fake private/public storage and a fake bus where appropriate, while creating and reading real ZIP archives
-- scraper-process tests use `Process::fake()` and `Process::preventStrayProcesses()`, including the existing unlimited runner timeout behavior and exit-code failure classification
+- scraper-process tests use `Process::fake()` and `Process::preventStrayProcesses()`, including the finite scraper timeout behavior and exit-code failure classification
 - Livewire component tests use `Livewire::test()`
 - Feature tests use `RefreshDatabase`
 

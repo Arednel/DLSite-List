@@ -4,6 +4,7 @@
          bootstrap="vendor/autoload.php"
          colors="true"
          defaultTestSuite="Unit,Feature"
+         cacheDirectory="storage/framework/testing/phpunit"
 >
     <testsuites>
         <testsuite name="Unit">

@@ -3,13 +3,11 @@
 namespace App\Http\Controllers;
 
 use App\Http\Requests\StartRefetchRequest;
-use App\Jobs\FetchProductWorkJob;
 use App\Models\Option;
 use App\Models\RefetchRun;
 use App\Support\Refetch\RefetchService;
 use Illuminate\Contracts\Cache\LockTimeoutException;
 use Illuminate\Http\RedirectResponse;
-use Illuminate\Support\Facades\Bus;
 use Illuminate\View\View;
 
 class RefetchController extends Controller
@@ -28,7 +26,7 @@ class RefetchController extends Controller
         }
 
         try {
-            $run = $service->createRun($productIds, $request->boolean('check_images'));
+            $run = $service->startRun($productIds, $request->boolean('check_images'));
         } catch (LockTimeoutException) {
             return redirect()
                 ->route('options.index', ['tab' => 'refetch'])
@@ -37,19 +35,6 @@ class RefetchController extends Controller
                     'product_ids' => __('Refetch cannot start while another refetch action is in progress.'),
                 ]);
         }
-
-        $batch = Bus::batch(
-            collect($productIds)
-                ->map(fn(string $productId): FetchProductWorkJob => new FetchProductWorkJob(
-                    $run->getKey(),
-                    $productId,
-                ))
-                ->all()
-        )
-            ->name("Refetch works #{$run->getKey()}")
-            ->dispatch();
-
-        $run->forceFill(['batch_id' => $batch->id])->save();
 
         return redirect()->route('options.refetch.show', $run);
     }

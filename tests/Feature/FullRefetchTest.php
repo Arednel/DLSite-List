@@ -59,6 +59,7 @@ class FullRefetchTest extends TestCase
 
         Bus::assertBatched(function (PendingBatch $batch) use ($run, $dlsite, $custom): bool {
             return $batch->name === "Refetch works #{$run->id}"
+                && $batch->allowsFailures()
                 && $batch->jobs->map(
                     fn(FetchProductWorkJob $job): string => $job->productId
                 )->all() === [$dlsite->id, $custom->id];

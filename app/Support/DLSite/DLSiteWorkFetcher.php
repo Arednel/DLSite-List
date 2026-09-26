@@ -18,12 +18,18 @@ final class DLSiteWorkFetcher
         string $workId,
         string $jsonPath,
         ?string $imageDirectory = null,
+        ?int $processTimeoutSeconds = null,
     ): DLSiteFetchResult {
         $lastResult = null;
         $lastFetch = null;
 
         for ($attempt = 1; $attempt <= self::MAX_ATTEMPTS; $attempt++) {
-            $lastResult = $this->runner->fetchWork($workId, $jsonPath, $imageDirectory);
+            $lastResult = $this->runner->fetchWork(
+                $workId,
+                $jsonPath,
+                $imageDirectory,
+                $processTimeoutSeconds,
+            );
 
             if ($lastResult->failed()) {
                 continue;
