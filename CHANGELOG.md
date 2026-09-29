@@ -9,6 +9,7 @@ All notable changes to this project are documented in this file.
 * Fixed Refetch runs getting stuck indefinitely if a worker stops, a job fails, or a work fetch stops responding.
 * Refetch batches now continue after individual job failures and roll back cleanly if batch startup fails.
 * Fixed PHPUnit cache permission warnings in Docker.
+* Fixed Japanese Index column headers wrapping inconsistently.
 
 ## 1.10.0 - 2026-09-25
 

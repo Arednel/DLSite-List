@@ -1194,6 +1194,10 @@ body.image-viewer-open {
     border-color: transparent;
 }
 
+.list-table .list-table-header .header-title {
+    word-break: keep-all;
+}
+
 @media (max-width: 768px) {
     body {
         overflow-x: hidden;
