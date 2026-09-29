@@ -1230,6 +1230,7 @@ class ProductControllerTest extends TestCase
     public function test_editable_metadata_fields_save_product_and_creator_values(): void
     {
         Option::setEditFieldLayout([
+            ['field' => ProductField::ProductFormat->value, 'visible' => true, 'editable' => true],
             ['field' => ProductField::Circle->value, 'visible' => true, 'editable' => true],
             ['field' => ProductField::Scenario->value, 'visible' => true, 'editable' => true],
             ['field' => ProductField::VoiceActor->value, 'visible' => true, 'editable' => true],
@@ -1241,6 +1242,7 @@ class ProductControllerTest extends TestCase
 
         $product = Product::factory()->create([
             'work_name' => 'EDITABLE_METADATA_TOKEN',
+            'product_format' => ['ADV', 'SND', 'MS2', 'custom:Audiobook'],
             'circle' => 'Old Circle',
             'maker_id' => null,
             'description' => null,
@@ -1249,6 +1251,8 @@ class ProductControllerTest extends TestCase
 
         $this->get("/edit/{$product->id}")
             ->assertOk()
+            ->assertSee('name="product_format"', false)
+            ->assertSee('Adventure, Voice, Music, Audiobook')
             ->assertSee('name="circle"', false)
             ->assertSee('placeholder="Circle name"', false)
             ->assertSee('name="maker_id"', false)
@@ -1263,6 +1267,7 @@ class ProductControllerTest extends TestCase
 
         $this->post("/update/{$product->id}", [
             'work_name' => $product->work_name,
+            'product_format' => 'Video, Voice, Music, Publication, Audiobook',
             'circle' => 'New Circle',
             'maker_id' => 'RG_EDITABLE_METADATA',
             'scenario' => 'Scenario One, Scenario Two',
@@ -1276,6 +1281,7 @@ class ProductControllerTest extends TestCase
         $product->refresh();
         $namesByRole = app(ProductContributorSync::class)->namesByRole($product);
 
+        $this->assertSame(['MOV', 'SND', 'MS2', 'PBC', 'custom:Audiobook'], $product->product_format);
         $this->assertSame('New Circle', $product->circle);
         $this->assertSame('RG_EDITABLE_METADATA', $product->maker_id);
         $this->assertSame('Japanese metadata description', $product->description);
@@ -1288,6 +1294,58 @@ class ProductControllerTest extends TestCase
         $this->assertDatabaseHas('contributors', [
             'name' => 'New Circle',
             'maker_id' => 'RG_EDITABLE_METADATA',
+        ]);
+
+        $this->post("/update/{$product->id}", [
+            'work_name' => $product->work_name,
+            'product_format' => '',
+        ])->assertSessionHasNoErrors();
+
+        $this->assertNull($product->fresh()->product_format);
+    }
+
+    public function test_editable_product_format_preserves_custom_values_containing_commas(): void
+    {
+        Option::setEditFieldLayout([
+            ['field' => ProductField::ProductFormat->value, 'visible' => true, 'editable' => true],
+        ]);
+
+        $product = Product::factory()->create([
+            'work_name' => 'PRODUCT_FORMAT_COMMA_TOKEN',
+            'product_format' => ['ADV', 'custom:Audio, Visual'],
+        ]);
+
+        $this->get("/edit/{$product->id}")
+            ->assertOk()
+            ->assertSee('Adventure, "Audio, Visual"');
+
+        $this->post("/update/{$product->id}", [
+            'work_name' => $product->work_name,
+            'product_format' => 'Adventure, "Audio, Visual"',
+        ])->assertSessionHasNoErrors();
+
+        $this->assertSame(
+            ['ADV', 'custom:Audio, Visual'],
+            $product->fresh()->product_format,
+        );
+    }
+
+    public function test_product_format_validation_message_is_localized(): void
+    {
+        Option::setUiLanguage(UiLanguage::Japanese);
+        Option::setEditFieldLayout([
+            ['field' => ProductField::ProductFormat->value, 'visible' => true, 'editable' => true],
+        ]);
+
+        $product = Product::factory()->create([
+            'work_name' => 'PRODUCT_FORMAT_VALIDATION_TOKEN',
+        ]);
+
+        $this->post("/update/{$product->id}", [
+            'work_name' => $product->work_name,
+            'product_format' => "Invalid\nFormat",
+        ])->assertSessionHasErrors([
+            'product_format.0' => '作品形式の値が無効です。',
         ]);
     }
 
@@ -1924,6 +1982,7 @@ class ProductControllerTest extends TestCase
                 'maker_id' => 'RG12345',
                 'work_name' => 'SCRAPED_JP_TITLE_TOKEN',
                 'age_category' => ['_name_' => 'R18'],
+                'product_format' => ['MOV', 'SND', 'MS2'],
                 'circle' => 'SCRAPED_CIRCLE_TOKEN',
                 'sample_images' => [
                     '//img.dlsite.jp/modpub/images2/work/doujin/RJ000000/RJ000000_img_smp1.jpg',
@@ -1974,6 +2033,7 @@ class ProductControllerTest extends TestCase
         $this->assertSame('SCRAPED_JP_TITLE_TOKEN', $product->work_name);
         $this->assertSame('SCRAPED_EN_TITLE_TOKEN', $product->work_name_english);
         $this->assertSame('SCRAPED_TITLE_NAME_SERIES', $product->series);
+        $this->assertSame(['MOV', 'SND', 'MS2'], $product->product_format);
         $this->assertSame('Completed', $product->progress);
         $this->assertSame([
             "storage/Works/{$workId}/sample_1.jpg",
@@ -2045,6 +2105,81 @@ class ProductControllerTest extends TestCase
 
         $this->assertDatabaseHas('products', ['id' => $workId]);
         Process::assertRanTimes(fn(): bool => true, 5);
+    }
+
+    public function test_quick_add_uses_scraped_product_format_when_the_field_is_hidden(): void
+    {
+        Storage::fake('local');
+        Process::fake(['*' => Process::result(output: '{"failed_images":[]}')])
+            ->preventStrayProcesses();
+
+        $workId = 'RJ000009901';
+        Storage::disk('local')->put(
+            "Works/{$workId}.json",
+            json_encode($this->scrapedWorkPayload($workId, ['product_format' => ['MOV', 'MV2', 'SND', 'MS2']]), JSON_THROW_ON_ERROR),
+        );
+
+        $this->post('/store', [
+            'id' => $workId,
+            'product_format' => 'Role-playing, Music, Audiobook',
+        ])->assertSessionHasNoErrors();
+
+        $this->assertSame(['MOV', 'SND', 'MS2'], Product::query()->findOrFail($workId)->product_format);
+    }
+
+    public function test_quick_add_uses_scraped_product_format_when_visible_field_is_blank(): void
+    {
+        Storage::fake('local');
+        Process::fake(['*' => Process::result(output: '{"failed_images":[]}')])
+            ->preventStrayProcesses();
+
+        Option::setQuickAddFieldLayout([
+            ['field' => ProductField::ProductFormat->value, 'visible' => true],
+        ]);
+
+        $workId = 'RJ000009902';
+        Storage::disk('local')->put(
+            "Works/{$workId}.json",
+            json_encode($this->scrapedWorkPayload($workId, ['product_format' => ['MOV', 'MV2', 'SND', 'MS2']]), JSON_THROW_ON_ERROR),
+        );
+
+        $this->post('/store', [
+            'id' => $workId,
+            'product_format' => '',
+        ])->assertSessionHasNoErrors();
+
+        $this->assertSame(['MOV', 'SND', 'MS2'], Product::query()->findOrFail($workId)->product_format);
+    }
+
+    public function test_quick_add_can_override_scraped_product_format_when_the_field_is_visible(): void
+    {
+        Storage::fake('local');
+        Process::fake(['*' => Process::result(output: '{"failed_images":[]}')])
+            ->preventStrayProcesses();
+
+        Option::setQuickAddFieldLayout([
+            ['field' => ProductField::ProductFormat->value, 'visible' => true],
+        ]);
+
+        $workId = 'RJ000009903';
+        Storage::disk('local')->put(
+            "Works/{$workId}.json",
+            json_encode($this->scrapedWorkPayload($workId, ['product_format' => ['MOV', 'SND', 'MS2']]), JSON_THROW_ON_ERROR),
+        );
+
+        $this->get('/create')
+            ->assertOk()
+            ->assertSee('name="product_format"', false);
+
+        $this->post('/store', [
+            'id' => $workId,
+            'product_format' => 'Role-playing, Animation, Audiobook',
+        ])->assertSessionHasNoErrors();
+
+        $this->assertSame(
+            ['RPG', 'MV2', 'custom:Audiobook'],
+            Product::query()->findOrFail($workId)->product_format,
+        );
     }
 
     public function test_store_uses_visible_quick_add_metadata_overrides_and_preserves_hidden_scraped_metadata(): void
@@ -2327,6 +2462,7 @@ class ProductControllerTest extends TestCase
         $this->assertSame('CUSTOM_STORE_JP_TOKEN', $product->work_name);
         $this->assertSame('CUSTOM_STORE_EN_TOKEN', $product->work_name_english);
         $this->assertSame('R18', $product->age_category);
+        $this->assertNull($product->product_format);
         $this->assertSame('CUSTOM_STORE_SERIES_TOKEN', $product->series);
         $this->assertSame('CUSTOM_STORE_NOTES_TOKEN', $product->notes);
         $this->assertSame(
@@ -2349,6 +2485,26 @@ class ProductControllerTest extends TestCase
             ->assertOk()
             ->assertSee("src=\"{$coverPath}?v={$coverVersion}\"", false)
             ->assertDontSee('images/No Image.png', false);
+    }
+
+    public function test_custom_quick_add_can_store_product_format_when_the_field_is_visible(): void
+    {
+        Storage::fake('public');
+        Option::setCustomQuickAddFieldLayout([
+            ['field' => ProductField::ProductFormat->value, 'visible' => true],
+        ]);
+
+        $workId = 'RJ000009903';
+
+        $this->post('/store/custom', $this->customStorePayload($workId, [
+            'work_name' => 'CUSTOM_PRODUCT_FORMAT_TOKEN',
+            'product_format' => 'Adventure, Voice, Music, Audiobook',
+        ]))->assertSessionHasNoErrors();
+
+        $this->assertSame(
+            ['ADV', 'SND', 'MS2', 'custom:Audiobook'],
+            Product::query()->findOrFail($workId)->product_format,
+        );
     }
 
     public function test_custom_store_saves_visible_custom_quick_add_metadata_and_ignores_hidden_optional_fields(): void

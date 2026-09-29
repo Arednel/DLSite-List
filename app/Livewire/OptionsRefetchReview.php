@@ -2,6 +2,7 @@
 
 namespace App\Livewire;
 
+use App\Enums\ProductFormat;
 use App\Enums\RefetchCategory;
 use App\Models\Genre;
 use App\Models\Option;
@@ -440,8 +441,8 @@ class OptionsRefetchReview extends Component
                 'work_name' => $card['work_name'],
                 'field' => $card['field'],
                 'label' => $card['label'],
-                'current' => $this->prepareReviewValue($card['old'], $category->isImage(), $colors),
-                'refetched' => $this->prepareReviewValue($card['new'], $category->isImage(), $colors),
+                'current' => $this->prepareCategoryReviewValue($card['old'], $category, $colors),
+                'refetched' => $this->prepareCategoryReviewValue($card['new'], $category, $colors),
                 'tag_details' => $category === RefetchCategory::Tags
                     ? $this->tagDetails($card['change'], $colors)
                     : [],
@@ -504,6 +505,18 @@ class OptionsRefetchReview extends Component
                 ),
             ],
         ];
+    }
+
+    /**
+     * @param  array<string, array<string, mixed>>  $colors
+     */
+    private function prepareCategoryReviewValue(mixed $value, RefetchCategory $category, array $colors): mixed
+    {
+        if ($category === RefetchCategory::ProductFormat && is_array($value)) {
+            $value = ProductFormat::labelsFor($value);
+        }
+
+        return $this->prepareReviewValue($value, $category->isImage(), $colors);
     }
 
     /**

@@ -27,6 +27,7 @@ class RefetchDiffBuilderTest extends TestCase
             'work_name' => 'Old JP',
             'work_name_english' => 'Old EN',
             'age_category' => 'ALL_AGES',
+            'product_format' => ['MOV', 'SND'],
             'circle' => 'Old Circle',
             'series' => 'Old Series',
             'description' => 'Old Description',
@@ -52,6 +53,7 @@ class RefetchDiffBuilderTest extends TestCase
                 'maker_id' => 'RGNEW',
                 'work_name' => 'New JP',
                 'age_category' => ['_name_' => 'R18'],
+                'product_format' => ['SOU', 'MV2'],
                 'circle' => 'New Circle',
                 'scenario' => ['New Writer'],
                 'voice_actor' => ['New Voice'],
@@ -87,6 +89,7 @@ class RefetchDiffBuilderTest extends TestCase
                 RefetchCategory::Descriptions,
                 RefetchCategory::Series,
                 RefetchCategory::Age,
+                RefetchCategory::ProductFormat,
                 RefetchCategory::Circle,
                 RefetchCategory::Maker,
                 RefetchCategory::Scenario,
@@ -102,6 +105,135 @@ class RefetchDiffBuilderTest extends TestCase
 
         $this->assertArrayNotHasKey(RefetchCategory::SampleImages->value, $changes);
         $this->assertSame('Custom Tag', $changes['tags']['tags']['old']['custom'][0]);
+    }
+
+    public function test_product_format_diff_uses_dlsite_mirror_rules_and_ignores_custom_values(): void
+    {
+        $product = Product::factory()->create([
+            'product_format' => ['MOV', 'MV2', 'SND', 'custom:Audiobook'],
+        ]);
+
+        $changes = app(RefetchDiffBuilder::class)->build(
+            $product,
+            new DLSiteFetchResult(
+                workData: DLSiteWorkData::fromArray([
+                    'japanese' => [
+                        'product_id' => $product->getKey(),
+                        'product_format' => ['SOU', 'SND', 'MS2', 'MV2'],
+                    ],
+                ]),
+                failedImages: [],
+            ),
+            null,
+        );
+
+        $this->assertSame(
+            [
+                'label' => 'Product Format',
+                'old' => ['MOV', 'SND'],
+                'new' => ['SOU', 'MS2', 'MV2'],
+            ],
+            $changes[RefetchCategory::ProductFormat->value]['product_format'],
+        );
+    }
+
+    public function test_product_format_diff_ignores_mirrored_additional_value_when_main_matches(): void
+    {
+        $product = Product::factory()->create([
+            'product_format' => ['SOU', 'SND'],
+        ]);
+
+        $changes = app(RefetchDiffBuilder::class)->build(
+            $product,
+            new DLSiteFetchResult(
+                workData: DLSiteWorkData::fromArray([
+                    'japanese' => [
+                        'product_id' => $product->getKey(),
+                        'product_format' => ['SOU', 'SND'],
+                    ],
+                ]),
+                failedImages: [],
+            ),
+            null,
+        );
+
+        $this->assertArrayNotHasKey(RefetchCategory::ProductFormat->value, $changes);
+    }
+
+    public function test_product_format_diff_keeps_additional_values_without_their_mirrored_main(): void
+    {
+        $product = Product::factory()->create([
+            'product_format' => ['SOU'],
+        ]);
+
+        $changes = app(RefetchDiffBuilder::class)->build(
+            $product,
+            new DLSiteFetchResult(
+                workData: DLSiteWorkData::fromArray([
+                    'japanese' => [
+                        'product_id' => $product->getKey(),
+                        'product_format' => ['SOU', 'MS2', 'MV2'],
+                    ],
+                ]),
+                failedImages: [],
+            ),
+            null,
+        );
+
+        $this->assertSame(
+            [
+                'label' => 'Product Format',
+                'old' => ['SOU'],
+                'new' => ['SOU', 'MS2', 'MV2'],
+            ],
+            $changes[RefetchCategory::ProductFormat->value]['product_format'],
+        );
+    }
+
+    public function test_product_format_diff_uses_additional_value_when_its_mirrored_main_is_absent(): void
+    {
+        $product = Product::factory()->create([
+            'product_format' => ['SOU'],
+        ]);
+
+        $changes = app(RefetchDiffBuilder::class)->build(
+            $product,
+            new DLSiteFetchResult(
+                workData: DLSiteWorkData::fromArray([
+                    'japanese' => [
+                        'product_id' => $product->getKey(),
+                        'product_format' => ['SND'],
+                    ],
+                ]),
+                failedImages: [],
+            ),
+            null,
+        );
+
+        $this->assertSame(['SOU'], $changes['product_format']['product_format']['old']);
+        $this->assertSame(['SND'], $changes['product_format']['product_format']['new']);
+    }
+
+    public function test_product_format_diff_can_backfill_an_existing_null_value(): void
+    {
+        $product = Product::factory()->create(['product_format' => null]);
+
+        $changes = app(RefetchDiffBuilder::class)->build(
+            $product,
+            new DLSiteFetchResult(
+                workData: DLSiteWorkData::fromArray([
+                    'japanese' => [
+                        'product_id' => $product->getKey(),
+                        'product_format' => ['SLN'],
+                    ],
+                ]),
+                failedImages: [],
+            ),
+            null,
+        );
+
+        $this->assertSame([], $changes['product_format']['product_format']['old']);
+        $this->assertSame(['SLN'], $changes['product_format']['product_format']['new']);
     }
 
     public function test_materially_renamed_fetched_tag_is_distinct_from_refetched_original_name(): void

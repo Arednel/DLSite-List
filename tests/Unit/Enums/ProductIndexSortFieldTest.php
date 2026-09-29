@@ -14,6 +14,7 @@ class ProductIndexSortFieldTest extends TestCase
             ProductIndexSortField::Score->value => 'score',
             ProductIndexSortField::Series->value => 'series',
             ProductIndexSortField::AgeCategory->value => 'age_category',
+            ProductIndexSortField::ProductFormat->value => 'product_format->[0]',
             ProductIndexSortField::Progress->value => 'progress',
             ProductIndexSortField::Priority->value => 'priority',
             ProductIndexSortField::TotalTimesReListened->value => 'num_re_listen_times',
@@ -41,6 +42,7 @@ class ProductIndexSortFieldTest extends TestCase
             ProductIndexSortField::Score->value,
             ProductIndexSortField::Series->value,
             ProductIndexSortField::AgeCategory->value,
+            ProductIndexSortField::ProductFormat->value,
             ProductIndexSortField::Progress->value,
             ProductIndexSortField::Priority->value,
             ProductIndexSortField::TotalTimesReListened->value,
@@ -60,6 +62,7 @@ class ProductIndexSortFieldTest extends TestCase
 
         $this->assertArrayHasKey(ProductIndexSortField::AddedToTheSiteDate->value, $visibleOptions);
         $this->assertArrayNotHasKey(ProductIndexSortField::UpdatedAt->value, $visibleOptions);
+        $this->assertArrayNotHasKey(ProductIndexSortField::ProductFormat->value, $visibleOptions);
         $this->assertArrayNotHasKey(ProductIndexSortField::Circle->value, $visibleOptions);
     }
 
@@ -77,6 +80,7 @@ class ProductIndexSortFieldTest extends TestCase
             ProductIndexSortField::Score->value,
             ProductIndexSortField::RJ->value,
             ProductIndexSortField::AgeCategory->value,
+            ProductIndexSortField::ProductFormat->value,
             ProductIndexSortField::Progress->value,
             ProductIndexSortField::Priority->value,
             ProductIndexSortField::TotalTimesReListened->value,
@@ -112,6 +116,7 @@ class ProductIndexSortFieldTest extends TestCase
             ['field' => ProductIndexSortField::Score->value, 'visible' => false],
             ['field' => ProductIndexSortField::RJ->value, 'visible' => true],
             ['field' => ProductIndexSortField::AgeCategory->value, 'visible' => true],
+            ['field' => ProductIndexSortField::ProductFormat->value, 'visible' => false],
             ['field' => ProductIndexSortField::Progress->value, 'visible' => true],
             ['field' => ProductIndexSortField::Priority->value, 'visible' => true],
             ['field' => ProductIndexSortField::TotalTimesReListened->value, 'visible' => true],

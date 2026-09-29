@@ -32,6 +32,7 @@ class ProductFieldLayoutTest extends TestCase
                 ProductField::Score,
                 ProductField::Series,
                 ProductField::AgeCategory,
+                ProductField::ProductFormat,
                 ProductField::Progress,
                 ProductField::Circle,
                 ProductField::Scenario,
@@ -64,6 +65,7 @@ class ProductFieldLayoutTest extends TestCase
                 ProductField::ReListenValue,
                 ProductField::Priority,
                 ProductField::AgeCategory,
+                ProductField::ProductFormat,
                 ProductField::Circle,
                 ProductField::Scenario,
                 ProductField::Illustration,
@@ -77,6 +79,7 @@ class ProductFieldLayoutTest extends TestCase
                 ProductField::Score,
                 ProductField::Series,
                 ProductField::AgeCategory,
+                ProductField::ProductFormat,
                 ProductField::Progress,
                 ProductField::Notes,
                 ProductField::Priority,
@@ -109,6 +112,7 @@ class ProductFieldLayoutTest extends TestCase
                 ProductField::ReListenValue,
                 ProductField::Priority,
                 ProductField::AgeCategory,
+                ProductField::ProductFormat,
                 ProductField::Circle,
                 ProductField::Scenario,
                 ProductField::Illustration,
@@ -126,6 +130,7 @@ class ProductFieldLayoutTest extends TestCase
                 ProductField::Tags,
                 ProductField::Notes,
                 ProductField::AgeCategory,
+                ProductField::ProductFormat,
                 ProductField::Image,
                 ProductField::SampleImages,
                 ProductField::StartDate,
@@ -155,6 +160,12 @@ class ProductFieldLayoutTest extends TestCase
     {
         $this->assertFalse(ProductField::SampleImages->isAvailableOn(ProductFieldLayout::SURFACE_QUICK_ADD));
         $this->assertTrue(ProductField::SampleImages->isAvailableOn(ProductFieldLayout::SURFACE_CUSTOM_QUICK_ADD));
+        $this->assertTrue(ProductField::ProductFormat->isAvailableOn(ProductFieldLayout::SURFACE_INDEX));
+        $this->assertTrue(ProductField::ProductFormat->isAvailableOn(ProductFieldLayout::SURFACE_EDIT));
+        $this->assertTrue(ProductField::ProductFormat->isAvailableOn(ProductFieldLayout::SURFACE_FILTER));
+        $this->assertTrue(ProductField::ProductFormat->isAvailableOn(ProductFieldLayout::SURFACE_QUICK_ADD));
+        $this->assertTrue(ProductField::ProductFormat->isAvailableOn(ProductFieldLayout::SURFACE_BULK_IMPORT));
+        $this->assertTrue(ProductField::ProductFormat->isAvailableOn(ProductFieldLayout::SURFACE_CUSTOM_QUICK_ADD));
 
         $this->assertTrue(ProductField::Title->isVisibilityLocked(ProductFieldLayout::SURFACE_EDIT));
         $this->assertTrue(ProductField::Title->isEditableByDefault(ProductFieldLayout::SURFACE_EDIT));
@@ -169,6 +180,12 @@ class ProductFieldLayoutTest extends TestCase
         $this->assertTrue(ProductField::DescriptionJapanese->isHiddenByDefault(ProductFieldLayout::SURFACE_FILTER));
         $this->assertTrue(ProductField::DescriptionEnglish->isHiddenByDefault(ProductFieldLayout::SURFACE_FILTER));
         $this->assertTrue(ProductField::StartDate->isHiddenByDefault(ProductFieldLayout::SURFACE_FILTER));
+        $this->assertTrue(ProductField::ProductFormat->isHiddenByDefault(ProductFieldLayout::SURFACE_INDEX));
+        $this->assertTrue(ProductField::ProductFormat->isHiddenByDefault(ProductFieldLayout::SURFACE_EDIT));
+        $this->assertTrue(ProductField::ProductFormat->isHiddenByDefault(ProductFieldLayout::SURFACE_FILTER));
+        $this->assertTrue(ProductField::ProductFormat->isHiddenByDefault(ProductFieldLayout::SURFACE_QUICK_ADD));
+        $this->assertTrue(ProductField::ProductFormat->isHiddenByDefault(ProductFieldLayout::SURFACE_BULK_IMPORT));
+        $this->assertTrue(ProductField::ProductFormat->isHiddenByDefault(ProductFieldLayout::SURFACE_CUSTOM_QUICK_ADD));
         $this->assertTrue(ProductField::Notes->isHiddenByDefault(ProductFieldLayout::SURFACE_INDEX));
         $this->assertTrue(ProductField::CreatedAt->isHiddenByDefault(ProductFieldLayout::SURFACE_INDEX));
         $this->assertTrue(ProductField::UpdatedAt->isHiddenByDefault(ProductFieldLayout::SURFACE_INDEX));
@@ -184,6 +201,7 @@ class ProductFieldLayoutTest extends TestCase
             ProductField::Score->value,
             ProductField::Series->value,
             ProductField::AgeCategory->value,
+            ProductField::ProductFormat->value,
             ProductField::Progress->value,
             ProductField::Circle->value,
             ProductField::Scenario->value,
@@ -267,6 +285,7 @@ class ProductFieldLayoutTest extends TestCase
             ProductField::ReListenValue->value,
             ProductField::Priority->value,
             ProductField::AgeCategory->value,
+            ProductField::ProductFormat->value,
             ProductField::Circle->value,
             ProductField::Scenario->value,
             ProductField::Illustration->value,
@@ -305,6 +324,7 @@ class ProductFieldLayoutTest extends TestCase
             ProductField::Score->value,
             ProductField::Series->value,
             ProductField::AgeCategory->value,
+            ProductField::ProductFormat->value,
             ProductField::Progress->value,
             ProductField::Notes->value,
             ProductField::Priority->value,
@@ -369,6 +389,7 @@ class ProductFieldLayoutTest extends TestCase
             ProductField::ReListenValue->value,
             ProductField::Priority->value,
             ProductField::AgeCategory->value,
+            ProductField::ProductFormat->value,
             ProductField::Circle->value,
             ProductField::Scenario->value,
             ProductField::Illustration->value,
@@ -412,6 +433,7 @@ class ProductFieldLayoutTest extends TestCase
             ProductField::Tags->value,
             ProductField::Notes->value,
             ProductField::AgeCategory->value,
+            ProductField::ProductFormat->value,
             ProductField::Image->value,
             ProductField::SampleImages->value,
             ProductField::StartDate->value,

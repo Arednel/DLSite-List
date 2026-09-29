@@ -183,8 +183,9 @@ Covers the full Refetch workflow:
 - run creation and batch/result rows
 - staged fetch data
 - image-check choice
-- thirteen review categories
-- apply/ignore/reject behavior
+- review categories
+- apply/ignore/reject behavior, including Product Format Overwrite and Ignore
+- localized Product Format review values
 - incremental application
 - lifecycle locking
 - metadata/tag/contributor preservation/overwrite rules
@@ -199,7 +200,7 @@ Covers Refetch queue failure recovery, cancellation, continued processing after 
 
 #### `tests/Feature/BulkImportTest.php`
 
-Covers Bulk Import parsing/validation, shared-input snapshots, queued item processing, skips/failures, transactional persistence (including failed completion writes, worker interruption before commit, and stale item/run state), and run completion.
+Covers Bulk Import parsing/validation, shared-input snapshots, queued item processing, skips/failures, transactional persistence (including failed completion writes, worker interruption before commit, and stale item/run state), and run completion. Product Format coverage verifies fetched values when the field is hidden or blank and manual override behavior when a visible value is supplied.
 
 #### `tests/Feature/OptionsBulkImportsTest.php`
 
@@ -211,13 +212,13 @@ Covers core transfer contracts, route/review smoke coverage, compact collapsed E
 
 #### `tests/Feature/LibraryTransferExportTest.php`
 
-Covers export selection/planning, deterministic work/image inventory, Tag Library/Options fragmentation, multipart manifests and size boundaries, work-level progress, source-change replanning, and downloads.
+Covers export selection/planning, deterministic work/image inventory, Tag Library/Options fragmentation, multipart manifests and size boundaries, work-level progress, source-change replanning, and downloads. Product Format coverage verifies that ordered canonical/custom values are written to both locale documents and survive export/import round trips.
 
 Regression coverage injects failures after successor-job insertion in every planning phase, verifies transaction rollback and successful retry, and checks stale planning calls.
 
 #### `tests/Feature/LibraryTransferImportTest.php`
 
-Covers multipart upload/validation, missing or replacement parts, archive/path/checksum safety, bounded analysis/checkpoint retries, image validation, existing/new work analysis, and data-only continuation.
+Covers multipart upload/validation, missing or replacement parts, archive/path/checksum safety, bounded analysis/checkpoint retries, image validation, existing/new work analysis, and data-only continuation. Product Format coverage includes custom/empty values, invalid-value quarantine, locale fallback, and compatibility with archives created before the field existed.
 
 #### `tests/Feature/LibraryTransferReviewTest.php`
 
@@ -328,7 +329,8 @@ Covers the main product HTTP workflows:
 - all-tags pattern matching, overlapping matches, missing tags, and per-attachment language/custom-source visibility
 - Create/Edit field order using submitted input names, product binding, and return-navigation data
 - hidden/read-only field preservation
-- DLSite Quick Add fetch/store/error behavior, unexpected scraper/manifest failures returning to standalone/modal forms with input preserved, and shared importer regression coverage
+- DLsite Quick Add fetch/store/error behavior and shared importer regression coverage
+- Product Format Edit/Custom Quick Add input, fetched Quick Add fallback, visible override, blank fallback, and localized validation
 - Custom Quick Add uploads
 - tag/contributor synchronization
 - metadata and partial-date updates
@@ -351,7 +353,8 @@ Covers `works:cleanup-images`, including preservation of referenced images and p
 Covers the Livewire Index:
 - pagination/query-string state
 - filtering/search/date ranges
-- sort behavior
+- Product Format display, partial label/custom search, exact-code matching, JSON-element boundaries, and special-character search escaping
+- sort behavior, including Product Format sorting by its first stored value
 - narrow hydration
 - batched settings
 - field visibility/order, optional-column sort mappings, and hydrated values independent of UI wording
@@ -455,6 +458,9 @@ Covers server-rendered Add/Edit modal completion fallback output and conditional
 `tests/Unit/Enums/ProductContributorRoleTest.php`
 - Covers contributor role values and role-to-product-field mapping.
 
+`tests/Unit/Enums/ProductFormatTest.php`
+- Covers exact-code and partial-label search, editable-field round trips for every canonical Product Format in English and Japanese, ambiguous-label fallbacks, and replacing the main format without dropping manual additional/custom values.
+
 `tests/Unit/Enums/ProductIndexSortFieldTest.php`
 - Covers valid Index sort fields, labels/backend metadata, and sort-dropdown behavior.
 
@@ -510,7 +516,7 @@ Covers server-rendered Add/Edit modal completion fallback output and conditional
 - Covers typed Index row construction from narrow product hydration, encoded Series/Circle/contributor filter URLs, preserved Edit return state/fragment, age-aware DLSite URLs, defaults for unhydrated optional attributes, and rejection of a missing required `work_name`.
 
 `tests/Unit/Support/RefetchDiffBuilderTest.php`
-- Covers all Refetch metadata/creator/tag categories, tag identity handling, cover hashing, and unavailable sample-image behavior.
+- Covers all Refetch metadata/creator/tag categories, including main-only Product Format comparison that ignores fetched additional formats, plus tag identity handling, cover hashing, and unavailable sample-image behavior.
 
 `tests/Unit/Support/ReturnTargetTest.php`
 - Covers Index-only return-query/fragment normalization, malformed input fallback, legacy route rejection, and URL generation.
@@ -527,7 +533,7 @@ Covers server-rendered Add/Edit modal completion fallback output and conditional
 - Covers Laravel Process command construction, explicit output destinations, venv executable, unlimited timeout behavior, and log-retention environment.
 
 `tests/Unit/Support/DLSite/DLSiteWorkDataTest.php`
-- Covers shared scraped metadata extraction for titles/descriptions/creators/maker data, English fallback behavior, product ids, and missing-id errors.
+- Covers shared scraped metadata extraction for titles/descriptions/creators/maker data, Product Format normalization and Japanese-first/English-fallback handling, product ids, and missing-id errors.
 
 `tests/Unit/Support/DLSite/DLSiteWorkFetcherTest.php`
 - Covers the PHP-owned five-attempt retry loop, manifest/JSON validation, partial results, immediate success, and rejection of stale JSON fallback.
@@ -561,6 +567,16 @@ Threshold behavior:
 - over 1000 ms -> stronger warning text
 
 ### Python
+
+#### `python/tests/test_dlsite_scraper.py`
+
+Covers Python scraper Product Format handling:
+- every main `WorkType`
+- `SND`/`MS2`/`MV2` extraction from `Work.options`
+- mirrored additional-format suppression while preserving unmatched additional formats
+- additional-option ordering
+- stable DLsite enum-code serialization
+- age-category serialization after the `dlsite-async` upgrade
 
 #### `python/tests/test_weekly_logging.py`
 

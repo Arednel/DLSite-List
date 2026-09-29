@@ -36,6 +36,8 @@ class ProductIndex extends Component
 
     public string $series = '';
 
+    public string $product_format = '';
+
     public string $circle = '';
 
     public string $scenario = '';

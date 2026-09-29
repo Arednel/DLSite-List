@@ -4,6 +4,21 @@ All notable changes to this project are documented in this file.
 
 ## Unreleased
 
+### Upgrade notes
+
+For existing manual installations:
+
+* Run `php artisan migrate`.
+* Activate the Python virtual environment and run `pip install -r python/requirements.txt`.
+
+### Added
+
+* Added DLsite `Product Format` metadata support.
+
+### Changed
+
+* Updated `dlsite-async` Python package to 0.11.1 version.
+
 ### Fixed
 
 * Fixed Refetch runs getting stuck indefinitely if a worker stops, a job fails, or a work fetch stops responding.
@@ -11,6 +26,7 @@ All notable changes to this project are documented in this file.
 * Fixed PHPUnit cache permission warnings in Docker.
 * Fixed Japanese Index column headers wrapping inconsistently.
 * Improved Index filtering performance when requiring works to have every selected tag.
+* Fixed failing to fetch metadata for announced DLsite works.
 
 ## 1.10.0 - 2026-09-25
 

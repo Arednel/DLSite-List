@@ -4,6 +4,7 @@ namespace App\Models;
 
 use App\Enums\ProductAgeCategory;
 use App\Enums\ProductContributorRole;
+use App\Enums\ProductFormat;
 use App\Enums\ProductIndexTagMatch;
 use App\Support\VisibleGenreAttachment;
 use Illuminate\Database\Eloquent\Attributes\Scope;
@@ -28,6 +29,7 @@ class Product extends Model
         'work_name',
         'work_name_english',
         'age_category',
+        'product_format',
         'circle',
         'work_image',
         'description',
@@ -48,6 +50,7 @@ class Product extends Model
         'start_date' => 'array',
         'end_date' => 'array',
         'sample_images' => 'array',
+        'product_format' => 'array',
         'rj_number' => 'integer',
         'start_date_sort' => 'integer',
         'end_date_sort' => 'integer',
@@ -167,6 +170,64 @@ class Product extends Model
     protected function filterSeries(Builder $query, string $series): void
     {
         $query->where('series', $series);
+    }
+
+    #[Scope]
+    protected function filterProductFormat(Builder $query, string $search): void
+    {
+        $search = trim($search);
+
+        if ($search === '') {
+            return;
+        }
+
+        $values = array_fill_keys(
+            ProductFormat::matchingCodesForSearch($search),
+            true,
+        );
+
+        $prefix = ProductFormat::CUSTOM_PREFIX;
+        $prefixLength = strlen($prefix);
+
+        $products = $query->getModel()
+            ->newQuery()
+            ->select(['id', 'product_format'])
+            ->whereNotNull('product_format')
+            ->lazyById(500);
+
+        foreach ($products as $product) {
+            $formats = $product->product_format;
+
+            if (! is_array($formats)) {
+                continue;
+            }
+
+            foreach ($formats as $value) {
+                if (
+                    ! is_string($value)
+                    || isset($values[$value])
+                    || ! str_starts_with($value, $prefix)
+                ) {
+                    continue;
+                }
+
+                if (mb_stripos(substr($value, $prefixLength), $search) !== false) {
+                    $values[$value] = true;
+                }
+            }
+        }
+
+        if ($values === []) {
+            $query->whereKey([]);
+
+            return;
+        }
+
+        $query->where(function (Builder $formatQuery) use ($values): void {
+            foreach (array_keys($values) as $value) {
+                $formatQuery->orWhereJsonContains('product_format', $value);
+            }
+        });
     }
 
     #[Scope]

@@ -263,6 +263,7 @@ class LibraryTransferTest extends TestCase
             'work_name' => 'Imported title',
             'description' => 'Imported description',
             'notes' => 'Imported notes',
+            'product_format' => ['MOV', 'SND', 'MS2', 'custom:Audiobook'],
             'work_image' => 'storage/Works/RJ123456/cover.png',
             'created_at' => '2020-01-02 03:04:05',
             'updated_at' => '2021-01-02 03:04:05',
@@ -283,7 +284,7 @@ class LibraryTransferTest extends TestCase
             ->assertSee('New work import')
             ->assertSee('No existing local work')
             ->assertSee('Imported title')
-            ->assertSeeInOrder(['Titles', 'Descriptions', 'Series', 'Age', 'Circle', 'Maker ID'])
+            ->assertSeeInOrder(['Titles', 'Descriptions', 'Series', 'Age', 'Product Format', 'Circle', 'Maker ID'])
             ->call('mainTab', 'works')
             ->assertSet('section', 'works')
             ->assertSet('category', 'titles')
@@ -293,6 +294,7 @@ class LibraryTransferTest extends TestCase
             ->assertSee('Imported title')
             ->call('newWorkTab', 'descriptions')->assertSee('Imported description')
             ->call('newWorkTab', 'notes')->assertSee('Imported notes')
+            ->call('newWorkTab', 'product_format')->assertSeeInOrder(['Video', 'Voice', 'Music', 'Audiobook'])
             ->call('newWorkTab', 'cover')->assertSee('class="refetch-preview-image"', false)
             ->call('decideMany', 'overwrite')->assertHasNoErrors();
         $newWork = $run->items()->where('category', 'new_works')->firstOrFail();
@@ -310,6 +312,7 @@ class LibraryTransferTest extends TestCase
             ->assertSee('Existing title');
         $this->apply($run, 'merge');
         $this->assertDatabaseHas('products', ['id' => 'RJ123456', 'created_at' => '2020-01-02 03:04:05', 'updated_at' => '2021-01-02 03:04:05']);
+        $this->assertSame(['MOV', 'SND', 'MS2', 'custom:Audiobook'], Product::findOrFail('RJ123456')->product_format);
         $this->assertSame(LibraryTransferRunStatus::Review, $this->imported($export)->status);
     }
 

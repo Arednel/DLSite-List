@@ -367,6 +367,7 @@ class LibraryTransferReviewTest extends TestCase
             'descriptions',
             'series',
             'age',
+            'product_format',
             'circle',
             'maker',
             'scenario',
@@ -445,8 +446,8 @@ class LibraryTransferReviewTest extends TestCase
         foreach ([['Incoming Voice'], []] as $voices) {
             $export = $this->exported();
             $this->rewriteWorkData($export->parts()->first(), fn() => [
-                'japanese' => ['product_id' => $product->id, 'work_name' => $product->work_name],
-                'english' => ['voice_actor' => $voices],
+                'japanese' => ['product_id' => $product->id, 'work_name' => $product->work_name, 'product_format' => null],
+                'english' => ['voice_actor' => $voices, 'product_format' => null],
             ]);
             $run = $this->imported($export);
             $this->assertSame(['voice_actor'], $run->items()->whereIn('category', array_keys($original))->pluck('category')->all());

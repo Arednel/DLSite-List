@@ -55,7 +55,9 @@ Tag and contributor data is loaded only when the current visible fields need it.
 
 The fetcher can retry a failed DLsite fetch up to five times. Python does not own a second retry loop.
 
-The Quick Add field layout controls which user-editable override rows are submitted. Hidden DLSite metadata fields such as age, circle, contributors, and descriptions can still be populated from scraped data.
+The Quick Add field layout controls which user-editable override rows are submitted. Hidden DLsite metadata such as age, product format, circle, contributors, and descriptions can still be populated from scraped data.
+
+The main DLsite `Product Format` is stored first; only SND (Voice), MS2 (Music), and MV2 (Animation) are accepted as additional formats from Work.options. When an additional format mirrors the fetched main format, the additional value is omitted: SOU suppresses SND, MUS suppresses MS2, and MOV suppresses MV2. An additional format is kept when its matching main format is absent. This DLsite-fetch rule does not apply to manual Edit input or Library export/import, which preserve the stored values.
 
 ### Custom Quick Add
 
@@ -169,7 +171,7 @@ Refetch updates scraped DLsite-owned data without immediately overwriting the ex
 9. Canonical JSON is promoted only when the accepted changes actually change the work.
 10. Obsolete images are cleaned only for works whose image state changed.
 
-Refetch has thirteen ordered review categories defined by `RefetchCategory`.
+Refetch has fourteen ordered review categories defined by `RefetchCategory`.
 
 Cover and sample-image changes are independent. Refetch uses the shared `ProductImagePromotion` boundary so interrupted image replacement can be recovered safely.
 
@@ -382,6 +384,7 @@ Autocomplete:
 - titles
 - series
 - age category
+- product format
 - Japanese and English descriptions
 - progress
 - score
@@ -395,7 +398,7 @@ Autocomplete:
 
 The RJ code is the product identifier.
 
-`sample_images` is stored as JSON and cast to a PHP array by `Product`.
+`sample_images` and `product_format` are stored as JSON and cast to PHP arrays by `Product`.
 
 Partial start/finish dates remain the editable source of truth. Derived integer sort columns are maintained for SQL sorting:
 - `start_date_sort`

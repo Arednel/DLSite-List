@@ -10,6 +10,7 @@ use App\Jobs\ImportBulkWorkJob;
 use App\Models\BulkImportItem;
 use App\Models\BulkImportRun;
 use App\Models\Genre;
+use App\Models\Option;
 use App\Models\Product;
 use App\Support\BulkImport\BulkImportService;
 use App\Support\DLSite\DLSiteProductImporter;
@@ -99,6 +100,14 @@ class BulkImportTest extends TestCase
     {
         Bus::fake();
 
+        Option::setBulkImportFieldLayout([
+            ['field' => ProductField::ProductFormat->value, 'visible' => true],
+        ]);
+
+        $this->get(route('products.create.bulk'))
+            ->assertOk()
+            ->assertSee('name="product_format"', false);
+
         $response = $this->post(route('products.store.bulk'), [
             'rj_list' => implode("\n", [
                 'First: rj000000101',
@@ -108,6 +117,7 @@ class BulkImportTest extends TestCase
             ]),
             'progress' => 'Completed',
             'notes' => 'Shared bulk note',
+            'product_format' => 'Simulation, Animation, Audiobook',
         ]);
 
         $run = BulkImportRun::query()->firstOrFail();
@@ -125,8 +135,13 @@ class BulkImportTest extends TestCase
         );
         $this->assertSame('Completed', data_get($run->input_snapshot, 'values.progress'));
         $this->assertSame('Shared bulk note', data_get($run->input_snapshot, 'values.notes'));
+        $this->assertSame(
+            ['SLN', 'MV2', 'custom:Audiobook'],
+            data_get($run->input_snapshot, 'values.product_format'),
+        );
         $this->assertTrue((bool) data_get($run->input_snapshot, 'submitted.progress'));
         $this->assertTrue((bool) data_get($run->input_snapshot, 'submitted.notes'));
+        $this->assertTrue((bool) data_get($run->input_snapshot, 'submitted.product_format'));
 
         Bus::assertChained([
             ImportBulkWorkJob::class,
@@ -537,11 +552,99 @@ class BulkImportTest extends TestCase
         $this->assertSame('Completed', $product->progress);
         $this->assertSame('Shared bulk note', $product->notes);
         $this->assertSame('SCRAPED_JP_TITLE_TOKEN', $product->work_name);
+        $this->assertSame(['MOV', 'SND', 'MS2'], $product->product_format);
         $this->assertSame(BulkImportItemStatus::Imported, $item->status);
         $this->assertSame(BulkImportRunStatus::Completed, $run->status);
         $this->assertSame(1, $run->processed_count);
         $this->assertSame(1, $run->imported_count);
         $this->assertNotNull($run->completed_at);
+    }
+
+    public function test_successful_job_uses_scraped_product_format_when_the_field_is_hidden(): void
+    {
+        Storage::fake('local');
+        Storage::fake('public');
+        Process::fake([
+            '*' => Process::result(output: '{"failed_images":[]}'),
+        ])->preventStrayProcesses();
+
+        $rjCode = 'RJ000000403';
+        Storage::disk('local')->put(
+            "Works/{$rjCode}.json",
+            json_encode($this->scrapedWorkPayload($rjCode), JSON_THROW_ON_ERROR),
+        );
+
+        $input = new DLSiteProductImportInput(
+            values: ['product_format' => ['RPG', 'MS2']],
+            visibleFields: [ProductField::RjCode->value],
+            submitted: ['product_format' => true],
+            autoSeriesFromTitleName: true,
+        );
+        [$run, $item] = $this->createRunItem($rjCode, $input);
+
+        (new ImportBulkWorkJob($item->id))->handle(app(DLSiteProductImporter::class));
+        (new FinishBulkImportRunJob($run->id))->handle();
+
+        $this->assertSame(['MOV', 'SND', 'MS2'], Product::query()->findOrFail($rjCode)->product_format);
+    }
+
+    public function test_successful_job_uses_scraped_product_format_when_visible_bulk_value_is_blank(): void
+    {
+        Storage::fake('local');
+        Storage::fake('public');
+        Process::fake([
+            '*' => Process::result(output: '{"failed_images":[]}'),
+        ])->preventStrayProcesses();
+
+        $rjCode = 'RJ000000404';
+        Storage::disk('local')->put(
+            "Works/{$rjCode}.json",
+            json_encode($this->scrapedWorkPayload($rjCode), JSON_THROW_ON_ERROR),
+        );
+
+        $input = new DLSiteProductImportInput(
+            values: ['product_format' => []],
+            visibleFields: [ProductField::RjCode->value, ProductField::ProductFormat->value],
+            submitted: ['product_format' => true],
+            autoSeriesFromTitleName: true,
+        );
+        [$run, $item] = $this->createRunItem($rjCode, $input);
+
+        (new ImportBulkWorkJob($item->id))->handle(app(DLSiteProductImporter::class));
+        (new FinishBulkImportRunJob($run->id))->handle();
+
+        $this->assertSame(['MOV', 'SND', 'MS2'], Product::query()->findOrFail($rjCode)->product_format);
+    }
+
+    public function test_successful_job_uses_visible_bulk_product_format_override(): void
+    {
+        Storage::fake('local');
+        Storage::fake('public');
+        Process::fake([
+            '*' => Process::result(output: '{"failed_images":[]}'),
+        ])->preventStrayProcesses();
+
+        $rjCode = 'RJ000000405';
+        Storage::disk('local')->put(
+            "Works/{$rjCode}.json",
+            json_encode($this->scrapedWorkPayload($rjCode), JSON_THROW_ON_ERROR),
+        );
+
+        $input = new DLSiteProductImportInput(
+            values: ['product_format' => ['RPG', 'MV2', 'custom:Audiobook']],
+            visibleFields: [ProductField::RjCode->value, ProductField::ProductFormat->value],
+            submitted: ['product_format' => true],
+            autoSeriesFromTitleName: true,
+        );
+        [$run, $item] = $this->createRunItem($rjCode, $input);
+
+        (new ImportBulkWorkJob($item->id))->handle(app(DLSiteProductImporter::class));
+        (new FinishBulkImportRunJob($run->id))->handle();
+
+        $this->assertSame(
+            ['RPG', 'MV2', 'custom:Audiobook'],
+            Product::query()->findOrFail($rjCode)->product_format,
+        );
     }
 
     public function test_image_warning_is_stored_as_formatted_text(): void
@@ -605,6 +708,7 @@ class BulkImportTest extends TestCase
                 'maker_id' => 'RG12345',
                 'work_name' => 'SCRAPED_JP_TITLE_TOKEN',
                 'age_category' => ['_name_' => 'R18'],
+                'product_format' => ['MOV', 'MV2', 'SND', 'MS2'],
                 'circle' => 'SCRAPED_CIRCLE_TOKEN',
                 'sample_images' => [],
                 'genre' => [],

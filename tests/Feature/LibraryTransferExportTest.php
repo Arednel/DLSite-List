@@ -351,7 +351,8 @@ class LibraryTransferExportTest extends TestCase
             'id' => 'RJ123456',
             'work_image' => 'storage/Works/RJ123456/cover.png',
             'sample_images' => ['storage/Works/RJ123456/sample_2.jpeg'],
-            'age_category' => 'R18'
+            'age_category' => 'R18',
+            'product_format' => ['MOV', 'MV2', 'SND', 'MS2', 'custom:Audiobook'],
         ]);
         Product::factory()->create(['id' => 'RJ000002']);
         $this->saveImage('Works/RJ123456/cover.png');
@@ -380,6 +381,7 @@ class LibraryTransferExportTest extends TestCase
             'work_image',
             'regist_date',
             'work_type',
+            'product_format',
             'book_type',
             'announce_date',
             'modified_date',
@@ -420,16 +422,19 @@ class LibraryTransferExportTest extends TestCase
         ], array_keys($work['dlsite_list']));
         $this->assertSame(['_value_', '_name_'], array_keys($work['japanese']['age_category']));
         $this->assertSame([3, 'R18'], array_values($work['japanese']['age_category']));
+        $this->assertSame(['MOV', 'MV2', 'SND', 'MS2', 'custom:Audiobook'], $work['japanese']['product_format']);
+        $this->assertSame(['MOV', 'MV2', 'SND', 'MS2', 'custom:Audiobook'], $work['english']['product_format']);
         $this->assertSame('works/RJ123456/images/cover.png', $work['japanese']['work_image']);
         $this->assertSame(['works/RJ123456/images/sample_1.jpeg'], $work['japanese']['sample_images']);
         $this->assertStringNotContainsString('storage/', json_encode($work, JSON_THROW_ON_ERROR));
         $paths = array_column($export->parts()->where('kind', 'images')->first()->manifest['entries'], 'path');
         $this->assertSame(['works/RJ123456/images/cover.png', 'works/RJ123456/images/sample_1.jpeg'], $paths);
-        $product->update(['work_image' => null, 'sample_images' => []]);
+        $product->update(['work_image' => null, 'sample_images' => [], 'product_format' => null]);
         $run = $this->imported($export);
         $this->apply($run);
         $this->assertSame('storage/Works/RJ123456/cover.png', $product->fresh()->work_image);
         $this->assertSame(['storage/Works/RJ123456/sample_1.jpeg'], $product->fresh()->sample_images);
+        $this->assertSame(['MOV', 'MV2', 'SND', 'MS2', 'custom:Audiobook'], $product->fresh()->product_format);
     }
 
     public function test_retry_after_repeated_source_changes_restarts_planning_from_current_images(): void

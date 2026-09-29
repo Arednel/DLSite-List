@@ -3,6 +3,7 @@
 namespace App\Support\Refetch;
 
 use App\Enums\ProductContributorRole;
+use App\Enums\ProductFormat;
 use App\Enums\RefetchCategory;
 use App\Jobs\FetchProductWorkJob;
 use App\Models\Genre;
@@ -482,8 +483,19 @@ final class RefetchService
                 RefetchCategory::Descriptions,
                 RefetchCategory::Series,
                 RefetchCategory::Age,
+                RefetchCategory::ProductFormat,
             ], true)) {
-                $product->forceFill([$field => $change['new']]);
+                $value = $change['new'];
+
+                if ($category === RefetchCategory::ProductFormat) {
+                    $value = ProductFormat::normalizeStoredValues([
+                        ...ProductFormat::normalizeDlsiteValues(is_array($value) ? $value : [$value]),
+                        ...ProductFormat::customStoredValues(is_array($product->product_format) ? $product->product_format : []),
+                    ]);
+                    $value = $value === [] ? null : $value;
+                }
+
+                $product->forceFill([$field => $value]);
 
                 if (! $product->isDirty($field)) {
                     return false;

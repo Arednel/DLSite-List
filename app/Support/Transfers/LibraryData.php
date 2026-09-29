@@ -17,7 +17,7 @@ final class LibraryData
     public const FIELDS = [
         'titles' => ['work_name', 'work_name_english'],
         'descriptions' => ['description', 'description_english'],
-        'details' => ['maker_id', 'series', 'age_category', 'notes'],
+        'details' => ['maker_id', 'series', 'age_category', 'product_format', 'notes'],
         'listening' => ['progress', 'score', 'priority', 'num_re_listen_times', 're_listen_value', 'start_date', 'end_date'],
     ];
 

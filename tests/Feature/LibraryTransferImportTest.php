@@ -156,6 +156,102 @@ class LibraryTransferImportTest extends TestCase
         $this->assertSame(LibraryTransferRunStatus::CompletedWithWarnings, $run->fresh()->status);
     }
 
+    #[DataProvider('invalidProductFormats')]
+    public function test_invalid_product_format_is_quarantined_without_blocking_other_work_data(string $locale, mixed $formats): void
+    {
+        Product::factory()->create(['id' => 'RJ123456', 'product_format' => ['MOV']]);
+        Product::factory()->create(['id' => 'RJ123457', 'product_format' => ['ADV']]);
+        $export = $this->exported();
+        $this->rewriteWorkData($export->parts()->firstOrFail(), function (array $work) use ($locale, $formats): array {
+            $work[$locale]['product_format'] = $formats;
+
+            return $work;
+        });
+
+        $run = $this->imported($export);
+
+        $this->assertSame(1, $run->items()->where('status', 'unavailable')->count());
+        $this->assertGreaterThan(0, $run->items()->where('status', 'pending')->count());
+        $this->apply($run);
+        $this->assertSame(['MOV'], Product::findOrFail('RJ123456')->product_format);
+        $this->assertSame(['ADV'], Product::findOrFail('RJ123457')->product_format);
+    }
+
+    public static function invalidProductFormats(): iterable
+    {
+        foreach (['japanese', 'english'] as $locale) {
+            foreach (
+                [
+                    'unknown code' => ['INVALID'],
+                    'boolean' => false,
+                    'scalar' => 'SOU',
+                    'nested value' => [['unexpected' => 'SOU']],
+                    'non-list' => ['format' => 'SOU'],
+                    'null entry' => [null],
+                    'blank entry' => [' '],
+                    'too many entries' => array_fill(0, 51, 'SOU'),
+                ] as $name => $formats
+            ) {
+                yield "$locale $name" => [$locale, $formats];
+            }
+        }
+    }
+
+    public function test_custom_product_format_round_trips_through_import(): void
+    {
+        $product = Product::factory()->create([
+            'id' => 'RJ123456',
+            'product_format' => ['ADV', 'custom:Audiobook'],
+        ]);
+        $export = $this->exported();
+        $product->delete();
+
+        $run = $this->imported($export);
+
+        $this->apply($run);
+        $this->assertSame(['ADV', 'custom:Audiobook'], Product::findOrFail('RJ123456')->product_format);
+    }
+
+    public function test_empty_product_format_round_trips_through_import(): void
+    {
+        $product = Product::factory()->create([
+            'id' => 'RJ123456',
+            'product_format' => null,
+        ]);
+        $export = $this->exported();
+        $product->delete();
+
+        $run = $this->imported($export);
+
+        $this->assertSame(0, $run->items()->where('status', 'unavailable')->count());
+        $this->apply($run);
+        $this->assertNull(Product::findOrFail('RJ123456')->product_format);
+    }
+
+    public function test_work_archive_without_product_format_preserves_existing_formats(): void
+    {
+        Product::factory()->create([
+            'id' => 'RJ123456',
+            'product_format' => ['MOV', 'SND'],
+        ]);
+        $export = $this->exported();
+        $this->rewriteWorkData($export->parts()->firstOrFail(), function (array $work): array {
+            unset($work['japanese']['product_format'], $work['english']['product_format']);
+            $work['japanese']['work_name'] = 'Imported legacy title';
+
+            return $work;
+        });
+
+        $run = $this->imported($export);
+
+        $this->assertSame(0, $run->items()->where('status', 'unavailable')->count());
+        $this->assertFalse($run->items()->where('category', 'product_format')->exists());
+        $this->apply($run);
+        $product = Product::findOrFail('RJ123456');
+        $this->assertSame('Imported legacy title', $product->work_name);
+        $this->assertSame(['MOV', 'SND'], $product->product_format);
+    }
+
     public function test_work_path_and_payload_identity_mismatch_is_a_structural_error(): void
     {
         Product::factory()->create(['id' => 'RJ123456']);

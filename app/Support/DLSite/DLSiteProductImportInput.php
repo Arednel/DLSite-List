@@ -32,6 +32,7 @@ final readonly class DLSiteProductImportInput
             'work_name',
             'work_name_english',
             'age_category',
+            'product_format',
             'circle',
             'maker_id',
             'description',

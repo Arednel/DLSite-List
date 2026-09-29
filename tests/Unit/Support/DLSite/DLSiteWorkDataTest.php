@@ -16,6 +16,7 @@ class DLSiteWorkDataTest extends TestCase
                 'maker_id' => 'RG123',
                 'work_name' => 'JP Title',
                 'age_category' => ['_name_' => 'R18'],
+                'product_format' => ['MOV', 'SND', 'MS2'],
                 'circle' => 'Circle Name',
                 'scenario' => ['Writer', 'writer'],
                 'voice_actor' => ['Voice One', 'Voice Two'],
@@ -39,6 +40,7 @@ class DLSiteWorkDataTest extends TestCase
         $this->assertSame('JP Title', $data->workName);
         $this->assertNull($data->englishWorkName);
         $this->assertSame('R18', $data->ageCategory);
+        $this->assertSame(['MOV', 'SND', 'MS2'], $data->productFormat);
         $this->assertSame('Circle Name', $data->circle);
         $this->assertNull($data->englishDescription);
         $this->assertSame('Series Name', $data->autoSeries());
@@ -47,6 +49,21 @@ class DLSiteWorkDataTest extends TestCase
         $this->assertSame(['Writer'], $data->contributorsByRole[ProductContributorRole::Scenario->value]);
         $this->assertSame(['Voice One', 'Voice Two'], $data->contributorsByRole[ProductContributorRole::VoiceActor->value]);
         $this->assertSame(['Circle Name'], $data->contributorsByRole[ProductContributorRole::Circle->value]);
+    }
+
+    public function test_product_format_uses_english_fallback_and_preserves_order_while_deduplicating(): void
+    {
+        $data = DLSiteWorkData::fromArray([
+            'japanese' => [
+                'product_id' => 'RJ123456',
+                'product_format' => [],
+            ],
+            'english' => [
+                'product_format' => ['MOV', 'MV2', 'SND', 'MOV', 'MS2', 'custom:Audiobook'],
+            ],
+        ]);
+
+        $this->assertSame(['MOV', 'MV2', 'SND', 'MS2', 'custom:Audiobook'], $data->productFormat);
     }
 
     public function test_it_keeps_distinct_english_description(): void

@@ -26,6 +26,7 @@ final class WorkArchiveData
         'work_image',
         'regist_date',
         'work_type',
+        'product_format',
         'book_type',
         'announce_date',
         'modified_date',
@@ -161,6 +162,11 @@ final class WorkArchiveData
             throw new InvalidArgumentException('Unknown dlsite_list fields in schema v1.');
         }
 
+        Validator::make($document, [
+            ...LibraryWorkValidator::productFormatRules('japanese.product_format'),
+            ...LibraryWorkValidator::productFormatRules('english.product_format'),
+        ])->validate();
+
         $work = DLSiteWorkData::fromArray($document, $expectedCode);
         $title = $this->localeText($document['japanese'], 'work_name') ?? $work->workName ?? $work->englishWorkName;
         if ($title === null) {
@@ -204,6 +210,9 @@ final class WorkArchiveData
         }
         if ($this->hasEither($document, 'age_category')) {
             $details['age_category'] = $work->ageCategory;
+        }
+        if ($this->hasEither($document, 'product_format')) {
+            $details['product_format'] = $work->productFormat === [] ? null : $work->productFormat;
         }
         if (array_key_exists('notes', $custom)) {
             $details['notes'] = $custom['notes'];
@@ -265,6 +274,7 @@ final class WorkArchiveData
             'work_image' => $cover,
             'regist_date' => null,
             'work_type' => null,
+            'product_format' => $product->product_format,
             'book_type' => null,
             'announce_date' => null,
             'modified_date' => null,

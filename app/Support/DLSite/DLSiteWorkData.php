@@ -3,6 +3,7 @@
 namespace App\Support\DLSite;
 
 use App\Enums\ProductContributorRole;
+use App\Enums\ProductFormat;
 
 final readonly class DLSiteWorkData
 {
@@ -12,6 +13,7 @@ final readonly class DLSiteWorkData
         public ?string $workName,
         public ?string $englishWorkName,
         public ?string $ageCategory,
+        public array $productFormat,
         public ?string $circle,
         public ?string $description,
         public ?string $englishDescription,
@@ -44,6 +46,7 @@ final readonly class DLSiteWorkData
             workName: $workName,
             englishWorkName: $englishWorkName === $workName ? null : $englishWorkName,
             ageCategory: self::text(data_get($japanese, 'age_category._name_')),
+            productFormat: self::productFormat($japanese, $english),
             circle: self::text($japanese['circle'] ?? $english['circle'] ?? null),
             description: $description,
             englishDescription: $englishDescription === $description ? null : $englishDescription,
@@ -59,6 +62,20 @@ final readonly class DLSiteWorkData
     public function autoSeries(): ?string
     {
         return $this->titleName;
+    }
+
+    /**
+     * @return list<string>
+     */
+    private static function productFormat(array $japanese, array $english): array
+    {
+        $japaneseFormats = self::list($japanese['product_format'] ?? []);
+
+        return ProductFormat::normalizeStoredValues(
+            $japaneseFormats !== []
+                ? $japaneseFormats
+                : self::list($english['product_format'] ?? []),
+        );
     }
 
     /**

@@ -3,11 +3,13 @@
 namespace App\Http\Requests;
 
 use App\Enums\ProductAgeCategory;
+use App\Enums\ProductFormat;
 use App\Enums\ProductContributorRole;
 use App\Enums\ProductPriority;
 use App\Enums\ProductProgress;
 use App\Enums\ProductReListenValue;
 use App\Enums\ProductScore;
+use App\Rules\ValidProductFormat;
 use App\Support\TagInput;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Support\Arr;
@@ -58,6 +60,8 @@ abstract class BaseProductRequest extends FormRequest
             'score' => ['nullable', Rule::enum(ProductScore::class)],
             'series' => ['nullable', 'string'],
             'age_category' => ['nullable', Rule::enum(ProductAgeCategory::class)],
+            'product_format' => ['nullable', 'array', 'list', 'max:50'],
+            'product_format.*' => ['string', new ValidProductFormat],
             'circle' => ['nullable', 'string'],
             'maker_id' => ['nullable', 'string'],
             ProductContributorRole::Scenario->value => ['nullable', 'array'],
@@ -101,6 +105,9 @@ abstract class BaseProductRequest extends FormRequest
             'num_re_listen_times' => $this->input('add.num_re_listen_times'),
             're_listen_value' => $this->input('add.re_listen_value'),
             'priority' => $this->input('add.priority'),
+            ...($this->wasSubmitted('product_format')
+                ? ['product_format' => ProductFormat::normalizeInput($this->input('product_format'))]
+                : []),
         ]);
     }
 

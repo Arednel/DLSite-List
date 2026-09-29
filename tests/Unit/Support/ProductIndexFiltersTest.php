@@ -97,6 +97,7 @@ class ProductIndexFiltersTest extends TestCase
     public function test_metadata_text_filters_round_trip_through_input_and_query_output(): void
     {
         $filters = ProductIndexFilters::fromQuery([
+            'product_format' => '  Voice / ASMR  ',
             'circle' => '  Circle Token  ',
             'scenario' => 'Scenario Token',
             'voice_actor' => 'Voice Token',
@@ -106,6 +107,7 @@ class ProductIndexFiltersTest extends TestCase
             'description_english' => 'English Description Token',
         ]);
 
+        $this->assertSame('Voice / ASMR', $filters->productFormat);
         $this->assertSame('Circle Token', $filters->circle);
         $this->assertSame('Scenario Token', $filters->scenario);
         $this->assertSame('Voice Token', $filters->voiceActor);
@@ -114,6 +116,7 @@ class ProductIndexFiltersTest extends TestCase
         $this->assertSame('Japanese Description Token', $filters->description);
         $this->assertSame('English Description Token', $filters->descriptionEnglish);
         $this->assertSame([
+            'product_format' => 'Voice / ASMR',
             'circle' => 'Circle Token',
             'scenario' => 'Scenario Token',
             'voice_actor' => 'Voice Token',
@@ -122,6 +125,7 @@ class ProductIndexFiltersTest extends TestCase
             'description' => 'Japanese Description Token',
             'description_english' => 'English Description Token',
         ], array_intersect_key($filters->toInput(), array_flip([
+            'product_format',
             'circle',
             'scenario',
             'voice_actor',
@@ -131,6 +135,7 @@ class ProductIndexFiltersTest extends TestCase
             'description_english',
         ])));
         $this->assertSame([
+            'product_format' => 'Voice / ASMR',
             'circle' => 'Circle Token',
             'scenario' => 'Scenario Token',
             'voice_actor' => 'Voice Token',
@@ -157,6 +162,7 @@ class ProductIndexFiltersTest extends TestCase
             ['notes'],
             ['genre'],
             ['series'],
+            ['product_format'],
             ['circle'],
             ['scenario'],
             ['voice_actor'],

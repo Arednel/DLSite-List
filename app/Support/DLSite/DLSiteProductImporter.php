@@ -4,6 +4,7 @@ namespace App\Support\DLSite;
 
 use App\Enums\ProductContributorRole;
 use App\Enums\ProductField;
+use App\Enums\ProductFormat;
 use App\Models\Genre;
 use App\Models\Product;
 use App\Support\ProductContributorSync;
@@ -58,6 +59,7 @@ final class DLSiteProductImporter
         $customGenres = $input->fieldVisible(ProductField::Tags)
             ? (array) $input->value('genre_custom', [])
             : [];
+        $productFormat = $this->productFormatValue($input, $workData);
 
         $product = DB::transaction(function () use (
             $input,
@@ -71,6 +73,7 @@ final class DLSiteProductImporter
             $englishDescription,
             $contributorsByRole,
             $customGenres,
+            $productFormat,
             $onCreated,
             $fetchResult,
         ): Product {
@@ -80,6 +83,7 @@ final class DLSiteProductImporter
                     'maker_id' => $makerId,
                     'work_name' => $workName,
                     'work_name_english' => $englishWorkName,
+                    'product_format' => $productFormat === [] ? null : $productFormat,
                     'age_category' => $this->textOverride(
                         $input,
                         ProductField::AgeCategory,
@@ -177,6 +181,22 @@ final class DLSiteProductImporter
         $value = $input->value($key);
 
         return filled($value) ? (string) $value : $default;
+    }
+
+    /** @return list<string> */
+    private function productFormatValue(
+        DLSiteProductImportInput $input,
+        DLSiteWorkData $workData,
+    ): array {
+        $fetched = ProductFormat::normalizeDlsiteValues($workData->productFormat);
+
+        if (! $input->fieldSubmitted(ProductField::ProductFormat, 'product_format')) {
+            return $fetched;
+        }
+
+        $value = (array) $input->value('product_format', []);
+
+        return $value !== [] ? $value : $fetched;
     }
 
     private function seriesValue(DLSiteProductImportInput $input, DLSiteWorkData $workData): ?string

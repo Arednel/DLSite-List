@@ -147,6 +147,7 @@ class FullRefetchTest extends TestCase
                 'Descriptions',
                 'Series',
                 'Age',
+                'Product Format',
                 'Circle',
                 'Maker ID',
                 'Scenario Author',
@@ -163,6 +164,98 @@ class FullRefetchTest extends TestCase
             ->assertSee('title-tooltips.css', false)
             ->assertSee('Apply All Tabs')
             ->assertSee('Reject Run');
+    }
+
+    public function test_product_format_review_overwrites_dlsite_values_and_preserves_custom_values(): void
+    {
+        $product = Product::factory()->create([
+            'work_name' => 'Product Format Work',
+            'product_format' => ['MOV', 'SND', 'MS2', 'custom:Audiobook'],
+        ]);
+        $run = app(RefetchService::class)->createRun([$product->id], false);
+        $result = $run->results()->firstOrFail();
+        $result->forceFill([
+            'status' => RefetchWorkResult::STATUS_FETCHED,
+            'changes' => [
+                RefetchCategory::ProductFormat->value => [
+                    'product_format' => [
+                        'label' => 'Product Format',
+                        'old' => ['MOV', 'SND', 'MS2'],
+                        'new' => ['SOU', 'MS2', 'MV2'],
+                    ],
+                ],
+            ],
+        ])->save();
+        $run->forceFill([
+            'status' => RefetchRun::STATUS_REVIEW,
+            'processed_count' => 1,
+            'fetched_count' => 1,
+            'completed_at' => now(),
+            'resolved_tabs' => array_values(array_diff(
+                RefetchCategory::values(),
+                [RefetchCategory::ProductFormat->value],
+            )),
+        ])->save();
+
+        app()->setLocale('ja');
+        Livewire::test(OptionsRefetchReview::class, ['run' => $run])
+            ->call('showCategory', RefetchCategory::ProductFormat->value)
+            ->assertSet('activeCategory', RefetchCategory::ProductFormat->value)
+            ->assertSee('作品形式')
+            ->assertSee('動画')
+            ->assertSee('ボイス・ASMR')
+            ->set(
+                'globalActions.' . RefetchCategory::ProductFormat->value,
+                RefetchService::ACTION_OVERWRITE,
+            )
+            ->call('askApplyTab', RefetchCategory::ProductFormat->value)
+            ->call('applyTab');
+
+        $this->assertSame(['SOU', 'MS2', 'MV2', 'custom:Audiobook'], $product->fresh()->product_format);
+    }
+
+    public function test_product_format_ignore_preserves_current_value(): void
+    {
+        $product = Product::factory()->create([
+            'work_name' => 'Product Format Ignore Work',
+            'product_format' => ['MOV', 'custom:Audiobook'],
+        ]);
+        $run = app(RefetchService::class)->createRun([$product->id], false);
+        $result = $run->results()->firstOrFail();
+        $result->forceFill([
+            'status' => RefetchWorkResult::STATUS_FETCHED,
+            'changes' => [
+                RefetchCategory::ProductFormat->value => [
+                    'product_format' => [
+                        'label' => 'Product Format',
+                        'old' => ['MOV'],
+                        'new' => ['SOU'],
+                    ],
+                ],
+            ],
+        ])->save();
+        $run->forceFill([
+            'status' => RefetchRun::STATUS_REVIEW,
+            'processed_count' => 1,
+            'fetched_count' => 1,
+            'completed_at' => now(),
+            'resolved_tabs' => array_values(array_diff(
+                RefetchCategory::values(),
+                [RefetchCategory::ProductFormat->value],
+            )),
+        ])->save();
+
+        app(RefetchService::class)->applyTab(
+            $run,
+            RefetchCategory::ProductFormat,
+            RefetchService::ACTION_IGNORE,
+        );
+
+        $this->assertSame(['MOV', 'custom:Audiobook'], $product->fresh()->product_format);
+        $this->assertSame(
+            RefetchService::ACTION_IGNORE,
+            data_get($result->fresh()->decisions, 'product_format.product_format.action'),
+        );
     }
 
     public function test_fetch_records_full_metadata_for_a_custom_created_work_without_overwriting_json(): void

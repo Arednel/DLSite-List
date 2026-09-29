@@ -51,6 +51,14 @@
         @endif
     @break
 
+    @case('product_format')
+        @if ($field['editable'])
+            <x-fields.product-format-field :value="$product->product_format" :label="$field['label']" />
+        @else
+            <x-fields.readonly-text :label="$field['label']" :value="$readonlyFieldValues['product_format'] ?? null" />
+        @endif
+    @break
+
     @case('progress')
         @if ($field['editable'])
             <x-fields.status-select :value="$product->progress" :options="$progressOptions" />

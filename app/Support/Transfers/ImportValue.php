@@ -3,6 +3,7 @@
 namespace App\Support\Transfers;
 
 use App\Enums\ProductAgeCategory;
+use App\Enums\ProductFormat;
 use App\Enums\ProductPriority;
 use App\Enums\ProductProgress;
 use App\Enums\ProductReListenValue;
@@ -24,6 +25,7 @@ final class ImportValue
             'description_english' => __('English Description'),
             'maker_id', 'maker' => __('Maker ID'),
             'age_category' => __('Age'),
+            'product_format' => __('Product Format'),
             'rj_code' => __('RJ code'),
             'tag-library' => __('Tag Library'),
             'jp' => __('Japanese'),
@@ -142,6 +144,7 @@ final class ImportValue
         }
         $enum = match ($field) {
             'age_category' => ProductAgeCategory::class,
+            'product_format' => ProductFormat::class,
             'progress' => ProductProgress::class,
             'priority' => ProductPriority::class,
             'score' => ProductScore::class,
@@ -153,6 +156,12 @@ final class ImportValue
         }
         if (! is_array($value)) {
             return $value;
+        }
+        if ($field === 'product_format' && array_is_list($value)) {
+            return array_map(
+                fn(string $label): array => ['value' => $label],
+                ProductFormat::labelsFor($value),
+            );
         }
         if ($value !== [] && array_diff(array_keys($value), ['year', 'month', 'day']) === []) {
             return implode('-', array_map(fn($part) => isset($value[$part]) ? str_pad((string) $value[$part], $part === 'year' ? 4 : 2, '0', STR_PAD_LEFT) : '?', ['year', 'month', 'day']));

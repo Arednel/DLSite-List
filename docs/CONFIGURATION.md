@@ -581,6 +581,7 @@ Fetched Tags are readonly by default. If made editable, editing changes only the
 - `score`
 - `series`
 - `age_category`
+- `product_format` - hidden
 - `progress`
 - `circle` - hidden
 - `scenario` - hidden
@@ -614,6 +615,7 @@ Fetched Tags are readonly by default. If made editable, editing changes only the
 - `re_listen_value`
 - `priority`
 - `age_category` - hidden
+- `product_format` - hidden
 - `circle` - hidden
 - `scenario` - hidden
 - `illustration` - hidden
@@ -628,6 +630,7 @@ Fetched Tags are readonly by default. If made editable, editing changes only the
 - `score`
 - `series`
 - `age_category`
+- `product_format` - hidden
 - `progress`
 - `notes`
 - `priority`
@@ -661,6 +664,7 @@ Fetched Tags are readonly by default. If made editable, editing changes only the
 - `re_listen_value`
 - `priority`
 - `age_category` - hidden
+- `product_format` - hidden
 - `circle` - hidden
 - `scenario` - hidden
 - `illustration` - hidden
@@ -669,7 +673,7 @@ Fetched Tags are readonly by default. If made editable, editing changes only the
 - `description_japanese` - hidden
 - `description_english` - hidden
 
-Hidden DLSite Quick Add metadata fields are not accepted as user overrides, but their scraped age/circle/contributor/description values are still preserved from DLsite.
+Hidden DLsite Quick Add metadata fields are not accepted as user overrides, but their scraped values are still preserved.
 
 #### Bulk Import Default Order
 
@@ -686,6 +690,7 @@ Hidden DLSite Quick Add metadata fields are not accepted as user overrides, but 
 - `re_listen_value`
 - `priority`
 - `age_category` - hidden
+- `product_format` - hidden
 - `circle` - hidden
 - `scenario` - hidden
 - `illustration` - hidden
@@ -704,6 +709,7 @@ Hidden DLSite Quick Add metadata fields are not accepted as user overrides, but 
 - `tags`
 - `notes`
 - `age_category` - locked visible
+- `product_format` - hidden
 - `image` - locked visible
 - `sample_images`
 - `start_date`
@@ -727,6 +733,7 @@ Custom Quick Add has no scraper fallback. Hidden optional description rows store
 - `score`
 - `series`
 - `age_category`
+- `product_format` - hidden
 - `progress`
 - `priority`
 - `num_re_listen_times`

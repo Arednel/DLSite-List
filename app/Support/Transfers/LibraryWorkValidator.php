@@ -4,12 +4,14 @@ namespace App\Support\Transfers;
 
 use App\Enums\ProductAgeCategory;
 use App\Enums\ProductContributorRole;
+use App\Enums\ProductFormat;
 use App\Enums\ProductPriority;
 use App\Enums\ProductProgress;
 use App\Enums\ProductReListenValue;
 use App\Enums\ProductScore;
 use App\Rules\MaxBytes;
 use App\Rules\ValidPartialDate;
+use App\Rules\ValidProductFormat;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Validation\Rule;
 
@@ -25,7 +27,20 @@ final class LibraryWorkValidator
 
         Validator::make($data, $this->rules(), $this->messages())->validate();
 
+        if (is_array(data_get($data, 'details.product_format'))) {
+            data_set($data, 'details.product_format', ProductFormat::normalizeStoredValues(data_get($data, 'details.product_format')));
+        }
+
         return $data;
+    }
+
+    /** @return array<string, list<mixed>> */
+    public static function productFormatRules(string $field): array
+    {
+        return [
+            $field => ['sometimes', 'nullable', 'array', 'list', 'max:50'],
+            $field . '.*' => ['required', new ValidProductFormat],
+        ];
     }
 
     private function validateAllowedKeys(array $data): void
@@ -58,6 +73,7 @@ final class LibraryWorkValidator
             'details.maker_id' => ['sometimes', 'nullable', 'string', 'max:200'],
             'details.series' => ['sometimes', 'nullable', 'string', 'max:1000'],
             'details.age_category' => ['sometimes', 'nullable', Rule::enum(ProductAgeCategory::class)],
+            ...self::productFormatRules('details.product_format'),
             'details.notes' => ['sometimes', 'nullable', 'string', 'max:1000'],
             'listening' => ['sometimes', 'array:' . implode(',', LibraryData::FIELDS['listening'])],
             'listening.progress' => ['sometimes', 'nullable', Rule::enum(ProductProgress::class)],

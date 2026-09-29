@@ -360,6 +360,7 @@ class OptionMetadataSettingsTest extends TestCase
         $this->assertSame(Option::DEFAULT_INDEX_PER_PAGE, $defaults->perPage);
         $this->assertSame($this->visibleDefaultSortOptions(), $defaults->indexSortFieldOptions);
         $this->assertFalse(collect($defaults->indexSortFieldLayout)->firstWhere('field', ProductIndexSortField::UpdatedAt->value)['visible']);
+        $this->assertFalse(collect($defaults->indexSortFieldLayout)->firstWhere('field', ProductIndexSortField::ProductFormat->value)['visible']);
         $this->assertFalse(collect($defaults->indexSortFieldLayout)->firstWhere('field', ProductIndexSortField::Circle->value)['visible']);
         $this->assertSame(ProductField::Image->value, $defaults->indexColumns[0]['field']);
         $this->assertContains(ProductField::Title->value, $defaults->visibleIndexFields);
@@ -577,6 +578,7 @@ class OptionMetadataSettingsTest extends TestCase
         $this->assertFalse($layout[1]['visible']);
         $this->assertSame(ProductIndexSortField::RJ->value, $layout[2]['field']);
         $this->assertFalse(collect($layout)->firstWhere('field', ProductIndexSortField::UpdatedAt->value)['visible']);
+        $this->assertFalse(collect($layout)->firstWhere('field', ProductIndexSortField::ProductFormat->value)['visible']);
         $this->assertFalse(collect($layout)->firstWhere('field', ProductIndexSortField::Author->value)['visible']);
 
         $storedLayout = json_decode(
@@ -668,6 +670,7 @@ class OptionMetadataSettingsTest extends TestCase
     {
         return array_diff_key(ProductIndexSortField::options(), array_flip([
             ProductIndexSortField::UpdatedAt->value,
+            ProductIndexSortField::ProductFormat->value,
             ProductIndexSortField::Circle->value,
             ProductIndexSortField::Scenario->value,
             ProductIndexSortField::Illustration->value,

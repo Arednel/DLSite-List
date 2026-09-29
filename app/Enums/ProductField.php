@@ -16,6 +16,7 @@ enum ProductField: string
     case Score = 'score';
     case Series = 'series';
     case AgeCategory = 'age_category';
+    case ProductFormat = 'product_format';
     case Progress = 'progress';
     case Circle = 'circle';
     case Scenario = 'scenario';
@@ -45,6 +46,7 @@ enum ProductField: string
             self::Score => __('Score'),
             self::Series => __('Series'),
             self::AgeCategory => __('Age'),
+            self::ProductFormat => __('Product Format'),
             self::Progress => __('Progress'),
             self::Circle => __('Circle'),
             self::Scenario => __('Scenario Author'),
@@ -85,6 +87,7 @@ enum ProductField: string
             self::Score => ProductIndexSortField::Score,
             self::Series => ProductIndexSortField::Series,
             self::AgeCategory => ProductIndexSortField::AgeCategory,
+            self::ProductFormat => ProductIndexSortField::ProductFormat,
             self::Progress => ProductIndexSortField::Progress,
             self::Priority => ProductIndexSortField::Priority,
             self::TotalTimesReListened => ProductIndexSortField::TotalTimesReListened,
@@ -178,6 +181,7 @@ enum ProductField: string
                     self::ReListenValue,
                     self::Priority,
                     self::AgeCategory,
+                    self::ProductFormat,
                     self::Circle,
                     self::Scenario,
                     self::Illustration,
@@ -193,6 +197,7 @@ enum ProductField: string
                     self::Score,
                     self::Series,
                     self::AgeCategory,
+                    self::ProductFormat,
                     self::Progress,
                     self::Tags,
                     self::Notes,
@@ -210,6 +215,7 @@ enum ProductField: string
                     self::Score,
                     self::Series,
                     self::AgeCategory,
+                    self::ProductFormat,
                     self::Progress,
                     self::Notes,
                     self::Priority,
@@ -254,6 +260,7 @@ enum ProductField: string
                     self::ReListenValue,
                     self::Priority,
                     self::AgeCategory,
+                    self::ProductFormat,
                     self::Circle,
                     self::Scenario,
                     self::Illustration,
@@ -277,6 +284,7 @@ enum ProductField: string
                     self::Tags,
                     self::Notes,
                     self::AgeCategory,
+                    self::ProductFormat,
                     self::Image,
                     self::SampleImages,
                     self::StartDate,
@@ -309,6 +317,7 @@ enum ProductField: string
                     self::Score,
                     self::Series,
                     self::AgeCategory,
+                    self::ProductFormat,
                     self::Progress,
                     self::Circle,
                     self::Scenario,
@@ -352,6 +361,7 @@ enum ProductField: string
     {
         return [
             ...($hiddenAgeCategory ? [self::AgeCategory] : []),
+            self::ProductFormat,
             self::Circle,
             self::Scenario,
             self::Illustration,

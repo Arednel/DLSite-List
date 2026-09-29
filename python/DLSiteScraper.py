@@ -9,10 +9,22 @@ from pathlib import Path
 
 import requests
 from dlsite_async import DlsiteAPI
+from dlsite_async.work import WorkOption, WorkType
 from PIL import Image
 
 from weekly_logging import WeeklyFileHandler
 
+ADDITIONAL_PRODUCT_FORMAT_OPTIONS = {
+    WorkOption.VOICE,
+    WorkOption.MUSIC,
+    WorkOption.VIDEO,
+}
+
+MIRRORED_PRODUCT_FORMAT_OPTIONS = {
+    WorkOption.VOICE: WorkType.VOICE_ASMR,
+    WorkOption.MUSIC: WorkType.MUSIC,
+    WorkOption.VIDEO: WorkType.VIDEO,
+}
 
 def parse_arguments(argv=None):
     parser = argparse.ArgumentParser()
@@ -40,6 +52,8 @@ def configure_logging(log_directory):
 
 
 def to_serializable(obj):
+    if isinstance(obj, WorkOption):
+        return obj.value
     if isinstance(obj, dict):
         return {k: to_serializable(v) for k, v in obj.items()}
     elif isinstance(obj, list):
@@ -52,6 +66,24 @@ def to_serializable(obj):
         return obj
     else:
         return str(obj)  # Fallback for anything weird
+
+
+def product_format_codes(work):
+    formats = []
+    work_type = getattr(work, "work_type", None)
+
+    if isinstance(work_type, WorkType):
+        formats.append(work_type.value)
+
+    for option in getattr(work, "options", None) or []:
+        if (
+            option in ADDITIONAL_PRODUCT_FORMAT_OPTIONS
+            and MIRRORED_PRODUCT_FORMAT_OPTIONS[option] != work_type
+            and option.value not in formats
+        ):
+            formats.append(option.value)
+
+    return formats
 
 
 async def japanese_dlsite(work_id):
@@ -164,6 +196,8 @@ def run(arguments):
     work_japanese, work_english = asyncio.run(fetch_work_data(arguments.work_id))
     japanese = to_serializable(work_japanese)
     english = to_serializable(work_english)
+    japanese["product_format"] = product_format_codes(work_japanese)
+    english["product_format"] = product_format_codes(work_english)
     combined = {"japanese": japanese, "english": english}
     json_output = Path(arguments.json_output)
     json_output.parent.mkdir(parents=True, exist_ok=True)

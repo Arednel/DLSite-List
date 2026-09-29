@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Enums\ProductAgeCategory;
 use App\Enums\ProductContributorRole;
 use App\Enums\ProductField;
+use App\Enums\ProductFormat;
 use App\Enums\ProductPriority;
 use App\Enums\ProductProgress;
 use App\Enums\ProductReListenValue;
@@ -55,6 +56,7 @@ class ProductController extends Controller
         'notes',
         'series',
         'age_category',
+        'product_format',
         'circle',
         'maker_id',
         'progress',
@@ -146,6 +148,9 @@ class ProductController extends Controller
             'work_name' => $validated['work_name'],
             'work_name_english' => $validated['work_name_english'] ?? null,
             'age_category' => $validated['age_category'],
+            'product_format' => $this->createFieldSubmitted($request, $visibleCreateFields, ProductField::ProductFormat, 'product_format')
+                ? (($validated['product_format'] ?? []) ?: null)
+                : null,
             'circle' => $circle,
             'work_image' => $work_image,
             'description' => $description,
@@ -333,6 +338,9 @@ class ProductController extends Controller
     private function readonlyFieldValues(Product $product): array
     {
         return [
+            ProductField::ProductFormat->value => ($product->product_format ?? []) === []
+                ? null
+                : implode(', ', ProductFormat::labelsFor($product->product_format)),
             ProductField::DescriptionJapanese->value => $product->description,
             ProductField::DescriptionEnglish->value => $product->description_english,
             ProductField::Notes->value => $product->notes,
@@ -588,6 +596,7 @@ class ProductController extends Controller
             ProductField::Score->value => ['score' => 'score'],
             ProductField::Series->value => ['series' => 'series'],
             ProductField::AgeCategory->value => ['age_category' => 'age_category'],
+            ProductField::ProductFormat->value => ['product_format' => 'product_format'],
             ProductField::Circle->value => [
                 'circle' => 'circle',
                 'maker_id' => 'maker_id',
@@ -614,6 +623,10 @@ class ProductController extends Controller
     ): array {
         if ($field === ProductField::DescriptionEnglish->value) {
             return $this->descriptionUpdatePayload($data, $japaneseDescriptionForDuplicateCheck);
+        }
+
+        if ($field === ProductField::ProductFormat->value) {
+            return ['product_format' => ($data['product_format'] ?? []) ?: null];
         }
 
         return collect($submittedColumns)

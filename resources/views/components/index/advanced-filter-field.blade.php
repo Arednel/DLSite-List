@@ -31,6 +31,14 @@
         </div>
     @break
 
+    @case('product_format')
+        <div class="filter-widget product-format">
+            <label class="widget-header" for="filter_product_format">{{ __('Product Format') }}</label>
+            <input id="filter_product_format" type="text" name="product_format" wire:model="draft.product_format"
+                placeholder="{{ __('Voice') }}">
+        </div>
+    @break
+
     @case('age_category')
         <x-index.filter-select id="filter_age_category" name="age_category" label="Age" :options="$filterOptions['age_categories']"
             placeholder="All Works" wire:model="draft.age_category" />

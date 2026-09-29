@@ -163,281 +163,282 @@
                                                             <div class="index-content-overflow" x-data="{ expanded: false }"
                                                                 style="--index-content-overflow-height: {{ $contentOverflow['inline_notes']['height'] }}">
                                                                 <div id="index-inline-notes-{{ $product->id }}"
-                                                                    x-bind:class="{ 'index-content-overflow__content--collapsed': !expanded }">
+                                                                    x-bind:class="{
+                                                                        'index-content-overflow__content--collapsed': !
+                                                                            expanded
+                                                                    }">
                                                         @endif
-                                                            <div class="user-note-text">{{ $product->notes }}</div>
+                                                        <div class="user-note-text">{{ $product->notes }}</div>
                                                         @if ($contentOverflow['inline_notes']['enabled'])
-                                                                </div>
-                                                                <button type="button" class="index-content-overflow__toggle"
-                                                                    aria-controls="index-inline-notes-{{ $product->id }}"
-                                                                    x-bind:aria-expanded="expanded.toString()" x-cloak
-                                                                    x-on:click="expanded = !expanded">
-                                                                    <span x-show="!expanded">{{ __('Show all') }}</span>
-                                                                    <span x-show="expanded">{{ __('Show less') }}</span>
-                                                                </button>
-                                                            </div>
-                                                        @endif
                                                     </div>
-                                                @endif
-                                            @break
-
-                                            @case('score')
-                                                <span class="cell-value">{{ $product->score ?? '-' }}</span>
-                                            @break
-
-                                            @case('series')
-                                                <span class="cell-value">
-                                                    @if ($product->seriesUrl === null)
-                                                        -
-                                                    @else
-                                                        <a href="{{ $product->seriesUrl }}">
-                                                            {{ $product->series }}
-                                                        </a>
-                                                    @endif
-                                                </span>
-                                            @break
-
-                                            @case('age_category')
-                                                {{ $filterOptions['age_categories'][$product->ageCategory] ?? ($product->ageCategory ?? '-') }}
-                                            @break
-
-                                            @case('progress')
-                                                <div class="progress">
-                                                    <span>{{ __($product->progress) }}</span>
-                                                </div>
-                                            @break
-
-                                            @case('notes')
-                                                <div class="notes">
-                                                    @if ($contentOverflow['notes_column']['enabled'])
-                                                        <div class="index-content-overflow" x-data="{ expanded: false }"
-                                                            style="--index-content-overflow-height: {{ $contentOverflow['notes_column']['height'] }}">
-                                                            <div id="index-notes-column-{{ $product->id }}"
-                                                                x-bind:class="{ 'index-content-overflow__content--collapsed': !expanded }">
-                                                    @endif
-                                                        <div class="user-note-text">{{ $product->notes ?: '-' }}</div>
-                                                    @if ($contentOverflow['notes_column']['enabled'])
-                                                            </div>
-                                                            <button type="button" class="index-content-overflow__toggle"
-                                                                aria-controls="index-notes-column-{{ $product->id }}"
-                                                                x-bind:aria-expanded="expanded.toString()" x-cloak
-                                                                x-on:click="expanded = !expanded">
-                                                                <span x-show="!expanded">{{ __('Show all') }}</span>
-                                                                <span x-show="expanded">{{ __('Show less') }}</span>
-                                                            </button>
-                                                        </div>
-                                                    @endif
-                                                </div>
-                                            @break
-
-                                            @case('start_date')
-                                                {{ $productDisplayValues[$product->id][$column['field']] ?? '-' }}
-                                            @break
-
-                                            @case('end_date')
-                                                {{ $productDisplayValues[$product->id][$column['field']] ?? '-' }}
-                                            @break
-
-                                            @case('num_re_listen_times')
-                                                {{ $productDisplayValues[$product->id][$column['field']] ?? '-' }}
-                                            @break
-
-                                            @case('re_listen_value')
-                                                {{ $productDisplayValues[$product->id][$column['field']] ?? '-' }}
-                                            @break
-
-                                            @case('priority')
-                                                {{ $productDisplayValues[$product->id][$column['field']] ?? '-' }}
-                                            @break
-
-                                            @case('created_at')
-                                                {{ $productDisplayValues[$product->id][$column['field']] ?? '-' }}
-                                            @break
-
-                                            @case('updated_at')
-                                                {{ $productDisplayValues[$product->id][$column['field']] ?? '-' }}
-                                            @break
-
-                                            @case('circle')
-                                                @forelse ($product->contributors[$column['contributor_role']] ?? [] as $contributor)
-                                                    <a href="{{ $contributor->indexUrl }}">
-                                                        {{ $contributor->name }}</a>
-                                                    @if ($contributor->makerId)
-                                                        <span class="metadata-note">({{ $contributor->makerId }})</span>
-                                                    @endif{{ !$loop->last ? ',' : '' }}
-                                                @empty
-                                                    @if ($product->circle)
-                                                        <a href="{{ $product->circleUrl }}">
-                                                            {{ $product->circle }}</a>
-                                                        @if ($product->makerId)
-                                                            <span class="metadata-note">({{ $product->makerId }})</span>
-                                                        @endif
-                                                    @else
-                                                        -
-                                                    @endif
-                                                @endforelse
-                                                @break
-
-                                                @case('scenario')
-                                                @case('illustration')
-
-                                                @case('voice_actor')
-                                                @case('author')
-                                                    @forelse ($product->contributors[$column['contributor_role']] ?? [] as $contributor)
-                                                        <a href="{{ $contributor->indexUrl }}">
-                                                            {{ $contributor->name }}</a>{{ !$loop->last ? ',' : '' }}
-                                                    @empty
-                                                        -
-                                                    @endforelse
-                                                @break
-
-                                                @case('description_japanese')
-                                                    <div class="description-cell">
-                                                        @if ($product->description)
-                                                            <div>{{ $product->description }}</div>
-                                                        @else
-                                                            -
-                                                        @endif
-                                                    </div>
-                                                @break
-
-                                                @case('description_english')
-                                                    <div class="description-cell">
-                                                        @if ($product->descriptionEnglish)
-                                                            <div>{{ $product->descriptionEnglish }}</div>
-                                                        @else
-                                                            -
-                                                        @endif
-                                                    </div>
-                                                @break
-
-                                                @case('tags')
-                                                    <div class="tags">
-                                                        @if ($contentOverflow['tags']['enabled'])
-                                                            <div class="index-content-overflow" x-data="{ expanded: false }"
-                                                                style="--index-content-overflow-height: {{ $contentOverflow['tags']['height'] }}">
-                                                                <div id="index-tags-{{ $product->id }}"
-                                                                    x-bind:class="{ 'index-content-overflow__content--collapsed': !expanded }">
-                                                        @endif
-                                                            @foreach ($productGenres[$product->id] ?? [] as $genre)
-                                                                @if (($genre->has_background_color ?? false) || ($genre->has_font_color ?? false))
-                                                                    <a @class([
-                                                                        'index-tag-chip',
-                                                                        'index-tag-chip--background-colored' =>
-                                                                            ($genre->has_background_color ?? false) === true,
-                                                                        'index-tag-chip--text-colored' =>
-                                                                            ($genre->has_font_color ?? false) === true,
-                                                                    ])
-                                                                        @if (filled($genre->color_style ?? null)) style="{{ $genre->color_style }}" @endif
-                                                                        href="{{ $tagHrefPrefix }}genre={{ $genre->id }}">
-                                                                        {{ $genre->title }}</a>{{ !$loop->last ? ',' : '' }}
-                                                                @else
-                                                                    <a
-                                                                        href="{{ $tagHrefPrefix }}genre={{ $genre->id }}">{{ $genre->title }}</a>{{ !$loop->last ? ',' : '' }}
-                                                                @endif
-                                                            @endforeach
-                                                        @if ($contentOverflow['tags']['enabled'])
-                                                                </div>
-                                                                <button type="button" class="index-content-overflow__toggle"
-                                                                    aria-controls="index-tags-{{ $product->id }}"
-                                                                    x-bind:aria-expanded="expanded.toString()" x-cloak
-                                                                    x-on:click="expanded = !expanded">
-                                                                    <span x-show="!expanded">{{ __('Show all') }}</span>
-                                                                    <span x-show="expanded">{{ __('Show less') }}</span>
-                                                                </button>
-                                                            </div>
-                                                        @endif
-                                                    </div>
-                                                @break
-                                            @endswitch
-                                        </td>
-                                    @endforeach
-                                    <td class="data actions" data-label="{{ __('Actions') }}">
-                                        <div class="row-actions">
-                                            <span class="edit-action">
-                                                <a href="{{ $product->editUrl }}" class="product-edit-link"
-                                                    data-work-form-modal-link
-                                                    data-work-form-modal-title="{{ __('Edit Details') }}">{{ __('Edit') }}</a>
-                                            </span>
-                                        </div>
-                                    </td>
-                                </tr>
-                                @empty
-                                    <tr class="list-table-empty-row">
-                                        <td class="list-table-empty" colspan="{{ 3 + count($indexColumns) }}">
-                                            {{ __('Nothing found for the current filters.') }}
-                                        </td>
-                                    </tr>
-                                @endforelse
-                            </tbody>
-                        </table>
-
-                        @if (!$isUnlimited && $products->total() > 0)
-                            {{ $products->links('livewire.index-pagination-links', ['scrollTo' => 'progress-menu']) }}
-                        @elseif ($isUnlimited)
-                            <div class="index-pagination">
-                                <div class="index-pagination__summary">
-                                    {{ __('Showing all :count works', ['count' => $totalProducts]) }}
-                                </div>
-                            </div>
-                        @endif
+                                                    <button type="button" class="index-content-overflow__toggle"
+                                                        aria-controls="index-inline-notes-{{ $product->id }}"
+                                                        x-bind:aria-expanded="expanded.toString()" x-cloak
+                                                        x-on:click="expanded = !expanded">
+                                                        <span x-show="!expanded">{{ __('Show all') }}</span>
+                                                        <span x-show="expanded">{{ __('Show less') }}</span>
+                                                    </button>
                     </div>
+                    @endif
+                </div>
+                @endif
+            @break
+
+            @case('score')
+                <span class="cell-value">{{ $product->score ?? '-' }}</span>
+            @break
+
+            @case('series')
+                <span class="cell-value">
+                    @if ($product->seriesUrl === null)
+                        -
+                    @else
+                        <a href="{{ $product->seriesUrl }}">
+                            {{ $product->series }}
+                        </a>
+                    @endif
+                </span>
+            @break
+
+            @case('age_category')
+                {{ $filterOptions['age_categories'][$product->ageCategory] ?? ($product->ageCategory ?? '-') }}
+            @break
+
+            @case('product_format')
+                {{ $productDisplayValues[$product->id][$column['field']] ?? '-' }}
+            @break
+
+            @case('progress')
+                <div class="progress">
+                    <span>{{ __($product->progress) }}</span>
+                </div>
+            @break
+
+            @case('notes')
+                <div class="notes">
+                    @if ($contentOverflow['notes_column']['enabled'])
+                        <div class="index-content-overflow" x-data="{ expanded: false }"
+                            style="--index-content-overflow-height: {{ $contentOverflow['notes_column']['height'] }}">
+                            <div id="index-notes-column-{{ $product->id }}"
+                                x-bind:class="{ 'index-content-overflow__content--collapsed': !expanded }">
+                    @endif
+                    <div class="user-note-text">{{ $product->notes ?: '-' }}</div>
+                    @if ($contentOverflow['notes_column']['enabled'])
+                </div>
+                <button type="button" class="index-content-overflow__toggle"
+                    aria-controls="index-notes-column-{{ $product->id }}" x-bind:aria-expanded="expanded.toString()" x-cloak
+                    x-on:click="expanded = !expanded">
+                    <span x-show="!expanded">{{ __('Show all') }}</span>
+                    <span x-show="expanded">{{ __('Show less') }}</span>
+                </button>
+            </div>
+            @endif
+        </div>
+    @break
+
+    @case('start_date')
+        {{ $productDisplayValues[$product->id][$column['field']] ?? '-' }}
+    @break
+
+    @case('end_date')
+        {{ $productDisplayValues[$product->id][$column['field']] ?? '-' }}
+    @break
+
+    @case('num_re_listen_times')
+        {{ $productDisplayValues[$product->id][$column['field']] ?? '-' }}
+    @break
+
+    @case('re_listen_value')
+        {{ $productDisplayValues[$product->id][$column['field']] ?? '-' }}
+    @break
+
+    @case('priority')
+        {{ $productDisplayValues[$product->id][$column['field']] ?? '-' }}
+    @break
+
+    @case('created_at')
+        {{ $productDisplayValues[$product->id][$column['field']] ?? '-' }}
+    @break
+
+    @case('updated_at')
+        {{ $productDisplayValues[$product->id][$column['field']] ?? '-' }}
+    @break
+
+    @case('circle')
+        @forelse ($product->contributors[$column['contributor_role']] ?? [] as $contributor)
+            <a href="{{ $contributor->indexUrl }}">
+                {{ $contributor->name }}</a>
+            @if ($contributor->makerId)
+                <span class="metadata-note">({{ $contributor->makerId }})</span>
+            @endif{{ !$loop->last ? ',' : '' }}
+        @empty
+            @if ($product->circle)
+                <a href="{{ $product->circleUrl }}">
+                    {{ $product->circle }}</a>
+                @if ($product->makerId)
+                    <span class="metadata-note">({{ $product->makerId }})</span>
+                @endif
+            @else
+                -
+            @endif
+        @endforelse
+        @break
+
+        @case('scenario')
+        @case('illustration')
+
+        @case('voice_actor')
+        @case('author')
+            @forelse ($product->contributors[$column['contributor_role']] ?? [] as $contributor)
+                <a href="{{ $contributor->indexUrl }}">
+                    {{ $contributor->name }}</a>{{ !$loop->last ? ',' : '' }}
+            @empty
+                -
+            @endforelse
+        @break
+
+        @case('description_japanese')
+            <div class="description-cell">
+                @if ($product->description)
+                    <div>{{ $product->description }}</div>
+                @else
+                    -
+                @endif
+            </div>
+        @break
+
+        @case('description_english')
+            <div class="description-cell">
+                @if ($product->descriptionEnglish)
+                    <div>{{ $product->descriptionEnglish }}</div>
+                @else
+                    -
+                @endif
+            </div>
+        @break
+
+        @case('tags')
+            <div class="tags">
+                @if ($contentOverflow['tags']['enabled'])
+                    <div class="index-content-overflow" x-data="{ expanded: false }"
+                        style="--index-content-overflow-height: {{ $contentOverflow['tags']['height'] }}">
+                        <div id="index-tags-{{ $product->id }}"
+                            x-bind:class="{ 'index-content-overflow__content--collapsed': !expanded }">
+                @endif
+                @foreach ($productGenres[$product->id] ?? [] as $genre)
+                    @if (($genre->has_background_color ?? false) || ($genre->has_font_color ?? false))
+                        <a @class([
+                            'index-tag-chip',
+                            'index-tag-chip--background-colored' =>
+                                ($genre->has_background_color ?? false) === true,
+                            'index-tag-chip--text-colored' =>
+                                ($genre->has_font_color ?? false) === true,
+                        ]) @if (filled($genre->color_style ?? null)) style="{{ $genre->color_style }}" @endif
+                            href="{{ $tagHrefPrefix }}genre={{ $genre->id }}">
+                            {{ $genre->title }}</a>{{ !$loop->last ? ',' : '' }}
+                    @else
+                        <a
+                            href="{{ $tagHrefPrefix }}genre={{ $genre->id }}">{{ $genre->title }}</a>{{ !$loop->last ? ',' : '' }}
+                    @endif
+                @endforeach
+                @if ($contentOverflow['tags']['enabled'])
+            </div>
+            <button type="button" class="index-content-overflow__toggle" aria-controls="index-tags-{{ $product->id }}"
+                x-bind:aria-expanded="expanded.toString()" x-cloak x-on:click="expanded = !expanded">
+                <span x-show="!expanded">{{ __('Show all') }}</span>
+                <span x-show="expanded">{{ __('Show less') }}</span>
+            </button>
+            </div>
+            @endif
+            </div>
+        @break
+    @endswitch
+    </td>
+    @endforeach
+    <td class="data actions" data-label="{{ __('Actions') }}">
+        <div class="row-actions">
+            <span class="edit-action">
+                <a href="{{ $product->editUrl }}" class="product-edit-link" data-work-form-modal-link
+                    data-work-form-modal-title="{{ __('Edit Details') }}">{{ __('Edit') }}</a>
+            </span>
+        </div>
+    </td>
+    </tr>
+    @empty
+        <tr class="list-table-empty-row">
+            <td class="list-table-empty" colspan="{{ 3 + count($indexColumns) }}">
+                {{ __('Nothing found for the current filters.') }}
+            </td>
+        </tr>
+        @endforelse
+        </tbody>
+        </table>
+
+        @if (!$isUnlimited && $products->total() > 0)
+            {{ $products->links('livewire.index-pagination-links', ['scrollTo' => 'progress-menu']) }}
+        @elseif ($isUnlimited)
+            <div class="index-pagination">
+                <div class="index-pagination__summary">
+                    {{ __('Showing all :count works', ['count' => $totalProducts]) }}
                 </div>
             </div>
+        @endif
+        </div>
+        </div>
+        </div>
 
-            @if ($imageViewerEnabled)
-                <dialog id="index-image-viewer-dialog" class="index-image-viewer" aria-labelledby="index-image-viewer-title"
-                    wire:ignore data-image-label="{{ __('Image :current of :total for :title') }}">
-                    <div class="index-image-viewer__panel">
-                        <header class="index-image-viewer__header">
-                            <h2 id="index-image-viewer-title" data-index-image-viewer-title>
-                                {{ __('Cover and Sample Images') }}</h2>
-                            <button type="button" class="index-image-viewer__close" data-index-image-viewer-close
-                                aria-label="{{ __('Close image viewer') }}">
-                                <i class="fa-solid fa-xmark" aria-hidden="true"></i>
-                            </button>
-                        </header>
+        @if ($imageViewerEnabled)
+            <dialog id="index-image-viewer-dialog" class="index-image-viewer" aria-labelledby="index-image-viewer-title"
+                wire:ignore data-image-label="{{ __('Image :current of :total for :title') }}">
+                <div class="index-image-viewer__panel">
+                    <header class="index-image-viewer__header">
+                        <h2 id="index-image-viewer-title" data-index-image-viewer-title>
+                            {{ __('Cover and Sample Images') }}</h2>
+                        <button type="button" class="index-image-viewer__close" data-index-image-viewer-close
+                            aria-label="{{ __('Close image viewer') }}">
+                            <i class="fa-solid fa-xmark" aria-hidden="true"></i>
+                        </button>
+                    </header>
 
-                        <div class="index-image-viewer__stage">
-                            <button type="button"
-                                class="index-image-viewer__navigation index-image-viewer__navigation--previous"
-                                data-index-image-viewer-previous aria-label="{{ __('Previous image') }}">
-                                <i class="fa-solid fa-chevron-left" aria-hidden="true"></i>
-                            </button>
+                    <div class="index-image-viewer__stage">
+                        <button type="button" class="index-image-viewer__navigation index-image-viewer__navigation--previous"
+                            data-index-image-viewer-previous aria-label="{{ __('Previous image') }}">
+                            <i class="fa-solid fa-chevron-left" aria-hidden="true"></i>
+                        </button>
 
-                            <div class="index-image-viewer__media">
-                                <img data-index-image-viewer-image hidden alt="">
-                                <div class="index-image-viewer__placeholder" data-index-image-viewer-placeholder hidden
-                                    role="status">
-                                    <i class="fa-regular fa-image" aria-hidden="true"></i>
-                                    <span>{{ __('No image') }}</span>
-                                </div>
-                                <p class="index-image-viewer__loading" data-index-image-viewer-loading role="status">
-                                    {{ __('Loading images...') }}</p>
+                        <div class="index-image-viewer__media">
+                            <img data-index-image-viewer-image hidden alt="">
+                            <div class="index-image-viewer__placeholder" data-index-image-viewer-placeholder hidden
+                                role="status">
+                                <i class="fa-regular fa-image" aria-hidden="true"></i>
+                                <span>{{ __('No image') }}</span>
                             </div>
-
-                            <button type="button" class="index-image-viewer__navigation index-image-viewer__navigation--next"
-                                data-index-image-viewer-next aria-label="{{ __('Next image') }}">
-                                <i class="fa-solid fa-chevron-right" aria-hidden="true"></i>
-                            </button>
+                            <p class="index-image-viewer__loading" data-index-image-viewer-loading role="status">
+                                {{ __('Loading images...') }}</p>
                         </div>
 
-                        <footer class="index-image-viewer__footer">
-                            <output class="index-image-viewer__counter" data-index-image-viewer-counter
-                                aria-live="polite"></output>
-                            <a class="index-image-viewer__view-full" data-index-image-viewer-full target="_blank"
-                                rel="noopener noreferrer" hidden>
-                                {{ __('View in full') }}
-                                <i class="fa-solid fa-arrow-up-right-from-square" aria-hidden="true"></i>
-                            </a>
-                        </footer>
+                        <button type="button" class="index-image-viewer__navigation index-image-viewer__navigation--next"
+                            data-index-image-viewer-next aria-label="{{ __('Next image') }}">
+                            <i class="fa-solid fa-chevron-right" aria-hidden="true"></i>
+                        </button>
                     </div>
-                </dialog>
 
-                @assets
-                    <script
-                        src="{{ asset('scripts/index-image-viewer.js') }}?v={{ filemtime(public_path('scripts/index-image-viewer.js')) }}"
-                        defer></script>
-                @endassets
-            @endif
+                    <footer class="index-image-viewer__footer">
+                        <output class="index-image-viewer__counter" data-index-image-viewer-counter
+                            aria-live="polite"></output>
+                        <a class="index-image-viewer__view-full" data-index-image-viewer-full target="_blank"
+                            rel="noopener noreferrer" hidden>
+                            {{ __('View in full') }}
+                            <i class="fa-solid fa-arrow-up-right-from-square" aria-hidden="true"></i>
+                        </a>
+                    </footer>
+                </div>
+            </dialog>
+
+            @assets
+                <script
+                    src="{{ asset('scripts/index-image-viewer.js') }}?v={{ filemtime(public_path('scripts/index-image-viewer.js')) }}"
+                    defer></script>
+            @endassets
+        @endif
         </div>

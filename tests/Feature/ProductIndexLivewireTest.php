@@ -442,6 +442,7 @@ class ProductIndexLivewireTest extends TestCase
             'score' => 8,
             'series' => 'VISIBLE_COLUMNS_SERIES',
             'age_category' => 'R18',
+            'product_format' => ['MOV', 'SND', 'MS2'],
             'circle' => 'VISIBLE_COLUMNS_CIRCLE',
             'maker_id' => 'RG000000001',
             'description' => 'VISIBLE_COLUMNS_DESCRIPTION',
@@ -464,6 +465,7 @@ class ProductIndexLivewireTest extends TestCase
                 ProductField::Score->value,
                 ProductField::Series->value,
                 ProductField::AgeCategory->value,
+                ProductField::ProductFormat->value,
                 ProductField::Progress->value,
                 ProductField::Circle->value,
                 ProductField::Scenario->value,
@@ -491,6 +493,7 @@ class ProductIndexLivewireTest extends TestCase
         $this->assertArrayHasKey('score', $attributes);
         $this->assertArrayHasKey('series', $attributes);
         $this->assertArrayHasKey('age_category', $attributes);
+        $this->assertArrayHasKey('product_format', $attributes);
         $this->assertArrayHasKey('circle', $attributes);
         $this->assertArrayHasKey('maker_id', $attributes);
         $this->assertArrayHasKey('description', $attributes);
@@ -504,6 +507,129 @@ class ProductIndexLivewireTest extends TestCase
         $this->assertArrayNotHasKey('rj_number', $attributes);
         $this->assertArrayNotHasKey('start_date_sort', $attributes);
         $this->assertArrayNotHasKey('end_date_sort', $attributes);
+    }
+
+    public function test_optional_product_format_column_uses_localized_labels(): void
+    {
+        Option::setIndexFieldLayout([
+            ['field' => ProductField::ProductFormat->value, 'visible' => true],
+        ]);
+
+        $this->createProduct(1, [
+            'product_format' => ['ADV', 'SND', 'MS2', 'MV2'],
+        ]);
+
+        app()->setLocale('en');
+
+        Livewire::test(ProductIndex::class)
+            ->assertSee('Adventure')
+            ->assertSee('Voice')
+            ->assertSee('Music')
+            ->assertSee('Animation');
+
+        app()->setLocale('ja');
+
+        Livewire::test(ProductIndex::class)
+            ->assertSee('アドベンチャー')
+            ->assertSee('ボイス')
+            ->assertSee('音楽')
+            ->assertSee('動画');
+    }
+
+    public function test_product_format_filter_searches_canonical_and_custom_values(): void
+    {
+        Option::setFilterFieldLayout([
+            ['field' => ProductField::ProductFormat->value, 'visible' => true],
+        ]);
+
+        $this->createProduct(1, [
+            'work_name' => 'PRODUCT_FORMAT_PRIMARY_VOICE',
+            'product_format' => ['SOU'],
+        ]);
+        $this->createProduct(2, [
+            'work_name' => 'PRODUCT_FORMAT_ADDITIONAL_VOICE',
+            'product_format' => ['ADV', 'SND'],
+        ]);
+        $this->createProduct(3, [
+            'work_name' => 'PRODUCT_FORMAT_SIMULATION',
+            'product_format' => ['SLN'],
+        ]);
+        $this->createProduct(4, [
+            'work_name' => 'PRODUCT_FORMAT_CUSTOM_AUDIOBOOK',
+            'product_format' => ['custom:Audiobook'],
+        ]);
+        $this->createProduct(5, [
+            'work_name' => 'PRODUCT_FORMAT_CUSTOM_THEN_VOICE',
+            'product_format' => ['custom:Audiobook', 'SND'],
+        ]);
+        $this->createProduct(6, [
+            'work_name' => 'PRODUCT_FORMAT_CUSTOM_WILDCARDS',
+            'product_format' => ['custom:100%_Exact'],
+        ]);
+        $this->createProduct(7, [
+            'work_name' => 'PRODUCT_FORMAT_CUSTOM_WILDCARD_DECOY',
+            'product_format' => ['custom:100XXExact'],
+        ]);
+
+        Livewire::withQueryParams(['product_format' => 'Voice'])
+            ->test(ProductIndex::class)
+            ->assertSet('product_format', 'Voice')
+            ->assertSee('id="filter_product_format"', false)
+            ->assertSee('PRODUCT_FORMAT_PRIMARY_VOICE')
+            ->assertSee('PRODUCT_FORMAT_ADDITIONAL_VOICE');
+
+        Livewire::withQueryParams(['product_format' => 'Sim'])
+            ->test(ProductIndex::class)
+            ->assertSee('PRODUCT_FORMAT_SIMULATION')
+            ->assertDontSee('PRODUCT_FORMAT_PRIMARY_VOICE');
+
+        Livewire::withQueryParams(['product_format' => 'book'])
+            ->test(ProductIndex::class)
+            ->assertSee('PRODUCT_FORMAT_CUSTOM_AUDIOBOOK')
+            ->assertSee('PRODUCT_FORMAT_CUSTOM_THEN_VOICE');
+
+        Livewire::withQueryParams(['product_format' => 'SN'])
+            ->test(ProductIndex::class)
+            ->assertDontSee('PRODUCT_FORMAT_ADDITIONAL_VOICE')
+            ->assertDontSee('PRODUCT_FORMAT_CUSTOM_THEN_VOICE');
+
+        Livewire::withQueryParams(['product_format' => '100%_'])
+            ->test(ProductIndex::class)
+            ->assertSee('PRODUCT_FORMAT_CUSTOM_WILDCARDS')
+            ->assertDontSee('PRODUCT_FORMAT_CUSTOM_WILDCARD_DECOY');
+    }
+
+    public function test_product_format_sort_orders_by_primary_format_code(): void
+    {
+        Option::setIndexPerPage(Option::INDEX_PER_PAGE_UNLIMITED);
+        Option::setIndexSortFieldLayout([
+            ['field' => ProductIndexSortField::ProductFormat->value, 'visible' => true],
+        ]);
+
+        $this->createProduct(1, [
+            'work_name' => 'PRODUCT_FORMAT_SORT_SOU',
+            'product_format' => ['SOU'],
+        ]);
+        $this->createProduct(2, [
+            'work_name' => 'PRODUCT_FORMAT_SORT_ADV',
+            'product_format' => ['ADV', 'MS2'],
+        ]);
+        $this->createProduct(3, [
+            'work_name' => 'PRODUCT_FORMAT_SORT_MOV',
+            'product_format' => ['MOV'],
+        ]);
+
+        Livewire::withQueryParams([
+            'sort_first_field' => ProductIndexSortField::ProductFormat->value,
+            'sort_first_direction' => 'asc',
+        ])
+            ->test(ProductIndex::class)
+            ->assertSee('value="' . ProductIndexSortField::ProductFormat->value . '"', false)
+            ->assertSeeInOrder([
+                'PRODUCT_FORMAT_SORT_ADV',
+                'PRODUCT_FORMAT_SORT_MOV',
+                'PRODUCT_FORMAT_SORT_SOU',
+            ]);
     }
 
     public function test_index_field_layout_can_show_split_hidden_descriptions_and_reorder_columns(): void

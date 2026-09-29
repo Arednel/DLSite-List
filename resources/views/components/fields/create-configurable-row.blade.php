@@ -42,6 +42,10 @@
         <x-fields.age-category :options="$ageCategoryOptions" :required="$isCustomCreate" />
     @break
 
+    @case('product_format')
+        <x-fields.product-format-field :label="$field['label']" />
+    @break
+
     @case('circle')
         <tr>
             <td width="130" class="form-table-cell">{{ __('Circle') }}</td>

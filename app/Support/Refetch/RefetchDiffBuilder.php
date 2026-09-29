@@ -3,6 +3,7 @@
 namespace App\Support\Refetch;
 
 use App\Enums\ProductContributorRole;
+use App\Enums\ProductFormat;
 use App\Enums\RefetchCategory;
 use App\Models\Genre;
 use App\Models\Product;
@@ -34,6 +35,7 @@ final class RefetchDiffBuilder
         $this->add($changes, RefetchCategory::Descriptions, 'description_english', 'English Description', $product->description_english, $work->englishDescription);
         $this->add($changes, RefetchCategory::Series, 'series', 'Series', $product->series, $work->autoSeries());
         $this->add($changes, RefetchCategory::Age, 'age_category', 'Age', $product->age_category, $work->ageCategory);
+        $this->addProductFormat($changes, RefetchCategory::ProductFormat, 'product_format', 'Product Format', $product->product_format ?? [], $work->productFormat);
         $this->add(
             $changes,
             RefetchCategory::Circle,
@@ -94,6 +96,27 @@ final class RefetchDiffBuilder
         mixed $new,
     ): void {
         if ($this->equivalent($old, $new)) {
+            return;
+        }
+
+        $changes[$category->value][$field] = compact('label', 'old', 'new');
+    }
+
+    /**
+     * @param  array<string, array<string, array<string, mixed>>>  $changes
+     */
+    private function addProductFormat(
+        array &$changes,
+        RefetchCategory $category,
+        string $field,
+        string $label,
+        mixed $old,
+        mixed $new,
+    ): void {
+        $old = ProductFormat::normalizeDlsiteValues(is_array($old) ? $old : [$old]);
+        $new = ProductFormat::normalizeDlsiteValues(is_array($new) ? $new : [$new]);
+
+        if ($old === $new) {
             return;
         }
 
