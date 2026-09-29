@@ -7,6 +7,7 @@ use App\Enums\ProductField;
 use App\Enums\ProductFormat;
 use App\Enums\ProductIndexSortField;
 use App\Enums\ProductPriority;
+use App\Enums\ProductProgress;
 use App\Enums\ProductReListenValue;
 use App\Models\Genre;
 use App\Models\Option;
@@ -48,6 +49,7 @@ final class ProductIndexResults
 
     private const DISPLAY_VALUE_FIELDS = [
         'product_format',
+        'progress',
         'start_date',
         'end_date',
         'num_re_listen_times',
@@ -670,6 +672,7 @@ final class ProductIndexResults
     {
         return match ($field) {
             'product_format' => $this->productFormatDisplayValue($product->product_format),
+            'progress' => ProductProgress::tryFrom((string) $product->progress)?->label() ?? '-',
             'start_date' => PartialDateFormatter::format($product->start_date) ?? '-',
             'end_date' => PartialDateFormatter::format($product->end_date) ?? '-',
             'num_re_listen_times' => $product->num_re_listen_times === null

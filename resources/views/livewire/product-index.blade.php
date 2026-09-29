@@ -210,7 +210,7 @@
 
             @case('progress')
                 <div class="progress">
-                    <span>{{ __($product->progress) }}</span>
+                    <span>{{ $productDisplayValues[$product->id][$column['field']] ?? '-' }}</span>
                 </div>
             @break
 

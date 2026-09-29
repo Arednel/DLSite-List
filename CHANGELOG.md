@@ -27,6 +27,7 @@ For existing manual installations:
 * Fixed Japanese Index column headers wrapping inconsistently.
 * Improved Index filtering performance when requiring works to have every selected tag.
 * Fixed failing to fetch metadata for announced DLsite works.
+* Fixed Progress values in the Index table not using the selected UI Wording setting.
 
 ## 1.10.0 - 2026-09-25
 

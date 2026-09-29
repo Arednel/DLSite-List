@@ -66,6 +66,19 @@ class ProductSurfaceLocalizationTest extends TestCase
         $this->assertSame(ProductProgress::Listening->value, $product->refresh()->progress);
     }
 
+    public function test_index_progress_column_uses_selected_ui_wording(): void
+    {
+        Option::setContentFocus(ContentFocus::General);
+        Product::factory()->create([
+            'progress' => ProductProgress::PlanToListen->value,
+        ]);
+
+        $this->get(route('index'))
+            ->assertOk()
+            ->assertSee('<span>Planned</span>', false)
+            ->assertDontSee('<span>Plan to Listen</span>', false);
+    }
+
     public function test_saved_japanese_localizes_index_copy_accessibility_and_context_without_mutating_values(): void
     {
         Option::setUiLanguage(UiLanguage::Japanese);
