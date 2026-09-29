@@ -10,6 +10,7 @@ All notable changes to this project are documented in this file.
 * Refetch batches now continue after individual job failures and roll back cleanly if batch startup fails.
 * Fixed PHPUnit cache permission warnings in Docker.
 * Fixed Japanese Index column headers wrapping inconsistently.
+* Improved Index filtering performance when requiring works to have every selected tag.
 
 ## 1.10.0 - 2026-09-25
 

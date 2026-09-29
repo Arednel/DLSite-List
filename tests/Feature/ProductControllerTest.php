@@ -496,6 +496,76 @@ class ProductControllerTest extends TestCase
             ->assertDontSee($hiddenJapaneseOnly->work_name);
     }
 
+    public function test_all_tag_filters_preserve_patterns_overlapping_matches_and_missing_tags(): void
+    {
+        $soft = $this->createGenre('MoodSoft', Genre::TYPE_CUSTOM);
+        $loud = $this->createGenre('MoodLoud', Genre::TYPE_CUSTOM);
+        $office = $this->createGenre('Office', Genre::TYPE_CUSTOM);
+
+        $softOffice = Product::factory()->create(['work_name' => 'TAG_PATTERN_SOFT_OFFICE']);
+        $this->attachGenres($softOffice, [$soft, $office]);
+        $loudOffice = Product::factory()->create(['work_name' => 'TAG_PATTERN_LOUD_OFFICE']);
+        $this->attachGenres($loudOffice, [$loud, $office]);
+        $bothOffice = Product::factory()->create(['work_name' => 'TAG_PATTERN_BOTH_OFFICE']);
+        $this->attachGenres($bothOffice, [$soft, $loud, $office]);
+        $withoutOffice = Product::factory()->create(['work_name' => 'TAG_PATTERN_WITHOUT_OFFICE']);
+        $this->attachGenres($withoutOffice, [$soft, $loud]);
+
+        $this->get('/?' . http_build_query(['tags' => 'mood%, office, MOOD%', 'tag_match' => 'all']))
+            ->assertOk()
+            ->assertSee($softOffice->work_name)
+            ->assertSee($loudOffice->work_name)
+            ->assertSee($bothOffice->work_name)
+            ->assertDontSee($withoutOffice->work_name);
+
+        $this->get('/?' . http_build_query(['tags' => 'mood%, moodsoft', 'tag_match' => 'all']))
+            ->assertOk()
+            ->assertSee($softOffice->work_name)
+            ->assertSee($bothOffice->work_name)
+            ->assertSee($withoutOffice->work_name)
+            ->assertDontSee($loudOffice->work_name);
+
+        $this->get('/?' . http_build_query(['tags' => 'mood%, MissingTag', 'tag_match' => 'all']))
+            ->assertOk()
+            ->assertDontSee($softOffice->work_name)
+            ->assertDontSee($loudOffice->work_name)
+            ->assertDontSee($bothOffice->work_name)
+            ->assertDontSee($withoutOffice->work_name);
+    }
+
+    public function test_all_tag_filters_check_attachment_language_and_custom_source(): void
+    {
+        $shared = Genre::query()->create(['title' => 'SharedTag']);
+        $required = Genre::query()->create(['title' => 'RequiredTag']);
+        $english = Product::factory()->create(['work_name' => 'TAG_LANGUAGE_EN_WORK']);
+        $japanese = Product::factory()->create(['work_name' => 'TAG_LANGUAGE_JP_WORK']);
+        $custom = Product::factory()->create(['work_name' => 'TAG_LANGUAGE_CUSTOM_WORK']);
+
+        app(ProductGenreSync::class)->sync($english, [
+            Genre::LANGUAGE_ENGLISH => [$shared->id],
+        ], [$required->id]);
+        app(ProductGenreSync::class)->sync($japanese, [
+            Genre::LANGUAGE_JAPANESE => [$shared->id],
+        ], [$required->id]);
+        app(ProductGenreSync::class)->sync($custom, [], [$shared->id, $required->id]);
+
+        $url = '/?' . http_build_query(['tags' => 'SharedTag, RequiredTag', 'tag_match' => 'all']);
+
+        Option::setUiLanguage(UiLanguage::English);
+        $this->get($url)
+            ->assertOk()
+            ->assertSee($english->work_name)
+            ->assertSee($custom->work_name)
+            ->assertDontSee($japanese->work_name);
+
+        Option::setUiLanguage(UiLanguage::Japanese);
+        $this->get($url)
+            ->assertOk()
+            ->assertSee($japanese->work_name)
+            ->assertSee($custom->work_name)
+            ->assertDontSee($english->work_name);
+    }
+
     public function test_index_sorts_by_start_and_finish_date_with_primary_and_secondary_server_side_sort(): void
     {
         $beta = Product::factory()->create([

@@ -11,6 +11,7 @@ use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
+use Illuminate\Database\Query\Builder as QueryBuilder;
 use Illuminate\Support\Facades\Storage;
 
 class Product extends Model
@@ -293,9 +294,14 @@ class Product extends Model
 
         if ($tagMatch === ProductIndexTagMatch::All) {
             foreach ($normalizedTags as $tag) {
-                $query->whereHas('genres', function (Builder $genreQuery) use ($tag): void {
-                    $genreQuery->whereLike('title', $tag);
-                    $genreQuery->where(VisibleGenreAttachment::query());
+                // Resolve titles once so product queries only filter indexed attachments.
+                $genreIds = Genre::query()->whereLike('title', $tag)->pluck('id');
+
+                $query->whereIn($query->qualifyColumn('id'), function (QueryBuilder $attachmentQuery) use ($genreIds): void {
+                    $attachmentQuery->select('genre_product.product_id')
+                        ->from('genre_product')
+                        ->whereIn('genre_product.genre_id', $genreIds)
+                        ->where(VisibleGenreAttachment::query());
                 });
             }
 

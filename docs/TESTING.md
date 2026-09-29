@@ -325,6 +325,7 @@ Covers selected-work Refetch search, RJ-desc ordering, and preservation of selec
 
 Covers the main product HTTP workflows:
 - Index filtering/sorting/display
+- all-tags pattern matching, overlapping matches, missing tags, and per-attachment language/custom-source visibility
 - Create/Edit field order using submitted input names, product binding, and return-navigation data
 - hidden/read-only field preservation
 - DLSite Quick Add fetch/store/error behavior, unexpected scraper/manifest failures returning to standalone/modal forms with input preserved, and shared importer regression coverage
