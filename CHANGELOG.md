@@ -4,6 +4,10 @@ All notable changes to this project are documented in this file.
 
 ## Unreleased
 
+## 1.11.0 - 2026-09-30
+
+*Product Format metadata & Fixes*
+
 ### Upgrade notes
 
 For existing manual installations:
