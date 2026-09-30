@@ -31,8 +31,6 @@ After that DLSite List is available at:
 http://localhost:8080
 ```
 
-Docker serves `/storage/*` directly through Nginx, so `php artisan storage:link` is not required inside the Docker setup.
-
 For Import / Export, the supplied Docker configuration allows individual ZIP uploads up to 256 MiB. PHP uses `upload_max_filesize = 256M` and `post_max_size = 260M`, while Nginx uses `client_max_body_size 260M`. If larger import files are needed, raise the PHP and Nginx limits together and keep the request/post limit above the file-size limit.
 
 The test database/services are behind the Compose `test` profile and do not start with the normal application command.
@@ -89,19 +87,13 @@ php artisan key:generate
 php artisan migrate
 ```
 
-6. Create the public storage link:
-
-```bash
-php artisan storage:link
-```
-
-7. Create the scraper python virtual environment:
+6. Create the scraper python virtual environment:
 
 ```bash
 python -m venv python/venv
 ```
 
-8. Activate the virtual environment:
+7. Activate the virtual environment:
 
 Windows:
 
@@ -115,13 +107,13 @@ Linux/macOS:
 source python/venv/bin/activate
 ```
 
-9. Install scraper dependencies:
+8. Install scraper dependencies:
 
 ```bash
 pip install -r python/requirements.txt
 ```
 
-10. Keep a Laravel queue worker running when using Refetch, Bulk Import, or Import / Export:
+9. Keep a Laravel queue worker running when using Refetch, Bulk Import, or Import / Export:
 
 ```bash
 php artisan queue:work
@@ -307,6 +299,8 @@ SESSION_LIFETIME=120
 ```
 
 These are the project's supplied defaults. Work images and Refetch staging explicitly use the named `local` and `public` disks from `config/filesystems.php`; changing `FILESYSTEM_DISK` alone does not move those files to another storage backend.
+
+When authentication is enabled, files in `storage/app/public` also require authentication.
 
 Refetch and Bulk Import lifecycle protection use Laravel atomic cache locks. If `CACHE_DRIVER` is changed, use a configured cache store that supports Laravel atomic locks.
 

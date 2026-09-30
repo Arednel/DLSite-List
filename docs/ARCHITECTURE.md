@@ -234,12 +234,13 @@ When enabled:
 - five failed login attempts from the same client IP within five minutes trigger throttling
 - a successful login clears that IP's failed-attempt state
 - `Remember me` keeps the administrator signed in for up to 180 days
+- files under `storage/app/public` are served through Laravel; unauthenticated `/storage/*` requests return HTTP 401 while authentication is enabled
 
 Administrator password changes and resets rotate the remember token.
 
-`RequireOptionalAuthentication` runs in the web middleware stack after session startup.
+`RequireOptionalAuthentication` runs in the web middleware stack after session startup. The `/storage/*` route replaces it with the narrower `RequireOptionalStorageAuthentication` middleware and skips UI-locale resolution, while retaining the session/cookie middleware required for normal and remember-me authentication.
 
-Files served directly from `public/` and `/storage` are not protected by Laravel session middleware.
+Static application assets under `public/` remain directly web-accessible and are not part of the authenticated library-media boundary.
 
 ## Application Structure
 
@@ -250,7 +251,7 @@ Files served directly from `public/` and `/storage` are not protected by Laravel
 - Database: MySQL 8
 - Background work: Laravel database queues and job batches
 - Scraper: `python/DLSiteScraper.py`
-- Persistent application files: Laravel storage plus publicly served work images
+- Persistent application files: Laravel storage, with `storage/app/public` files served through Laravel
 
 Laravel remains the application boundary. Python is a scraper process invoked by Laravel, not a second web service.
 
@@ -259,6 +260,7 @@ Laravel remains the application boundary. Python is a scraper process invoked by
 Routes are defined in `routes/web.php`.
 
 Main controllers:
+- `app/Http/Controllers/PublicStorageController.php`
 - `app/Http/Controllers/ProductController.php`
 - `app/Http/Controllers/OptionsController.php`
 - `app/Http/Controllers/AutocompleteController.php`
@@ -531,11 +533,13 @@ Canonical work metadata:
 storage/app/Works/{RJ}.json
 ```
 
-Canonical public work images:
+Canonical work images:
 
 ```text
 storage/app/public/Works/{RJ}/...
 ```
+
+These files are addressed by the existing `/storage/...` application URLs but are served by `PublicStorageController` from the `public` filesystem disk. The controller serves files through Laravel's `public` disk (`storage/app/public`) and returns `404` for missing, malformed, or path-traversal requests.
 
 Staged Refetch metadata:
 

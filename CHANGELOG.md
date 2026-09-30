@@ -4,6 +4,16 @@ All notable changes to this project are documented in this file.
 
 ## Unreleased
 
+### Upgrade notes
+
+For existing manual installations:
+
+* Remove the existing `public/storage` symlink.
+
+### Security
+
+* Files in `storage/app/public` are now served through Laravel and require login when authentication is enabled.
+
 ## 1.11.0 - 2026-09-30
 
 *Product Format metadata & Fixes*

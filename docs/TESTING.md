@@ -168,6 +168,10 @@ Covers optional administrator authentication:
 - themes/locales
 - Remember me persistence
 
+#### `tests/Feature/PublicStorageTest.php`
+
+Covers Laravel-served `storage/app/public` files, including authentication-off guest access, HTTP 401 for unauthenticated access when authentication is enabled, authenticated access, nested storage paths, directory rejection, missing files, traversal rejection, and preventing unauthenticated guests from probing file existence when authentication is enabled.
+
 #### `tests/Feature/AutocompleteControllerTest.php`
 
 Covers tag/series autocomplete endpoints, matching/order rules, result limits, tag color payloads, group-over-tag color precedence, and autocomplete asset/data-attribute rendering.

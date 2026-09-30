@@ -6,7 +6,11 @@ use App\Http\Controllers\AutocompleteController;
 use App\Http\Controllers\LibraryTransferController;
 use App\Http\Controllers\OptionsController;
 use App\Http\Controllers\ProductController;
+use App\Http\Controllers\PublicStorageController;
 use App\Http\Controllers\RefetchController;
+use App\Http\Middleware\RequireOptionalAuthentication;
+use App\Http\Middleware\RequireOptionalStorageAuthentication;
+use App\Http\Middleware\SetUiLocale;
 use App\Support\ReturnTarget;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
@@ -74,6 +78,16 @@ Route::controller(AutocompleteController::class)->group(function () {
     Route::get('/autocomplete/tags', 'tags')->name('autocomplete.tags');
     Route::get('/autocomplete/series', 'series')->name('autocomplete.series');
 });
+
+// Files Storage
+Route::get('/storage/{path}', PublicStorageController::class)
+    ->where('path', '.*')
+    ->name('storage.public')
+    ->middleware(RequireOptionalStorageAuthentication::class)
+    ->withoutMiddleware([
+        RequireOptionalAuthentication::class,
+        SetUiLocale::class,
+    ]);
 
 // Optional authentication
 Route::controller(AuthenticationController::class)->group(function () {
