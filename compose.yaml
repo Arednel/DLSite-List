@@ -53,8 +53,6 @@ services:
             context: .
             dockerfile: docker/web.dockerfile
         working_dir: /var/www/dlsite_list
-        volumes:
-            - storage_app:/var/www/dlsite_list/storage/app:ro
         depends_on:
             - "app"
         ports:
