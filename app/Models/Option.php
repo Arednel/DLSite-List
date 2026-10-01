@@ -37,6 +37,8 @@ class Option extends Model
 
     public const DLSITE_AGE_APPROPRIATE_LINKS_ENABLED = 'dlsite_age_appropriate_links_enabled';
 
+    public const DLSITE_ANNOUNCE_LINKS_ENABLED = 'dlsite_announce_links_enabled';
+
     public const PRODUCT_FORM_THEME = 'product_form_theme';
 
     public const USER_AUTHENTICATION_ENABLED = 'user_authentication_enabled';
@@ -176,6 +178,7 @@ class Option extends Model
         self::SERIES_AUTOCOMPLETE_ORDER,
         self::AUTO_SERIES_FROM_TITLE_NAME,
         self::DLSITE_AGE_APPROPRIATE_LINKS_ENABLED,
+        self::DLSITE_ANNOUNCE_LINKS_ENABLED,
         self::PRODUCT_FORM_THEME,
         self::USER_AUTHENTICATION_ENABLED,
         self::AUTHENTICATION_PAGE_THEME,
@@ -202,6 +205,7 @@ class Option extends Model
         self::SERIES_AUTOCOMPLETE_ORDER,
         self::AUTO_SERIES_FROM_TITLE_NAME,
         self::DLSITE_AGE_APPROPRIATE_LINKS_ENABLED,
+        self::DLSITE_ANNOUNCE_LINKS_ENABLED,
         self::PRODUCT_FORM_THEME,
         self::PRODUCT_FORM_MODAL_ENABLED,
         self::PRODUCT_FORM_MODAL_COMPLETION_ACTION,
@@ -272,6 +276,7 @@ class Option extends Model
             self::SERIES_AUTOCOMPLETE_ORDER => AutocompleteOrder::Usage->value,
             self::AUTO_SERIES_FROM_TITLE_NAME => true,
             self::DLSITE_AGE_APPROPRIATE_LINKS_ENABLED => false,
+            self::DLSITE_ANNOUNCE_LINKS_ENABLED => true,
             self::PRODUCT_FORM_THEME => self::PRODUCT_FORM_THEME_BLACK,
             self::AUTHENTICATION_PAGE_THEME => self::AUTHENTICATION_PAGE_THEME_CHERRY,
             self::PRODUCT_FORM_MODAL_COMPLETION_ACTION => self::PRODUCT_FORM_MODAL_COMPLETION_REDIRECT,
@@ -463,6 +468,21 @@ class Option extends Model
     public static function resetDlsiteAgeAppropriateLinksEnabledToDefault(): void
     {
         self::forget(self::DLSITE_AGE_APPROPRIATE_LINKS_ENABLED);
+    }
+
+    public static function dlsiteAnnounceLinksEnabled(): bool
+    {
+        return self::booleanValueFor(self::DLSITE_ANNOUNCE_LINKS_ENABLED, self::defaultFor(self::DLSITE_ANNOUNCE_LINKS_ENABLED));
+    }
+
+    public static function setDlsiteAnnounceLinksEnabled(bool $enabled): void
+    {
+        self::setBooleanValue(self::DLSITE_ANNOUNCE_LINKS_ENABLED, $enabled);
+    }
+
+    public static function resetDlsiteAnnounceLinksEnabledToDefault(): void
+    {
+        self::forget(self::DLSITE_ANNOUNCE_LINKS_ENABLED);
     }
 
     public static function productFormTheme(): string
@@ -825,6 +845,7 @@ class Option extends Model
                 self::PRODUCT_FORM_MODAL_ENABLED,
                 self::PRODUCT_FORM_MODAL_COMPLETION_ACTION,
                 self::DLSITE_AGE_APPROPRIATE_LINKS_ENABLED,
+                self::DLSITE_ANNOUNCE_LINKS_ENABLED,
             ])
             ->pluck('value', 'key');
 
@@ -884,6 +905,10 @@ class Option extends Model
             dlsiteAgeAppropriateLinksEnabled: self::normalizeBoolean(
                 $values->get(self::DLSITE_AGE_APPROPRIATE_LINKS_ENABLED),
                 self::defaultFor(self::DLSITE_AGE_APPROPRIATE_LINKS_ENABLED),
+            ),
+            dlsiteAnnounceLinksEnabled: self::normalizeBoolean(
+                $values->get(self::DLSITE_ANNOUNCE_LINKS_ENABLED),
+                self::defaultFor(self::DLSITE_ANNOUNCE_LINKS_ENABLED),
             ),
         );
     }

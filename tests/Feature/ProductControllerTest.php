@@ -2127,6 +2127,24 @@ class ProductControllerTest extends TestCase
         $this->assertSame(['MOV', 'SND', 'MS2'], Product::query()->findOrFail($workId)->product_format);
     }
 
+    public function test_quick_add_stores_fetched_announcement_date(): void
+    {
+        Storage::fake('local');
+        Process::fake(['*' => Process::result(output: '{"failed_images":[]}')])->preventStrayProcesses();
+
+        $workId = 'RJ000009911';
+        Storage::disk('local')->put(
+            "Works/{$workId}.json",
+            json_encode($this->scrapedWorkPayload($workId, [
+                'announce_date' => '2026-09-24 00:00:00',
+            ]), JSON_THROW_ON_ERROR),
+        );
+
+        $this->post('/store', ['id' => $workId])->assertSessionHasNoErrors();
+
+        $this->assertSame('2026-09-24 00:00:00', Product::findOrFail($workId)->announce_date?->format('Y-m-d H:i:s'));
+    }
+
     public function test_quick_add_uses_scraped_product_format_when_visible_field_is_blank(): void
     {
         Storage::fake('local');

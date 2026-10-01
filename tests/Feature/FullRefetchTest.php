@@ -214,6 +214,63 @@ class FullRefetchTest extends TestCase
         $this->assertSame(['SOU', 'MS2', 'MV2', 'custom:Audiobook'], $product->fresh()->product_format);
     }
 
+    #[DataProvider('announcementDateReviewActions')]
+    public function test_announcement_date_review_respects_overwrite_and_ignore(
+        string $action,
+        string $expectedDate,
+        bool $expectedChanged,
+    ): void {
+        Storage::fake('local');
+        Storage::fake('public');
+        $product = Product::factory()->create([
+            'announce_date' => '2026-09-01 00:00:00',
+        ]);
+        $run = app(RefetchService::class)->createRun([$product->id], false);
+        // Accepted changes cause RefetchService to promote the staged scraper JSON when the last tab is resolved, just as a real fetched refetch does.
+        Storage::disk('local')->put(
+            "Refetch/{$run->id}/Works/{$product->id}.json",
+            json_encode(['japanese' => ['product_id' => $product->id], 'english' => []], JSON_THROW_ON_ERROR),
+        );
+        $result = $run->results()->firstOrFail();
+        $result->forceFill([
+            'status' => RefetchWorkResult::STATUS_FETCHED,
+            'changes' => [
+                RefetchCategory::AnnouncementDate->value => [
+                    'announce_date' => [
+                        'label' => 'Scheduled release date',
+                        'old' => '2026-09-01 00:00:00',
+                        'new' => '2026-09-24 00:00:00',
+                    ],
+                ],
+            ],
+        ])->save();
+        $run->forceFill([
+            'status' => RefetchRun::STATUS_REVIEW,
+            'processed_count' => 1,
+            'fetched_count' => 1,
+            'completed_at' => now(),
+            'resolved_tabs' => array_values(array_diff(
+                RefetchCategory::values(),
+                [RefetchCategory::AnnouncementDate->value],
+            )),
+        ])->save();
+
+        app(RefetchService::class)->applyTab($run, RefetchCategory::AnnouncementDate, $action);
+
+        $this->assertSame($expectedDate, $product->fresh()->announce_date?->format('Y-m-d H:i:s'));
+        $this->assertSame($action, data_get($result->fresh()->decisions, 'announce_date.announce_date.action'));
+        $this->assertSame($expectedChanged, data_get($result->fresh()->decisions, 'announce_date.announce_date.changed'));
+        $this->assertTrue($run->fresh()->tabResolved(RefetchCategory::AnnouncementDate));
+    }
+
+    public static function announcementDateReviewActions(): array
+    {
+        return [
+            'accept new date' => [RefetchService::ACTION_OVERWRITE, '2026-09-24 00:00:00', true],
+            'ignore new date' => [RefetchService::ACTION_IGNORE, '2026-09-01 00:00:00', false],
+        ];
+    }
+
     public function test_product_format_ignore_preserves_current_value(): void
     {
         $product = Product::factory()->create([

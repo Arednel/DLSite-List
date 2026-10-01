@@ -44,6 +44,7 @@ class ProductIndexFiltersTest extends TestCase
             'priority' => '-1',
             'num_re_listen_times' => 'abc',
             'start_date_from' => '2026-02-31',
+            'announce_date_to' => '2026-02-31',
             'created_at_to' => '2026/01/01',
             'sort_first_field' => 'priority',
         ]);
@@ -72,6 +73,8 @@ class ProductIndexFiltersTest extends TestCase
             'start_date_to' => '2026-01-31',
             'end_date_from' => '2026-02-01',
             'end_date_to' => '2026-02-28',
+            'announce_date_from' => '2026-02-01',
+            'announce_date_to' => '2026-02-28',
             'created_at_from' => '2026-03-01',
             'created_at_to' => '2026-03-31',
             'updated_at_from' => '2026-04-01',
@@ -80,6 +83,8 @@ class ProductIndexFiltersTest extends TestCase
 
         $this->assertSame('2026-01-01', $filters->startDateFrom);
         $this->assertSame('2026-02-28', $filters->endDateTo);
+        $this->assertSame('2026-02-01', $filters->announceDateFrom);
+        $this->assertSame('2026-02-28', $filters->announceDateTo);
         $this->assertSame('2026-03-01', $filters->createdAtFrom);
         $this->assertSame('2026-04-30', $filters->updatedAtTo);
         $this->assertSame([
@@ -87,6 +92,8 @@ class ProductIndexFiltersTest extends TestCase
             'start_date_to' => '2026-01-31',
             'end_date_from' => '2026-02-01',
             'end_date_to' => '2026-02-28',
+            'announce_date_from' => '2026-02-01',
+            'announce_date_to' => '2026-02-28',
             'created_at_from' => '2026-03-01',
             'created_at_to' => '2026-03-31',
             'updated_at_from' => '2026-04-01',
@@ -179,6 +186,7 @@ class ProductIndexFiltersTest extends TestCase
             ['re_listen_value'],
             ['start_date_from', 'start_date_to'],
             ['end_date_from', 'end_date_to'],
+            ['announce_date_from', 'announce_date_to'],
             ['created_at_from', 'created_at_to'],
             ['updated_at_from', 'updated_at_to'],
         ], ProductIndexFilters::VISIBILITY_FILTER_GROUPS);

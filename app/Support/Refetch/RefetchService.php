@@ -484,6 +484,7 @@ final class RefetchService
                 RefetchCategory::Series,
                 RefetchCategory::Age,
                 RefetchCategory::ProductFormat,
+                RefetchCategory::AnnouncementDate,
             ], true)) {
                 $value = $change['new'];
 

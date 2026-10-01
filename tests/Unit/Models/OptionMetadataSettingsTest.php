@@ -91,6 +91,17 @@ class OptionMetadataSettingsTest extends TestCase
         $this->assertFalse(Option::dlsiteAgeAppropriateLinksEnabled());
     }
 
+    public function test_dlsite_announcement_links_default_to_enabled_and_can_be_reset(): void
+    {
+        $this->assertTrue(Option::dlsiteAnnounceLinksEnabled());
+
+        Option::setDlsiteAnnounceLinksEnabled(false);
+        $this->assertFalse(Option::dlsiteAnnounceLinksEnabled());
+
+        Option::resetDlsiteAnnounceLinksEnabledToDefault();
+        $this->assertTrue(Option::dlsiteAnnounceLinksEnabled());
+    }
+
     public function test_optional_product_statuses_default_save_and_reset(): void
     {
         $this->assertSame([
@@ -361,6 +372,7 @@ class OptionMetadataSettingsTest extends TestCase
         $this->assertSame($this->visibleDefaultSortOptions(), $defaults->indexSortFieldOptions);
         $this->assertFalse(collect($defaults->indexSortFieldLayout)->firstWhere('field', ProductIndexSortField::UpdatedAt->value)['visible']);
         $this->assertFalse(collect($defaults->indexSortFieldLayout)->firstWhere('field', ProductIndexSortField::ProductFormat->value)['visible']);
+        $this->assertFalse(collect($defaults->indexSortFieldLayout)->firstWhere('field', ProductIndexSortField::AnnouncementDate->value)['visible']);
         $this->assertFalse(collect($defaults->indexSortFieldLayout)->firstWhere('field', ProductIndexSortField::Circle->value)['visible']);
         $this->assertSame(ProductField::Image->value, $defaults->indexColumns[0]['field']);
         $this->assertContains(ProductField::Title->value, $defaults->visibleIndexFields);
@@ -671,6 +683,7 @@ class OptionMetadataSettingsTest extends TestCase
         return array_diff_key(ProductIndexSortField::options(), array_flip([
             ProductIndexSortField::UpdatedAt->value,
             ProductIndexSortField::ProductFormat->value,
+            ProductIndexSortField::AnnouncementDate->value,
             ProductIndexSortField::Circle->value,
             ProductIndexSortField::Scenario->value,
             ProductIndexSortField::Illustration->value,

@@ -231,6 +231,9 @@ class ProductSurfaceLocalizationTest extends TestCase
             'Custom->Fetched JP' => 'Custom -> Fetched JP',
             'Custom->Fetched EN' => 'Custom -> Fetched EN',
             'This work Custom->Fetched' => 'This work Custom -> Fetched',
+            'Announcement Date from' => 'Scheduled release date from',
+            'Announcement Date to' => 'Scheduled release date to',
+            'Announcement Date' => 'Scheduled release date',
         ];
         $actualEnglishOverrides = [];
         $placeholders = static function (string $value): array {

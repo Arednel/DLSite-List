@@ -432,6 +432,29 @@ class ProductIndexLivewireTest extends TestCase
         $this->assertStringContainsString('age_category', $productQuery);
     }
 
+    public function test_announcement_links_are_generated_from_hidden_announcement_date_and_setting(): void
+    {
+        Option::setIndexFieldLayout([
+            ['field' => ProductField::AgeCategory->value, 'visible' => false],
+        ]);
+        Option::setDlsiteAgeAppropriateLinksEnabled(true);
+
+        $announced = $this->createProduct(1011, [
+            'age_category' => 'ALL_AGES',
+            'announce_date' => '2026-09-24 00:00:00',
+        ]);
+        $ordinary = $this->createProduct(1012, ['age_category' => 'R18']);
+
+        $html = Livewire::test(ProductIndex::class)->html();
+        $this->assertSame(3, substr_count($html, "https://www.dlsite.com/home/announce/=/product_id/{$announced->id}.html"));
+        $this->assertSame(3, substr_count($html, "https://www.dlsite.com/maniax/work/=/product_id/{$ordinary->id}.html"));
+
+        Option::setDlsiteAnnounceLinksEnabled(false);
+        $disabledHtml = Livewire::test(ProductIndex::class)->html();
+        $this->assertSame(3, substr_count($disabledHtml, "https://www.dlsite.com/home/work/=/product_id/{$announced->id}.html"));
+        $this->assertStringNotContainsString("/announce/=/product_id/{$announced->id}.html", $disabledHtml);
+    }
+
     public function test_index_results_hydrate_columns_for_visible_index_fields(): void
     {
         $this->createProduct(1, [
@@ -686,6 +709,86 @@ class ProductIndexLivewireTest extends TestCase
             ->assertSee('wire:click="sortByHeader(\'updated_at\')"', false)
             ->assertSee('2026-04-05 06:07')
             ->assertSee('2026-08-09 10:11');
+    }
+
+    public function test_announcement_date_index_column_is_hidden_by_default_and_can_be_enabled(): void
+    {
+        $this->createProduct(1, [
+            'work_name' => 'ANNOUNCE_COLUMN_WORK',
+            'announce_date' => Carbon::parse('2026-09-24 12:34:00'),
+        ]);
+
+        Livewire::test(ProductIndex::class)
+            ->assertDontSee('data-column="Scheduled release date"', false)
+            ->assertDontSee('2026-09-24 12:34');
+
+        Option::setIndexFieldLayout([
+            ['field' => ProductField::AnnouncementDate->value, 'visible' => true],
+        ]);
+
+        Livewire::test(ProductIndex::class)
+            ->assertSee('data-column="Scheduled release date"', false)
+            ->assertSee('wire:click="sortByHeader(\'announce_date\')"', false)
+            ->assertSee('2026-09-24 12:34');
+    }
+
+    public function test_announcement_date_filter_uses_inclusive_calendar_date_range(): void
+    {
+        $this->createProduct(1, [
+            'work_name' => 'ANNOUNCE_BEFORE',
+            'announce_date' => Carbon::parse('2026-09-23 23:59:00'),
+        ]);
+        $this->createProduct(2, [
+            'work_name' => 'ANNOUNCE_WITHIN',
+            'announce_date' => Carbon::parse('2026-09-24 23:59:00'),
+        ]);
+        $this->createProduct(3, [
+            'work_name' => 'ANNOUNCE_AFTER',
+            'announce_date' => Carbon::parse('2026-09-25 00:00:00'),
+        ]);
+        $this->createProduct(4, [
+            'work_name' => 'ANNOUNCE_MISSING',
+            'announce_date' => null,
+        ]);
+
+        Option::setFilterFieldLayout([
+            ['field' => ProductField::AnnouncementDate->value, 'visible' => true],
+        ]);
+
+        Livewire::test(ProductIndex::class)
+            ->assertSee('wire:model="draft.announce_date_from"', false)
+            ->assertSee('wire:model="draft.announce_date_to"', false)
+            ->set('draft.announce_date_from', '2026-09-24')
+            ->set('draft.announce_date_to', '2026-09-24')
+            ->call('applyFilters')
+            ->assertSet('announce_date_from', '2026-09-24')
+            ->assertSet('announce_date_to', '2026-09-24')
+            ->assertSee('ANNOUNCE_WITHIN')
+            ->assertDontSee('ANNOUNCE_BEFORE')
+            ->assertDontSee('ANNOUNCE_AFTER')
+            ->assertDontSee('ANNOUNCE_MISSING');
+    }
+
+    public function test_announcement_date_sort_is_optional_and_keeps_null_values_last(): void
+    {
+        $this->createProduct(1, ['work_name' => 'ANNOUNCE_SORT_EARLY', 'announce_date' => '2026-09-23 12:00:00']);
+        $this->createProduct(2, ['work_name' => 'ANNOUNCE_SORT_LATE', 'announce_date' => '2026-09-25 12:00:00']);
+        $this->createProduct(3, ['work_name' => 'ANNOUNCE_SORT_NONE', 'announce_date' => null]);
+
+        $this->assertArrayNotHasKey(
+            ProductIndexSortField::AnnouncementDate->value,
+            Option::productIndexSettings()->indexSortFieldOptions,
+        );
+
+        Option::setIndexSortFieldLayout([
+            ['field' => ProductIndexSortField::AnnouncementDate->value, 'visible' => true],
+        ]);
+
+        Livewire::test(ProductIndex::class)
+            ->set('draft.sort_first_field', 'announce_date')
+            ->set('draft.sort_first_direction', 'asc')
+            ->call('applyFilters')
+            ->assertSeeInOrder(['ANNOUNCE_SORT_EARLY', 'ANNOUNCE_SORT_LATE', 'ANNOUNCE_SORT_NONE']);
     }
 
     public function test_index_content_overflow_keeps_content_without_controls_when_disabled(): void

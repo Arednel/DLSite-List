@@ -26,6 +26,7 @@ final class ProductIndexResults
         'work_name_english',
         'notes',
         'progress',
+        'announce_date',
     ];
 
     private const VISIBLE_FIELD_COLUMNS = [
@@ -34,6 +35,7 @@ final class ProductIndexResults
         'series' => ['series'],
         'age_category' => ['age_category'],
         'product_format' => ['product_format'],
+        'announce_date' => ['announce_date'],
         'notes' => ['notes'],
         'start_date' => ['start_date'],
         'end_date' => ['end_date'],
@@ -52,6 +54,7 @@ final class ProductIndexResults
         'progress',
         'start_date',
         'end_date',
+        'announce_date',
         'num_re_listen_times',
         're_listen_value',
         'priority',
@@ -257,6 +260,14 @@ final class ProductIndexResults
             ->when(
                 $filters->endDateTo !== '',
                 fn($query) => $query->where('end_date_sort', '<=', $this->dateSortValueFromInput($filters->endDateTo))
+            )
+            ->when(
+                $filters->announceDateFrom !== '',
+                fn($query) => $query->whereDate('announce_date', '>=', $filters->announceDateFrom)
+            )
+            ->when(
+                $filters->announceDateTo !== '',
+                fn($query) => $query->whereDate('announce_date', '<=', $filters->announceDateTo)
             )
             ->when(
                 $filters->createdAtFrom !== '',
@@ -675,6 +686,7 @@ final class ProductIndexResults
             'progress' => ProductProgress::tryFrom((string) $product->progress)?->label() ?? '-',
             'start_date' => PartialDateFormatter::format($product->start_date) ?? '-',
             'end_date' => PartialDateFormatter::format($product->end_date) ?? '-',
+            'announce_date' => $product->announce_date?->format('Y-m-d H:i') ?? '-',
             'num_re_listen_times' => $product->num_re_listen_times === null
                 ? '-'
                 : (string) $product->num_re_listen_times,

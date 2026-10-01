@@ -17,7 +17,7 @@ final class LibraryData
     public const FIELDS = [
         'titles' => ['work_name', 'work_name_english'],
         'descriptions' => ['description', 'description_english'],
-        'details' => ['maker_id', 'series', 'age_category', 'product_format', 'notes'],
+        'details' => ['maker_id', 'series', 'age_category', 'product_format', 'announce_date', 'notes'],
         'listening' => ['progress', 'score', 'priority', 'num_re_listen_times', 're_listen_value', 'start_date', 'end_date'],
     ];
 
@@ -28,6 +28,7 @@ final class LibraryData
     public function work(Product $product, bool $images = false): array
     {
         $attributes = $product->attributesToArray();
+        $attributes['announce_date'] = $product->announce_date?->format('Y-m-d H:i:s');
         $data = ['rj_code' => strtoupper($product->id), 'created_at' => $product->created_at?->utc()->toIso8601ZuluString(), 'updated_at' => $product->updated_at?->utc()->toIso8601ZuluString()];
         foreach (self::FIELDS as $category => $fields) {
             $data[$category] = Arr::only($attributes, $fields);

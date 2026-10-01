@@ -9,6 +9,12 @@ All notable changes to this project are documented in this file.
 For existing manual installations:
 
 * Remove the existing `public/storage` symlink.
+* Run `php artisan migrate`.
+
+### Added
+
+* Added support for DLsite's Scheduled Release Date (`announce_date`) metadata.
+* Added an option, enabled by default, to use DLsite announcement (`announce/`) links when available, falling back to regular (`work/`) links.
 
 ### Changed
 

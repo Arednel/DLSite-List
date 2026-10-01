@@ -244,6 +244,10 @@
         {{ $productDisplayValues[$product->id][$column['field']] ?? '-' }}
     @break
 
+    @case('announce_date')
+        {{ $productDisplayValues[$product->id][$column['field']] ?? '-' }}
+    @break
+
     @case('num_re_listen_times')
         {{ $productDisplayValues[$product->id][$column['field']] ?? '-' }}
     @break

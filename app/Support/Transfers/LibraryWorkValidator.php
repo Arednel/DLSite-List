@@ -74,6 +74,7 @@ final class LibraryWorkValidator
             'details.series' => ['sometimes', 'nullable', 'string', 'max:1000'],
             'details.age_category' => ['sometimes', 'nullable', Rule::enum(ProductAgeCategory::class)],
             ...self::productFormatRules('details.product_format'),
+            'details.announce_date' => ['sometimes', 'nullable', 'date'],
             'details.notes' => ['sometimes', 'nullable', 'string', 'max:1000'],
             'listening' => ['sometimes', 'array:' . implode(',', LibraryData::FIELDS['listening'])],
             'listening.progress' => ['sometimes', 'nullable', Rule::enum(ProductProgress::class)],

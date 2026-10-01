@@ -34,6 +34,7 @@ final class ImportReview
             'series',
             'age',
             'product_format',
+            'announce_date',
             'circle',
             'maker',
             'scenario',
@@ -61,6 +62,7 @@ final class ImportReview
         'series' => ['details', 'series'],
         'age' => ['details', 'age_category'],
         'product_format' => ['details', 'product_format'],
+        'announce_date' => ['details', 'announce_date'],
         'maker' => ['details', 'maker_id'],
         'notes' => ['details', 'notes'],
         'score' => ['listening', 'score'],
@@ -524,6 +526,10 @@ final class ImportReview
                 : Arr::only($current, array_keys($incoming));
         }
         if (isset($item->metadata['field'])) {
+            if ($item->metadata['field'] === 'announce_date') {
+                return $product->announce_date?->format('Y-m-d H:i:s');
+            }
+
             return $product->getAttribute($item->metadata['field']);
         }
         if (in_array($item->category, ['cover', 'sample_images'], true)) {

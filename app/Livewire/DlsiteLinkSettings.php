@@ -14,9 +14,12 @@ class DlsiteLinkSettings extends Component
 
     public bool $enabled = false;
 
+    public bool $announceEnabled = true;
+
     public function mount(): void
     {
         $this->enabled = Option::dlsiteAgeAppropriateLinksEnabled();
+        $this->announceEnabled = Option::dlsiteAnnounceLinksEnabled();
     }
 
     public function render(): View
@@ -28,30 +31,36 @@ class DlsiteLinkSettings extends Component
     {
         $this->validate([
             'enabled' => ['boolean'],
+            'announceEnabled' => ['boolean'],
         ]);
 
         Option::setDlsiteAgeAppropriateLinksEnabled($this->enabled);
+        Option::setDlsiteAnnounceLinksEnabled($this->announceEnabled);
         $this->enabled = Option::dlsiteAgeAppropriateLinksEnabled();
-        $this->markSaved('DLSite link setting saved.');
+        $this->announceEnabled = Option::dlsiteAnnounceLinksEnabled();
+        $this->markSaved('DLSite link settings saved.');
     }
 
     public function resetToDefault(): void
     {
         Option::resetDlsiteAgeAppropriateLinksEnabledToDefault();
+        Option::resetDlsiteAnnounceLinksEnabledToDefault();
         $this->enabled = Option::dlsiteAgeAppropriateLinksEnabled();
-        $this->completeResetWithNotice('DLSite link setting reset to default.');
+        $this->announceEnabled = Option::dlsiteAnnounceLinksEnabled();
+        $this->completeResetWithNotice('DLSite link settings reset to default.');
     }
 
     #[On('options-defaults-reset')]
     public function refreshFromSettings(): void
     {
         $this->enabled = Option::dlsiteAgeAppropriateLinksEnabled();
+        $this->announceEnabled = Option::dlsiteAnnounceLinksEnabled();
         $this->clearSavedNotice();
     }
 
     public function updated(string $property): void
     {
-        if ($property !== 'enabled') {
+        if (! in_array($property, ['enabled', 'announceEnabled'], true)) {
             return;
         }
 

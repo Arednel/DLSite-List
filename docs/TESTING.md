@@ -188,7 +188,7 @@ Covers the full Refetch workflow:
 - staged fetch data
 - image-check choice
 - review categories
-- apply/ignore/reject behavior, including Product Format Overwrite and Ignore
+- apply/ignore/reject behavior, including Product Format and announcement-date Overwrite/Ignore
 - localized Product Format review values
 - incremental application
 - lifecycle locking
@@ -204,7 +204,7 @@ Covers Refetch queue failure recovery, cancellation, continued processing after 
 
 #### `tests/Feature/BulkImportTest.php`
 
-Covers Bulk Import parsing/validation, shared-input snapshots, queued item processing, skips/failures, transactional persistence (including failed completion writes, worker interruption before commit, and stale item/run state), and run completion. Product Format coverage verifies fetched values when the field is hidden or blank and manual override behavior when a visible value is supplied.
+Covers Bulk Import parsing/validation, shared-input snapshots, queued item processing, skips/failures, transactional persistence (including failed completion writes, worker interruption before commit, and stale item/run state), and run completion. Product Format coverage verifies fetched values when the field is hidden or blank and manual override behavior when a visible value is supplied. Also verifies announcement dates are saved by the shared importer.
 
 #### `tests/Feature/OptionsBulkImportsTest.php`
 
@@ -216,19 +216,19 @@ Covers core transfer contracts, route/review smoke coverage, compact collapsed E
 
 #### `tests/Feature/LibraryTransferExportTest.php`
 
-Covers export selection/planning, deterministic work/image inventory, Tag Library/Options fragmentation, multipart manifests and size boundaries, work-level progress, source-change replanning, and downloads. Product Format coverage verifies that ordered canonical/custom values are written to both locale documents and survive export/import round trips.
+Covers export selection/planning, deterministic work/image inventory, Tag Library/Options fragmentation, multipart manifests and size boundaries, work-level progress, source-change replanning, and downloads. Product Format coverage verifies that ordered canonical/custom values are written to both locale documents and survive export/import round trips; announcement dates are exported in both locales.
 
 Regression coverage injects failures after successor-job insertion in every planning phase, verifies transaction rollback and successful retry, and checks stale planning calls.
 
 #### `tests/Feature/LibraryTransferImportTest.php`
 
-Covers multipart upload/validation, missing or replacement parts, archive/path/checksum safety, bounded analysis/checkpoint retries, image validation, existing/new work analysis, and data-only continuation. Product Format coverage includes custom/empty values, invalid-value quarantine, locale fallback, and compatibility with archives created before the field existed.
+Covers multipart upload/validation, missing or replacement parts, archive/path/checksum safety, bounded analysis/checkpoint retries, image validation, existing/new work analysis, and data-only continuation. Product Format coverage includes custom/empty values, invalid-value quarantine, locale fallback, and compatibility with archives created before the field existed. `announce_date` tests cover round trips, omitted fields, and invalid-date quarantine.
 
 #### `tests/Feature/LibraryTransferReviewTest.php`
 
 Covers Ignore/Overwrite/Merge decisions, work/tag/group/relationship/option application, stale-conflict handling, atomic work updates, image promotion/recovery, timestamps, and read-only completed reviews. Work-review navigation checks category identifiers and the items returned when switching repeat-field tabs.
 
-Partial contributor document coverage verifies that omitted roles survive Overwrite and explicitly empty roles can still be cleared.
+Partial contributor document coverage verifies that omitted roles survive Overwrite and explicitly empty roles can still be cleared. Announcement-date review checks use matching date formats for unchanged imported values.
 
 #### `tests/Feature/LibraryTransferLifecycleTest.php`
 
@@ -356,14 +356,14 @@ Covers `works:cleanup-images`, including preservation of referenced images and p
 
 Covers the Livewire Index:
 - pagination/query-string state
-- filtering/search/date ranges
+- filtering/search/date ranges, including inclusive Scheduled Release Date boundaries
 - Product Format display, partial label/custom search, exact-code matching, JSON-element boundaries, and special-character search escaping
-- sort behavior, including Product Format sorting by its first stored value
+- sort behavior, including Product Format sorting by its first stored value and announcement-date sorting with nulls last
 - narrow hydration
 - batched settings
 - field visibility/order, optional-column sort mappings, and hydrated values independent of UI wording
 - timestamps
-- DLSite links
+- DLSite links, including `announce/` selection independent of Home/Maniax
 - Image Viewer
 - Add/Edit modal links
 - tags/colors/group ordering
@@ -371,6 +371,10 @@ Covers the Livewire Index:
 - responsive rendered structure
 - content overflow
 - return/query behavior
+
+#### `tests/Feature/AnnouncementDateMigrationTest.php`
+
+Covers backfilling existing scraper JSON, missing/corrupt files, and propagation of database update errors.
 
 #### `tests/Feature/ProductMetadataMigrationTest.php`
 
@@ -381,7 +385,7 @@ Covers metadata-backfill behavior when canonical work JSON is missing or invalid
 Covers metadata-related UI settings:
 - field layouts, including collapsed section rendering
 - automatic Series
-- DLSite links
+- DLSite links, including the default-on announcement toggle, save/reset behavior, and tooltip
 - Add/Edit form theme
 - Add/Edit modal
 - Index table width
@@ -488,7 +492,7 @@ Covers server-rendered Add/Edit modal completion fallback output and conditional
 - Covers Option defaults, normalization, persistence, reset behavior, content-focus persistence, and batched metadata/Index settings.
 
 `tests/Unit/Models/ProductDLSiteUrlTest.php`
-- Covers default Maniax URLs and enabled age-aware Home/Maniax mapping.
+- Covers default Maniax URLs, age-aware Home/Maniax mapping, and independent announcement/regular page-type selection.
 
 `tests/Unit/Models/RefetchStateTest.php`
 - Covers Refetch run/result state and category helpers.
@@ -537,7 +541,7 @@ Covers server-rendered Add/Edit modal completion fallback output and conditional
 - Covers Laravel Process command construction, explicit output destinations, venv executable, unlimited timeout behavior, and log-retention environment.
 
 `tests/Unit/Support/DLSite/DLSiteWorkDataTest.php`
-- Covers shared scraped metadata extraction for titles/descriptions/creators/maker data, Product Format normalization and Japanese-first/English-fallback handling, product ids, and missing-id errors.
+- Covers shared scraped metadata extraction for titles/descriptions/creators/maker data, Product Format normalization, announcement-date locale fallback, product ids, and missing-id errors.
 
 `tests/Unit/Support/DLSite/DLSiteWorkFetcherTest.php`
 - Covers the PHP-owned five-attempt retry loop, manifest/JSON validation, partial results, immediate success, and rejection of stale JSON fallback.

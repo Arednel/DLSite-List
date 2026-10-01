@@ -44,4 +44,35 @@ class ProductDLSiteUrlTest extends TestCase
             'invalid legacy age' => ['UNKNOWN', 'maniax'],
         ];
     }
+
+    #[DataProvider('announcementUrlProvider')]
+    public function test_announcement_setting_and_date_determine_the_page_type(
+        ?string $announceDate,
+        bool $enabled,
+        bool $ageAppropriate,
+        string $section,
+        string $pageType,
+    ): void {
+        $product = new Product([
+            'id' => 'RJ01234567',
+            'age_category' => 'ALL_AGES',
+            'announce_date' => $announceDate,
+        ]);
+
+        $this->assertSame(
+            "https://www.dlsite.com/{$section}/{$pageType}/=/product_id/RJ01234567.html",
+            $product->dlsiteWorkUrl($ageAppropriate, $enabled),
+        );
+    }
+
+    public static function announcementUrlProvider(): array
+    {
+        return [
+            'missing date / enabled' => [null, true, true, 'home', 'work'],
+            'missing date / disabled' => [null, false, true, 'home', 'work'],
+            'date / enabled / home' => ['2026-09-24 00:00:00', true, true, 'home', 'announce'],
+            'date / enabled / maniax' => ['2026-09-24 00:00:00', true, false, 'maniax', 'announce'],
+            'date / disabled' => ['2026-09-24 00:00:00', false, true, 'home', 'work'],
+        ];
+    }
 }

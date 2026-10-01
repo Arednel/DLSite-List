@@ -458,16 +458,25 @@ When enabled, DLSite Quick Add fills Series only when the user did not enter one
 
 It does not apply to Custom Quick Add or Refetch.
 
-#### DLSite Links
+#### DLsite Links
 
-Age-appropriate DLSite links are disabled by default.
+Age-appropriate DLsite links are disabled by default.
 
 Disabled:
-- all Index image/title DLSite links use Maniax URL
+- all Index image/title DLsite links use Maniax URL
 
 Enabled:
-- exact `ALL_AGES` -> DLSite Home URL
+- exact `ALL_AGES` -> DLsite Home URL
 - `R15`, `R18`, missing, or malformed values -> Maniax URL
+
+Announcement links are enabled by default and independent of Home/Maniax selection.
+
+Disabled:
+- all Index image/title links use regular `work/` URLs
+
+Enabled:
+- works with a stored announcement date -> `announce/` URL
+- works without an announcement date -> regular `work/` URL
 
 #### Add/Edit Form Theme
 
@@ -588,6 +597,7 @@ Fetched Tags are readonly by default. If made editable, editing changes only the
 - `notes` - hidden
 - `start_date` - hidden
 - `end_date` - hidden
+- `announce_date` - hidden
 - `num_re_listen_times` - hidden
 - `re_listen_value` - hidden
 - `priority` - hidden
@@ -633,6 +643,7 @@ Fetched Tags are readonly by default. If made editable, editing changes only the
 - `tags`
 - `start_date` - hidden
 - `end_date` - hidden
+- `announce_date` - hidden
 - `created_at` - hidden
 - `updated_at` - hidden
 - `circle` - hidden
@@ -728,6 +739,7 @@ Custom Quick Add has no scraper fallback. Hidden optional description rows store
 - `series`
 - `age_category`
 - `product_format` - hidden
+- `announce_date` - hidden
 - `progress`
 - `priority`
 - `num_re_listen_times`

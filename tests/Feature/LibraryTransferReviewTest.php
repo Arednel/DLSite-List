@@ -61,6 +61,22 @@ class LibraryTransferReviewTest extends TestCase
         $this->assertSame('Parent Tags', ImportValue::label('relationships'));
     }
 
+    public function test_import_review_compares_announcement_dates_using_the_archive_format(): void
+    {
+        $date = '2026-09-24 00:00:00';
+        $product = Product::factory()->create(['id' => 'RJ123456', 'announce_date' => $date]);
+        $run = $this->imported($this->exported());
+        $item = $run->items()->where('category', 'announce_date')->firstOrFail();
+
+        $this->assertSame($date, $item->baseline);
+        $this->assertSame($date, $item->incoming);
+        $this->assertSame($date, $this->review()->current($item, $product->fresh()));
+
+        $this->apply($run);
+        $this->assertSame(LibraryImportItemStatus::Applied, $item->fresh()->status);
+        $this->assertSame($date, $product->fresh()->announce_date?->format('Y-m-d H:i:s'));
+    }
+
     public function test_stale_category_blocks_the_selected_work_batch_and_refreshes_its_choices(): void
     {
         $product = Product::factory()->create(['id' => 'RJ123456', 'work_name' => 'Archive title', 'notes' => 'Archive notes']);
@@ -368,6 +384,7 @@ class LibraryTransferReviewTest extends TestCase
             'series',
             'age',
             'product_format',
+            'announce_date',
             'circle',
             'maker',
             'scenario',

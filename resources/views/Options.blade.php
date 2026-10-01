@@ -155,10 +155,10 @@
 
                     <h2>
                         <i class="fa-solid fa-link fa-fw options-section-icon" aria-hidden="true"></i>
-                        {{ __('DLSite Links') }}
+                        {{ __('DLsite Links') }}
                     </h2>
                     <p class="option-description">
-                        {{ __('Choose whether Index work links use the DLSite section appropriate for the saved age category.') }}
+                        {{ __('Choose where DLsite links on the Index page point to, including which DLsite section (Home or Maniax) and page type they use (regular work/ or announce/).') }}
                     </p>
 
                     <livewire:dlsite-link-settings />

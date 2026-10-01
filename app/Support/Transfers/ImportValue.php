@@ -26,6 +26,7 @@ final class ImportValue
             'maker_id', 'maker' => __('Maker ID'),
             'age_category' => __('Age'),
             'product_format' => __('Product Format'),
+            'announce_date' => __('Scheduled release date'),
             'rj_code' => __('RJ code'),
             'tag-library' => __('Tag Library'),
             'jp' => __('Japanese'),

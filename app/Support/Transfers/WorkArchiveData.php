@@ -165,6 +165,8 @@ final class WorkArchiveData
         Validator::make($document, [
             ...LibraryWorkValidator::productFormatRules('japanese.product_format'),
             ...LibraryWorkValidator::productFormatRules('english.product_format'),
+            'japanese.announce_date' => ['sometimes', 'nullable', 'date_format:Y-m-d H:i:s'],
+            'english.announce_date' => ['sometimes', 'nullable', 'date_format:Y-m-d H:i:s'],
         ])->validate();
 
         $work = DLSiteWorkData::fromArray($document, $expectedCode);
@@ -213,6 +215,9 @@ final class WorkArchiveData
         }
         if ($this->hasEither($document, 'product_format')) {
             $details['product_format'] = $work->productFormat === [] ? null : $work->productFormat;
+        }
+        if ($this->hasEither($document, 'announce_date')) {
+            $details['announce_date'] = $work->announceDate;
         }
         if (array_key_exists('notes', $custom)) {
             $details['notes'] = $custom['notes'];
@@ -276,7 +281,7 @@ final class WorkArchiveData
             'work_type' => null,
             'product_format' => $product->product_format,
             'book_type' => null,
-            'announce_date' => null,
+            'announce_date' => $product->announce_date?->format('Y-m-d H:i:s'),
             'modified_date' => null,
             'scenario' => $contributors['scenario'],
             'illustration' => $contributors['illustration'],

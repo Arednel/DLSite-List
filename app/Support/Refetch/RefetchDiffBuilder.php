@@ -36,6 +36,7 @@ final class RefetchDiffBuilder
         $this->add($changes, RefetchCategory::Series, 'series', 'Series', $product->series, $work->autoSeries());
         $this->add($changes, RefetchCategory::Age, 'age_category', 'Age', $product->age_category, $work->ageCategory);
         $this->addProductFormat($changes, RefetchCategory::ProductFormat, 'product_format', 'Product Format', $product->product_format ?? [], $work->productFormat);
+        $this->add($changes, RefetchCategory::AnnouncementDate, 'announce_date', 'Scheduled release date', $product->announce_date?->format('Y-m-d H:i:s'), $work->announceDate);
         $this->add(
             $changes,
             RefetchCategory::Circle,

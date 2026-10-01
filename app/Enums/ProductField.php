@@ -17,6 +17,7 @@ enum ProductField: string
     case Series = 'series';
     case AgeCategory = 'age_category';
     case ProductFormat = 'product_format';
+    case AnnouncementDate = 'announce_date';
     case Progress = 'progress';
     case Circle = 'circle';
     case Scenario = 'scenario';
@@ -47,6 +48,7 @@ enum ProductField: string
             self::Series => __('Series'),
             self::AgeCategory => __('Age'),
             self::ProductFormat => __('Product Format'),
+            self::AnnouncementDate => __('Scheduled release date'),
             self::Progress => __('Progress'),
             self::Circle => __('Circle'),
             self::Scenario => __('Scenario Author'),
@@ -88,6 +90,7 @@ enum ProductField: string
             self::Series => ProductIndexSortField::Series,
             self::AgeCategory => ProductIndexSortField::AgeCategory,
             self::ProductFormat => ProductIndexSortField::ProductFormat,
+            self::AnnouncementDate => ProductIndexSortField::AnnouncementDate,
             self::Progress => ProductIndexSortField::Progress,
             self::Priority => ProductIndexSortField::Priority,
             self::TotalTimesReListened => ProductIndexSortField::TotalTimesReListened,
@@ -224,6 +227,7 @@ enum ProductField: string
                     self::Tags,
                     self::StartDate,
                     self::FinishDate,
+                    self::AnnouncementDate,
                     self::CreatedAt,
                     self::UpdatedAt,
                     self::Circle,
@@ -238,6 +242,7 @@ enum ProductField: string
                 'hidden_by_default' => [
                     self::StartDate,
                     self::FinishDate,
+                    self::AnnouncementDate,
                     self::CreatedAt,
                     self::UpdatedAt,
                     ...self::metadataFields(),
@@ -330,6 +335,7 @@ enum ProductField: string
                     self::Notes,
                     self::StartDate,
                     self::FinishDate,
+                    self::AnnouncementDate,
                     self::TotalTimesReListened,
                     self::ReListenValue,
                     self::Priority,
@@ -342,6 +348,7 @@ enum ProductField: string
                     self::Notes,
                     self::StartDate,
                     self::FinishDate,
+                    self::AnnouncementDate,
                     self::TotalTimesReListened,
                     self::ReListenValue,
                     self::Priority,

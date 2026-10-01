@@ -17,6 +17,7 @@ class DLSiteWorkDataTest extends TestCase
                 'work_name' => 'JP Title',
                 'age_category' => ['_name_' => 'R18'],
                 'product_format' => ['MOV', 'SND', 'MS2'],
+                'announce_date' => '2026-09-24 00:00:00',
                 'circle' => 'Circle Name',
                 'scenario' => ['Writer', 'writer'],
                 'voice_actor' => ['Voice One', 'Voice Two'],
@@ -41,6 +42,7 @@ class DLSiteWorkDataTest extends TestCase
         $this->assertNull($data->englishWorkName);
         $this->assertSame('R18', $data->ageCategory);
         $this->assertSame(['MOV', 'SND', 'MS2'], $data->productFormat);
+        $this->assertSame('2026-09-24 00:00:00', $data->announceDate);
         $this->assertSame('Circle Name', $data->circle);
         $this->assertNull($data->englishDescription);
         $this->assertSame('Series Name', $data->autoSeries());
@@ -64,6 +66,19 @@ class DLSiteWorkDataTest extends TestCase
         ]);
 
         $this->assertSame(['MOV', 'MV2', 'SND', 'MS2', 'custom:Audiobook'], $data->productFormat);
+    }
+
+    public function test_announcement_date_uses_english_fallback(): void
+    {
+        $data = DLSiteWorkData::fromArray([
+            'japanese' => ['product_id' => 'RJ123456', 'announce_date' => null],
+            'english' => ['announce_date' => '2026-09-24 00:00:00'],
+        ]);
+
+        $this->assertSame('2026-09-24 00:00:00', $data->announceDate);
+        $this->assertNull(DLSiteWorkData::fromArray([
+            'japanese' => ['product_id' => 'RJ123456', 'announce_date' => null],
+        ])->announceDate);
     }
 
     public function test_it_keeps_distinct_english_description(): void

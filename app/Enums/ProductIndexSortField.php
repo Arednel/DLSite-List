@@ -14,6 +14,7 @@ enum ProductIndexSortField: string
     case Series = 'series';
     case AgeCategory = 'age_category';
     case ProductFormat = 'product_format';
+    case AnnouncementDate = 'announce_date';
     case Progress = 'progress';
     case Priority = 'priority';
     case TotalTimesReListened = 'num_re_listen_times';
@@ -36,6 +37,7 @@ enum ProductIndexSortField: string
             self::Series => __('Series'),
             self::AgeCategory => __('Age'),
             self::ProductFormat => __('Product Format'),
+            self::AnnouncementDate => __('Scheduled release date'),
             self::Progress => __('Progress'),
             self::Priority => __('Priority'),
             self::TotalTimesReListened => app(ContentTerminology::class)->repeatCount(),
@@ -68,6 +70,7 @@ enum ProductIndexSortField: string
         return in_array($this, [
             self::UpdatedAt,
             self::ProductFormat,
+            self::AnnouncementDate,
             self::Circle,
             self::Scenario,
             self::Illustration,

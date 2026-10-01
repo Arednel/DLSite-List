@@ -30,6 +30,7 @@ class Product extends Model
         'work_name_english',
         'age_category',
         'product_format',
+        'announce_date',
         'circle',
         'work_image',
         'description',
@@ -51,6 +52,7 @@ class Product extends Model
         'end_date' => 'array',
         'sample_images' => 'array',
         'product_format' => 'array',
+        'announce_date' => 'datetime',
         'rj_number' => 'integer',
         'start_date_sort' => 'integer',
         'end_date_sort' => 'integer',
@@ -73,18 +75,15 @@ class Product extends Model
         $this->end_date_sort = self::dateSortValue($this->end_date);
     }
 
-    public function dlsiteWorkUrl(bool $ageAppropriateLinksEnabled): string
+    public function dlsiteWorkUrl(bool $ageAppropriateLinksEnabled, bool $announceLinksEnabled = true): string
     {
         $productId = (string) $this->getKey();
-        $maniaxUrl = "https://www.dlsite.com/maniax/work/=/product_id/{$productId}.html";
+        $section = $ageAppropriateLinksEnabled && $this->age_category === ProductAgeCategory::AllAges->value
+            ? 'home'
+            : 'maniax';
+        $pageType = $announceLinksEnabled && $this->announce_date !== null ? 'announce' : 'work';
 
-        if (! $ageAppropriateLinksEnabled) {
-            return $maniaxUrl;
-        }
-
-        return $this->age_category === ProductAgeCategory::AllAges->value
-            ? "https://www.dlsite.com/home/work/=/product_id/{$productId}.html"
-            : $maniaxUrl;
+        return "https://www.dlsite.com/{$section}/{$pageType}/=/product_id/{$productId}.html";
     }
 
     public static function versionedImagePath(string $path): string

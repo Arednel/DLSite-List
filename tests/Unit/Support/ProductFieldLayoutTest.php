@@ -45,6 +45,7 @@ class ProductFieldLayoutTest extends TestCase
                 ProductField::Notes,
                 ProductField::StartDate,
                 ProductField::FinishDate,
+                ProductField::AnnouncementDate,
                 ProductField::TotalTimesReListened,
                 ProductField::ReListenValue,
                 ProductField::Priority,
@@ -88,6 +89,7 @@ class ProductFieldLayoutTest extends TestCase
                 ProductField::Tags,
                 ProductField::StartDate,
                 ProductField::FinishDate,
+                ProductField::AnnouncementDate,
                 ProductField::CreatedAt,
                 ProductField::UpdatedAt,
                 ProductField::Circle,
@@ -186,6 +188,21 @@ class ProductFieldLayoutTest extends TestCase
         $this->assertTrue(ProductField::ProductFormat->isHiddenByDefault(ProductFieldLayout::SURFACE_QUICK_ADD));
         $this->assertTrue(ProductField::ProductFormat->isHiddenByDefault(ProductFieldLayout::SURFACE_BULK_IMPORT));
         $this->assertTrue(ProductField::ProductFormat->isHiddenByDefault(ProductFieldLayout::SURFACE_CUSTOM_QUICK_ADD));
+        foreach ([ProductFieldLayout::SURFACE_INDEX, ProductFieldLayout::SURFACE_FILTER] as $surface) {
+            $this->assertTrue(ProductField::AnnouncementDate->isAvailableOn($surface));
+            $this->assertTrue(ProductField::AnnouncementDate->isHiddenByDefault($surface));
+        }
+
+        foreach (
+            [
+                ProductFieldLayout::SURFACE_EDIT,
+                ProductFieldLayout::SURFACE_QUICK_ADD,
+                ProductFieldLayout::SURFACE_BULK_IMPORT,
+                ProductFieldLayout::SURFACE_CUSTOM_QUICK_ADD,
+            ] as $surface
+        ) {
+            $this->assertFalse(ProductField::AnnouncementDate->isAvailableOn($surface));
+        }
         $this->assertTrue(ProductField::Notes->isHiddenByDefault(ProductFieldLayout::SURFACE_INDEX));
         $this->assertTrue(ProductField::CreatedAt->isHiddenByDefault(ProductFieldLayout::SURFACE_INDEX));
         $this->assertTrue(ProductField::UpdatedAt->isHiddenByDefault(ProductFieldLayout::SURFACE_INDEX));
@@ -214,6 +231,7 @@ class ProductFieldLayoutTest extends TestCase
             ProductField::Notes->value,
             ProductField::StartDate->value,
             ProductField::FinishDate->value,
+            ProductField::AnnouncementDate->value,
             ProductField::TotalTimesReListened->value,
             ProductField::ReListenValue->value,
             ProductField::Priority->value,
@@ -333,6 +351,7 @@ class ProductFieldLayoutTest extends TestCase
             ProductField::Tags->value,
             ProductField::StartDate->value,
             ProductField::FinishDate->value,
+            ProductField::AnnouncementDate->value,
             ProductField::CreatedAt->value,
             ProductField::UpdatedAt->value,
             ProductField::Circle->value,

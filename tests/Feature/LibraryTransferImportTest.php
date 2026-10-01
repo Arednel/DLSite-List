@@ -228,6 +228,74 @@ class LibraryTransferImportTest extends TestCase
         $this->assertNull(Product::findOrFail('RJ123456')->product_format);
     }
 
+    public function test_announcement_date_round_trips_when_importing_a_deleted_local_record(): void
+    {
+        $product = Product::factory()->create([
+            'id' => 'RJ123456',
+            'announce_date' => '2026-09-24 00:00:00',
+        ]);
+        $export = $this->exported();
+        $product->delete();
+
+        $run = $this->imported($export);
+        $this->apply($run);
+
+        $this->assertSame('2026-09-24 00:00:00', Product::findOrFail('RJ123456')->announce_date?->format('Y-m-d H:i:s'));
+    }
+
+    public function test_legacy_work_archive_without_announcement_date_preserves_existing_date(): void
+    {
+        $product = Product::factory()->create([
+            'id' => 'RJ123456',
+            'announce_date' => '2026-09-24 00:00:00',
+        ]);
+        $export = $this->exported();
+        $this->rewriteWorkData($export->parts()->firstOrFail(), function (array $work): array {
+            unset($work['japanese']['announce_date'], $work['english']['announce_date']);
+            $work['japanese']['work_name'] = 'Imported legacy title';
+
+            return $work;
+        });
+
+        $run = $this->imported($export);
+        $this->assertFalse($run->items()->where('category', 'announce_date')->exists());
+        $this->apply($run);
+        $this->assertSame('Imported legacy title', $product->fresh()->work_name);
+        $this->assertSame('2026-09-24 00:00:00', $product->fresh()->announce_date?->format('Y-m-d H:i:s'));
+    }
+
+    #[DataProvider('announcementDateLocales')]
+    public function test_malformed_announcement_date_is_quarantined_and_does_not_clear_existing_value(string $locale): void
+    {
+        $original = Product::factory()->create([
+            'id' => 'RJ123456',
+            'announce_date' => '2026-09-24 00:00:00',
+        ]);
+        Product::factory()->create(['id' => 'RJ123457']);
+        $export = $this->exported();
+        $this->rewriteWorkData($export->parts()->firstOrFail(), function (array $work) use ($locale): array {
+            $work[$locale]['announce_date'] = 'not-a-date';
+            $work['japanese']['work_name'] = 'Corrupted archive title';
+
+            return $work;
+        });
+
+        $run = $this->imported($export);
+        $this->assertSame(1, $run->items()->where('status', 'unavailable')->count());
+        $error = (string) $run->items()->where('status', 'unavailable')->firstOrFail()->error;
+        $this->assertStringContainsString($locale, $error);
+        $this->assertStringContainsString('Y-m-d H:i:s', $error);
+        $this->apply($run);
+
+        $this->assertSame('2026-09-24 00:00:00', $original->fresh()->announce_date?->format('Y-m-d H:i:s'));
+        $this->assertNotSame('Corrupted archive title', $original->fresh()->work_name);
+    }
+
+    public static function announcementDateLocales(): array
+    {
+        return ['Japanese' => ['japanese'], 'English' => ['english']];
+    }
+
     public function test_work_archive_without_product_format_preserves_existing_formats(): void
     {
         Product::factory()->create([

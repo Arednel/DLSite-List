@@ -152,6 +152,24 @@
         </div>
     @break
 
+    @case('announce_date')
+        <div class="filter-widget announce-date">
+            <span class="widget-header">{{ __('Scheduled release date') }}</span>
+            <div class="filter-field-stack filter-date-range">
+                <label class="filter-date-control" for="filter_announce_date_from">
+                    <span>{{ __('From') }}</span>
+                    <input id="filter_announce_date_from" type="date" name="announce_date_from"
+                        wire:model="draft.announce_date_from" aria-label="{{ __('Scheduled release date from') }}">
+                </label>
+                <label class="filter-date-control" for="filter_announce_date_to">
+                    <span>{{ __('To') }}</span>
+                    <input id="filter_announce_date_to" type="date" name="announce_date_to"
+                        wire:model="draft.announce_date_to" aria-label="{{ __('Scheduled release date to') }}">
+                </label>
+            </div>
+        </div>
+    @break
+
     @case('created_at')
         <div class="filter-widget created-at">
             <span class="widget-header">{{ __('Added to the site Date') }}</span>

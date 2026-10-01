@@ -245,43 +245,56 @@ class ProductMetadataSettingsTest extends TestCase
     public function test_dlsite_link_setting_hydrates_saves_and_resets_to_default(): void
     {
         Option::setDlsiteAgeAppropriateLinksEnabled(true);
+        Option::setDlsiteAnnounceLinksEnabled(false);
 
         Livewire::test(DlsiteLinkSettings::class)
             ->assertSet('enabled', true)
+            ->assertSet('announceEnabled', false)
             ->set('enabled', false)
+            ->set('announceEnabled', true)
             ->call('save')
             ->assertHasNoErrors()
             ->assertSet('saved', true)
-            ->assertSet('notice', 'DLSite link setting saved.');
+            ->assertSet('notice', 'DLSite link settings saved.');
 
         $this->assertFalse(Option::dlsiteAgeAppropriateLinksEnabled());
+        $this->assertTrue(Option::dlsiteAnnounceLinksEnabled());
 
         Option::setDlsiteAgeAppropriateLinksEnabled(true);
+        Option::setDlsiteAnnounceLinksEnabled(false);
 
         Livewire::test(DlsiteLinkSettings::class)
             ->call('askResetToDefault')
             ->call('resetToDefault')
             ->assertSet('enabled', false)
+            ->assertSet('announceEnabled', true)
             ->assertSet('confirmingResetToDefault', false)
-            ->assertSet('notice', 'DLSite link setting reset to default.');
+            ->assertSet('notice', 'DLSite link settings reset to default.');
 
         $this->assertFalse(Option::dlsiteAgeAppropriateLinksEnabled());
+        $this->assertTrue(Option::dlsiteAnnounceLinksEnabled());
     }
 
     public function test_dlsite_link_setting_refreshes_after_global_reset_and_renders_tooltip(): void
     {
         Option::setDlsiteAgeAppropriateLinksEnabled(true);
+        Option::setDlsiteAnnounceLinksEnabled(false);
 
         $component = Livewire::test(DlsiteLinkSettings::class)
             ->assertSet('enabled', true)
+            ->assertSet('announceEnabled', false)
             ->assertSee('Use age-appropriate DLSite links')
-            ->assertSee('When enabled, All Ages works open on DLSite Home; R15 and R18 use Maniax. When disabled, all works use Maniax.');
+            ->assertSee('When enabled, All Ages works open on DLSite Home; R15 and R18 use Maniax. When disabled, all works use Maniax.')
+            ->assertSee('Use announcement links when available')
+            ->assertSee('When enabled, works that have an announcement date use DLSite announcement links (announce/). Released works will automatically redirect to their regular product pages (work/). When disabled, all links use regular product pages, which may show an error for not yet released works.')
+            ->assertDontSee('DLSite announcement links (`announce/`)', false);
 
         Option::resetVisibleSettingsToDefault();
 
         $component
             ->call('refreshFromSettings')
             ->assertSet('enabled', false)
+            ->assertSet('announceEnabled', true)
             ->assertSet('saved', false);
     }
 
@@ -896,6 +909,7 @@ class ProductMetadataSettingsTest extends TestCase
         ]);
         Option::setAutoSeriesFromTitleName(false);
         Option::setDlsiteAgeAppropriateLinksEnabled(true);
+        Option::setDlsiteAnnounceLinksEnabled(false);
         Option::setOptionalProductStatuses([
             'on_hold' => true,
             'dropped' => true,
@@ -937,6 +951,7 @@ class ProductMetadataSettingsTest extends TestCase
         $this->assertSame('1024px', Option::productIndexSettings()->tableWidthCss);
         $this->assertTrue(Option::autoSeriesFromTitleName());
         $this->assertFalse(Option::dlsiteAgeAppropriateLinksEnabled());
+        $this->assertTrue(Option::dlsiteAnnounceLinksEnabled());
         $this->assertSame(Option::DEFAULT_OPTIONAL_PRODUCT_STATUSES, Option::optionalProductStatuses());
         $this->assertSame(Option::PRODUCT_FORM_THEME_BLACK, Option::productFormTheme());
         $this->assertFalse(Option::productFormModalEnabled());

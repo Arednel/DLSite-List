@@ -9,6 +9,7 @@ enum RefetchCategory: string
     case Series = 'series';
     case Age = 'age';
     case ProductFormat = 'product_format';
+    case AnnouncementDate = 'announce_date';
     case Circle = 'circle';
     case Maker = 'maker';
     case Scenario = 'scenario';
@@ -27,6 +28,7 @@ enum RefetchCategory: string
             self::Series => __('Series'),
             self::Age => __('Age'),
             self::ProductFormat => __('Product Format'),
+            self::AnnouncementDate => __('Scheduled release date'),
             self::Circle => __('Circle'),
             self::Maker => __('Maker ID'),
             self::Scenario => __('Scenario Author'),

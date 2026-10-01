@@ -28,6 +28,7 @@ class RefetchDiffBuilderTest extends TestCase
             'work_name_english' => 'Old EN',
             'age_category' => 'ALL_AGES',
             'product_format' => ['MOV', 'SND'],
+            'announce_date' => null,
             'circle' => 'Old Circle',
             'series' => 'Old Series',
             'description' => 'Old Description',
@@ -54,6 +55,7 @@ class RefetchDiffBuilderTest extends TestCase
                 'work_name' => 'New JP',
                 'age_category' => ['_name_' => 'R18'],
                 'product_format' => ['SOU', 'MV2'],
+                'announce_date' => '2026-09-24 00:00:00',
                 'circle' => 'New Circle',
                 'scenario' => ['New Writer'],
                 'voice_actor' => ['New Voice'],
@@ -90,6 +92,7 @@ class RefetchDiffBuilderTest extends TestCase
                 RefetchCategory::Series,
                 RefetchCategory::Age,
                 RefetchCategory::ProductFormat,
+                RefetchCategory::AnnouncementDate,
                 RefetchCategory::Circle,
                 RefetchCategory::Maker,
                 RefetchCategory::Scenario,
@@ -104,6 +107,7 @@ class RefetchDiffBuilderTest extends TestCase
         }
 
         $this->assertArrayNotHasKey(RefetchCategory::SampleImages->value, $changes);
+        $this->assertSame('2026-09-24 00:00:00', $changes['announce_date']['announce_date']['new']);
         $this->assertSame('Custom Tag', $changes['tags']['tags']['old']['custom'][0]);
     }
 

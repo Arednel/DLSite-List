@@ -22,11 +22,13 @@ final readonly class ProductIndexRowBuilder
         Collection $contributorsByProductId,
         bool $ageAppropriateLinksEnabled,
         array $returnQuery,
+        bool $announceLinksEnabled = true,
     ): Collection {
         $indexUrl = $this->url->route('index', absolute: false);
 
         return $products->map(function (Product $product) use (
             $ageAppropriateLinksEnabled,
+            $announceLinksEnabled,
             $contributorsByProductId,
             $indexUrl,
             $returnQuery,
@@ -57,7 +59,7 @@ final readonly class ProductIndexRowBuilder
                     $contributorsByProductId->get($id) ?? collect(),
                     $indexUrl,
                 ),
-                dlsiteWorkUrl: $product->dlsiteWorkUrl($ageAppropriateLinksEnabled),
+                dlsiteWorkUrl: $product->dlsiteWorkUrl($ageAppropriateLinksEnabled, $announceLinksEnabled),
                 editUrl: $this->url->route('products.edit', [
                     'product' => $id,
                     'return_query' => $returnQuery,

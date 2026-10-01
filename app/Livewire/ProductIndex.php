@@ -76,6 +76,10 @@ class ProductIndex extends Component
 
     public string $end_date_to = '';
 
+    public string $announce_date_from = '';
+
+    public string $announce_date_to = '';
+
     public string $created_at_from = '';
 
     public string $created_at_to = '';
@@ -179,6 +183,7 @@ class ProductIndex extends Component
             $productContributors,
             $settings->dlsiteAgeAppropriateLinksEnabled,
             $currentQuery,
+            $settings->dlsiteAnnounceLinksEnabled,
         );
 
         $terminology = app(ContentTerminology::class);

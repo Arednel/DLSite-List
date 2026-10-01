@@ -26,6 +26,7 @@ class ProductFactory extends Factory
             'work_name_english' => 'WORK_EN_' . $id,
             'age_category' => 'ALL_AGES',
             'product_format' => null,
+            'announce_date' => null,
             'circle' => 'Circle',
             'work_image' => "storage/Works/{$id}/cover.jpg",
             'description' => 'Description',

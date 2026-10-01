@@ -171,7 +171,7 @@ Refetch updates scraped DLsite-owned data without immediately overwriting the ex
 9. Canonical JSON is promoted only when the accepted changes actually change the work.
 10. Obsolete images are cleaned only for works whose image state changed.
 
-Refetch has fourteen ordered review categories defined by `RefetchCategory`.
+Refetch has fifteen ordered review categories defined by `RefetchCategory`.
 
 Cover and sample-image changes are independent. Refetch uses the shared `ProductImagePromotion` boundary so interrupted image replacement can be recovered safely.
 
@@ -387,6 +387,7 @@ Autocomplete:
 - series
 - age category
 - product format
+- scheduled release date
 - Japanese and English descriptions
 - progress
 - score

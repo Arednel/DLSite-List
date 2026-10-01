@@ -84,6 +84,7 @@ final class DLSiteProductImporter
                     'work_name' => $workName,
                     'work_name_english' => $englishWorkName,
                     'product_format' => $productFormat === [] ? null : $productFormat,
+                    'announce_date' => $workData->announceDate,
                     'age_category' => $this->textOverride(
                         $input,
                         ProductField::AgeCategory,
