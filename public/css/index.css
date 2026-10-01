@@ -1,7 +1,4 @@
 body.product-index-page {
-    background-attachment: fixed;
-    background-position: center top;
-    background-repeat: repeat-x;
     min-height: 100vh;
     display: flex;
     flex-direction: column;
@@ -73,10 +70,6 @@ a {
     text-decoration: none;
 }
 
-.header a:hover {
-    color: #F7EDEB;
-}
-
 #footer-block {
     padding: 15px 0;
     background-color: #ee9898;
@@ -93,44 +86,16 @@ a {
 /*
  * Header
  */
-.header a {
-    font-weight: bold;
-    color: #fff;
-}
 
 .header {
-    position: relative;
-
+    position: absolute;
     display: block;
     width: 1060px;
     height: 70px;
-    margin: 0 auto
-}
-
-.header .header-title {
-    position: absolute;
-    top: 21px;
-    background-image: url("/img/pc/ownlist/logo_mal.png");
-    background-position: left top;
-    background-repeat: no-repeat;
-    background-size: auto 36px;
-    display: block;
-    width: 240px;
-    height: 36px;
-    text-indent: -9999px;
-    overflow: hidden
-}
-
-.header {
-    position: absolute;
-    top: 25px;
+    margin: 0 auto;
+    top: 18px;
     right: 4px
 }
-
-.header {
-    top: 18px;
-}
-
 
 /**
  * List Container
@@ -288,7 +253,6 @@ a {
     width: 100%;
     min-width: var(--index-table-width, 1024px);
     height: 38px;
-    border: 0px solid #EE9898 !important;
     color: #7D6A6A;
 }
 
@@ -313,8 +277,7 @@ a {
     min-width: var(--index-table-width, 1024px);
     margin: 0 auto;
     border-collapse: collapse;
-    border: #EE9898 0px solid;
-    border-color: transparent !important;
+    border: 0px;
 }
 
 /**
@@ -322,7 +285,7 @@ a {
  */
 
 .list-table .list-table-header .header-title {
-    background: #FBF8F0 url("/img/pc/ownlist/bar-table-header-dark.png") no-repeat right 7px / 1px 22px;
+    background: #FBF8F0;
     display: table-cell;
     height: 36px;
     border-bottom: #EE9898 1px solid;
@@ -401,7 +364,7 @@ a {
     color: #dd7d7d !important;
 }
 
-.list-table .list-table-data a:not(.edit-disabled):hover {
+.list-table .list-table-data a:hover {
     color: #F4BFB7 !important;
 }
 
@@ -529,10 +492,6 @@ a {
     min-width: 4px
 }
 
-.list-table .list-table-data .data.status .status-label {
-    display: none
-}
-
 .list-table .list-table-data .data.status.progress-listening {
     background-color: #A6E7C4;
 }
@@ -551,11 +510,6 @@ a {
 
 .list-table .list-table-data .data.status.progress-dropped {
     background-color: #EE9898;
-}
-
-.list-table .list-table-data .data.title {
-    padding-left: 8px;
-    text-align: left;
 }
 
 th {
@@ -1251,7 +1205,7 @@ body.image-viewer-open {
         display: flex;
         flex-wrap: wrap;
         justify-content: center;
-        gap: 8px 14px;
+        gap: 6px 10px;
         max-width: 100%;
     }
 
@@ -1396,7 +1350,7 @@ body.image-viewer-open {
     /* Switch desktop rows into stacked cards so the list fits narrow screens. */
     .list-table .list-table-data {
         display: grid;
-        grid-template-columns: 88px minmax(0, 1fr);
+        grid-template-columns: 74px minmax(0, 1fr);
         grid-template-areas:
             "status status"
             "image title"
@@ -1449,7 +1403,7 @@ body.image-viewer-open {
     .list-table .list-table-data .data.image .image {
         width: 100%;
         height: auto;
-        max-width: 88px;
+        max-width: 74px;
     }
 
     .list-table .list-table-data .data.title {
@@ -1515,20 +1469,8 @@ body.image-viewer-open {
         padding: 14px 0 32px;
     }
 
-    .progress-menu-container .progress-links {
-        gap: 6px 10px;
-    }
-
     .progress-menu-container .progress-menu .progress-button {
         width: calc(50% - 10px);
-    }
-
-    .list-table .list-table-data {
-        grid-template-columns: 74px minmax(0, 1fr);
-    }
-
-    .list-table .list-table-data .data.image .image {
-        max-width: 74px;
     }
 
     .index-image-viewer {

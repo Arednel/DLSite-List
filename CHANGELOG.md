@@ -10,6 +10,10 @@ For existing manual installations:
 
 * Remove the existing `public/storage` symlink.
 
+### Changed
+
+* CSS Cleanup.
+
 ### Security
 
 * Files in `storage/app/public` are now served through Laravel and require login when authentication is enabled.

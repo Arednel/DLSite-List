@@ -515,7 +515,7 @@ body.product-form-page {
     }
 
     .product-form-page #content {
-        padding: 0 8px 12px;
+        padding: 0 6px;
         border-left-width: 0;
         border-right-width: 0;
     }
@@ -606,10 +606,6 @@ body.product-form-page {
         margin-bottom: 15px !important;
     }
 
-    .product-form-page #content {
-        padding: 0 6px 10px;
-    }
-
     #dialog {
         border-width: 10px;
     }
@@ -618,8 +614,7 @@ body.product-form-page {
         padding: 8px 10px;
     }
 
-    .product-form-page #contentWrapper,
-    .product-form-page #content {
+    .product-form-page #contentWrapper {
         padding-bottom: 0px !important;
     }
 
@@ -631,11 +626,10 @@ body.product-form-page {
 
 .product-form-theme-cherry {
     --form-bg: #F9E0DC;
-    --form-border: #F9E0DC;
+    --form-border: #EE9898;
     --form-surface: #FFFDF8;
     --form-surface-warm: #FFF8F3;
     --form-hover-surface: #FFF3F0;
-    --form-border: #EE9898;
     --form-border-soft: rgba(238, 152, 152, 0.62);
     --form-text: #7D6A6A;
     --form-heading-text: #7D6A6A;
@@ -664,7 +658,6 @@ body.product-form-page {
     --form-surface: #222;
     --form-surface-warm: #222222;
     --form-hover-surface: #2A2A2A;
-    --form-border: #272727;
     --form-border-bottom: #585858;
     --form-border-soft: #414141;
     --form-border-soft-tr: #272727;

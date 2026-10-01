@@ -1041,14 +1041,6 @@ button.tag-library-tag {
     font-weight: bold;
 }
 
-.tag-library-modal-group-option {
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
-    color: #7D6A6A;
-    font-weight: bold;
-}
-
 .tag-library-modal-group-plaques {
     display: flex;
     flex-wrap: wrap;
