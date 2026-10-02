@@ -20,6 +20,7 @@ For existing manual installations:
 
 * Generalized internal RJ-specific naming and product-code handling.
 * Renamed database column `rj_number` to `code_number`.
+* Generalized numeric product-code sorting for RJ, BJ, and VJ identifiers.
 * CSS Cleanup.
 
 ### Security

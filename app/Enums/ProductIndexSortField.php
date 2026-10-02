@@ -9,7 +9,7 @@ enum ProductIndexSortField: string
 {
     use ProvidesOptions;
 
-    case RJ = 'rj';
+    case Code = 'rj';
     case Score = 'score';
     case Series = 'series';
     case AgeCategory = 'age_category';
@@ -32,7 +32,7 @@ enum ProductIndexSortField: string
     public function label(): string
     {
         return match ($this) {
-            self::RJ => __('RJ Code'),
+            self::Code => __('RJ Code'),
             self::Score => __('Score'),
             self::Series => __('Series'),
             self::AgeCategory => __('Age'),
@@ -57,7 +57,7 @@ enum ProductIndexSortField: string
     public function sqlColumn(): string
     {
         return match ($this) {
-            self::RJ => 'code_number',
+            self::Code => 'code_number',
             self::StartDate => 'start_date_sort',
             self::FinishDate => 'end_date_sort',
             self::ProductFormat => 'product_format->[0]',

@@ -10,7 +10,7 @@ class ProductIndexSortFieldTest extends TestCase
     public function test_it_exposes_sql_sort_columns_for_all_fields(): void
     {
         $expectedColumns = [
-            ProductIndexSortField::RJ->value => 'code_number',
+            ProductIndexSortField::Code->value => 'code_number',
             ProductIndexSortField::Score->value => 'score',
             ProductIndexSortField::Series->value => 'series',
             ProductIndexSortField::AgeCategory->value => 'age_category',
@@ -39,7 +39,7 @@ class ProductIndexSortFieldTest extends TestCase
     public function test_it_exposes_default_sort_dropdown_order(): void
     {
         $this->assertSame([
-            ProductIndexSortField::RJ->value,
+            ProductIndexSortField::Code->value,
             ProductIndexSortField::Score->value,
             ProductIndexSortField::Series->value,
             ProductIndexSortField::AgeCategory->value,
@@ -81,7 +81,7 @@ class ProductIndexSortFieldTest extends TestCase
         $this->assertSame([
             ProductIndexSortField::Series->value,
             ProductIndexSortField::Score->value,
-            ProductIndexSortField::RJ->value,
+            ProductIndexSortField::Code->value,
             ProductIndexSortField::AgeCategory->value,
             ProductIndexSortField::ProductFormat->value,
             ProductIndexSortField::AnnouncementDate->value,
@@ -118,7 +118,7 @@ class ProductIndexSortFieldTest extends TestCase
         $this->assertSame([
             ['field' => ProductIndexSortField::Series->value, 'visible' => true],
             ['field' => ProductIndexSortField::Score->value, 'visible' => false],
-            ['field' => ProductIndexSortField::RJ->value, 'visible' => true],
+            ['field' => ProductIndexSortField::Code->value, 'visible' => true],
             ['field' => ProductIndexSortField::AgeCategory->value, 'visible' => true],
             ['field' => ProductIndexSortField::ProductFormat->value, 'visible' => false],
             ['field' => ProductIndexSortField::AnnouncementDate->value, 'visible' => false],

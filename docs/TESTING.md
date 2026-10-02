@@ -395,7 +395,7 @@ Covers metadata-related UI settings:
 
 #### `tests/Feature/ProductSortKeysTest.php`
 
-Covers derived RJ and partial-date sort keys and exact series sorting behavior.
+Covers derived numeric product-code and partial-date sort keys, supported-prefix extraction, deterministic ordering for shared numeric suffixes, and exact series sorting behavior.
 
 #### `tests/Feature/ProductSurfaceLocalizationTest.php`
 

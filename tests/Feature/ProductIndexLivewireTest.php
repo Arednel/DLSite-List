@@ -2353,7 +2353,7 @@ class ProductIndexLivewireTest extends TestCase
             ->assertSet('draft.sort_first_field', ProductIndexSortField::Score->value)
             ->assertSeeInOrder(['SORT_LOW', 'SORT_HIGH'])
             ->assertSee('value="' . ProductIndexSortField::Series->value . '"', false)
-            ->assertSee('value="' . ProductIndexSortField::RJ->value . '"', false)
+            ->assertSee('value="' . ProductIndexSortField::Code->value . '"', false)
             ->assertDontSee('value="' . ProductIndexSortField::Score->value . '"', false)
             ->assertDontSee('value="' . ProductIndexSortField::UpdatedAt->value . '"', false)
             ->assertDontSee('value="' . ProductIndexSortField::Circle->value . '"', false);

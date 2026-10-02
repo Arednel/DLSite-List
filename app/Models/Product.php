@@ -333,7 +333,8 @@ class Product extends Model
     {
         $direction = strtolower($direction) === 'asc' ? 'asc' : 'desc';
 
-        $query->orderBy('code_number', $direction);
+        $query->orderBy('code_number', $direction)
+            ->orderBy('id');
     }
 
     #[Scope]
@@ -386,7 +387,7 @@ class Product extends Model
 
     public static function codeNumberFromId(?string $id): ?int
     {
-        if ($id === null || ! preg_match('/^RJ(\d+)$/i', $id, $matches)) {
+        if ($id === null || ! preg_match('/\A(?:RJ|BJ|VJ)(\d+)\z/i', $id, $matches)) {
             return null;
         }
 

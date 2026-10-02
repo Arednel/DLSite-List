@@ -407,7 +407,7 @@ Partial start/finish dates remain the editable source of truth. Derived integer 
 - `start_date_sort`
 - `end_date_sort`
 
-`code_number` is maintained for numeric work sorting.
+`code_number` stores the numeric part of RJ/BJ/VJ IDs for sorting (non-unique), using `id` as a tie-breaker. Product creation remains RJ-only for now.
 
 ### Tags
 

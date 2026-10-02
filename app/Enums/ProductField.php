@@ -85,7 +85,7 @@ enum ProductField: string
     public function sortField(): ?ProductIndexSortField
     {
         return match ($this) {
-            self::Title => ProductIndexSortField::RJ,
+            self::Title => ProductIndexSortField::Code,
             self::Score => ProductIndexSortField::Score,
             self::Series => ProductIndexSortField::Series,
             self::AgeCategory => ProductIndexSortField::AgeCategory,

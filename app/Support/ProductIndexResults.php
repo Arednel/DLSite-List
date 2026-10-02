@@ -475,11 +475,11 @@ final class ProductIndexResults
      */
     private function applySqlSorting(Builder $query, array $sorts): Builder
     {
-        $hasRjSort = false;
+        $codeDirection = null;
 
         foreach ($sorts as $sort) {
-            if ($sort->field === ProductIndexSortField::RJ) {
-                $hasRjSort = true;
+            if ($sort->field === ProductIndexSortField::Code) {
+                $codeDirection = $sort->direction->value;
             }
 
             if ($this->orderBySpecialSortField($query, $sort->field, $sort->direction->value)) {
@@ -489,11 +489,11 @@ final class ProductIndexResults
             $this->orderByNullableColumn($query, $sort->field->sqlColumn(), $sort->direction->value);
         }
 
-        if (! $hasRjSort) {
-            $this->orderByNullableColumn($query, ProductIndexSortField::RJ->sqlColumn(), 'desc');
+        if ($codeDirection === null) {
+            $this->orderByNullableColumn($query, ProductIndexSortField::Code->sqlColumn(), 'desc');
         }
 
-        return $query;
+        return $query->orderBy('id', $codeDirection ?? 'desc');
     }
 
     private function orderByNullableColumn(Builder $query, string $column, string $direction): void

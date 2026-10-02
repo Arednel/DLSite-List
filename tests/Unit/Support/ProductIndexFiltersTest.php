@@ -241,12 +241,12 @@ class ProductIndexFiltersTest extends TestCase
     {
         $options = ProductIndexFilters::optionSets([
             ProductIndexSortField::Series->value => ProductIndexSortField::Series->label(),
-            ProductIndexSortField::RJ->value => ProductIndexSortField::RJ->label(),
+            ProductIndexSortField::Code->value => ProductIndexSortField::Code->label(),
         ]);
 
         $this->assertSame([
             ProductIndexSortField::Series->value => 'Series',
-            ProductIndexSortField::RJ->value => 'RJ Code',
+            ProductIndexSortField::Code->value => 'RJ Code',
         ], $options['sort_fields']);
         $this->assertArrayHasKey('sort_directions', $options);
     }

@@ -637,7 +637,7 @@ class OptionMetadataSettingsTest extends TestCase
         $this->assertTrue($layout[0]['visible']);
         $this->assertSame(ProductIndexSortField::Score->value, $layout[1]['field']);
         $this->assertFalse($layout[1]['visible']);
-        $this->assertSame(ProductIndexSortField::RJ->value, $layout[2]['field']);
+        $this->assertSame(ProductIndexSortField::Code->value, $layout[2]['field']);
         $this->assertFalse(collect($layout)->firstWhere('field', ProductIndexSortField::UpdatedAt->value)['visible']);
         $this->assertFalse(collect($layout)->firstWhere('field', ProductIndexSortField::ProductFormat->value)['visible']);
         $this->assertFalse(collect($layout)->firstWhere('field', ProductIndexSortField::Author->value)['visible']);
@@ -655,7 +655,7 @@ class OptionMetadataSettingsTest extends TestCase
 
         Option::resetIndexSortFieldLayoutToDefault();
 
-        $this->assertSame(ProductIndexSortField::RJ->value, Option::indexSortFieldLayout()[0]['field']);
+        $this->assertSame(ProductIndexSortField::Code->value, Option::indexSortFieldLayout()[0]['field']);
         $this->assertTrue(Option::indexSortFieldLayout()[0]['visible']);
         $this->assertFalse(collect(Option::indexSortFieldLayout())->firstWhere('field', ProductIndexSortField::UpdatedAt->value)['visible']);
     }
