@@ -158,7 +158,7 @@
                         {{ __('DLsite Links') }}
                     </h2>
                     <p class="option-description">
-                        {{ __('Choose where DLsite links on the Index page point to, including which DLsite section (Home or Maniax) and page type they use (regular work/ or announce/).') }}
+                        {{ __('Choose the Home/Maniax fallback for works without a Site ID and which page type to use (regular work/ or announce/ when available).') }}
                     </p>
 
                     <livewire:dlsite-link-settings />

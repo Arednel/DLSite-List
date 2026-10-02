@@ -80,6 +80,7 @@ final class DLSiteProductImporter
             $product = Product::query()->createOrFirst(
                 ['id' => $productId],
                 [
+                    'site_id' => $workData->siteId,
                     'maker_id' => $makerId,
                     'work_name' => $workName,
                     'work_name_english' => $englishWorkName,

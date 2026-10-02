@@ -14,6 +14,7 @@ class ProductIndexSortFieldTest extends TestCase
             ProductIndexSortField::Score->value => 'score',
             ProductIndexSortField::Series->value => 'series',
             ProductIndexSortField::AgeCategory->value => 'age_category',
+            ProductIndexSortField::SiteId->value => 'site_id',
             ProductIndexSortField::ProductFormat->value => 'product_format->[0]',
             ProductIndexSortField::AnnouncementDate->value => 'announce_date',
             ProductIndexSortField::Progress->value => 'progress',
@@ -43,6 +44,7 @@ class ProductIndexSortFieldTest extends TestCase
             ProductIndexSortField::Score->value,
             ProductIndexSortField::Series->value,
             ProductIndexSortField::AgeCategory->value,
+            ProductIndexSortField::SiteId->value,
             ProductIndexSortField::ProductFormat->value,
             ProductIndexSortField::AnnouncementDate->value,
             ProductIndexSortField::Progress->value,
@@ -65,6 +67,7 @@ class ProductIndexSortFieldTest extends TestCase
         $this->assertArrayHasKey(ProductIndexSortField::AddedToTheSiteDate->value, $visibleOptions);
         $this->assertArrayNotHasKey(ProductIndexSortField::UpdatedAt->value, $visibleOptions);
         $this->assertArrayNotHasKey(ProductIndexSortField::ProductFormat->value, $visibleOptions);
+        $this->assertArrayNotHasKey(ProductIndexSortField::SiteId->value, $visibleOptions);
         $this->assertArrayNotHasKey(ProductIndexSortField::AnnouncementDate->value, $visibleOptions);
         $this->assertArrayNotHasKey(ProductIndexSortField::Circle->value, $visibleOptions);
     }
@@ -83,6 +86,7 @@ class ProductIndexSortFieldTest extends TestCase
             ProductIndexSortField::Score->value,
             ProductIndexSortField::Code->value,
             ProductIndexSortField::AgeCategory->value,
+            ProductIndexSortField::SiteId->value,
             ProductIndexSortField::ProductFormat->value,
             ProductIndexSortField::AnnouncementDate->value,
             ProductIndexSortField::Progress->value,
@@ -120,6 +124,7 @@ class ProductIndexSortFieldTest extends TestCase
             ['field' => ProductIndexSortField::Score->value, 'visible' => false],
             ['field' => ProductIndexSortField::Code->value, 'visible' => true],
             ['field' => ProductIndexSortField::AgeCategory->value, 'visible' => true],
+            ['field' => ProductIndexSortField::SiteId->value, 'visible' => false],
             ['field' => ProductIndexSortField::ProductFormat->value, 'visible' => false],
             ['field' => ProductIndexSortField::AnnouncementDate->value, 'visible' => false],
             ['field' => ProductIndexSortField::Progress->value, 'visible' => true],

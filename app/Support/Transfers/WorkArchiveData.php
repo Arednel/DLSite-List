@@ -60,6 +60,7 @@ final class WorkArchiveData
         're_listen_value',
         'priority',
         'custom_tags',
+        'site_id',
         'created_at',
         'updated_at',
         'cover',
@@ -107,6 +108,7 @@ final class WorkArchiveData
             're_listen_value' => $product->re_listen_value,
             'priority' => $product->priority,
             'custom_tags' => $tags['custom'],
+            'site_id' => $product->site_id,
         ];
         if ($images) {
             $custom['cover'] = $cover;
@@ -167,6 +169,7 @@ final class WorkArchiveData
             ...LibraryWorkValidator::productFormatRules('english.product_format'),
             'japanese.announce_date' => ['sometimes', 'nullable', 'date_format:Y-m-d H:i:s'],
             'english.announce_date' => ['sometimes', 'nullable', 'date_format:Y-m-d H:i:s'],
+            'dlsite_list.site_id' => ['sometimes', 'nullable', 'string', 'max:255', 'regex:/\A[a-z][a-z0-9_-]*\z/'],
         ])->validate();
 
         $work = DLSiteWorkData::fromArray($document, $expectedCode);
@@ -201,6 +204,9 @@ final class WorkArchiveData
         }
 
         $details = [];
+        $details['site_id'] = array_key_exists('site_id', $custom)
+            ? $custom['site_id']
+            : ($document['japanese']['site_id'] ?? $document['english']['site_id'] ?? null);
         if ($this->hasEither($document, 'maker_id')) {
             $details['maker_id'] = $this->localeText($document['japanese'], 'maker_id') ?? $this->localeText($document['english'], 'maker_id');
         }
@@ -265,11 +271,7 @@ final class WorkArchiveData
         $age = ProductAgeCategory::tryFrom((string) $product->age_category);
         $values = [
             'product_id' => strtoupper($product->id),
-            'site_id' => match ($age) {
-                ProductAgeCategory::AllAges => 'home',
-                ProductAgeCategory::R15, ProductAgeCategory::R18 => 'maniax',
-                null => null,
-            },
+            'site_id' => $product->site_id,
             'maker_id' => $product->maker_id,
             'work_name' => $title,
             'age_category' => $age === null ? null : ['_value_' => $this->ageValue($age), '_name_' => $age->value],

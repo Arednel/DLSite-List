@@ -483,6 +483,7 @@ final class RefetchService
                 RefetchCategory::Descriptions,
                 RefetchCategory::Series,
                 RefetchCategory::Age,
+                RefetchCategory::SiteId,
                 RefetchCategory::ProductFormat,
                 RefetchCategory::AnnouncementDate,
             ], true)) {

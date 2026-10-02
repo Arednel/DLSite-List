@@ -27,6 +27,7 @@ final class ProductIndexResults
         'notes',
         'progress',
         'announce_date',
+        'site_id',
     ];
 
     private const VISIBLE_FIELD_COLUMNS = [
@@ -34,6 +35,7 @@ final class ProductIndexResults
         'score' => ['score'],
         'series' => ['series'],
         'age_category' => ['age_category'],
+        'site_id' => ['site_id'],
         'product_format' => ['product_format'],
         'announce_date' => ['announce_date'],
         'notes' => ['notes'],
@@ -50,6 +52,7 @@ final class ProductIndexResults
     ];
 
     private const DISPLAY_VALUE_FIELDS = [
+        'site_id',
         'product_format',
         'progress',
         'start_date',
@@ -176,6 +179,10 @@ final class ProductIndexResults
             ->when(
                 $filters->ageCategory !== null,
                 fn($query) => $query->where('age_category', $filters->ageCategory->value)
+            )
+            ->when(
+                $filters->siteId !== '',
+                fn($query) => $query->where('site_id', $filters->siteId)
             )
             ->when(
                 $filters->progress !== null,
@@ -682,6 +689,7 @@ final class ProductIndexResults
     private function displayValue(Product $product, string $field): string
     {
         return match ($field) {
+            'site_id' => $product->site_id ?: '-',
             'product_format' => $this->productFormatDisplayValue($product->product_format),
             'progress' => ProductProgress::tryFrom((string) $product->progress)?->label() ?? '-',
             'start_date' => PartialDateFormatter::format($product->start_date) ?? '-',

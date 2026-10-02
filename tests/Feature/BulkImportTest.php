@@ -560,7 +560,7 @@ class BulkImportTest extends TestCase
         $this->assertNotNull($run->completed_at);
     }
 
-    public function test_bulk_import_job_persists_fetched_announcement_date(): void
+    public function test_bulk_import_job_persists_fetched_announcement_date_and_site_id(): void
     {
         Storage::fake('local');
         Storage::fake('public');
@@ -571,6 +571,7 @@ class BulkImportTest extends TestCase
         $rjCode = 'RJ000000406';
         $payload = $this->scrapedWorkPayload($rjCode);
         $payload['japanese']['announce_date'] = '2026-09-24 00:00:00';
+        $payload['japanese']['site_id'] = 'home';
         Storage::disk('local')->put("Works/{$rjCode}.json", json_encode($payload, JSON_THROW_ON_ERROR));
         [$run, $item] = $this->createRunItem($rjCode);
 
@@ -583,6 +584,7 @@ class BulkImportTest extends TestCase
             '2026-09-24 00:00:00',
             Product::query()->findOrFail($rjCode)->announce_date?->format('Y-m-d H:i:s'),
         );
+        $this->assertSame('home', Product::query()->findOrFail($rjCode)->site_id);
     }
 
     public function test_successful_job_uses_scraped_product_format_when_the_field_is_hidden(): void

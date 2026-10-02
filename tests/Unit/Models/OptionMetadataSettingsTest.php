@@ -731,6 +731,7 @@ class OptionMetadataSettingsTest extends TestCase
     {
         return array_diff_key(ProductIndexSortField::options(), array_flip([
             ProductIndexSortField::UpdatedAt->value,
+            ProductIndexSortField::SiteId->value,
             ProductIndexSortField::ProductFormat->value,
             ProductIndexSortField::AnnouncementDate->value,
             ProductIndexSortField::Circle->value,

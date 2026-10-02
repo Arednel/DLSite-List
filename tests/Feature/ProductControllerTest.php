@@ -2127,7 +2127,7 @@ class ProductControllerTest extends TestCase
         $this->assertSame(['MOV', 'SND', 'MS2'], Product::query()->findOrFail($workId)->product_format);
     }
 
-    public function test_quick_add_stores_fetched_announcement_date(): void
+    public function test_quick_add_stores_fetched_announcement_date_and_site_id(): void
     {
         Storage::fake('local');
         Process::fake(['*' => Process::result(output: '{"failed_images":[]}')])->preventStrayProcesses();
@@ -2137,12 +2137,14 @@ class ProductControllerTest extends TestCase
             "Works/{$workId}.json",
             json_encode($this->scrapedWorkPayload($workId, [
                 'announce_date' => '2026-09-24 00:00:00',
+                'site_id' => 'home',
             ]), JSON_THROW_ON_ERROR),
         );
 
         $this->post('/store', ['id' => $workId])->assertSessionHasNoErrors();
 
         $this->assertSame('2026-09-24 00:00:00', Product::findOrFail($workId)->announce_date?->format('Y-m-d H:i:s'));
+        $this->assertSame('home', Product::findOrFail($workId)->site_id);
     }
 
     public function test_quick_add_uses_scraped_product_format_when_visible_field_is_blank(): void

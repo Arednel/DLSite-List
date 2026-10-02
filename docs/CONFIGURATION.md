@@ -460,13 +460,12 @@ It does not apply to Custom Quick Add or Refetch.
 
 #### DLsite Links
 
-Age-appropriate DLsite links are disabled by default.
+Index DLsite links use each work's stored Site ID (`site_id`) as their section when present. **Use age-appropriate fallback when Site ID is missing** setting applies only when `site_id` is missing and is disabled by default:
 
 Disabled:
-- all Index image/title DLsite links use Maniax URL
-
+- works missing `site_id` use Maniax URL
 Enabled:
-- exact `ALL_AGES` -> DLsite Home URL
+- `ALL_AGES` -> DLsite Home URL
 - `R15`, `R18`, missing, or malformed values -> Maniax URL
 
 Announcement links are enabled by default and independent of Home/Maniax selection.
@@ -584,6 +583,7 @@ Fetched Tags are readonly by default. If made editable, editing changes only the
 - `score`
 - `series`
 - `age_category`
+- `site_id` - hidden
 - `product_format` - hidden
 - `progress`
 - `circle` - hidden
@@ -634,6 +634,7 @@ Fetched Tags are readonly by default. If made editable, editing changes only the
 - `score`
 - `series`
 - `age_category`
+- `site_id` - hidden
 - `product_format` - hidden
 - `progress`
 - `notes`
@@ -738,6 +739,7 @@ Custom Quick Add has no scraper fallback. Hidden optional description rows store
 - `score`
 - `series`
 - `age_category`
+- `site_id` - hidden
 - `product_format` - hidden
 - `announce_date` - hidden
 - `progress`

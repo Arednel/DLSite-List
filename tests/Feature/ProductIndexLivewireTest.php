@@ -346,6 +346,7 @@ class ProductIndexLivewireTest extends TestCase
         $this->assertArrayHasKey('work_name_english', $attributes);
         $this->assertArrayHasKey('notes', $attributes);
         $this->assertArrayHasKey('progress', $attributes);
+        $this->assertArrayHasKey('site_id', $attributes);
         $this->assertArrayNotHasKey('work_image', $attributes);
         $this->assertArrayNotHasKey('score', $attributes);
         $this->assertArrayNotHasKey('series', $attributes);
@@ -396,6 +397,22 @@ class ProductIndexLivewireTest extends TestCase
         $this->assertStringNotContainsString('/home/work/', $html);
         $this->assertNotNull($productQuery);
         $this->assertStringNotContainsString('age_category', $productQuery);
+    }
+
+    public function test_site_id_generates_index_links_even_when_the_site_column_is_hidden(): void
+    {
+        Option::setIndexFieldLayout([
+            ['field' => ProductField::SiteId->value, 'visible' => false],
+            ['field' => ProductField::AgeCategory->value, 'visible' => false],
+        ]);
+        $work = $this->createProduct(1, [
+            'site_id' => 'comic',
+            'age_category' => 'ALL_AGES',
+        ]);
+
+        $html = Livewire::test(ProductIndex::class)->html();
+        $this->assertSame(3, substr_count($html, "https://www.dlsite.com/comic/work/=/product_id/{$work->id}.html"));
+        $this->assertStringNotContainsString('data-label="Site ID"', $html);
     }
 
     public function test_enabled_dlsite_links_load_hidden_age_and_reuse_the_age_appropriate_url(): void
@@ -530,6 +547,52 @@ class ProductIndexLivewireTest extends TestCase
         $this->assertArrayNotHasKey('code_number', $attributes);
         $this->assertArrayNotHasKey('start_date_sort', $attributes);
         $this->assertArrayNotHasKey('end_date_sort', $attributes);
+    }
+
+    public function test_site_id_is_available_in_optional_index_column_filter_and_sort(): void
+    {
+        Option::setIndexPerPage(Option::INDEX_PER_PAGE_UNLIMITED);
+        Option::setIndexFieldLayout([
+            ['field' => ProductField::SiteId->value, 'visible' => true],
+        ]);
+        Option::setFilterFieldLayout([
+            ['field' => ProductField::SiteId->value, 'visible' => true],
+        ]);
+        Option::setIndexSortFieldLayout([
+            ['field' => ProductIndexSortField::SiteId->value, 'visible' => true],
+        ]);
+
+        $home = $this->createProduct(1, ['work_name' => 'SITE_HOME', 'site_id' => 'home']);
+        $this->createProduct(2, ['work_name' => 'SITE_COMIC', 'site_id' => 'comic']);
+        $unknown = $this->createProduct(3, ['work_name' => 'SITE_UNKNOWN', 'site_id' => null]);
+
+        $results = app(ProductIndexResults::class);
+        $products = $results->getProducts(ProductIndexFilters::fromQuery([]), Option::INDEX_PER_PAGE_UNLIMITED, [ProductField::SiteId->value]);
+        $displayValues = $results->displayValues($products, [ProductField::SiteId->value]);
+        $this->assertSame('home', $displayValues->get($home->id)['site_id']);
+        $this->assertSame('-', $displayValues->get($unknown->id)['site_id']);
+
+        Livewire::test(ProductIndex::class)
+            ->assertSee('data-label="Site ID"', false)
+            ->assertSee('id="filter_site_id"', false)
+            ->assertSee('value="site_id"', false)
+            ->set('draft.site_id', ' COMIC ')
+            ->call('applyFilters')
+            ->assertSet('site_id', 'comic')
+            ->assertSee('SITE_COMIC')
+            ->assertDontSee('SITE_HOME')
+            ->assertDontSee('SITE_UNKNOWN');
+
+        Livewire::withQueryParams(['site_id' => 'hom'])
+            ->test(ProductIndex::class)
+            ->assertDontSee('SITE_HOME');
+
+        Livewire::withQueryParams([
+            'sort_first_field' => ProductIndexSortField::SiteId->value,
+            'sort_first_direction' => 'asc',
+        ])
+            ->test(ProductIndex::class)
+            ->assertSeeInOrder(['SITE_COMIC', 'SITE_HOME', 'SITE_UNKNOWN']);
     }
 
     public function test_optional_product_format_column_uses_localized_labels(): void

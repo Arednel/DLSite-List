@@ -188,7 +188,7 @@ Covers the full Refetch workflow:
 - staged fetch data
 - image-check choice
 - review categories
-- apply/ignore/reject behavior, including Product Format and announcement-date Overwrite/Ignore
+- apply/ignore/reject behavior, including Product Format, announcement-date, and Site ID Overwrite/Ignore
 - localized Product Format review values
 - incremental application
 - lifecycle locking
@@ -204,7 +204,7 @@ Covers Refetch queue failure recovery, cancellation, continued processing after 
 
 #### `tests/Feature/BulkImportTest.php`
 
-Covers Bulk Import parsing/validation, shared-input snapshots, queued item processing, skips/failures, transactional persistence (including failed completion writes, worker interruption before commit, and stale item/run state), and run completion. Product Format coverage verifies fetched values when the field is hidden or blank and manual override behavior when a visible value is supplied. Also verifies announcement dates are saved by the shared importer.
+Covers Bulk Import parsing/validation, shared-input snapshots, queued item processing, skips/failures, transactional persistence (including failed completion writes, worker interruption before commit, and stale item/run state), and run completion. Product Format coverage verifies fetched values when the field is hidden or blank and manual override behavior when a visible value is supplied. Also verifies announcement dates and Site IDs are saved by the shared importer.
 
 #### `tests/Feature/OptionsBulkImportsTest.php`
 
@@ -212,7 +212,7 @@ Covers Bulk Import history, progress/errors, imported-work titles and fallback R
 
 #### `tests/Feature/LibraryTransferTest.php`
 
-Covers core transfer contracts, route/review smoke coverage, compact collapsed Export/Import error lists, portable Options (including legacy form-field aliases on import), new-work round trips, controlled downloads, and the shared library-mutation lock.
+Covers core transfer contracts, route/review smoke coverage, compact collapsed Export/Import error lists, portable Options, new-work round trips, controlled downloads, and the shared library-mutation lock.
 
 #### `tests/Feature/LibraryTransferExportTest.php`
 
@@ -222,7 +222,7 @@ Regression coverage injects failures after successor-job insertion in every plan
 
 #### `tests/Feature/LibraryTransferImportTest.php`
 
-Covers multipart upload/validation, missing or replacement parts, archive/path/checksum safety, bounded analysis/checkpoint retries, image validation, existing/new work analysis, and data-only continuation. Product Format coverage includes custom/empty values, invalid-value quarantine, locale fallback, and compatibility with archives created before the field existed. `announce_date` tests cover round trips, omitted fields, and invalid-date quarantine.
+Covers multipart upload/validation, missing or replacement parts, archive/path/checksum safety, bounded analysis/checkpoint retries, image validation, existing/new work analysis, and data-only continuation. Product Format coverage includes custom/empty values, invalid-value quarantine, locale fallback, and compatibility with archives created before the field existed. `announce_date` tests cover round trips, omitted fields, and invalid-date quarantine. Site ID tests cover round trips and preservation when importing older archives without an explicit stored site.
 
 #### `tests/Feature/LibraryTransferReviewTest.php`
 
@@ -361,9 +361,9 @@ Covers the Livewire Index:
 - sort behavior, including Product Format sorting by its first stored value and announcement-date sorting with nulls last
 - narrow hydration
 - batched settings
-- field visibility/order, optional-column sort mappings, and hydrated values independent of UI wording
+- field visibility/order, optional-column sort mappings (including optional Site ID display, exact filtering, and sorting), and hydrated values independent of UI wording
 - timestamps
-- DLSite links, including `announce/` selection independent of Home/Maniax
+- DLSite links using Site ID with age-based fallback, including `announce/` selection independent of site
 - Image Viewer
 - Add/Edit modal links
 - tags/colors/group ordering
@@ -385,7 +385,7 @@ Covers metadata-backfill behavior when canonical work JSON is missing or invalid
 Covers metadata-related UI settings:
 - field layouts, including collapsed section rendering
 - automatic Series
-- DLSite links, including the default-on announcement toggle, save/reset behavior, and tooltip
+- DLSite links, including the age-based fallback, default-on announcement toggle, save/reset behavior, and tooltip
 - Add/Edit form theme
 - Add/Edit modal
 - Index table width
@@ -541,7 +541,7 @@ Covers server-rendered Add/Edit modal completion fallback output and conditional
 - Covers Laravel Process command construction, explicit output destinations, venv executable, unlimited timeout behavior, and log-retention environment.
 
 `tests/Unit/Support/DLSite/DLSiteWorkDataTest.php`
-- Covers shared scraped metadata extraction for titles/descriptions/creators/maker data, Product Format normalization, announcement-date locale fallback, product ids, and missing-id errors.
+- Covers shared scraped metadata extraction for titles/descriptions/creators/maker data, Product Format normalization, announcement-date and site-id locale fallback, product ids, and missing-id errors.
 
 `tests/Unit/Support/DLSite/DLSiteWorkFetcherTest.php`
 - Covers the PHP-owned five-attempt retry loop, manifest/JSON validation, partial results, immediate success, and rejection of stale JSON fallback.

@@ -66,6 +66,15 @@ class ProductIndexFiltersTest extends TestCase
         $this->assertSame(ProductIndexSortDirection::Desc, $filters->primarySort?->direction);
     }
 
+    public function test_site_id_filter_round_trips_as_a_normalized_exact_value(): void
+    {
+        $filters = ProductIndexFilters::fromQuery(['site_id' => '  COMIC  ']);
+
+        $this->assertSame('comic', $filters->siteId);
+        $this->assertSame('comic', $filters->toInput()['site_id']);
+        $this->assertSame(['site_id' => 'comic'], $filters->toQuery());
+    }
+
     public function test_date_range_filters_round_trip_through_input_and_query_output(): void
     {
         $filters = ProductIndexFilters::fromQuery([
@@ -179,6 +188,7 @@ class ProductIndexFiltersTest extends TestCase
             ['description_english'],
             ['tags', 'tag_match'],
             ['age_category'],
+            ['site_id'],
             ['progress'],
             ['score'],
             ['priority'],

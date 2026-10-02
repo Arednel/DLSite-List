@@ -204,6 +204,7 @@
                 {{ $filterOptions['age_categories'][$product->ageCategory] ?? ($product->ageCategory ?? '-') }}
             @break
 
+            @case('site_id')
             @case('product_format')
                 {{ $productDisplayValues[$product->id][$column['field']] ?? '-' }}
             @break

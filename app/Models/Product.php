@@ -25,6 +25,7 @@ class Product extends Model
 
     protected $fillable = [
         'id',
+        'site_id',
         'maker_id',
         'work_name',
         'work_name_english',
@@ -78,9 +79,10 @@ class Product extends Model
     public function dlsiteWorkUrl(bool $ageAppropriateLinksEnabled, bool $announceLinksEnabled = true): string
     {
         $productId = (string) $this->getKey();
-        $section = $ageAppropriateLinksEnabled && $this->age_category === ProductAgeCategory::AllAges->value
-            ? 'home'
-            : 'maniax';
+        $section = $this->site_id
+            ?: ($ageAppropriateLinksEnabled && $this->age_category === ProductAgeCategory::AllAges->value
+                ? 'home'
+                : 'maniax');
         $pageType = $announceLinksEnabled && $this->announce_date !== null ? 'announce' : 'work';
 
         return "https://www.dlsite.com/{$section}/{$pageType}/=/product_id/{$productId}.html";

@@ -15,6 +15,7 @@ For existing manual installations:
 
 * Added support for DLsite's Scheduled Release Date (`announce_date`) metadata.
 * Added an option, enabled by default, to use DLsite announcement (`announce/`) links when available, falling back to regular (`work/`) links.
+* Added support for DLsite's `site_id` metadata.
 
 ### Changed
 
@@ -22,6 +23,7 @@ For existing manual installations:
 * Renamed database column `rj_number` to `code_number`.
 * Generalized numeric product-code sorting for RJ, BJ, and VJ identifiers.
 * CSS Cleanup.
+* DLsite links now use stored `site_id` when available.
 
 ### Security
 

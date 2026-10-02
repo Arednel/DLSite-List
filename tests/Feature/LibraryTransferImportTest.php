@@ -243,6 +243,26 @@ class LibraryTransferImportTest extends TestCase
         $this->assertSame('2026-09-24 00:00:00', Product::findOrFail('RJ123456')->announce_date?->format('Y-m-d H:i:s'));
     }
 
+    public function test_site_id_round_trips_and_legacy_work_uses_locale_site_id(): void
+    {
+        $product = Product::factory()->create(['id' => 'RJ123456', 'site_id' => 'home']);
+        $export = $this->exported();
+        $product->delete();
+        $this->apply($this->imported($export));
+        $this->assertSame('home', Product::findOrFail('RJ123456')->site_id);
+
+        $this->rewriteWorkData($export->parts()->firstOrFail(), function (array $work): array {
+            unset($work['dlsite_list']['site_id']);
+            $work['japanese']['site_id'] = 'maniax'; // Old exports inferred this value from age.
+            $work['english']['site_id'] = 'maniax';
+            $work['japanese']['work_name'] = 'Legacy title';
+
+            return $work;
+        });
+        $this->apply($this->imported($export));
+        $this->assertSame('maniax', Product::findOrFail('RJ123456')->site_id);
+    }
+
     public function test_legacy_work_archive_without_announcement_date_preserves_existing_date(): void
     {
         $product = Product::factory()->create([

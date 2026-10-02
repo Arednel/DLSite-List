@@ -352,6 +352,7 @@ class LibraryTransferExportTest extends TestCase
             'work_image' => 'storage/Works/RJ123456/cover.png',
             'sample_images' => ['storage/Works/RJ123456/sample_2.jpeg'],
             'age_category' => 'R18',
+            'site_id' => 'home', // Actual section must not be reconstructed from the age rating.
             'product_format' => ['MOV', 'MV2', 'SND', 'MS2', 'custom:Audiobook'],
             'announce_date' => '2026-09-24 00:00:00',
         ]);
@@ -416,6 +417,7 @@ class LibraryTransferExportTest extends TestCase
             're_listen_value',
             'priority',
             'custom_tags',
+            'site_id',
             'cover',
             'sample_images',
             'created_at',
@@ -423,6 +425,9 @@ class LibraryTransferExportTest extends TestCase
         ], array_keys($work['dlsite_list']));
         $this->assertSame(['_value_', '_name_'], array_keys($work['japanese']['age_category']));
         $this->assertSame([3, 'R18'], array_values($work['japanese']['age_category']));
+        $this->assertSame('home', $work['japanese']['site_id']);
+        $this->assertSame('home', $work['english']['site_id']);
+        $this->assertSame('home', $work['dlsite_list']['site_id']);
         $this->assertSame(['MOV', 'MV2', 'SND', 'MS2', 'custom:Audiobook'], $work['japanese']['product_format']);
         $this->assertSame(['MOV', 'MV2', 'SND', 'MS2', 'custom:Audiobook'], $work['english']['product_format']);
         $this->assertSame('2026-09-24 00:00:00', $work['japanese']['announce_date']);

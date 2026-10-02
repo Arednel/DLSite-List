@@ -16,6 +16,7 @@ enum ProductField: string
     case Score = 'score';
     case Series = 'series';
     case AgeCategory = 'age_category';
+    case SiteId = 'site_id';
     case ProductFormat = 'product_format';
     case AnnouncementDate = 'announce_date';
     case Progress = 'progress';
@@ -47,6 +48,7 @@ enum ProductField: string
             self::Score => __('Score'),
             self::Series => __('Series'),
             self::AgeCategory => __('Age'),
+            self::SiteId => __('Site ID'),
             self::ProductFormat => __('Product Format'),
             self::AnnouncementDate => __('Scheduled release date'),
             self::Progress => __('Progress'),
@@ -89,6 +91,7 @@ enum ProductField: string
             self::Score => ProductIndexSortField::Score,
             self::Series => ProductIndexSortField::Series,
             self::AgeCategory => ProductIndexSortField::AgeCategory,
+            self::SiteId => ProductIndexSortField::SiteId,
             self::ProductFormat => ProductIndexSortField::ProductFormat,
             self::AnnouncementDate => ProductIndexSortField::AnnouncementDate,
             self::Progress => ProductIndexSortField::Progress,
@@ -218,6 +221,7 @@ enum ProductField: string
                     self::Score,
                     self::Series,
                     self::AgeCategory,
+                    self::SiteId,
                     self::ProductFormat,
                     self::Progress,
                     self::Notes,
@@ -240,6 +244,7 @@ enum ProductField: string
                 ],
                 'visibility_locked' => [],
                 'hidden_by_default' => [
+                    self::SiteId,
                     self::StartDate,
                     self::FinishDate,
                     self::AnnouncementDate,
@@ -322,6 +327,7 @@ enum ProductField: string
                     self::Score,
                     self::Series,
                     self::AgeCategory,
+                    self::SiteId,
                     self::ProductFormat,
                     self::Progress,
                     self::Circle,
@@ -345,6 +351,7 @@ enum ProductField: string
                 'visibility_locked' => [self::Title],
                 'hidden_by_default' => [
                     ...self::metadataFields(),
+                    self::SiteId,
                     self::Notes,
                     self::StartDate,
                     self::FinishDate,

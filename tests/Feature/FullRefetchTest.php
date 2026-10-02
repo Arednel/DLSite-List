@@ -263,6 +263,44 @@ class FullRefetchTest extends TestCase
         $this->assertTrue($run->fresh()->tabResolved(RefetchCategory::AnnouncementDate));
     }
 
+    #[DataProvider('siteIdReviewActions')]
+    public function test_site_id_refetch_respects_overwrite_and_ignore(string $action, string $expectedSite): void
+    {
+        Storage::fake('local');
+        Storage::fake('public');
+        $product = Product::factory()->create(['site_id' => 'maniax']);
+        $run = app(RefetchService::class)->createRun([$product->id], false);
+        Storage::disk('local')->put(
+            "Refetch/{$run->id}/Works/{$product->id}.json",
+            json_encode(['japanese' => ['product_id' => $product->id, 'site_id' => 'home'], 'english' => []], JSON_THROW_ON_ERROR),
+        );
+        $result = $run->results()->firstOrFail();
+        $result->forceFill([
+            'status' => RefetchWorkResult::STATUS_FETCHED,
+            'changes' => [RefetchCategory::SiteId->value => [
+                'site_id' => ['label' => 'Site ID', 'old' => 'maniax', 'new' => 'home'],
+            ]],
+        ])->save();
+        $run->forceFill([
+            'status' => RefetchRun::STATUS_REVIEW,
+            'processed_count' => 1,
+            'fetched_count' => 1,
+            'completed_at' => now(),
+            'resolved_tabs' => array_values(array_diff(RefetchCategory::values(), [RefetchCategory::SiteId->value])),
+        ])->save();
+
+        app(RefetchService::class)->applyTab($run, RefetchCategory::SiteId, $action);
+        $this->assertSame($expectedSite, $product->fresh()->site_id);
+    }
+
+    public static function siteIdReviewActions(): array
+    {
+        return [
+            'overwrite' => [RefetchService::ACTION_OVERWRITE, 'home'],
+            'ignore' => [RefetchService::ACTION_IGNORE, 'maniax'],
+        ];
+    }
+
     public static function announcementDateReviewActions(): array
     {
         return [

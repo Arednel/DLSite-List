@@ -383,6 +383,7 @@ class LibraryTransferReviewTest extends TestCase
             'descriptions',
             'series',
             'age',
+            'site_id',
             'product_format',
             'announce_date',
             'circle',

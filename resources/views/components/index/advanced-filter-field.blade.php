@@ -39,6 +39,14 @@
         </div>
     @break
 
+    @case('site_id')
+        <div class="filter-widget site-id">
+            <label class="widget-header" for="filter_site_id">{{ __('Site ID') }}</label>
+            <input id="filter_site_id" type="text" name="site_id" wire:model="draft.site_id"
+                placeholder="{{ __('home, maniax') }}">
+        </div>
+    @break
+
     @case('age_category')
         <x-index.filter-select id="filter_age_category" name="age_category" label="Age" :options="$filterOptions['age_categories']"
             placeholder="All Works" wire:model="draft.age_category" />

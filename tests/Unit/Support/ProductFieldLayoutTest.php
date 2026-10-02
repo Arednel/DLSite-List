@@ -32,6 +32,7 @@ class ProductFieldLayoutTest extends TestCase
                 ProductField::Score,
                 ProductField::Series,
                 ProductField::AgeCategory,
+                ProductField::SiteId,
                 ProductField::ProductFormat,
                 ProductField::Progress,
                 ProductField::Circle,
@@ -80,6 +81,7 @@ class ProductFieldLayoutTest extends TestCase
                 ProductField::Score,
                 ProductField::Series,
                 ProductField::AgeCategory,
+                ProductField::SiteId,
                 ProductField::ProductFormat,
                 ProductField::Progress,
                 ProductField::Notes,
@@ -162,6 +164,12 @@ class ProductFieldLayoutTest extends TestCase
     {
         $this->assertFalse(ProductField::SampleImages->isAvailableOn(ProductFieldLayout::SURFACE_QUICK_ADD));
         $this->assertTrue(ProductField::SampleImages->isAvailableOn(ProductFieldLayout::SURFACE_CUSTOM_QUICK_ADD));
+        $this->assertTrue(ProductField::SiteId->isAvailableOn(ProductFieldLayout::SURFACE_INDEX));
+        $this->assertTrue(ProductField::SiteId->isAvailableOn(ProductFieldLayout::SURFACE_FILTER));
+        $this->assertFalse(ProductField::SiteId->isAvailableOn(ProductFieldLayout::SURFACE_EDIT));
+        $this->assertTrue(ProductField::SiteId->isHiddenByDefault(ProductFieldLayout::SURFACE_INDEX));
+        $this->assertTrue(ProductField::SiteId->isHiddenByDefault(ProductFieldLayout::SURFACE_FILTER));
+        $this->assertSame('site_id', ProductField::SiteId->sortField()?->value);
         $this->assertTrue(ProductField::ProductFormat->isAvailableOn(ProductFieldLayout::SURFACE_INDEX));
         $this->assertTrue(ProductField::ProductFormat->isAvailableOn(ProductFieldLayout::SURFACE_EDIT));
         $this->assertTrue(ProductField::ProductFormat->isAvailableOn(ProductFieldLayout::SURFACE_FILTER));
@@ -218,6 +226,7 @@ class ProductFieldLayoutTest extends TestCase
             ProductField::Score->value,
             ProductField::Series->value,
             ProductField::AgeCategory->value,
+            ProductField::SiteId->value,
             ProductField::ProductFormat->value,
             ProductField::Progress->value,
             ProductField::Circle->value,
@@ -342,6 +351,7 @@ class ProductFieldLayoutTest extends TestCase
             ProductField::Score->value,
             ProductField::Series->value,
             ProductField::AgeCategory->value,
+            ProductField::SiteId->value,
             ProductField::ProductFormat->value,
             ProductField::Progress->value,
             ProductField::Notes->value,

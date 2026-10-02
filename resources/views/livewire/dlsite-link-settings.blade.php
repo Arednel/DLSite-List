@@ -1,9 +1,9 @@
 <div>
     <form wire:submit.prevent="save" class="option-form">
         <x-options.switch wire:model.live="enabled" :help="__(
-            'When enabled, All Ages works open on DLSite Home; R15 and R18 use Maniax. When disabled, all works use Maniax.',
+            'When enabled, works without a Site ID, use Home for All Ages and Maniax for R15/R18. Otherwise, they use Maniax. Works with a Site ID always use their Site ID.',
         )">
-            {{ __('Use age-appropriate DLSite links') }}
+            {{ __('Use age-appropriate fallback when Site ID is missing') }}
         </x-options.switch>
 
         @error('enabled')

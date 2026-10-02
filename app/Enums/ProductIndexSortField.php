@@ -13,6 +13,7 @@ enum ProductIndexSortField: string
     case Score = 'score';
     case Series = 'series';
     case AgeCategory = 'age_category';
+    case SiteId = 'site_id';
     case ProductFormat = 'product_format';
     case AnnouncementDate = 'announce_date';
     case Progress = 'progress';
@@ -36,6 +37,7 @@ enum ProductIndexSortField: string
             self::Score => __('Score'),
             self::Series => __('Series'),
             self::AgeCategory => __('Age'),
+            self::SiteId => __('Site ID'),
             self::ProductFormat => __('Product Format'),
             self::AnnouncementDate => __('Scheduled release date'),
             self::Progress => __('Progress'),
@@ -69,6 +71,7 @@ enum ProductIndexSortField: string
     {
         return in_array($this, [
             self::UpdatedAt,
+            self::SiteId,
             self::ProductFormat,
             self::AnnouncementDate,
             self::Circle,

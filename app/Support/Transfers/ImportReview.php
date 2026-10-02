@@ -33,6 +33,7 @@ final class ImportReview
             'descriptions',
             'series',
             'age',
+            'site_id',
             'product_format',
             'announce_date',
             'circle',
@@ -61,6 +62,7 @@ final class ImportReview
     public const WORK_SCALAR_CATEGORIES = [
         'series' => ['details', 'series'],
         'age' => ['details', 'age_category'],
+        'site_id' => ['details', 'site_id'],
         'product_format' => ['details', 'product_format'],
         'announce_date' => ['details', 'announce_date'],
         'maker' => ['details', 'maker_id'],

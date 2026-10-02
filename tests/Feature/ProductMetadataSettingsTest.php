@@ -283,8 +283,8 @@ class ProductMetadataSettingsTest extends TestCase
         $component = Livewire::test(DlsiteLinkSettings::class)
             ->assertSet('enabled', true)
             ->assertSet('announceEnabled', false)
-            ->assertSee('Use age-appropriate DLSite links')
-            ->assertSee('When enabled, All Ages works open on DLSite Home; R15 and R18 use Maniax. When disabled, all works use Maniax.')
+            ->assertSee('Use age-appropriate fallback when Site ID is missing')
+            ->assertSee('When enabled, works without a Site ID, use Home for All Ages and Maniax for R15/R18. Otherwise, they use Maniax. Works with a Site ID always use their Site ID.')
             ->assertSee('Use announcement links when available')
             ->assertSee('When enabled, works that have an announcement date use DLSite announcement links (announce/). Released works will automatically redirect to their regular product pages (work/). When disabled, all links use regular product pages, which may show an error for not yet released works.')
             ->assertDontSee('DLSite announcement links (`announce/`)', false);

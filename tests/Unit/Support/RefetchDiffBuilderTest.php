@@ -111,6 +111,34 @@ class RefetchDiffBuilderTest extends TestCase
         $this->assertSame('Custom Tag', $changes['tags']['tags']['old']['custom'][0]);
     }
 
+    public function test_site_id_diff_is_reviewable_and_missing_fetched_site_proposes_removal(): void
+    {
+        $product = Product::factory()->create(['site_id' => 'maniax']);
+        $builder = app(RefetchDiffBuilder::class);
+        $changes = $builder->build($product, new DLSiteFetchResult(
+            workData: DLSiteWorkData::fromArray([
+                'japanese' => ['product_id' => $product->id, 'site_id' => 'home'],
+            ]),
+            failedImages: [],
+        ), null);
+
+        $this->assertSame([
+            'label' => 'Site ID',
+            'old' => 'maniax',
+            'new' => 'home',
+        ], $changes[RefetchCategory::SiteId->value]['site_id']);
+
+        $withoutSite = $builder->build($product, new DLSiteFetchResult(
+            workData: DLSiteWorkData::fromArray(['japanese' => ['product_id' => $product->id]]),
+            failedImages: [],
+        ), null);
+        $this->assertSame([
+            'label' => 'Site ID',
+            'old' => 'maniax',
+            'new' => null,
+        ], $withoutSite[RefetchCategory::SiteId->value]['site_id']);
+    }
+
     public function test_product_format_diff_uses_dlsite_mirror_rules_and_ignores_custom_values(): void
     {
         $product = Product::factory()->create([

@@ -58,6 +58,8 @@ class ProductIndex extends Component
 
     public string $age_category = '';
 
+    public string $site_id = '';
+
     public string $progress = '';
 
     public string $score = '';

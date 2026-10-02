@@ -73,6 +73,7 @@ final class LibraryWorkValidator
             'details.maker_id' => ['sometimes', 'nullable', 'string', 'max:200'],
             'details.series' => ['sometimes', 'nullable', 'string', 'max:1000'],
             'details.age_category' => ['sometimes', 'nullable', Rule::enum(ProductAgeCategory::class)],
+            'details.site_id' => ['sometimes', 'nullable', 'string', 'max:255', 'regex:/\A[a-z][a-z0-9_-]*\z/'],
             ...self::productFormatRules('details.product_format'),
             'details.announce_date' => ['sometimes', 'nullable', 'date'],
             'details.notes' => ['sometimes', 'nullable', 'string', 'max:1000'],

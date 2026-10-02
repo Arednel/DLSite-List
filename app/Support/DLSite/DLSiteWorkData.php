@@ -9,6 +9,7 @@ final readonly class DLSiteWorkData
 {
     public function __construct(
         public string $productId,
+        public ?string $siteId,
         public ?string $makerId,
         public ?string $workName,
         public ?string $englishWorkName,
@@ -43,6 +44,7 @@ final readonly class DLSiteWorkData
 
         return new self(
             productId: $productId,
+            siteId: self::text($japanese['site_id'] ?? null) ?? self::text($english['site_id'] ?? null),
             makerId: self::text($japanese['maker_id'] ?? $english['maker_id'] ?? null),
             workName: $workName,
             englishWorkName: $englishWorkName === $workName ? null : $englishWorkName,

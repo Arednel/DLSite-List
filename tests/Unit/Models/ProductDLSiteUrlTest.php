@@ -18,6 +18,36 @@ class ProductDLSiteUrlTest extends TestCase
         );
     }
 
+    #[DataProvider('siteIdUrlProvider')]
+    public function test_site_id_overrides_age_fallback_regardless_of_the_setting(
+        ?string $siteId,
+        bool $fallbackEnabled,
+        string $expectedSection,
+    ): void {
+        $product = new Product([
+            'id' => 'BJ370220',
+            'site_id' => $siteId,
+            'age_category' => 'ALL_AGES',
+        ]);
+
+        $this->assertSame(
+            "https://www.dlsite.com/{$expectedSection}/work/=/product_id/BJ370220.html",
+            $product->dlsiteWorkUrl($fallbackEnabled),
+        );
+    }
+
+    public static function siteIdUrlProvider(): array
+    {
+        return [
+            'books with fallback enabled' => ['books', true, 'books'],
+            'comic with fallback disabled' => ['comic', false, 'comic'],
+            'pro with fallback enabled' => ['pro', true, 'pro'],
+            'soft with fallback disabled' => ['soft', false, 'soft'],
+            'missing site with fallback enabled' => [null, true, 'home'],
+            'missing site with fallback disabled' => [null, false, 'maniax'],
+        ];
+    }
+
     #[DataProvider('enabledAgeUrlProvider')]
     public function test_enabled_age_appropriate_links_use_the_expected_dlsite_section(
         ?string $ageCategory,

@@ -13,6 +13,7 @@ class DLSiteWorkDataTest extends TestCase
         $data = DLSiteWorkData::fromArray([
             'japanese' => [
                 'product_id' => 'RJ123456',
+                'site_id' => 'maniax',
                 'maker_id' => 'RG123',
                 'work_name' => 'JP Title',
                 'age_category' => ['_name_' => 'R18'],
@@ -37,6 +38,7 @@ class DLSiteWorkDataTest extends TestCase
         ]);
 
         $this->assertSame('RJ123456', $data->productId);
+        $this->assertSame('maniax', $data->siteId);
         $this->assertSame('RG123', $data->makerId);
         $this->assertSame('JP Title', $data->workName);
         $this->assertNull($data->englishWorkName);
@@ -79,6 +81,19 @@ class DLSiteWorkDataTest extends TestCase
         $this->assertNull(DLSiteWorkData::fromArray([
             'japanese' => ['product_id' => 'RJ123456', 'announce_date' => null],
         ])->announceDate);
+    }
+
+    public function test_site_id_uses_english_fallback_and_remains_null_when_missing(): void
+    {
+        $data = DLSiteWorkData::fromArray([
+            'japanese' => ['product_id' => 'BJ370220', 'site_id' => ''],
+            'english' => ['site_id' => 'comic'],
+        ]);
+
+        $this->assertSame('comic', $data->siteId);
+        $this->assertNull(DLSiteWorkData::fromArray([
+            'japanese' => ['product_id' => 'RJ123456'],
+        ])->siteId);
     }
 
     public function test_it_keeps_distinct_english_description(): void
