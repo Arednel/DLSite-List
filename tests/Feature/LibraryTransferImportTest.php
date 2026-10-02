@@ -10,7 +10,10 @@ use App\Jobs\LibraryTransferJob;
 use App\Livewire\OptionsTransferRun;
 use App\Models\LibraryImportItem;
 use App\Models\LibraryTransferRun;
+use App\Models\Option;
 use App\Models\Product;
+use App\Support\Transfers\InvalidArchive;
+use App\Support\Transfers\PortableOptions;
 use Exception;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Bus;
@@ -243,6 +246,195 @@ class LibraryTransferImportTest extends TestCase
         $this->assertSame('2026-09-24 00:00:00', Product::findOrFail('RJ123456')->announce_date?->format('Y-m-d H:i:s'));
     }
 
+    public function test_schema_v1_archive_imports_released_identifiers_images_and_option_layouts(): void
+    {
+        $product = Product::factory()->create([
+            'id' => 'RJ123456',
+            'age_category' => 'R18',
+            'site_id' => 'home',
+            'work_image' => 'storage/Works/RJ123456/cover.png',
+        ]);
+        $this->saveImage('Works/RJ123456/cover.png');
+        $export = $this->exported(['works', 'images', 'options']);
+        $this->convertToReleasedSchemaV1($export);
+        foreach ($export->parts as $part) {
+            $this->assertSame(1, $this->archive()->inspect(Storage::disk('local')->path($part->path), true)['schema_version']);
+        }
+
+        $product->update(['site_id' => 'maniax', 'work_image' => null]);
+        $run = $this->imported($export);
+        $this->assertSame(LibraryTransferRunStatus::Review, $run->status);
+        foreach ([Option::QUICK_ADD_FIELD_LAYOUT, Option::BULK_IMPORT_FIELD_LAYOUT, Option::CUSTOM_QUICK_ADD_FIELD_LAYOUT] as $key) {
+            $layout = $run->items()->where('section', 'options')->where('entity_key', $key)->firstOrFail()->incoming;
+            $this->assertContains('product_code', array_column($layout, 'field'), $key);
+            $this->assertNotContains('rj_code', array_column($layout, 'field'), $key);
+            $codeRow = collect($layout)->firstWhere('field', 'product_code');
+            $this->assertTrue($codeRow['visible'], $key . ' locked Code visibility must survive normalization.');
+            $notesRow = collect($layout)->firstWhere('field', 'notes');
+            $this->assertTrue($notesRow['visible'], $key . ' Notes visibility must survive normalization.');
+        }
+        $this->apply($run);
+        foreach ([Option::QUICK_ADD_FIELD_LAYOUT, Option::BULK_IMPORT_FIELD_LAYOUT, Option::CUSTOM_QUICK_ADD_FIELD_LAYOUT] as $key) {
+            $layout = app(PortableOptions::class)->current($key);
+            $this->assertContains('product_code', array_column($layout, 'field'));
+            $this->assertTrue(collect($layout)->firstWhere('field', 'notes')['visible']);
+        }
+        $this->assertSame('home', $product->fresh()->site_id); // From legacy locale JSON, not inferred from R18.
+        $this->assertSame('storage/Works/RJ123456/cover.png', $product->fresh()->work_image);
+    }
+
+    public function test_schema_v1_rejects_a_v2_work_identifier(): void
+    {
+        Product::factory()->create(['id' => 'RJ123456']);
+        $export = $this->exported();
+        $part = $export->parts()->firstOrFail();
+        $path = Storage::disk('local')->path($part->path);
+        $zip = new ZipArchive;
+        $this->assertTrue($zip->open($path));
+        $manifest = json_decode($zip->getFromName('manifest.json'), true);
+        $manifest['schema_version'] = 1; // product_code is invalid in the released v1 work manifest.
+        $zip->addFromString('manifest.json', json_encode($manifest, JSON_THROW_ON_ERROR));
+        $zip->close();
+
+        $this->expectException(InvalidArchive::class);
+        $this->archive()->inspect($path, true);
+    }
+
+    public function test_schema_v2_image_entry_requires_product_code(): void
+    {
+        Product::factory()->create(['id' => 'RJ123456', 'work_image' => 'storage/Works/RJ123456/cover.png']);
+        $this->saveImage('Works/RJ123456/cover.png');
+        $export = $this->exported(['works', 'images']);
+        $part = $export->parts()->where('kind', 'images')->firstOrFail();
+        $path = Storage::disk('local')->path($part->path);
+        $zip = new ZipArchive;
+        $this->assertTrue($zip->open($path));
+        $manifest = json_decode($zip->getFromName('manifest.json'), true);
+        unset($manifest['entries'][0]['product_code']);
+        $zip->addFromString('manifest.json', json_encode($manifest, JSON_THROW_ON_ERROR));
+        $this->assertTrue($zip->close());
+
+        $this->expectException(InvalidArchive::class);
+        $this->archive()->inspect($path, true);
+    }
+
+    public function test_schema_v1_image_entry_allows_missing_rj_code(): void
+    {
+        Product::factory()->create(['id' => 'RJ123456', 'work_image' => 'storage/Works/RJ123456/cover.png']);
+        $this->saveImage('Works/RJ123456/cover.png');
+        $export = $this->exported(['works', 'images']);
+        $part = $export->parts()->where('kind', 'images')->firstOrFail();
+        $path = Storage::disk('local')->path($part->path);
+        $zip = new ZipArchive;
+        $this->assertTrue($zip->open($path));
+        $manifest = json_decode($zip->getFromName('manifest.json'), true);
+        $manifest['schema_version'] = 1;
+        unset($manifest['entries'][0]['product_code']);
+        $zip->addFromString('manifest.json', json_encode($manifest, JSON_THROW_ON_ERROR));
+        $this->assertTrue($zip->close());
+
+        $this->assertSame(1, $this->archive()->inspect($path, true)['schema_version']);
+    }
+
+    public function test_archive_parts_with_mixed_schema_versions_are_rejected(): void
+    {
+        Product::factory()->create(['id' => 'RJ123456', 'work_image' => 'storage/Works/RJ123456/cover.png']);
+        $this->saveImage('Works/RJ123456/cover.png');
+        $export = $this->exported(['works', 'images']);
+        $imagePart = $export->parts()->where('kind', 'images')->firstOrFail();
+        $zip = new ZipArchive;
+        $this->assertTrue($zip->open(Storage::disk('local')->path($imagePart->path)));
+        $manifest = json_decode($zip->getFromName('manifest.json'), true);
+        $manifest['schema_version'] = 1;
+        foreach ($manifest['entries'] as &$entry) {
+            $entry['rj_code'] = $entry['product_code'];
+            unset($entry['product_code']);
+        }
+        unset($entry);
+        $zip->addFromString('manifest.json', json_encode($manifest, JSON_THROW_ON_ERROR));
+        $this->assertTrue($zip->close());
+
+        $dataPart = $export->parts()->where('kind', 'data')->firstOrFail();
+        $run = $this->service()->startImport();
+        $this->service()->upload($run, new UploadedFile(Storage::disk('local')->path($dataPart->path), $dataPart->filename, 'application/zip', null, true));
+
+        $this->expectException(InvalidArchive::class);
+        $this->service()->upload($run->fresh(), new UploadedFile(Storage::disk('local')->path($imagePart->path), $imagePart->filename, 'application/zip', null, true));
+    }
+
+    public function test_v2_prepares_existing_bj_vj_imports_without_enabling_new_product_creation(): void
+    {
+        $bj = Product::factory()->create(['id' => 'BJ123456', 'site_id' => 'books', 'work_image' => 'storage/Works/BJ123456/cover.png']);
+        $vj = Product::factory()->create(['id' => 'VJ234567', 'site_id' => 'pro']);
+        $this->saveImage('Works/BJ123456/cover.png');
+        $export = $this->exported(['works', 'images']);
+        $data = $export->parts()->where('kind', 'data')->firstOrFail();
+        $this->assertEqualsCanonicalizing(['BJ123456', 'VJ234567'], array_column($data->manifest['entries'], 'product_code'));
+        $this->assertSame(2, $this->archive()->inspect(Storage::disk('local')->path($data->path), true)['schema_version']);
+
+        $bj->update(['site_id' => null, 'work_image' => null]);
+        $vj->update(['site_id' => null]);
+        $this->apply($this->imported($export));
+        $this->assertSame('books', $bj->fresh()->site_id);
+        $this->assertSame('storage/Works/BJ123456/cover.png', $bj->fresh()->work_image);
+        $this->assertSame('pro', $vj->fresh()->site_id);
+
+        $bj->delete();
+        $run = $this->imported($export);
+        $unavailable = $run->items()->where('entity_key', 'BJ123456')->where('status', 'unavailable')->firstOrFail();
+        $this->assertSame('BJ/VJ product creation is not enabled yet.', $unavailable->error);
+        $this->assertSame([], $unavailable->incoming_preview['new_work']['cover']);
+        $this->assertSame([], $unavailable->incoming_preview['new_work']['titles']);
+    }
+
+    /** Convert a current test export to the released v1 archive contract, not any intermediate branch format. */
+    private function convertToReleasedSchemaV1(LibraryTransferRun $export): void
+    {
+        foreach ($export->parts as $part) {
+            $zip = new ZipArchive;
+            $this->assertTrue($zip->open(Storage::disk('local')->path($part->path)));
+            $manifest = json_decode($zip->getFromName('manifest.json'), true);
+            $manifest['schema_version'] = 1;
+            foreach ($manifest['entries'] as &$entry) {
+                if (array_key_exists('product_code', $entry)) {
+                    $entry['rj_code'] = $entry['product_code'];
+                    unset($entry['product_code']);
+                }
+                if ($entry['section'] === 'works') {
+                    $record = json_decode($zip->getFromName($entry['path']), true);
+                    unset($record['dlsite_list']['site_id']);
+                    $record['japanese']['announce_date'] = null;
+                    $record['english']['announce_date'] = null;
+                } elseif ($entry['section'] === 'options') {
+                    $record = json_decode($zip->getFromName($entry['path']), true);
+                    foreach ($record['records'] as &$option) {
+                        if (! in_array($option['key'], [Option::QUICK_ADD_FIELD_LAYOUT, Option::BULK_IMPORT_FIELD_LAYOUT, Option::CUSTOM_QUICK_ADD_FIELD_LAYOUT], true)) {
+                            continue;
+                        }
+                        foreach ($option['value'] as &$row) {
+                            if (($row['field'] ?? null) === 'product_code') {
+                                $row['field'] = 'rj_code';
+                            } elseif (($row['field'] ?? null) === 'notes') {
+                                $row['visible'] = true;
+                            }
+                        }
+                        unset($row);
+                    }
+                    unset($option);
+                } else {
+                    continue;
+                }
+                $json = json_encode($record, JSON_THROW_ON_ERROR | JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+                $zip->addFromString($entry['path'], $json);
+                $entry['bytes'] = strlen($json);
+                $entry['sha256'] = hash('sha256', $json);
+            }
+            unset($entry);
+            $zip->addFromString('manifest.json', json_encode($manifest, JSON_THROW_ON_ERROR | JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES));
+            $this->assertTrue($zip->close());
+        }
+    }
+
     public function test_site_id_round_trips_and_legacy_work_uses_locale_site_id(): void
     {
         $product = Product::factory()->create(['id' => 'RJ123456', 'site_id' => 'home']);
@@ -369,7 +561,7 @@ class LibraryTransferImportTest extends TestCase
         $entry = $manifest['entries'][0]['path'];
         switch ($case) {
             case 'schema':
-                $manifest['schema_version'] = 2;
+                $manifest['schema_version'] = 3;
                 break;
             case 'checksum':
                 $manifest['entries'][0]['sha256'] = str_repeat('0', 64);
@@ -398,7 +590,7 @@ class LibraryTransferImportTest extends TestCase
         }
         $zip->addFromString('manifest.json', json_encode($manifest));
         $zip->close();
-        $this->expectException(Exception::class);
+        $this->expectException(InvalidArchive::class);
         $this->archive()->inspect($path, true);
     }
 

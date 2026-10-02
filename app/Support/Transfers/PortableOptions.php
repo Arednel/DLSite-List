@@ -94,6 +94,23 @@ final class PortableOptions
         return $key === Option::INDEX_SORT_FIELD_LAYOUT ? ProductIndexSortField::storageLayout($value) : $value;
     }
 
+    /** Normalize field names from released schema v1 Options archives before review. */
+    public function normalizeLegacy(string $key, mixed $value): mixed
+    {
+        if (! in_array($key, [Option::QUICK_ADD_FIELD_LAYOUT, Option::BULK_IMPORT_FIELD_LAYOUT, Option::CUSTOM_QUICK_ADD_FIELD_LAYOUT], true) || ! is_array($value)) {
+            return $value;
+        }
+
+        foreach ($value as &$row) {
+            if (is_array($row) && ($row['field'] ?? null) === 'rj_code') {
+                $row['field'] = 'product_code';
+            }
+        }
+        unset($row);
+
+        return $value;
+    }
+
     public function validate(string $key, mixed $value): void
     {
         $defaults = $this->defaults();

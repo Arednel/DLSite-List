@@ -181,7 +181,7 @@ final class ProductImagePromotion
 
     private function validateDestination(string $path): void
     {
-        if (! preg_match('/\\AWorks\\/RJ\\d+\\/(cover|sample_[1-9]\\d*)\\.(jpe?g|png|gif|webp|avif|bmp)\\z/', $path)) {
+        if (! preg_match('/\\AWorks\\/(?:RJ|BJ|VJ)\\d+\\/(cover|sample_[1-9]\\d*)\\.(jpe?g|png|gif|webp|avif|bmp)\\z/', $path)) {
             throw new RuntimeException('Unsafe image replacement path.');
         }
     }

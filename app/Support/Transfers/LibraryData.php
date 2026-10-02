@@ -29,7 +29,7 @@ final class LibraryData
     {
         $attributes = $product->attributesToArray();
         $attributes['announce_date'] = $product->announce_date?->format('Y-m-d H:i:s');
-        $data = ['rj_code' => strtoupper($product->id), 'created_at' => $product->created_at?->utc()->toIso8601ZuluString(), 'updated_at' => $product->updated_at?->utc()->toIso8601ZuluString()];
+        $data = ['product_code' => strtoupper($product->id), 'created_at' => $product->created_at?->utc()->toIso8601ZuluString(), 'updated_at' => $product->updated_at?->utc()->toIso8601ZuluString()];
         foreach (self::FIELDS as $category => $fields) {
             $data[$category] = Arr::only($attributes, $fields);
         }

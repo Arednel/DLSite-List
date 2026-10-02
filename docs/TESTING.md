@@ -222,7 +222,7 @@ Regression coverage injects failures after successor-job insertion in every plan
 
 #### `tests/Feature/LibraryTransferImportTest.php`
 
-Covers multipart upload/validation, missing or replacement parts, archive/path/checksum safety, bounded analysis/checkpoint retries, image validation, existing/new work analysis, and data-only continuation. Product Format coverage includes custom/empty values, invalid-value quarantine, locale fallback, and compatibility with archives created before the field existed. `announce_date` tests cover round trips, omitted fields, and invalid-date quarantine. Site ID tests cover round trips and preservation when importing older archives without an explicit stored site.
+Covers multipart upload/validation, missing or replacement parts, archive/path/checksum safety, bounded analysis/checkpoint retries, image validation, existing/new work analysis, and data-only continuation. Product Format coverage includes custom/empty values, invalid-value quarantine, locale fallback, and compatibility with archives created before the field existed. `announce_date` tests cover round trips, omitted fields, and invalid-date quarantine. Site ID tests cover round trips and locale metadata fallback when importing older archives without an explicit stored site. Archive compatibility tests cover v2 output, released v1 manifests and legacy `rj_code` Options layouts.
 
 #### `tests/Feature/LibraryTransferReviewTest.php`
 

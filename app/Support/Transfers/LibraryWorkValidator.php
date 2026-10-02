@@ -21,8 +21,8 @@ final class LibraryWorkValidator
     {
         $this->validateAllowedKeys($data);
 
-        if (isset($data['rj_code']) && is_string($data['rj_code'])) {
-            $data['rj_code'] = strtoupper(trim($data['rj_code']));
+        if (isset($data['product_code']) && is_string($data['product_code'])) {
+            $data['product_code'] = strtoupper(trim($data['product_code']));
         }
 
         Validator::make($data, $this->rules(), $this->messages())->validate();
@@ -45,12 +45,12 @@ final class LibraryWorkValidator
 
     private function validateAllowedKeys(array $data): void
     {
-        $allowed = ['rj_code', 'created_at', 'updated_at', ...array_keys(LibraryData::FIELDS), 'contributors', 'tags', 'cover', 'sample_images'];
+        $allowed = ['product_code', 'created_at', 'updated_at', ...array_keys(LibraryData::FIELDS), 'contributors', 'tags', 'cover', 'sample_images'];
 
         Validator::make(['work' => $data], [
             'work' => ['array:' . implode(',', $allowed)],
         ], [
-            'work.array' => 'Unknown work fields in schema v1.',
+            'work.array' => 'Unknown work fields.',
         ])->validate();
     }
 
@@ -60,7 +60,7 @@ final class LibraryWorkValidator
     private function rules(): array
     {
         return [
-            'rj_code' => ['required', 'string', 'max:191', 'regex:/\ARJ\d+\z/'],
+            'product_code' => ['required', 'string', 'max:191', 'regex:/\A(?:RJ|BJ|VJ)\d+\z/'],
             'created_at' => ['sometimes', 'nullable', 'date', 'regex:' . LibraryData::UTC_DATE_PATTERN],
             'updated_at' => ['sometimes', 'nullable', 'date', 'regex:' . LibraryData::UTC_DATE_PATTERN],
             'titles' => ['required', 'array:' . implode(',', LibraryData::FIELDS['titles'])],

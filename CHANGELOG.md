@@ -24,6 +24,7 @@ For existing manual installations:
 * Generalized numeric product-code sorting for RJ, BJ, and VJ identifiers.
 * CSS Cleanup.
 * DLsite links now use stored `site_id` when available.
+* Updated Import/Export schema to v2 version.
 
 ### Security
 

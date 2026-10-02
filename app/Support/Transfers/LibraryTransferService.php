@@ -67,7 +67,7 @@ final class LibraryTransferService
             'scopes.*' => ['required', 'distinct', Rule::in(['works', 'images', 'tag-library', 'options'])],
             'mode' => ['required', Rule::in(['all', 'selected'])],
             'ids' => ['array', Rule::exists('products', 'id')],
-            'ids.*' => ['string', 'regex:/\ARJ\d+\z/'],
+            'ids.*' => ['string', 'regex:/\A(?:RJ|BJ|VJ)\d+\z/'],
         ])->validate();
         if (in_array('images', $scopes, true) && ! in_array('works', $scopes, true)) {
             throw new RuntimeException('Images require Works.');
@@ -351,14 +351,14 @@ final class LibraryTransferService
             $now = now();
             $rows = [];
             foreach ($chunk as $index => $entry) {
-                preg_match('/\Aworks\/(RJ\d+)\//', $entry['path'], $match);
+                preg_match('/\Aworks\/((?:RJ|BJ|VJ)\d+)\//', $entry['path'], $match);
                 $rows[] = [
                     'library_transfer_run_id' => $run->id,
                     'library_transfer_part_id' => $part->id,
                     'generation' => 1,
                     'kind' => $part->kind,
                     'section' => $entry['section'],
-                    'logical_key' => $entry['rj_code'] ?? ($match[1] ?? null),
+                    'logical_key' => $entry[$manifest['schema_version'] === 1 ? 'rj_code' : 'product_code'] ?? ($match[1] ?? null),
                     'fragment_number' => $entry['fragment'] ?? null,
                     'fragment_count' => $entry['fragments'] ?? null,
                     'position' => $base + $index,
@@ -473,6 +473,8 @@ final class LibraryTransferService
                     try {
                         if ($section === 'works') {
                             $record = $this->works->import($record, $key);
+                        } elseif ($section === 'options' && ($run->settings['manifest']['schema_version'] ?? null) === 1 && is_string($record['key'] ?? null) && array_key_exists('value', $record)) {
+                            $record['value'] = $this->options->normalizeLegacy($record['key'], $record['value']);
                         }
                         DB::transaction(fn() => $this->review->stage($run, $section, $record, $images, $natural));
                     } catch (InvalidArgumentException | ValidationException $exception) {
@@ -592,7 +594,7 @@ final class LibraryTransferService
 
     private function analysisImages(LibraryTransferRun $run, string $code): array
     {
-        if (($run->settings['without_images'] ?? false) || ! preg_match('/\\ARJ\\d+\\z/', $code) || strlen($code) > 191) {
+        if (($run->settings['without_images'] ?? false) || ! preg_match('/\\A(?:RJ|BJ|VJ)\\d+\\z/', $code) || strlen($code) > 191) {
             return [];
         }
 

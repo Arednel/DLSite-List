@@ -190,7 +190,7 @@ final class ImportReview
                     $known = $imageEntries[$file['path'] ?? ''] ?? null;
                     $path = $file['path'] ?? null;
                     $validPath = is_string($path)
-                        && str_starts_with($path, 'works/' . $record['rj_code'] . '/images/')
+                        && str_starts_with($path, 'works/' . $record['product_code'] . '/images/')
                         && TransferArchive::imageCategory($path) === $category;
                     $matchesInventory = $known
                         && $known['sha256'] === ($file['sha256'] ?? '')
@@ -202,13 +202,17 @@ final class ImportReview
                     $record[$category]['files'][$index]['entry_id'] = $known['id'];
                 }
             }
-            $product = Product::find($record['rj_code']);
+            $product = Product::find($record['product_code']);
             $metadata = [...$source, 'title' => $record['titles']['work_name'], ...Arr::only($record, ['created_at', 'updated_at'])];
             if (! $product) {
+                // BJ/VJ creation is enabled with the remaining entry points in Step 6.
+                if (! preg_match('/\ARJ\d+\z/', $record['product_code'])) {
+                    throw new InvalidArgumentException('BJ/VJ product creation is not enabled yet.');
+                }
                 if ((isset($record['cover']) && ! $record['cover']['complete']) || (isset($record['sample_images']) && ! $record['sample_images']['complete'])) {
                     $metadata['warning'] = 'Incomplete image categories will be skipped when adding this work.';
                 }
-                $this->item($run, $section, 'new_works', $record['rj_code'], null, $record, $metadata);
+                $this->item($run, $section, 'new_works', $record['product_code'], null, $record, $metadata);
 
                 return;
             }
@@ -293,7 +297,8 @@ final class ImportReview
         if ($category === 'new_works') {
             $previews = [];
             foreach (array_slice(self::CATEGORIES['works'], 1) as $workCategory) {
-                $previews[$workCategory] = ImportValue::newWorkChanges($item, $workCategory);
+                // Quarantined records have not completed staging (including image entry IDs).
+                $previews[$workCategory] = $error === null ? ImportValue::newWorkChanges($item, $workCategory) : [];
             }
             $item->incoming_preview = ['new_work' => $previews];
             $item->baseline_preview = ['value' => null, 'image' => false, 'truncated' => false];
@@ -617,7 +622,7 @@ final class ImportReview
         }
     }
 
-    /** Apply all selected categories for one RJ code as one database/filesystem unit. */
+    /** Apply all selected categories for one product code as one database/filesystem unit. */
     public function applyWorkItems(Collection $items): void
     {
         $items = $items->where('section', 'works')->where('status', LibraryImportItemStatus::Pending)->values();
@@ -644,8 +649,8 @@ final class ImportReview
                     return;
                 }
 
-                $rjCode = $pending->first()->entity_key;
-                $product = Product::whereKey($rjCode)->lockForUpdate()->first();
+                $productCode = $pending->first()->entity_key;
+                $product = Product::whereKey($productCode)->lockForUpdate()->first();
                 if ($product && $selected->contains(fn(LibraryImportItem $item): bool => in_array($item->category, ['tags', 'custom_tags'], true))) {
                     $pivots = DB::table('genre_product')->where('product_id', $product->id)->lockForUpdate()->pluck('id');
                     DB::table('genre_product_languages')->whereIn('genre_product_id', $pivots)->lockForUpdate()->get();
@@ -664,11 +669,11 @@ final class ImportReview
                 $ordered = $selected->sortBy(fn(LibraryImportItem $item): int => array_search($item->category, self::CATEGORIES['works'], true));
                 foreach ($ordered as $item) {
                     $this->applyWork($item, $product);
-                    $product = Product::whereKey($rjCode)->lockForUpdate()->first();
+                    $product = Product::whereKey($productCode)->lockForUpdate()->first();
                     $item->update(['status' => LibraryImportItemStatus::Applied, 'error' => null]);
                 }
                 LibraryImportItem::whereIn('id', $ignored->pluck('id'))->update(['status' => LibraryImportItemStatus::Ignored]);
-                $this->finalizeWorkTimestamps($pending->first()->run, $rjCode, $product);
+                $this->finalizeWorkTimestamps($pending->first()->run, $productCode, $product);
             }, $owner);
         } catch (InvalidArgumentException $exception) {
             LibraryImportItem::whereIn('id', $items->where('decision', '<>', LibraryImportDecision::Ignore)->pluck('id'))->update([
@@ -681,9 +686,9 @@ final class ImportReview
         }
     }
 
-    private function finalizeWorkTimestamps(LibraryTransferRun $run, string $rjCode, ?Product $product): void
+    private function finalizeWorkTimestamps(LibraryTransferRun $run, string $productCode, ?Product $product): void
     {
-        $items = $run->items()->where('section', 'works')->where('entity_key', $rjCode)->orderBy('id')->lockForUpdate()->get();
+        $items = $run->items()->where('section', 'works')->where('entity_key', $productCode)->orderBy('id')->lockForUpdate()->get();
         if (
             $items->isEmpty() || $items->contains(fn(LibraryImportItem $item): bool => $item->result['timestamps_finalized'] ?? false)
             || $items->contains(fn(LibraryImportItem $item): bool => $item->status === LibraryImportItemStatus::Pending)

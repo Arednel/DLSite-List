@@ -139,7 +139,7 @@ final class TransferArchive
             $work = $snapshot['work'];
             foreach (['cover', 'sample_images'] as $category) {
                 foreach ($work['dlsite_list'][$category]['files'] ?? [] as $index => $file) {
-                    $files[] = [...$file, 'disk' => 'public', 'section' => $category, 'rj_code' => $id];
+                    $files[] = [...$file, 'disk' => 'public', 'section' => $category, 'product_code' => $id];
                     unset($work['dlsite_list'][$category]['files'][$index]['source']);
                 }
             }
@@ -224,7 +224,7 @@ final class TransferArchive
                 'generation' => $run->generation,
                 'kind' => ($file['section'] === 'cover' || $file['section'] === 'sample_images') ? 'images' : 'data',
                 'section' => $file['section'],
-                'logical_key' => $file['rj_code'] ?? null,
+                'logical_key' => $file['product_code'] ?? null,
                 'fragment_number' => $file['fragment'] ?? null,
                 'fragment_count' => $file['fragments'] ?? null,
                 'position' => $planning['position']++,
@@ -383,7 +383,7 @@ final class TransferArchive
             $name = self::filename($run->settings['exported_at'], $part->kind, $part->number, $counts[$part->kind]);
             $manifest = [
                 'format' => 'dlsite-list',
-                'schema_version' => 1,
+                'schema_version' => 2,
                 'archive_set_id' => $run->archive_set_id,
                 'exported_at' => $run->settings['exported_at'],
                 'scopes' => $run->settings['scopes'],
@@ -429,7 +429,7 @@ final class TransferArchive
         return Arr::whereNotNull([
             'path' => $entry->path,
             'section' => $entry->section,
-            'rj_code' => $entry->logical_key,
+            'product_code' => $entry->logical_key,
             'fragment' => $entry->fragment_number,
             'fragments' => $entry->fragment_count,
             'bytes' => $entry->bytes,
@@ -464,7 +464,7 @@ final class TransferArchive
             'sha256' => hash('sha256', $json),
             'media_type' => 'application/json',
             'section' => 'works',
-            'rj_code' => $id,
+            'product_code' => $id,
         ];
     }
 
@@ -498,7 +498,7 @@ final class TransferArchive
             }
             $length = strlen(json_encode($record, JSON_THROW_ON_ERROR | JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES)) + 1;
             if ($length + 64 > config('transfers.max_json_bytes') || ($run->settings['part_bytes'] !== null && $this->bound([['path' => $section . '.part0001.json', 'bytes' => $length + 64]]) > $run->settings['part_bytes'])) {
-                throw new InvalidArchive('Domain record cannot fit in one supported fragment: ' . ($record['rj_code'] ?? $record['key'] ?? $section));
+                throw new InvalidArchive('Domain record cannot fit in one supported fragment: ' . ($record['product_code'] ?? $record['key'] ?? $section));
             }
             if ($buffer !== [] && ($bytes + $length > $maximum || count($buffer) >= config('transfers.max_fragment_records'))) {
                 $write();
@@ -809,7 +809,7 @@ final class TransferArchive
             throw new InvalidArchive('Unsupported or invalid archive layout: missing work entry format.');
         }
         foreach ($manifest['entries'] as $entry) {
-            $this->validateManifestEntry($entry, $kind, $manifest['scopes']);
+            $this->validateManifestEntry($entry, $kind, $manifest['scopes'], $manifest['schema_version']);
         }
     }
 
@@ -820,7 +820,7 @@ final class TransferArchive
     {
         return [
             'format' => ['required', Rule::in(['dlsite-list'])],
-            'schema_version' => ['required', 'integer:strict', Rule::in([1])],
+            'schema_version' => ['required', 'integer:strict', Rule::in([1, 2])],
             'archive_set_id' => ['required', 'uuid'],
             'exported_at' => ['required', 'date', 'regex:' . LibraryData::UTC_DATE_PATTERN],
             'work_entry_format' => ['sometimes', 'string'],
@@ -875,11 +875,11 @@ final class TransferArchive
         ];
     }
 
-    private function validateManifestEntry(array $entry, string $kind, array $scopes): void
+    private function validateManifestEntry(array $entry, string $kind, array $scopes, int $version): void
     {
         if ($kind === 'data') {
             $section = $entry['section'] ?? null;
-            $validWork = $this->validWorkEntry($entry);
+            $validWork = $this->validWorkEntry($entry, $version);
             $validFragment = $this->validFragmentEntry($entry, $section);
             $validSection = in_array($section, $scopes, true);
             $validType = ($entry['media_type'] ?? null) === 'application/json';
@@ -892,21 +892,24 @@ final class TransferArchive
             return;
         }
 
-        if (! in_array('images', $scopes, true) || ! self::validImageEntry($entry)) {
+        if (! in_array('images', $scopes, true) || ! self::validImageEntry($entry, $version)) {
             throw new InvalidArchive('Unsupported or invalid archive layout: invalid image entry.');
         }
     }
 
-    private function validWorkEntry(array $entry): bool
+    private function validWorkEntry(array $entry, int $version): bool
     {
+        $codePattern = $version === 1 ? 'RJ' : '(?:RJ|BJ|VJ)';
+        $codeField = $version === 1 ? 'rj_code' : 'product_code';
         if (($entry['section'] ?? null) !== 'works'
             || ! is_string($entry['path'] ?? null)
-            || ! preg_match('/\Aworks\/(RJ\d+)\/work\.json\z/', $entry['path'], $match)
+            || ! preg_match('/\Aworks\/(' . $codePattern . '\d+)\/work\.json\z/', $entry['path'], $match)
         ) {
             return false;
         }
 
-        return ($entry['rj_code'] ?? null) === $match[1]
+        return ($entry[$codeField] ?? null) === $match[1]
+            && ! array_key_exists($version === 1 ? 'product_code' : 'rj_code', $entry)
             && ! array_key_exists('fragment', $entry)
             && ! array_key_exists('fragments', $entry);
     }
@@ -926,18 +929,29 @@ final class TransferArchive
             && Validator::make($entry, $this->fragmentRules())->passes();
     }
 
-    public static function imageCategory(string $path): ?string
+    public static function imageCategory(string $path, int $version = 2): ?string
     {
-        if (preg_match('/\\Aworks\\/RJ\\d+\\/images\\/(cover|sample_[1-9]\\d*)\\.(jpe?g|png|gif|webp|avif|bmp)\\z/', $path, $match)) {
+        $codePattern = $version === 1 ? 'RJ' : '(?:RJ|BJ|VJ)';
+        if (preg_match('/\Aworks\/' . $codePattern . '\d+\/images\/(cover|sample_[1-9]\d*)\.(jpe?g|png|gif|webp|avif|bmp)\z/', $path, $match)) {
             return $match[1] === 'cover' ? 'cover' : 'sample_images';
         }
 
         return null;
     }
 
-    private static function validImageEntry(array $entry): bool
+    private static function validImageEntry(array $entry, int $version): bool
     {
-        $category = self::imageCategory($entry['path']);
+        $category = self::imageCategory($entry['path'], $version);
+        $codeField = $version === 1 ? 'rj_code' : 'product_code';
+        preg_match('/\Aworks\/((?:RJ|BJ|VJ)\d+)\/images\//', $entry['path'], $match);
+        if (($version === 2 && ! array_key_exists($codeField, $entry))
+            || (array_key_exists($codeField, $entry) && $entry[$codeField] !== ($match[1] ?? null))
+        ) {
+            return false;
+        }
+        if (array_key_exists($version === 1 ? 'product_code' : 'rj_code', $entry)) {
+            return false;
+        }
         $extension = pathinfo($entry['path'], PATHINFO_EXTENSION);
         if (
             $category === null || ($entry['section'] ?? null) !== $category

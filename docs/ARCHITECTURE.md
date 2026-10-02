@@ -171,7 +171,7 @@ Refetch updates scraped DLsite-owned data without immediately overwriting the ex
 9. Canonical JSON is promoted only when the accepted changes actually change the work.
 10. Obsolete images are cleaned only for works whose image state changed.
 
-Refetch has fifteen ordered review categories defined by `RefetchCategory`.
+Refetch has sixteen ordered review categories defined by `RefetchCategory`.
 
 Cover and sample-image changes are independent. Refetch uses the shared `ProductImagePromotion` boundary so interrupted image replacement can be recovered safely.
 
@@ -211,15 +211,17 @@ Partial work imports include only contributor roles explicitly present in either
 
 #### Archive boundary
 
-Schema v1 uses one archive-set identity across independent data and image ZIP parts. Every part contains `manifest.json`, which identifies the schema, part kind/count, scopes, and declared entries with sizes and SHA-256 checksums.
+New exports use schema v2, while imports support both the released schema v1 and schema v2. Both use one archive-set identity across independent data and image ZIP parts. Every part contains `manifest.json`, which identifies the schema, part kind/count, scopes, and declared entries with sizes and SHA-256 checksums. Parts from different schema versions cannot be mixed.
 
 Portable entries are domain-oriented:
 
-- each work is a deterministic `works/{RJ}/work.json` document using the `dlsite-async+dlsite-list` format
+- each work is a deterministic `works/{product_code}/work.json` document using the `dlsite-async+dlsite-list` format; v2 manifests use `product_code` (RJ/BJ/VJ), while v1 uses the historical `rj_code` (RJ only)
 - Tag Library and Options are stored as bounded JSON fragments
 - images are separate binary entries referenced by archive path, checksum, size, and media type
 
 The portable format excludes database IDs, authentication data, internal storage paths, and deployment-specific settings. Import reads explicitly declared entries rather than extracting archives wholesale, and rejects unsupported/mixed layouts, unsafe paths, undeclared or conflicting entries, and integrity mismatches before review.
+
+For v1 archives, legacy `rj_code` fields in the three portable Add/Import Options layouts are normalized to `product_code` before Import Review. Site ID is imported from `dlsite_list.site_id` when present, otherwise from the Japanese/English JSON `site_id`, without age-based inference.
 
 ### Authentication
 
@@ -382,10 +384,11 @@ Autocomplete:
 ### Products
 
 `products` stores the library work and user-owned tracking data, including:
-- RJ/product identifier
+- product identifier
 - titles
 - series
 - age category
+- site ID
 - product format
 - scheduled release date
 - Japanese and English descriptions

@@ -161,7 +161,7 @@ final class WorkArchiveData
         if (Validator::make(['dlsite_list' => $custom], [
             'dlsite_list' => ['array:' . implode(',', self::CUSTOM_FIELDS)],
         ])->fails()) {
-            throw new InvalidArgumentException('Unknown dlsite_list fields in schema v1.');
+            throw new InvalidArgumentException('Unknown dlsite_list work fields.');
         }
 
         Validator::make($document, [
@@ -178,7 +178,7 @@ final class WorkArchiveData
             throw new InvalidArgumentException('DLSite work data is missing a work name.');
         }
 
-        $record = ['rj_code' => $expectedCode];
+        $record = ['product_code' => $expectedCode];
         foreach (['created_at', 'updated_at'] as $field) {
             if (array_key_exists($field, $custom)) {
                 $record[$field] = $custom[$field];

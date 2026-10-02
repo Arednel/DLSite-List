@@ -361,6 +361,11 @@ class LibraryTransferExportTest extends TestCase
         $this->saveImage('Works/RJ123456/sample_2.jpeg');
         $export = $this->exported(['works', 'images']);
         $data = $export->parts()->where('kind', 'data')->firstOrFail();
+        $this->assertSame(2, $data->manifest['schema_version']);
+        foreach ($data->manifest['entries'] as $entry) {
+            $this->assertSame(explode('/', $entry['path'])[1], $entry['product_code']);
+            $this->assertArrayNotHasKey('rj_code', $entry);
+        }
         $this->assertSame('dlsite-async+dlsite-list', $data->manifest['work_entry_format']);
         $this->assertSame(
             ['works/RJ123456/work.json', 'works/RJ000002/work.json'],
