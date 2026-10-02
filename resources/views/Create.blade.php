@@ -23,7 +23,7 @@
             <div id="contentWrapper">
                 <div>
                     <h1 class="form-page-title">
-                        {{ $isBulkImport ? __('Bulk Import') : ($isCustomCreate ? __('Add Manually') : __('Add by RJ Code')) }}
+                        {{ $isBulkImport ? __('Bulk Import') : ($isCustomCreate ? __('Add Manually') : __('Add by Product Code')) }}
                     </h1>
                 </div>
 
@@ -33,7 +33,7 @@
                             <tr>
                                 <td>
                                     <div class="dialog-title dialog-header">
-                                        {{ $isBulkImport ? __('Bulk Import') : ($isCustomCreate ? __('Add Manually') : __('Add by RJ Code')) }}
+                                        {{ $isBulkImport ? __('Bulk Import') : ($isCustomCreate ? __('Add Manually') : __('Add by Product Code')) }}
                                     </div>
                                     <div class="dialog-body">
                                         <div class="create-mode-switch">
@@ -73,7 +73,7 @@
                                                 <tbody>
                                                     @foreach ($quickAddFields as $field)
                                                         @if ($isBulkImport && ($field['field'] ?? null) === 'product_code')
-                                                            <x-fields.bulk-rj-code-row />
+                                                            <x-fields.bulk-product-code-row />
                                                         @else
                                                             <x-fields.create-configurable-row :field="$field"
                                                                 :is-custom-create="$isCustomCreate" :age-category-options="$ageCategoryOptions" :month-labels="$monthLabels"

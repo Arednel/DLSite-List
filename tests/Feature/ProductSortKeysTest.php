@@ -106,7 +106,7 @@ class ProductSortKeysTest extends TestCase
 
         $ascending = $results->getProducts(
             ProductIndexFilters::fromQuery([
-                'sort_first_field' => 'rj', // Persisted sort value remains unchanged.
+                'sort_first_field' => 'product_code',
                 'sort_first_direction' => 'asc',
             ]),
             Option::INDEX_PER_PAGE_UNLIMITED,

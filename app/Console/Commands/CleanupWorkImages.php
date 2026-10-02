@@ -14,7 +14,7 @@ class CleanupWorkImages extends Command
 {
     protected $signature = 'works:cleanup-images';
 
-    protected $description = 'Cleanup unreferenced cover and sample images from existing RJ work folders';
+    protected $description = 'Cleanup unreferenced cover and sample images from existing product folders';
 
     public function handle(ProductImageCleanupService $cleanup, ProductImagePromotion $promotion, LibraryMutationLock $mutationLock): int
     {
@@ -57,13 +57,13 @@ class CleanupWorkImages extends Command
         }
 
         $this->info(
-            "Cleanup complete: processed {$processed} RJ work folder(s); "
+            "Cleanup complete: processed {$processed} product folder(s); "
                 . "removed {$removed} unreferenced image(s)."
         );
 
         if ($skipped > 0) {
             $this->info(
-                "Skipped {$skipped} RJ work folder(s) without a matching product."
+                "Skipped {$skipped} product folder(s) without a matching product."
             );
         }
 

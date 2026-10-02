@@ -16,7 +16,7 @@ return new class extends Migration
             $table->string('site_id')->nullable()->after('id');
         });
 
-        // Use the stored scraper response; do not infer the section from the RJ prefix or age rating.
+        // Use the stored scraper response; do not infer the section from the product code or age rating.
         DB::table('products')->select('id')->orderBy('id')->chunk(200, function ($products): void {
             foreach ($products as $product) {
                 $path = "Works/{$product->id}.json";

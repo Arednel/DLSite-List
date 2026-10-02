@@ -36,7 +36,7 @@ class OptionsWorkSearchTest extends TestCase
             ->assertDontSee('VISIBLE_WORK_TOKEN');
     }
 
-    public function test_livewire_work_search_sorts_visible_results_by_numeric_rj_descending(): void
+    public function test_livewire_work_search_sorts_visible_results_by_numeric_product_code_descending(): void
     {
         Product::factory()->create([
             'id' => 'RJ000000002',

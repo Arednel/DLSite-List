@@ -13,8 +13,8 @@
         @if ($run->isActive())
             <div class="progress-summary">
                 @if ($run->currentItem !== null)
-                    <strong>{{ __('Importing :rj - :position / :total', [
-                        'rj' => $run->currentItem->product_id,
+                    <strong>{{ __('Importing :code - :position / :total', [
+                        'code' => $run->currentItem->product_id,
                         'position' => $run->currentItem->position,
                         'total' => $run->total_count,
                     ]) }}</strong>

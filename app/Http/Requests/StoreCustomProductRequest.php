@@ -19,7 +19,7 @@ class StoreCustomProductRequest extends BaseProductRequest
     public function rules(): array
     {
         return array_merge($this->commonRules(), [
-            'id' => ['bail', 'required', 'regex:/^RJ\d+$/', Rule::unique('products', 'id')],
+            'id' => ['bail', 'required', 'max:191', 'regex:/^(?:RJ|BJ|VJ)\d+$/', Rule::unique('products', 'id')],
             'work_name' => ['required', 'string'],
             'age_category' => ['required', Rule::enum(ProductAgeCategory::class)],
             'work_image' => ['required', File::image()->max('20mb')],
@@ -34,9 +34,9 @@ class StoreCustomProductRequest extends BaseProductRequest
     public function messages(): array
     {
         return [
-            'id.required' => __('Enter an RJ code or a link containing one.'),
-            'id.regex' => __('Could not find an RJ code (format: RJ + numbers) in your input.'),
-            'id.unique' => __('Work with this RJ code is already in your library'),
+            'id.required' => __('Enter a product code or a link containing one.'),
+            'id.regex' => __('Could not find a product code (RJ, BJ or VJ followed by numbers) in your input.'),
+            'id.unique' => __('Work with this product code is already in your library'),
         ];
     }
 

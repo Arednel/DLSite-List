@@ -27,7 +27,7 @@ final class ImportValue
             'age_category' => __('Age'),
             'product_format' => __('Product Format'),
             'announce_date' => __('Scheduled release date'),
-            'product_code' => __('RJ code'),
+            'product_code' => __('Product Code'),
             'tag-library' => __('Tag Library'),
             'jp' => __('Japanese'),
             'en' => __('English'),

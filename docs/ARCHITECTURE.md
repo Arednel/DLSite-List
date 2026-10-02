@@ -46,7 +46,7 @@ Tag and contributor data is loaded only when the current visible fields need it.
 
 1. `StoreProductRequest` validates submitted form data.
 2. `ProductController` builds a `DLSiteProductImportInput` snapshot from the validated values and Quick Add layout.
-3. `DLSiteProductImporter` requests the RJ work through `DLSiteWorkFetcher`.
+3. `DLSiteProductImporter` requests the product through `DLSiteWorkFetcher`.
 4. `DLSiteWorkFetcher` calls `DLSitePythonRunner`, which invokes `python/DLSiteScraper.py` with explicit JSON/image/log destinations.
 5. PHP owns the fetch retry loop and validates the scraper result.
 6. Scraped metadata is converted by `DLSiteWorkData`; explicit visible Quick Add values override the fetched values where supported.
@@ -76,7 +76,7 @@ Custom works still use the normal product/tag/contributor model and can particip
 
 `GET /create/bulk` opens Bulk Import and `POST /store/bulk` starts a background run.
 
-1. `StartBulkImportRequest` extracts, normalizes, de-duplicates, and validates up to 500 RJ codes plus the shared form values.
+1. `StartBulkImportRequest` extracts, normalizes, de-duplicates, and validates up to 500 product codes plus the shared form values.
 2. `BulkImportService` snapshots the input, creates the run/items, and dispatches sequential `ImportBulkWorkJob` jobs on the database queue.
 3. Each item skips an existing product or uses the shared `DLSiteProductImporter`; expected DLsite work failures are recorded per item while unexpected failures stop the run.
 4. `FinishBulkImportRunJob` reconciles counts and completes the run.
@@ -221,7 +221,7 @@ Portable entries are domain-oriented:
 
 The portable format excludes database IDs, authentication data, internal storage paths, and deployment-specific settings. Import reads explicitly declared entries rather than extracting archives wholesale, and rejects unsupported/mixed layouts, unsafe paths, undeclared or conflicting entries, and integrity mismatches before review.
 
-For v1 archives, legacy `rj_code` fields in the three portable Add/Import Options layouts are normalized to `product_code` before Import Review. Site ID is imported from `dlsite_list.site_id` when present, otherwise from the Japanese/English JSON `site_id`, without age-based inference.
+For v1 archives, legacy `rj_code` fields in the three portable Add/Import Options layouts and the `rj` Index sort field are normalized to `product_code` before Import Review. Site ID is imported from `dlsite_list.site_id` when present, otherwise from the Japanese/English JSON `site_id`, without age-based inference.
 
 ### Authentication
 
@@ -402,7 +402,7 @@ Autocomplete:
 - sample-image paths
 - legacy/fallback maker metadata where required
 
-The product code (RJ codes only) is the product identifier.
+The product code (RJ, BJ or VJ) is the product identifier.
 
 `sample_images` and `product_format` are stored as JSON and cast to PHP arrays by `Product`.
 
@@ -410,7 +410,7 @@ Partial start/finish dates remain the editable source of truth. Derived integer 
 - `start_date_sort`
 - `end_date_sort`
 
-`code_number` stores the numeric part of RJ/BJ/VJ IDs for sorting (non-unique), using `id` as a tie-breaker. Product creation remains RJ-only for now.
+`code_number` stores the numeric part of RJ/BJ/VJ IDs for sorting (non-unique), using `id` as a tie-breaker.
 
 ### Tags
 
@@ -534,13 +534,13 @@ Transfer mapping deliberately separates portable domain values from transport me
 Canonical work metadata:
 
 ```text
-storage/app/Works/{RJ}.json
+storage/app/Works/{product_code}.json
 ```
 
 Canonical work images:
 
 ```text
-storage/app/public/Works/{RJ}/...
+storage/app/public/Works/{product_code}/...
 ```
 
 These files are addressed by the existing `/storage/...` application URLs but are served by `PublicStorageController` from the `public` filesystem disk. The controller serves files through Laravel's `public` disk (`storage/app/public`) and returns `404` for missing, malformed, or path-traversal requests.
@@ -548,13 +548,13 @@ These files are addressed by the existing `/storage/...` application URLs but ar
 Staged Refetch metadata:
 
 ```text
-storage/app/Refetch/{run}/Works/{RJ}.json
+storage/app/Refetch/{run}/Works/{product_code}.json
 ```
 
 Staged Refetch images:
 
 ```text
-storage/app/public/Refetch/{run}/Works/{RJ}/...
+storage/app/public/Refetch/{run}/Works/{product_code}/...
 ```
 
 Refetch and Import share `ProductImagePromotion` for canonical image replacement. It keeps private backups plus a durable recovery journal under:

@@ -114,7 +114,7 @@ class LibraryTransferExportTest extends TestCase
         $this->assertGreaterThan(0, $run->parts()->count());
     }
 
-    public function test_simple_work_search_preserves_hidden_selections_and_snapshots_exact_rj_codes(): void
+    public function test_simple_work_search_preserves_hidden_selections_and_snapshots_exact_product_codes(): void
     {
         Product::factory()->create(['id' => 'RJ111111', 'work_name' => 'Alpha']);
         Product::factory()->create(['id' => 'RJ222222', 'work_name' => 'Beta']);

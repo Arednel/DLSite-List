@@ -105,7 +105,7 @@
                     <div>
                         <label class="field-label" for="export-work-search">{{ __('Select works') }}</label>
                         <input id="export-work-search" class="option-control" type="search"
-                            placeholder="{{ __('Search by RJ ID or title...') }}"
+                            placeholder="{{ __('Search by product ID or title...') }}"
                             wire:model.live.debounce.250ms="search">
                     </div>
 

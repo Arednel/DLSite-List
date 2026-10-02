@@ -196,10 +196,10 @@ Docker:
 docker compose --env-file docker/.env.docker exec app php artisan works:cleanup-images
 ```
 
-The command scans existing RJ work folders and removes obsolete cover/sample images that are no longer referenced by their work.
+The command scans existing product folders and removes obsolete cover/sample images that are no longer referenced by their work.
 
 It deliberately skips:
-- orphan RJ folders without a matching work
+- orphan product folders without a matching work
 - unknown filenames
 - nested files
 - non-image files
@@ -735,7 +735,7 @@ Custom Quick Add has no scraper fallback. Hidden optional description rows store
 
 #### Index Sort Menu Default Order
 
-- `rj`
+- `product_code`
 - `score`
 - `series`
 - `age_category`
@@ -817,6 +817,6 @@ The supplied Docker configuration supports individual import ZIP parts up to `25
 
 ### Bulk Imports
 
-`Options -> Bulk Imports` shows Bulk Import history, 10 runs per page. Active runs update independently and show the current RJ code, progress counts, warnings, and errors; completed and failed runs remain static.
+`Options -> Bulk Imports` shows Bulk Import history, 10 runs per page. Active runs update independently and show the current product code, progress counts, warnings, and errors; completed and failed runs remain static.
 
 Cleanup permanently deletes all Bulk Import history and is unavailable while a run is queued or running.

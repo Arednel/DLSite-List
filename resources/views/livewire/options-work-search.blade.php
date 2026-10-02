@@ -10,7 +10,7 @@
     <div>
         <label class="field-label" for="work-search">{{ __('Select works') }}</label>
         <input id="work-search" class="option-control" type="search"
-            placeholder="{{ __('Search by RJ ID or title...') }}" wire:model.live.debounce.250ms="search">
+            placeholder="{{ __('Search by product ID or title...') }}" wire:model.live.debounce.250ms="search">
     </div>
 
     <div class="work-checklist">

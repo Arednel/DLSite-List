@@ -10,7 +10,7 @@
 
 @switch($field['field'])
     @case('product_code')
-        <x-fields.rj-input :show-dlsite-fetch-status="!$isCustomCreate" />
+        <x-fields.product-code-input :show-dlsite-fetch-status="!$isCustomCreate" />
     @break
 
     @case('progress')

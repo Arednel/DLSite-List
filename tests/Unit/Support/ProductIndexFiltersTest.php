@@ -66,6 +66,29 @@ class ProductIndexFiltersTest extends TestCase
         $this->assertSame(ProductIndexSortDirection::Desc, $filters->primarySort?->direction);
     }
 
+    public function test_index_sort_query_accepts_only_the_current_product_code_value(): void
+    {
+        $legacy = ProductIndexFilters::fromQuery([
+            'sort_first_field' => 'rj',
+            'sort_first_direction' => 'asc',
+        ]);
+        $this->assertNull($legacy->primarySort);
+        $this->assertSame([], $legacy->toQuery());
+
+        $current = ProductIndexFilters::fromQuery([
+            'sort_first_field' => 'product_code',
+            'sort_first_direction' => 'asc',
+        ]);
+        $this->assertSame(ProductIndexSortField::Code, $current->primarySort?->field);
+        $this->assertSame('product_code', $current->toQuery()['sort_first_field']);
+
+        $secondaryLegacy = ProductIndexFilters::fromQuery([
+            'sort_first_field' => 'score',
+            'sort_second_field' => 'rj',
+        ]);
+        $this->assertNull($secondaryLegacy->secondarySort);
+    }
+
     public function test_site_id_filter_round_trips_as_a_normalized_exact_value(): void
     {
         $filters = ProductIndexFilters::fromQuery(['site_id' => '  COMIC  ']);
@@ -256,7 +279,7 @@ class ProductIndexFiltersTest extends TestCase
 
         $this->assertSame([
             ProductIndexSortField::Series->value => 'Series',
-            ProductIndexSortField::Code->value => 'RJ Code',
+            ProductIndexSortField::Code->value => 'Product Code',
         ], $options['sort_fields']);
         $this->assertArrayHasKey('sort_directions', $options);
     }

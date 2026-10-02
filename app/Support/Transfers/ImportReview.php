@@ -205,10 +205,6 @@ final class ImportReview
             $product = Product::find($record['product_code']);
             $metadata = [...$source, 'title' => $record['titles']['work_name'], ...Arr::only($record, ['created_at', 'updated_at'])];
             if (! $product) {
-                // BJ/VJ creation is enabled with the remaining entry points in Step 6.
-                if (! preg_match('/\ARJ\d+\z/', $record['product_code'])) {
-                    throw new InvalidArgumentException('BJ/VJ product creation is not enabled yet.');
-                }
                 if ((isset($record['cover']) && ! $record['cover']['complete']) || (isset($record['sample_images']) && ! $record['sample_images']['complete'])) {
                     $metadata['warning'] = 'Incomplete image categories will be skipped when adding this work.';
                 }

@@ -17,9 +17,9 @@ class StartBulkImportRequest extends BaseProductRequest
     public function rules(): array
     {
         return [
-            'rj_list' => ['required', 'string'],
-            'rj_codes' => ['required', 'array', 'max:500'],
-            'rj_codes.*' => ['string', 'max:191', 'regex:/^RJ\\d+$/'],
+            'product_code_list' => ['required', 'string'],
+            'product_codes' => ['required', 'array', 'max:500'],
+            'product_codes.*' => ['string', 'max:191', 'regex:/^(?:RJ|BJ|VJ)\\d+$/'],
             'work_name' => ['nullable', 'string'],
             ...$this->commonRules(),
         ];
@@ -28,9 +28,9 @@ class StartBulkImportRequest extends BaseProductRequest
     public function messages(): array
     {
         return [
-            'rj_list.required' => __('Enter text containing at least one RJ code.'),
-            'rj_codes.max' => __('You can import up to 500 RJ codes at once.'),
-            'rj_codes.*.max' => __('RJ code #:position must not exceed :max characters.'),
+            'product_code_list.required' => __('Enter text containing at least one product code.'),
+            'product_codes.max' => __('You can import up to 500 product codes at once.'),
+            'product_codes.*.max' => __('Product code #:position must not exceed :max characters.'),
         ];
     }
 
@@ -39,13 +39,13 @@ class StartBulkImportRequest extends BaseProductRequest
         return [
             ...parent::after(),
             function (Validator $validator): void {
-                if ($this->normalizedProductCodes !== [] || $validator->errors()->has('rj_list')) {
+                if ($this->normalizedProductCodes !== [] || $validator->errors()->has('product_code_list')) {
                     return;
                 }
 
                 $validator->errors()->add(
-                    'rj_list',
-                    __('Could not find an RJ code (format: RJ + numbers) in your input.'),
+                    'product_code_list',
+                    __('Could not find a product code (RJ, BJ or VJ followed by numbers) in your input.'),
                 );
             },
         ];
@@ -53,9 +53,9 @@ class StartBulkImportRequest extends BaseProductRequest
 
     protected function prepareForValidation(): void
     {
-        $this->normalizedProductCodes = $this->extractProductCodes($this->input('rj_list'));
+        $this->normalizedProductCodes = $this->extractProductCodes($this->input('product_code_list'));
 
-        $this->merge(['rj_codes' => $this->normalizedProductCodes]);
+        $this->merge(['product_codes' => $this->normalizedProductCodes]);
 
         parent::prepareForValidation();
     }

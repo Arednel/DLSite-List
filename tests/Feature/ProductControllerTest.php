@@ -687,7 +687,7 @@ class ProductControllerTest extends TestCase
             ->assertOk()
             ->assertSee('class="product-form-theme-black"', false)
             ->assertDontSee('class="dark-mode"', false)
-            ->assertSee('Add by RJ Code')
+            ->assertSee('Add by Product Code')
             ->assertSee('DLSite Create')
             ->assertSee('Custom Create')
             ->assertSee('width=device-width, initial-scale=1', false)
@@ -702,7 +702,7 @@ class ProductControllerTest extends TestCase
             ->assertSee('scripts/dlsite-create-status.js', false)
             ->assertSee('Custom Tags')
             ->assertSee('name="id"', false)
-            ->assertSee('placeholder="RJ01234567"', false)
+            ->assertSee('placeholder="RJ01234567 / BJ0123456 / VJ0123456"', false)
             ->assertDontSee('name="return_route"', false)
             ->assertSee('href="http://localhost"', false)
             ->assertSee('id="add_start_date_month"', false)
@@ -736,7 +736,7 @@ class ProductControllerTest extends TestCase
             ->assertSee('/store/custom', false)
             ->assertSee('enctype="multipart/form-data"', false)
             ->assertSee('name="id"', false)
-            ->assertSee('placeholder="RJ01234567"', false)
+            ->assertSee('placeholder="RJ01234567 / BJ0123456 / VJ0123456"', false)
             ->assertSee('name="work_name"', false)
             ->assertSee('name="age_category"', false)
             ->assertSee('id="age_category" name="age_category" class="form-control"', false)
@@ -791,7 +791,7 @@ class ProductControllerTest extends TestCase
             ], false);
     }
 
-    public function test_quick_add_layout_can_hide_optional_fields_and_keep_required_rj_visible(): void
+    public function test_quick_add_layout_can_hide_optional_fields_and_keep_required_product_code_visible(): void
     {
         Option::setQuickAddFieldLayout([
             ['field' => ProductField::ProductCode->value, 'visible' => false],
@@ -802,7 +802,7 @@ class ProductControllerTest extends TestCase
         $this->get('/create')
             ->assertOk()
             ->assertSee('name="id"', false)
-            ->assertSeeInOrder(['RJ Code or Link', 'Priority'])
+            ->assertSeeInOrder(['Product Code or Link', 'Priority'])
             ->assertDontSee('name="notes"', false);
     }
 
@@ -825,7 +825,7 @@ class ProductControllerTest extends TestCase
             ->assertSee('name="age_category"', false)
             ->assertSee('name="work_image"', false)
             ->assertSeeInOrder([
-                'RJ Code or Link',
+                'Product Code or Link',
                 'Japanese Title',
                 'Age Category',
                 'Cover Image',
@@ -896,7 +896,7 @@ class ProductControllerTest extends TestCase
         $this->from('/create/custom?modal=1')
             ->post('/store/custom', ['modal' => '1'])
             ->assertRedirect('/create/custom?modal=1')
-            ->assertSessionHasErrors(['id' => 'Enter an RJ code or a link containing one.'])
+            ->assertSessionHasErrors(['id' => 'Enter a product code or a link containing one.'])
             ->assertSessionHasErrors(['id', 'work_name', 'age_category', 'work_image']);
     }
 
@@ -1930,7 +1930,7 @@ class ProductControllerTest extends TestCase
         ]);
     }
 
-    public function test_store_rejects_invalid_rj_code(): void
+    public function test_store_rejects_invalid_product_code(): void
     {
         $response = $this->from('/create')->post('/store', [
             'id' => 'not-an-rj-code',
@@ -1940,7 +1940,7 @@ class ProductControllerTest extends TestCase
         $response->assertSessionHasErrors(['id']);
     }
 
-    public function test_store_rejects_duplicate_rj_code(): void
+    public function test_store_rejects_duplicate_product_code(): void
     {
         $existing = Product::factory()->create();
 
@@ -1952,7 +1952,7 @@ class ProductControllerTest extends TestCase
         $response->assertSessionHasErrors(['id']);
     }
 
-    public function test_store_extracts_rj_from_url_before_validation(): void
+    public function test_store_extracts_product_code_from_url_before_validation(): void
     {
         $existing = Product::factory()->create();
         $urlInput = 'https://www.dlsite.com/maniax/work/=/product_id/' . strtolower($existing->id) . '.html';
@@ -1964,7 +1964,49 @@ class ProductControllerTest extends TestCase
         $response->assertRedirect('/create');
         $response->assertSessionHasErrors(['id']);
 
-        $this->assertSame('Work with this RJ code is already in your library', session('errors')->first('id'));
+        $this->assertSame('Work with this product code is already in your library', session('errors')->first('id'));
+    }
+
+    public function test_quick_add_creates_bj_and_vj_products_from_dlsite_links(): void
+    {
+        Storage::fake('local');
+        Storage::fake('public');
+        Process::fake(['*' => Process::result(output: '{"failed_images":[]}')])->preventStrayProcesses();
+
+        foreach (['BJ123456' => 'books', 'VJ234567' => 'pro'] as $productCode => $siteId) {
+            Storage::disk('local')->put("Works/{$productCode}.json", json_encode([
+                'japanese' => [
+                    'product_id' => $productCode,
+                    'site_id' => $siteId,
+                    'work_name' => "FETCHED_{$productCode}",
+                    'age_category' => ['_name_' => 'ALL_AGES'],
+                ],
+                'english' => [],
+            ], JSON_THROW_ON_ERROR));
+
+            $this->post('/store', [
+                'id' => "https://www.dlsite.com/{$siteId}/work/=/product_id/" . strtolower($productCode) . '.html',
+            ])->assertSessionHasNoErrors()->assertRedirect("/#{$productCode}");
+
+            $product = Product::findOrFail($productCode);
+            $this->assertSame($siteId, $product->site_id);
+            $this->assertSame("FETCHED_{$productCode}", $product->work_name);
+        }
+    }
+
+    public function test_custom_create_accepts_bj_and_vj_product_codes(): void
+    {
+        Storage::fake('public');
+
+        foreach (['BJ123456', 'VJ234567'] as $productCode) {
+            $this->post('/store/custom', $this->customStorePayload($productCode))
+                ->assertSessionHasNoErrors()
+                ->assertRedirect("/#{$productCode}");
+
+            $product = Product::findOrFail($productCode);
+            $this->assertNull($product->site_id);
+            $this->assertSame('CUSTOM_RETURN_TARGET_TOKEN', $product->work_name);
+        }
     }
 
     public function test_store_uses_fake_dlsite_process_and_scraped_json_to_create_product(): void
@@ -2791,7 +2833,7 @@ class ProductControllerTest extends TestCase
         $response->assertSessionHasErrors(['work_name', 'age_category', 'work_image']);
     }
 
-    public function test_custom_store_rejects_duplicate_rj_code(): void
+    public function test_custom_store_rejects_duplicate_product_code(): void
     {
         Storage::fake('public');
 

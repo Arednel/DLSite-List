@@ -82,21 +82,21 @@ class BulkImportTest extends TestCase
         Bus::assertNothingDispatched();
     }
 
-    public function test_bulk_import_page_reuses_quick_add_form_with_rj_list_input(): void
+    public function test_bulk_import_page_reuses_quick_add_form_with_product_code_list_input(): void
     {
         $this->get(route('products.create.bulk'))
             ->assertOk()
             ->assertSee('Bulk Import')
-            ->assertSee('name="rj_list"', false)
+            ->assertSee('name="product_code_list"', false)
             ->assertSee('fa-circle-question', false)
-            ->assertSee('RJ Codes or Links')
-            ->assertSee('Paste RJ codes or links. All occurrences of RJ followed by numbers are imported, e.g. RJ123456.')
+            ->assertSee('Product Codes or Links')
+            ->assertSee('Paste product codes or links. All occurrences of RJ, BJ or VJ followed by numbers are imported, e.g. RJ123456, BJ123456 or VJ123456.')
             ->assertSee('Start Bulk Import')
             ->assertSee(route('products.create', [], false), false)
             ->assertSee(route('products.create.custom', [], false), false);
     }
 
-    public function test_start_normalizes_deduplicates_snapshots_and_queues_rjs_in_order(): void
+    public function test_start_normalizes_deduplicates_snapshots_and_queues_product_codes_in_order(): void
     {
         Bus::fake();
 
@@ -109,11 +109,11 @@ class BulkImportTest extends TestCase
             ->assertSee('name="product_format"', false);
 
         $response = $this->post(route('products.store.bulk'), [
-            'rj_list' => implode("\n", [
+            'product_code_list' => implode("\n", [
                 'First: rj000000101',
-                'https://www.dlsite.com/maniax/work/=/product_id/RJ000000102.html',
+                'https://www.dlsite.com/books/work/=/product_id/bj000000102.html',
                 'duplicate RJ000000101 and unrelated text',
-                'Copied row [RJ000000103] title',
+                'Copied row [VJ000000103] title',
             ]),
             'progress' => 'Completed',
             'notes' => 'Shared bulk note',
@@ -130,7 +130,7 @@ class BulkImportTest extends TestCase
         $this->assertSame(BulkImportRunStatus::Queued, $run->status);
         $this->assertSame(3, $run->total_count);
         $this->assertSame(
-            ['RJ000000101', 'RJ000000102', 'RJ000000103'],
+            ['RJ000000101', 'BJ000000102', 'VJ000000103'],
             $run->items()->orderBy('position')->pluck('product_id')->all(),
         );
         $this->assertSame('Completed', data_get($run->input_snapshot, 'values.progress'));
@@ -151,7 +151,7 @@ class BulkImportTest extends TestCase
         ]);
     }
 
-    public function test_bulk_import_accepts_up_to_five_hundred_unique_rj_codes(): void
+    public function test_bulk_import_accepts_up_to_five_hundred_unique_product_codes(): void
     {
         Bus::fake();
 
@@ -160,7 +160,7 @@ class BulkImportTest extends TestCase
             ->implode("\n");
 
         $this->post(route('products.store.bulk'), [
-            'rj_list' => $codes,
+            'product_code_list' => $codes,
         ])->assertRedirect();
 
         $run = BulkImportRun::query()->firstOrFail();
@@ -168,7 +168,7 @@ class BulkImportTest extends TestCase
         $this->assertSame(500, $run->items()->count());
     }
 
-    public function test_bulk_import_rejects_more_than_five_hundred_unique_rj_codes(): void
+    public function test_bulk_import_rejects_more_than_five_hundred_unique_product_codes(): void
     {
         Bus::fake();
 
@@ -178,28 +178,28 @@ class BulkImportTest extends TestCase
 
         $this->from(route('products.create.bulk'))
             ->post(route('products.store.bulk'), [
-                'rj_list' => $codes,
+                'product_code_list' => $codes,
             ])
             ->assertRedirect(route('products.create.bulk'))
             ->assertSessionHasErrors([
-                'rj_codes' => 'You can import up to 500 RJ codes at once.',
+                'product_codes' => 'You can import up to 500 product codes at once.',
             ]);
 
         $this->assertDatabaseCount('bulk_import_runs', 0);
         Bus::assertNothingDispatched();
     }
 
-    public function test_text_without_any_rj_code_rejects_the_run_without_dispatching_jobs(): void
+    public function test_text_without_any_product_code_rejects_the_run_without_dispatching_jobs(): void
     {
         Bus::fake();
 
         $this->from(route('products.create.bulk'))
             ->post(route('products.store.bulk'), [
-                'rj_list' => "DLsite links and copied text, but no work code here.",
+                'product_code_list' => "DLsite links and copied text, but no work code here.",
             ])
             ->assertRedirect(route('products.create.bulk'))
             ->assertSessionHasErrors([
-                'rj_list' => 'Could not find an RJ code (format: RJ + numbers) in your input.',
+                'product_code_list' => 'Could not find a product code (RJ, BJ or VJ followed by numbers) in your input.',
             ]);
 
         $this->assertDatabaseCount('bulk_import_runs', 0);
@@ -286,14 +286,14 @@ class BulkImportTest extends TestCase
             '*' => Process::result(output: '{"failed_images":[]}'),
         ])->preventStrayProcesses();
 
-        $rjCode = 'RJ000000303';
-        $payload = $this->scrapedWorkPayload($rjCode);
+        $productCode = 'RJ000000303';
+        $payload = $this->scrapedWorkPayload($productCode);
         $payload['japanese']['genre'] = ['ROLLBACK_TEST_GENRE'];
         Storage::disk('local')->put(
-            "Works/{$rjCode}.json",
+            "Works/{$productCode}.json",
             json_encode($payload, JSON_THROW_ON_ERROR),
         );
-        [$run, $item] = $this->createRunItem($rjCode);
+        [$run, $item] = $this->createRunItem($productCode);
         $job = new ImportBulkWorkJob($item->id);
         $event = 'eloquent.creating: ' . Genre::class;
 
@@ -315,7 +315,7 @@ class BulkImportTest extends TestCase
         $item->refresh();
         $run->refresh();
 
-        $this->assertDatabaseMissing('products', ['id' => $rjCode]);
+        $this->assertDatabaseMissing('products', ['id' => $productCode]);
         $this->assertSame(BulkImportItemStatus::Failed, $item->status);
         $this->assertSame(BulkImportRunStatus::Failed, $run->status);
         $this->assertNotSame('Already in library.', $item->error);
@@ -329,12 +329,12 @@ class BulkImportTest extends TestCase
             '*' => Process::result(output: '{"failed_images":[]}'),
         ])->preventStrayProcesses();
 
-        $rjCode = 'RJ000000306';
+        $productCode = 'RJ000000306';
         Storage::disk('local')->put(
-            "Works/{$rjCode}.json",
-            json_encode($this->scrapedWorkPayload($rjCode), JSON_THROW_ON_ERROR),
+            "Works/{$productCode}.json",
+            json_encode($this->scrapedWorkPayload($productCode), JSON_THROW_ON_ERROR),
         );
-        [$run, $item] = $this->createRunItem($rjCode);
+        [$run, $item] = $this->createRunItem($productCode);
         $job = new ImportBulkWorkJob($item->id);
         $event = 'eloquent.updating: ' . BulkImportItem::class;
 
@@ -356,7 +356,7 @@ class BulkImportTest extends TestCase
             Event::forget($event);
         }
 
-        $this->assertDatabaseMissing('products', ['id' => $rjCode]);
+        $this->assertDatabaseMissing('products', ['id' => $productCode]);
         $this->assertSame(BulkImportItemStatus::Failed, $item->fresh()->status);
         $this->assertSame(BulkImportRunStatus::Failed, $run->fresh()->status);
         $this->assertSame(1, $run->fresh()->processed_count);
@@ -372,12 +372,12 @@ class BulkImportTest extends TestCase
             '*' => Process::result(output: '{"failed_images":[]}'),
         ])->preventStrayProcesses();
 
-        $rjCode = 'RJ000000307';
+        $productCode = 'RJ000000307';
         Storage::disk('local')->put(
-            "Works/{$rjCode}.json",
-            json_encode($this->scrapedWorkPayload($rjCode), JSON_THROW_ON_ERROR),
+            "Works/{$productCode}.json",
+            json_encode($this->scrapedWorkPayload($productCode), JSON_THROW_ON_ERROR),
         );
-        [$run, $item] = $this->createRunItem($rjCode);
+        [$run, $item] = $this->createRunItem($productCode);
         $job = new ImportBulkWorkJob($item->id);
         $event = 'eloquent.updated: ' . BulkImportItem::class;
 
@@ -399,14 +399,14 @@ class BulkImportTest extends TestCase
             Event::forget($event);
         }
 
-        $this->assertDatabaseMissing('products', ['id' => $rjCode]);
+        $this->assertDatabaseMissing('products', ['id' => $productCode]);
         $this->assertSame(BulkImportItemStatus::Importing, $item->fresh()->status);
         $this->assertSame(BulkImportRunStatus::Running, $run->fresh()->status);
         $this->assertSame(0, $run->fresh()->processed_count);
 
         $job->handle(app(DLSiteProductImporter::class));
 
-        $this->assertDatabaseHas('products', ['id' => $rjCode]);
+        $this->assertDatabaseHas('products', ['id' => $productCode]);
         $this->assertSame(BulkImportItemStatus::Imported, $item->fresh()->status);
         $this->assertSame(1, $run->fresh()->processed_count);
         $this->assertSame(1, $run->fresh()->imported_count);
@@ -430,12 +430,12 @@ class BulkImportTest extends TestCase
             '*' => Process::result(output: '{"failed_images":[]}'),
         ])->preventStrayProcesses();
 
-        $rjCode = $changed === 'item' ? 'RJ000000308' : 'RJ000000309';
+        $productCode = $changed === 'item' ? 'RJ000000308' : 'RJ000000309';
         Storage::disk('local')->put(
-            "Works/{$rjCode}.json",
-            json_encode($this->scrapedWorkPayload($rjCode), JSON_THROW_ON_ERROR),
+            "Works/{$productCode}.json",
+            json_encode($this->scrapedWorkPayload($productCode), JSON_THROW_ON_ERROR),
         );
-        [$run, $item] = $this->createRunItem($rjCode);
+        [$run, $item] = $this->createRunItem($productCode);
         $job = new ImportBulkWorkJob($item->id);
         $event = 'eloquent.created: ' . Product::class;
 
@@ -461,7 +461,7 @@ class BulkImportTest extends TestCase
             Event::forget($event);
         }
 
-        $this->assertDatabaseMissing('products', ['id' => $rjCode]);
+        $this->assertDatabaseMissing('products', ['id' => $productCode]);
         $this->assertSame(BulkImportItemStatus::Importing, $item->fresh()->status);
         $this->assertSame(BulkImportRunStatus::Running, $run->fresh()->status);
         $this->assertSame(0, $run->fresh()->processed_count);
@@ -518,10 +518,10 @@ class BulkImportTest extends TestCase
             '*' => Process::result(output: '{"failed_images":[]}'),
         ])->preventStrayProcesses();
 
-        $rjCode = 'RJ000000401';
+        $productCode = 'RJ000000401';
         Storage::disk('local')->put(
-            "Works/{$rjCode}.json",
-            json_encode($this->scrapedWorkPayload($rjCode), JSON_THROW_ON_ERROR),
+            "Works/{$productCode}.json",
+            json_encode($this->scrapedWorkPayload($productCode), JSON_THROW_ON_ERROR),
         );
 
         $input = new DLSiteProductImportInput(
@@ -540,12 +540,12 @@ class BulkImportTest extends TestCase
             ],
             autoSeriesFromTitleName: true,
         );
-        [$run, $item] = $this->createRunItem($rjCode, $input);
+        [$run, $item] = $this->createRunItem($productCode, $input);
 
         (new ImportBulkWorkJob($item->id))->handle(app(DLSiteProductImporter::class));
         (new FinishBulkImportRunJob($run->id))->handle();
 
-        $product = Product::query()->findOrFail($rjCode);
+        $product = Product::query()->findOrFail($productCode);
         $item->refresh();
         $run->refresh();
 
@@ -568,12 +568,12 @@ class BulkImportTest extends TestCase
             '*' => Process::result(output: '{"failed_images":[]}'),
         ])->preventStrayProcesses();
 
-        $rjCode = 'RJ000000406';
-        $payload = $this->scrapedWorkPayload($rjCode);
+        $productCode = 'RJ000000406';
+        $payload = $this->scrapedWorkPayload($productCode);
         $payload['japanese']['announce_date'] = '2026-09-24 00:00:00';
         $payload['japanese']['site_id'] = 'home';
-        Storage::disk('local')->put("Works/{$rjCode}.json", json_encode($payload, JSON_THROW_ON_ERROR));
-        [$run, $item] = $this->createRunItem($rjCode);
+        Storage::disk('local')->put("Works/{$productCode}.json", json_encode($payload, JSON_THROW_ON_ERROR));
+        [$run, $item] = $this->createRunItem($productCode);
 
         (new ImportBulkWorkJob($item->id))->handle(app(DLSiteProductImporter::class));
         (new FinishBulkImportRunJob($run->id))->handle();
@@ -582,9 +582,9 @@ class BulkImportTest extends TestCase
         $this->assertSame(BulkImportRunStatus::Completed, $run->fresh()->status);
         $this->assertSame(
             '2026-09-24 00:00:00',
-            Product::query()->findOrFail($rjCode)->announce_date?->format('Y-m-d H:i:s'),
+            Product::query()->findOrFail($productCode)->announce_date?->format('Y-m-d H:i:s'),
         );
-        $this->assertSame('home', Product::query()->findOrFail($rjCode)->site_id);
+        $this->assertSame('home', Product::query()->findOrFail($productCode)->site_id);
     }
 
     public function test_successful_job_uses_scraped_product_format_when_the_field_is_hidden(): void
@@ -595,10 +595,10 @@ class BulkImportTest extends TestCase
             '*' => Process::result(output: '{"failed_images":[]}'),
         ])->preventStrayProcesses();
 
-        $rjCode = 'RJ000000403';
+        $productCode = 'RJ000000403';
         Storage::disk('local')->put(
-            "Works/{$rjCode}.json",
-            json_encode($this->scrapedWorkPayload($rjCode), JSON_THROW_ON_ERROR),
+            "Works/{$productCode}.json",
+            json_encode($this->scrapedWorkPayload($productCode), JSON_THROW_ON_ERROR),
         );
 
         $input = new DLSiteProductImportInput(
@@ -607,12 +607,12 @@ class BulkImportTest extends TestCase
             submitted: ['product_format' => true],
             autoSeriesFromTitleName: true,
         );
-        [$run, $item] = $this->createRunItem($rjCode, $input);
+        [$run, $item] = $this->createRunItem($productCode, $input);
 
         (new ImportBulkWorkJob($item->id))->handle(app(DLSiteProductImporter::class));
         (new FinishBulkImportRunJob($run->id))->handle();
 
-        $this->assertSame(['MOV', 'SND', 'MS2'], Product::query()->findOrFail($rjCode)->product_format);
+        $this->assertSame(['MOV', 'SND', 'MS2'], Product::query()->findOrFail($productCode)->product_format);
     }
 
     public function test_successful_job_uses_scraped_product_format_when_visible_bulk_value_is_blank(): void
@@ -623,10 +623,10 @@ class BulkImportTest extends TestCase
             '*' => Process::result(output: '{"failed_images":[]}'),
         ])->preventStrayProcesses();
 
-        $rjCode = 'RJ000000404';
+        $productCode = 'RJ000000404';
         Storage::disk('local')->put(
-            "Works/{$rjCode}.json",
-            json_encode($this->scrapedWorkPayload($rjCode), JSON_THROW_ON_ERROR),
+            "Works/{$productCode}.json",
+            json_encode($this->scrapedWorkPayload($productCode), JSON_THROW_ON_ERROR),
         );
 
         $input = new DLSiteProductImportInput(
@@ -635,12 +635,12 @@ class BulkImportTest extends TestCase
             submitted: ['product_format' => true],
             autoSeriesFromTitleName: true,
         );
-        [$run, $item] = $this->createRunItem($rjCode, $input);
+        [$run, $item] = $this->createRunItem($productCode, $input);
 
         (new ImportBulkWorkJob($item->id))->handle(app(DLSiteProductImporter::class));
         (new FinishBulkImportRunJob($run->id))->handle();
 
-        $this->assertSame(['MOV', 'SND', 'MS2'], Product::query()->findOrFail($rjCode)->product_format);
+        $this->assertSame(['MOV', 'SND', 'MS2'], Product::query()->findOrFail($productCode)->product_format);
     }
 
     public function test_successful_job_uses_visible_bulk_product_format_override(): void
@@ -651,10 +651,10 @@ class BulkImportTest extends TestCase
             '*' => Process::result(output: '{"failed_images":[]}'),
         ])->preventStrayProcesses();
 
-        $rjCode = 'RJ000000405';
+        $productCode = 'RJ000000405';
         Storage::disk('local')->put(
-            "Works/{$rjCode}.json",
-            json_encode($this->scrapedWorkPayload($rjCode), JSON_THROW_ON_ERROR),
+            "Works/{$productCode}.json",
+            json_encode($this->scrapedWorkPayload($productCode), JSON_THROW_ON_ERROR),
         );
 
         $input = new DLSiteProductImportInput(
@@ -663,14 +663,14 @@ class BulkImportTest extends TestCase
             submitted: ['product_format' => true],
             autoSeriesFromTitleName: true,
         );
-        [$run, $item] = $this->createRunItem($rjCode, $input);
+        [$run, $item] = $this->createRunItem($productCode, $input);
 
         (new ImportBulkWorkJob($item->id))->handle(app(DLSiteProductImporter::class));
         (new FinishBulkImportRunJob($run->id))->handle();
 
         $this->assertSame(
             ['RPG', 'MV2', 'custom:Audiobook'],
-            Product::query()->findOrFail($rjCode)->product_format,
+            Product::query()->findOrFail($productCode)->product_format,
         );
     }
 
@@ -682,12 +682,12 @@ class BulkImportTest extends TestCase
         Process::fake([
             '*' => Process::result(output: '{"failed_images":["cover.jpg","sample_1.jpg"]}'),
         ])->preventStrayProcesses();
-        $rjCode = 'RJ000000402';
+        $productCode = 'RJ000000402';
         Storage::disk('local')->put(
-            "Works/{$rjCode}.json",
-            json_encode($this->scrapedWorkPayload($rjCode), JSON_THROW_ON_ERROR),
+            "Works/{$productCode}.json",
+            json_encode($this->scrapedWorkPayload($productCode), JSON_THROW_ON_ERROR),
         );
-        [, $item] = $this->createRunItem($rjCode);
+        [, $item] = $this->createRunItem($productCode);
 
         (new ImportBulkWorkJob($item->id))->handle(app(DLSiteProductImporter::class));
 
@@ -703,7 +703,7 @@ class BulkImportTest extends TestCase
 
     /** @return array{0: BulkImportRun, 1: \App\Models\BulkImportItem} */
     private function createRunItem(
-        string $rjCode,
+        string $productCode,
         ?DLSiteProductImportInput $input = null,
     ): array {
         $input ??= new DLSiteProductImportInput(
@@ -720,7 +720,7 @@ class BulkImportTest extends TestCase
         ]);
         $item = $run->items()->create([
             'position' => 1,
-            'product_id' => $rjCode,
+            'product_id' => $productCode,
             'status' => BulkImportItemStatus::Pending,
         ]);
 

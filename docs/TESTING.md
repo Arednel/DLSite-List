@@ -208,7 +208,7 @@ Covers Bulk Import parsing/validation, shared-input snapshots, queued item proce
 
 #### `tests/Feature/OptionsBulkImportsTest.php`
 
-Covers Bulk Import history, progress/errors, imported-work titles and fallback RJ codes, 10-run pagination, cleanup, stable Livewire identity, and active-run-only polling.
+Covers Bulk Import history, progress/errors, imported-work titles and fallback product codes, 10-run pagination, cleanup, stable Livewire identity, and active-run-only polling.
 
 #### `tests/Feature/LibraryTransferTest.php`
 
@@ -222,7 +222,7 @@ Regression coverage injects failures after successor-job insertion in every plan
 
 #### `tests/Feature/LibraryTransferImportTest.php`
 
-Covers multipart upload/validation, missing or replacement parts, archive/path/checksum safety, bounded analysis/checkpoint retries, image validation, existing/new work analysis, and data-only continuation. Product Format coverage includes custom/empty values, invalid-value quarantine, locale fallback, and compatibility with archives created before the field existed. `announce_date` tests cover round trips, omitted fields, and invalid-date quarantine. Site ID tests cover round trips and locale metadata fallback when importing older archives without an explicit stored site. Archive compatibility tests cover v2 output, released v1 manifests and legacy `rj_code` Options layouts.
+Covers multipart upload/validation, missing or replacement parts, archive/path/checksum safety, bounded analysis/checkpoint retries, image validation, existing/new work analysis, and data-only continuation. Product Format coverage includes custom/empty values, invalid-value quarantine, locale fallback, and compatibility with archives created before the field existed. `announce_date` tests cover round trips, omitted fields, and invalid-date quarantine. Site ID tests cover round trips and locale metadata fallback when importing older archives without an explicit stored site. Archive compatibility tests cover v2 output, released v1 manifests and legacy `rj_code`/Index sort Options layouts.
 
 #### `tests/Feature/LibraryTransferReviewTest.php`
 
@@ -324,7 +324,7 @@ Covers Refetch review tabs, compact collapsed failed-result/warning errors, per-
 
 #### `tests/Feature/OptionsWorkSearchTest.php`
 
-Covers selected-work Refetch search, RJ-desc ordering, and preservation of selected products while filtering.
+Covers selected-work Refetch search, product-code-desc ordering, and preservation of selected products while filtering.
 
 #### `tests/Feature/ProductControllerTest.php`
 

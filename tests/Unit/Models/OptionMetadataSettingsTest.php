@@ -328,6 +328,32 @@ class OptionMetadataSettingsTest extends TestCase
         }
     }
 
+    public function test_index_sort_code_field_migration_preserves_custom_order_and_visibility(): void
+    {
+        $legacy = [
+            ['field' => 'score', 'visible' => false],
+            ['field' => 'rj', 'visible' => true],
+            ['field' => 'series', 'visible' => true],
+        ];
+        DB::table('options')->insert([
+            'key' => Option::INDEX_SORT_FIELD_LAYOUT,
+            'value' => json_encode($legacy, JSON_THROW_ON_ERROR),
+        ]);
+
+        $migration = require database_path('migrations/2026_10_02_000003_rename_index_sort_code_field_in_saved_layout.php');
+        $migration->up();
+
+        $stored = json_decode(DB::table('options')->where('key', Option::INDEX_SORT_FIELD_LAYOUT)->value('value'), true);
+        $this->assertSame([
+            ['field' => 'score', 'visible' => false],
+            ['field' => 'product_code', 'visible' => true],
+            ['field' => 'series', 'visible' => true],
+        ], $stored);
+
+        $migration->down();
+        $this->assertSame($legacy, json_decode(DB::table('options')->where('key', Option::INDEX_SORT_FIELD_LAYOUT)->value('value'), true));
+    }
+
     public function test_quick_add_field_layouts_are_normalized_when_saved(): void
     {
         Option::setQuickAddFieldLayout([

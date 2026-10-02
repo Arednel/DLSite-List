@@ -255,6 +255,10 @@ class LibraryTransferImportTest extends TestCase
             'work_image' => 'storage/Works/RJ123456/cover.png',
         ]);
         $this->saveImage('Works/RJ123456/cover.png');
+        Option::setIndexSortFieldLayout([
+            ['field' => 'score', 'visible' => true],
+            ['field' => 'product_code', 'visible' => false],
+        ]);
         $export = $this->exported(['works', 'images', 'options']);
         $this->convertToReleasedSchemaV1($export);
         foreach ($export->parts as $part) {
@@ -273,6 +277,10 @@ class LibraryTransferImportTest extends TestCase
             $notesRow = collect($layout)->firstWhere('field', 'notes');
             $this->assertTrue($notesRow['visible'], $key . ' Notes visibility must survive normalization.');
         }
+        $sortLayout = $run->items()->where('section', 'options')->where('entity_key', Option::INDEX_SORT_FIELD_LAYOUT)->firstOrFail()->incoming;
+        $this->assertSame('score', $sortLayout[0]['field']);
+        $this->assertSame('product_code', $sortLayout[1]['field']);
+        $this->assertFalse($sortLayout[1]['visible']);
         $this->apply($run);
         foreach ([Option::QUICK_ADD_FIELD_LAYOUT, Option::BULK_IMPORT_FIELD_LAYOUT, Option::CUSTOM_QUICK_ADD_FIELD_LAYOUT] as $key) {
             $layout = app(PortableOptions::class)->current($key);
@@ -362,7 +370,7 @@ class LibraryTransferImportTest extends TestCase
         $this->service()->upload($run->fresh(), new UploadedFile(Storage::disk('local')->path($imagePart->path), $imagePart->filename, 'application/zip', null, true));
     }
 
-    public function test_v2_prepares_existing_bj_vj_imports_without_enabling_new_product_creation(): void
+    public function test_v2_updates_existing_and_creates_new_bj_vj_products(): void
     {
         $bj = Product::factory()->create(['id' => 'BJ123456', 'site_id' => 'books', 'work_image' => 'storage/Works/BJ123456/cover.png']);
         $vj = Product::factory()->create(['id' => 'VJ234567', 'site_id' => 'pro']);
@@ -380,11 +388,17 @@ class LibraryTransferImportTest extends TestCase
         $this->assertSame('pro', $vj->fresh()->site_id);
 
         $bj->delete();
+        $vj->delete();
         $run = $this->imported($export);
-        $unavailable = $run->items()->where('entity_key', 'BJ123456')->where('status', 'unavailable')->firstOrFail();
-        $this->assertSame('BJ/VJ product creation is not enabled yet.', $unavailable->error);
-        $this->assertSame([], $unavailable->incoming_preview['new_work']['cover']);
-        $this->assertSame([], $unavailable->incoming_preview['new_work']['titles']);
+        $this->assertEqualsCanonicalizing(
+            ['BJ123456', 'VJ234567'],
+            $run->items()->where('section', 'works')->where('category', 'new_works')->pluck('entity_key')->all(),
+        );
+        $this->assertSame(0, $run->items()->where('status', 'unavailable')->count());
+        $this->apply($run);
+        $this->assertSame('books', Product::findOrFail('BJ123456')->site_id);
+        $this->assertSame('storage/Works/BJ123456/cover.png', Product::findOrFail('BJ123456')->work_image);
+        $this->assertSame('pro', Product::findOrFail('VJ234567')->site_id);
     }
 
     /** Convert a current test export to the released v1 archive contract, not any intermediate branch format. */
@@ -408,6 +422,15 @@ class LibraryTransferImportTest extends TestCase
                 } elseif ($entry['section'] === 'options') {
                     $record = json_decode($zip->getFromName($entry['path']), true);
                     foreach ($record['records'] as &$option) {
+                        if ($option['key'] === Option::INDEX_SORT_FIELD_LAYOUT) {
+                            foreach ($option['value'] as &$row) {
+                                if (($row['field'] ?? null) === 'product_code') {
+                                    $row['field'] = 'rj';
+                                }
+                            }
+                            unset($row);
+                            continue;
+                        }
                         if (! in_array($option['key'], [Option::QUICK_ADD_FIELD_LAYOUT, Option::BULK_IMPORT_FIELD_LAYOUT, Option::CUSTOM_QUICK_ADD_FIELD_LAYOUT], true)) {
                             continue;
                         }

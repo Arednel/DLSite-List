@@ -90,14 +90,14 @@ class QuickAddFetchStatusTest extends TestCase
     {
         $this->followingRedirects()
             ->from('/create')
-            ->post('/store', ['id' => 'not-an-rj'])
+            ->post('/store', ['id' => 'not-a-product'])
             ->assertOk()
             ->assertSee(
                 'data-dlsite-fetch-status role="status" aria-live="polite" hidden',
                 false,
             )
             ->assertSee('class="text-error"', false)
-            ->assertSee('Could not find an RJ code (format: RJ + numbers) in your input.');
+            ->assertSee('Could not find a product code (RJ, BJ or VJ followed by numbers) in your input.');
     }
 
     private function assertTwoEnabledSubmitButtons(string $html, string $label): void

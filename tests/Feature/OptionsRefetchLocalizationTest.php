@@ -48,7 +48,7 @@ class OptionsRefetchLocalizationTest extends TestCase
             ->assertSee('作品を再取得')
             ->assertSee('再取得データをクリーンアップ')
             ->assertSee('aria-label="再取得のクリーンアップについて"', false)
-            ->assertSee('RJ IDまたはタイトルで検索...')
+            ->assertSee('作品IDまたはタイトルで検索...')
             ->assertSee('value="selected"', false);
     }
 

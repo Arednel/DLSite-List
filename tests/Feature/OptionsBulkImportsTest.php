@@ -83,7 +83,7 @@ class OptionsBulkImportsTest extends TestCase
             ->assertSee('wire:key="bulk-import-issue-', false);
     }
 
-    public function test_imported_works_list_uses_current_titles_and_falls_back_to_rj_codes(): void
+    public function test_imported_works_list_uses_current_titles_and_falls_back_to_product_codes(): void
     {
         $run = BulkImportRun::create([
             'status' => BulkImportRunStatus::Completed,

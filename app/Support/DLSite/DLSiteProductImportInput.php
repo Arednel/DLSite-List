@@ -59,7 +59,7 @@ final readonly class DLSiteProductImportInput
         }
 
         return new self(
-            values: Arr::except($validated, ['id', 'rj_list', 'rj_codes']),
+            values: Arr::except($validated, ['id', 'product_code_list', 'product_codes']),
             visibleFields: ProductFieldLayout::visibleFields($layout),
             submitted: $submitted,
             autoSeriesFromTitleName: Option::autoSeriesFromTitleName(),

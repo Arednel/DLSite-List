@@ -41,7 +41,7 @@ enum ProductField: string
     public function label(): string
     {
         return match ($this) {
-            self::ProductCode => __('RJ Code'),
+            self::ProductCode => __('Product Code'),
             self::Title => __('Title'),
             self::Image => __('Image'),
             self::SampleImages => __('Sample Images'),

@@ -73,7 +73,7 @@ class ProductIndexLivewireTest extends TestCase
             ->assertDontSee('Next');
     }
 
-    public function test_header_rj_sort_toggles_across_the_full_filtered_result_set(): void
+    public function test_header_product_code_sort_toggles_across_the_full_filtered_result_set(): void
     {
         Option::setIndexPerPage(2);
 
@@ -83,9 +83,9 @@ class ProductIndexLivewireTest extends TestCase
 
         Livewire::test(ProductIndex::class)
             ->assertSeeInOrder(['WORK_003', 'WORK_002'])
-            ->call('sortByHeader', 'rj')
+            ->call('sortByHeader', 'product_code')
             ->assertSeeInOrder(['WORK_003', 'WORK_002'])
-            ->call('sortByHeader', 'rj')
+            ->call('sortByHeader', 'product_code')
             ->assertSeeInOrder(['WORK_001', 'WORK_002'])
             ->assertDontSee('WORK_003');
     }

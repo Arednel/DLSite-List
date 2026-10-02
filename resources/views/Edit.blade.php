@@ -55,7 +55,8 @@
                                             <table class="form-fields-table" cellpadding="5" cellspacing="0"
                                                 width="100%">
                                                 <tbody>
-                                                    <x-fields.rj-display :id="$product->id" :work-name="$product->work_name" />
+                                                    <x-fields.product-code-display :id="$product->id"
+                                                        :work-name="$product->work_name" />
                                                     @foreach ($editFields as $field)
                                                         <x-fields.edit-configurable-row :field="$field"
                                                             :product="$product" :age-category-options="$ageCategoryOptions" :contributor-inputs="$contributorInputs"

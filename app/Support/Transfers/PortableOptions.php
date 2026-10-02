@@ -97,12 +97,21 @@ final class PortableOptions
     /** Normalize field names from released schema v1 Options archives before review. */
     public function normalizeLegacy(string $key, mixed $value): mixed
     {
-        if (! in_array($key, [Option::QUICK_ADD_FIELD_LAYOUT, Option::BULK_IMPORT_FIELD_LAYOUT, Option::CUSTOM_QUICK_ADD_FIELD_LAYOUT], true) || ! is_array($value)) {
+        if (! is_array($value)) {
+            return $value;
+        }
+
+        $legacy = match ($key) {
+            Option::QUICK_ADD_FIELD_LAYOUT, Option::BULK_IMPORT_FIELD_LAYOUT, Option::CUSTOM_QUICK_ADD_FIELD_LAYOUT => 'rj_code',
+            Option::INDEX_SORT_FIELD_LAYOUT => 'rj',
+            default => null,
+        };
+        if ($legacy === null) {
             return $value;
         }
 
         foreach ($value as &$row) {
-            if (is_array($row) && ($row['field'] ?? null) === 'rj_code') {
+            if (is_array($row) && ($row['field'] ?? null) === $legacy) {
                 $row['field'] = 'product_code';
             }
         }

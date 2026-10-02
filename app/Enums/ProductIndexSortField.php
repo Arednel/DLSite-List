@@ -9,7 +9,7 @@ enum ProductIndexSortField: string
 {
     use ProvidesOptions;
 
-    case Code = 'rj';
+    case Code = 'product_code';
     case Score = 'score';
     case Series = 'series';
     case AgeCategory = 'age_category';
@@ -33,7 +33,7 @@ enum ProductIndexSortField: string
     public function label(): string
     {
         return match ($this) {
-            self::Code => __('RJ Code'),
+            self::Code => __('Product Code'),
             self::Score => __('Score'),
             self::Series => __('Series'),
             self::AgeCategory => __('Age'),

@@ -41,7 +41,7 @@ abstract class BaseProductRequest extends FormRequest
             return [];
         }
 
-        preg_match_all('/RJ\d+/i', $value, $matches);
+        preg_match_all('/(?:RJ|BJ|VJ)\d+/i', $value, $matches);
 
         $codes = [];
 
