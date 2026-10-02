@@ -68,7 +68,7 @@ class BulkImportController extends Controller
             $request->validated(),
             $layout,
         );
-        $run = $service->start($request->rjCodes(), $input);
+        $run = $service->start($request->productCodes(), $input);
         $redirectUrl = route('options.index', [
             'tab' => 'bulk-imports',
             'bulk_import_run' => $run->getKey(),

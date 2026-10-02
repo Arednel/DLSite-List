@@ -178,7 +178,7 @@ class OptionsTransfers extends Component
                     'like',
                     '%' . trim($this->search) . '%',
                 ))
-                ->orderByNumericRj()
+                ->orderByNumericCode()
                 ->get(['id', 'work_name', 'work_name_english']);
         }
 

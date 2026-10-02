@@ -50,7 +50,7 @@ class OptionsWorkSearch extends Component
         }
 
         return $query
-            ->orderByNumericRj()
+            ->orderByNumericCode()
             ->get(['id', 'work_name', 'work_name_english']);
     }
 

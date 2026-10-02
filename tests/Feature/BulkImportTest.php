@@ -65,7 +65,7 @@ class BulkImportTest extends TestCase
                     ['RJ000000099'],
                     new DLSiteProductImportInput(
                         values: [],
-                        visibleFields: [ProductField::RjCode->value],
+                        visibleFields: [ProductField::ProductCode->value],
                         submitted: [],
                         autoSeriesFromTitleName: true,
                     ),
@@ -530,7 +530,7 @@ class BulkImportTest extends TestCase
                 'notes' => 'Shared bulk note',
             ],
             visibleFields: [
-                ProductField::RjCode->value,
+                ProductField::ProductCode->value,
                 ProductField::Progress->value,
                 ProductField::Notes->value,
             ],
@@ -601,7 +601,7 @@ class BulkImportTest extends TestCase
 
         $input = new DLSiteProductImportInput(
             values: ['product_format' => ['RPG', 'MS2']],
-            visibleFields: [ProductField::RjCode->value],
+            visibleFields: [ProductField::ProductCode->value],
             submitted: ['product_format' => true],
             autoSeriesFromTitleName: true,
         );
@@ -629,7 +629,7 @@ class BulkImportTest extends TestCase
 
         $input = new DLSiteProductImportInput(
             values: ['product_format' => []],
-            visibleFields: [ProductField::RjCode->value, ProductField::ProductFormat->value],
+            visibleFields: [ProductField::ProductCode->value, ProductField::ProductFormat->value],
             submitted: ['product_format' => true],
             autoSeriesFromTitleName: true,
         );
@@ -657,7 +657,7 @@ class BulkImportTest extends TestCase
 
         $input = new DLSiteProductImportInput(
             values: ['product_format' => ['RPG', 'MV2', 'custom:Audiobook']],
-            visibleFields: [ProductField::RjCode->value, ProductField::ProductFormat->value],
+            visibleFields: [ProductField::ProductCode->value, ProductField::ProductFormat->value],
             submitted: ['product_format' => true],
             autoSeriesFromTitleName: true,
         );
@@ -706,7 +706,7 @@ class BulkImportTest extends TestCase
     ): array {
         $input ??= new DLSiteProductImportInput(
             values: [],
-            visibleFields: [ProductField::RjCode->value],
+            visibleFields: [ProductField::ProductCode->value],
             submitted: [],
             autoSeriesFromTitleName: true,
         );

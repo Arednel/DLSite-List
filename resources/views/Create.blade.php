@@ -72,7 +72,7 @@
                                                 width="100%">
                                                 <tbody>
                                                     @foreach ($quickAddFields as $field)
-                                                        @if ($isBulkImport && ($field['field'] ?? null) === 'rj_code')
+                                                        @if ($isBulkImport && ($field['field'] ?? null) === 'product_code')
                                                             <x-fields.bulk-rj-code-row />
                                                         @else
                                                             <x-fields.create-configurable-row :field="$field"

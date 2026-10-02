@@ -53,7 +53,7 @@ class Product extends Model
         'sample_images' => 'array',
         'product_format' => 'array',
         'announce_date' => 'datetime',
-        'rj_number' => 'integer',
+        'code_number' => 'integer',
         'start_date_sort' => 'integer',
         'end_date_sort' => 'integer',
         'num_re_listen_times' => 'integer',
@@ -70,7 +70,7 @@ class Product extends Model
 
     public function syncIndexKeys(): void
     {
-        $this->rj_number = self::rjNumberFromId($this->id);
+        $this->code_number = self::codeNumberFromId($this->id);
         $this->start_date_sort = self::dateSortValue($this->start_date);
         $this->end_date_sort = self::dateSortValue($this->end_date);
     }
@@ -329,11 +329,11 @@ class Product extends Model
     }
 
     #[Scope]
-    protected function orderByNumericRj(Builder $query, string $direction = 'desc'): void
+    protected function orderByNumericCode(Builder $query, string $direction = 'desc'): void
     {
         $direction = strtolower($direction) === 'asc' ? 'asc' : 'desc';
 
-        $query->orderBy('rj_number', $direction);
+        $query->orderBy('code_number', $direction);
     }
 
     #[Scope]
@@ -384,7 +384,7 @@ class Product extends Model
         });
     }
 
-    public static function rjNumberFromId(?string $id): ?int
+    public static function codeNumberFromId(?string $id): ?int
     {
         if ($id === null || ! preg_match('/^RJ(\d+)$/i', $id, $matches)) {
             return null;

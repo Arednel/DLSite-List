@@ -7,7 +7,7 @@ use Illuminate\Validation\Validator;
 class StartBulkImportRequest extends BaseProductRequest
 {
     /** @var list<string> */
-    private array $normalizedRjCodes = [];
+    private array $normalizedProductCodes = [];
 
     public function authorize(): bool
     {
@@ -39,7 +39,7 @@ class StartBulkImportRequest extends BaseProductRequest
         return [
             ...parent::after(),
             function (Validator $validator): void {
-                if ($this->normalizedRjCodes !== [] || $validator->errors()->has('rj_list')) {
+                if ($this->normalizedProductCodes !== [] || $validator->errors()->has('rj_list')) {
                     return;
                 }
 
@@ -53,16 +53,16 @@ class StartBulkImportRequest extends BaseProductRequest
 
     protected function prepareForValidation(): void
     {
-        $this->normalizedRjCodes = $this->extractRjCodes($this->input('rj_list'));
+        $this->normalizedProductCodes = $this->extractProductCodes($this->input('rj_list'));
 
-        $this->merge(['rj_codes' => $this->normalizedRjCodes]);
+        $this->merge(['rj_codes' => $this->normalizedProductCodes]);
 
         parent::prepareForValidation();
     }
 
     /** @return list<string> */
-    public function rjCodes(): array
+    public function productCodes(): array
     {
-        return $this->normalizedRjCodes;
+        return $this->normalizedProductCodes;
     }
 }

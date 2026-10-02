@@ -9,7 +9,7 @@
 ])
 
 @switch($field['field'])
-    @case('rj_code')
+    @case('product_code')
         <x-fields.rj-input :show-dlsite-fetch-status="!$isCustomCreate" />
     @break
 

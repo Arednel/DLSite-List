@@ -794,7 +794,7 @@ class ProductControllerTest extends TestCase
     public function test_quick_add_layout_can_hide_optional_fields_and_keep_required_rj_visible(): void
     {
         Option::setQuickAddFieldLayout([
-            ['field' => ProductField::RjCode->value, 'visible' => false],
+            ['field' => ProductField::ProductCode->value, 'visible' => false],
             ['field' => ProductField::Priority->value, 'visible' => true],
             ['field' => ProductField::Notes->value, 'visible' => false],
         ]);
@@ -809,7 +809,7 @@ class ProductControllerTest extends TestCase
     public function test_custom_quick_add_layout_can_hide_optional_fields_and_keep_required_fields_visible(): void
     {
         Option::setCustomQuickAddFieldLayout([
-            ['field' => ProductField::RjCode->value, 'visible' => false],
+            ['field' => ProductField::ProductCode->value, 'visible' => false],
             ['field' => ProductField::Title->value, 'visible' => false],
             ['field' => ProductField::AgeCategory->value, 'visible' => false],
             ['field' => ProductField::Image->value, 'visible' => false],

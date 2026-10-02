@@ -46,7 +46,7 @@ class StoreProductRequest extends BaseProductRequest
      */
     protected function prepareForValidation(): void
     {
-        $this->normalizeRjIdInput();
+        $this->normalizeProductCodeInput();
         parent::prepareForValidation();
     }
 }

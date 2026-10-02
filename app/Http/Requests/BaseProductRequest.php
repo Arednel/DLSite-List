@@ -21,9 +21,9 @@ abstract class BaseProductRequest extends FormRequest
 {
     protected array $originalInput = [];
 
-    protected function normalizeRjIdInput(): void
+    protected function normalizeProductCodeInput(): void
     {
-        $codes = $this->extractRjCodes($this->input('id'));
+        $codes = $this->extractProductCodes($this->input('id'));
 
         if ($codes !== []) {
             $this->merge([
@@ -35,7 +35,7 @@ abstract class BaseProductRequest extends FormRequest
     /**
      * @return list<string>
      */
-    protected function extractRjCodes(mixed $value): array
+    protected function extractProductCodes(mixed $value): array
     {
         if (! is_string($value) || $value === '') {
             return [];

@@ -656,7 +656,7 @@ Fetched Tags are readonly by default. If made editable, editing changes only the
 
 #### Quick Add Default Order
 
-- `rj_code` - locked visible
+- `product_code` - locked visible
 - `progress`
 - `score`
 - `series`
@@ -682,7 +682,7 @@ Hidden DLsite Quick Add metadata fields are not accepted as user overrides, but 
 
 #### Bulk Import Default Order
 
-- `rj_code` - locked visible
+- `product_code` - locked visible
 - `progress`
 - `score`
 - `series`
@@ -706,7 +706,7 @@ Hidden DLsite Quick Add metadata fields are not accepted as user overrides, but 
 
 #### Custom Quick Add Default Order
 
-- `rj_code` - locked visible
+- `product_code` - locked visible
 - `progress`
 - `score`
 - `series`

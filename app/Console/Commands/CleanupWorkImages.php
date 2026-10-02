@@ -40,7 +40,7 @@ class CleanupWorkImages extends Command
         foreach (Storage::disk('public')->directories('Works') as $directory) {
             $productId = basename($directory);
 
-            if (Product::rjNumberFromId($productId) === null) {
+            if (Product::codeNumberFromId($productId) === null) {
                 continue;
             }
 

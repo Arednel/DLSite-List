@@ -235,7 +235,7 @@ class PerformanceSmokeTest extends TestCase
                     $chunk
                         ->map(fn(int $number): array => [
                             'id' => $this->productId($number),
-                            'rj_number' => $number,
+                            'code_number' => $number,
                             'maker_id' => sprintf('RG%09d', $number),
                             'work_name' => sprintf('PERF_WORK_%d', $number),
                             'work_name_english' => sprintf('PERF_WORK_EN_%d', $number),
@@ -427,7 +427,7 @@ class PerformanceSmokeTest extends TestCase
         DB::table('products')->updateOrInsert(
             ['id' => $this->deleteTargetId()],
             [
-                'rj_number' => 999999999,
+                'code_number' => 999999999,
                 'maker_id' => 'RG999999999',
                 'work_name' => 'PERF_DELETE_TARGET',
                 'work_name_english' => 'PERF_DELETE_TARGET_EN',

@@ -57,7 +57,7 @@ enum ProductIndexSortField: string
     public function sqlColumn(): string
     {
         return match ($this) {
-            self::RJ => 'rj_number',
+            self::RJ => 'code_number',
             self::StartDate => 'start_date_sort',
             self::FinishDate => 'end_date_sort',
             self::ProductFormat => 'product_format->[0]',

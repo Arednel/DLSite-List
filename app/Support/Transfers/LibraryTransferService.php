@@ -75,7 +75,7 @@ final class LibraryTransferService
         $ids = ! in_array('works', $scopes, true)
             ? []
             : Product::query()->when($mode === 'selected', fn($query) => $query->whereKey(array_values(array_unique($ids))))
-            ->orderByNumericRj()->orderBy('id')->pluck('id')->all();
+            ->orderByNumericCode()->orderBy('id')->pluck('id')->all();
         $ids = array_values(array_unique(array_map(fn($id) => strtoupper(trim($id)), $ids)));
         if (in_array('works', $scopes, true) && $ids === []) {
             throw new RuntimeException($mode === 'selected' ? 'Select at least one work.' : 'There are no works to export.');

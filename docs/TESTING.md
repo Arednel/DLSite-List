@@ -212,7 +212,7 @@ Covers Bulk Import history, progress/errors, imported-work titles and fallback R
 
 #### `tests/Feature/LibraryTransferTest.php`
 
-Covers core transfer contracts, route/review smoke coverage, compact collapsed Export/Import error lists, portable Options, new-work round trips, controlled downloads, and the shared library-mutation lock.
+Covers core transfer contracts, route/review smoke coverage, compact collapsed Export/Import error lists, portable Options (including legacy form-field aliases on import), new-work round trips, controlled downloads, and the shared library-mutation lock.
 
 #### `tests/Feature/LibraryTransferExportTest.php`
 
@@ -489,7 +489,7 @@ Covers server-rendered Add/Edit modal completion fallback output and conditional
 - Covers normalized tag identity/display casing, Hiragana/Katakana distinction, and inverse parent/child relationships.
 
 `tests/Unit/Models/OptionMetadataSettingsTest.php`
-- Covers Option defaults, normalization, persistence, reset behavior, content-focus persistence, and batched metadata/Index settings.
+- Covers Option defaults, normalization, persistence, reset behavior, content-focus persistence, batched metadata/Index settings, and the saved product-code layout field migration.
 
 `tests/Unit/Models/ProductDLSiteUrlTest.php`
 - Covers default Maniax URLs, age-aware Home/Maniax mapping, and independent announcement/regular page-type selection.

@@ -562,11 +562,11 @@ class ProductMetadataSettingsTest extends TestCase
             ->assertSet('editFields.title.visible', true)
             ->assertSet('editFields.title.visibility_locked', true)
             ->assertSet('editFields.title.editable', true)
-            ->assertSet('quickAddFields.rj_code.visible', true)
-            ->assertSet('quickAddFields.rj_code.visibility_locked', true)
-            ->assertSet('bulkImportFields.rj_code.visible', true)
-            ->assertSet('bulkImportFields.rj_code.visibility_locked', true)
-            ->assertSet('customQuickAddFields.rj_code.visibility_locked', true)
+            ->assertSet('quickAddFields.product_code.visible', true)
+            ->assertSet('quickAddFields.product_code.visibility_locked', true)
+            ->assertSet('bulkImportFields.product_code.visible', true)
+            ->assertSet('bulkImportFields.product_code.visibility_locked', true)
+            ->assertSet('customQuickAddFields.product_code.visibility_locked', true)
             ->assertSet('customQuickAddFields.title.visibility_locked', true)
             ->assertSet('customQuickAddFields.age_category.visibility_locked', true)
             ->assertSet('customQuickAddFields.image.visibility_locked', true);
@@ -821,19 +821,19 @@ class ProductMetadataSettingsTest extends TestCase
     {
         Livewire::test(ProductFieldLayoutSettings::class)
             ->set('editFields.title.visible', false)
-            ->set('quickAddFields.rj_code.visible', false)
-            ->set('bulkImportFields.rj_code.visible', false)
+            ->set('quickAddFields.product_code.visible', false)
+            ->set('bulkImportFields.product_code.visible', false)
             ->set('customQuickAddFields.title.visible', false)
             ->call('save')
             ->assertHasNoErrors()
             ->assertSet('editFields.title.visible', true)
-            ->assertSet('quickAddFields.rj_code.visible', true)
-            ->assertSet('bulkImportFields.rj_code.visible', true)
+            ->assertSet('quickAddFields.product_code.visible', true)
+            ->assertSet('bulkImportFields.product_code.visible', true)
             ->assertSet('customQuickAddFields.title.visible', true);
 
         $this->assertTrue($this->layoutRow(Option::editFieldLayout(), ProductField::Title)['visible']);
-        $this->assertTrue($this->layoutRow(Option::quickAddFieldLayout(), ProductField::RjCode)['visible']);
-        $this->assertTrue($this->layoutRow(Option::bulkImportFieldLayout(), ProductField::RjCode)['visible']);
+        $this->assertTrue($this->layoutRow(Option::quickAddFieldLayout(), ProductField::ProductCode)['visible']);
+        $this->assertTrue($this->layoutRow(Option::bulkImportFieldLayout(), ProductField::ProductCode)['visible']);
         $this->assertTrue($this->layoutRow(Option::customQuickAddFieldLayout(), ProductField::Title)['visible']);
     }
 
@@ -969,7 +969,7 @@ class ProductMetadataSettingsTest extends TestCase
         $this->assertTrue(Option::indexFieldLayout()[0]['visible']);
         $this->assertTrue($this->layoutRow(Option::indexFieldLayout(), ProductField::Title)['visibility_locked']);
         $this->assertFalse($this->layoutRow(Option::editFieldLayout(), ProductField::FetchedTags)['editable']);
-        $this->assertTrue($this->layoutRow(Option::quickAddFieldLayout(), ProductField::RjCode)['visibility_locked']);
+        $this->assertTrue($this->layoutRow(Option::quickAddFieldLayout(), ProductField::ProductCode)['visibility_locked']);
         $this->assertTrue($this->layoutRow(Option::quickAddFieldLayout(), ProductField::Notes)['visible']);
         $this->assertTrue($this->layoutRow(Option::customQuickAddFieldLayout(), ProductField::SampleImages)['visible']);
         $this->assertSame('keep-me', DB::table('options')->where('key', 'unrelated_option')->value('value'));

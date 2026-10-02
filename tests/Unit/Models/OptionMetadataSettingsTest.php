@@ -279,19 +279,68 @@ class OptionMetadataSettingsTest extends TestCase
         $this->assertArrayNotHasKey('note', collect($storedLayout)->firstWhere('field', ProductField::Notes->value));
     }
 
+    public function test_product_code_field_migration_preserves_existing_custom_layouts(): void
+    {
+        $layouts = [
+            Option::QUICK_ADD_FIELD_LAYOUT => [
+                ['field' => 'notes', 'visible' => false],
+                ['field' => 'rj_code', 'visible' => true, 'visibility_locked' => true],
+                ['field' => 'title', 'visible' => true],
+            ],
+            Option::BULK_IMPORT_FIELD_LAYOUT => [
+                ['field' => 'rj_code', 'visible' => true, 'visibility_locked' => true],
+                ['field' => 'score', 'visible' => false],
+            ],
+            Option::CUSTOM_QUICK_ADD_FIELD_LAYOUT => [
+                ['field' => 'title', 'visible' => true],
+                ['field' => 'rj_code', 'visible' => true, 'visibility_locked' => true],
+            ],
+        ];
+
+        foreach ($layouts as $key => $layout) {
+            DB::table('options')->insert([
+                'key' => $key,
+                'value' => json_encode($layout, JSON_THROW_ON_ERROR),
+            ]);
+        }
+
+        $migration = require database_path('migrations/2026_10_02_000001_rename_product_code_field_in_saved_layouts.php');
+        $migration->up();
+
+        foreach ($layouts as $key => $original) {
+            $expected = array_map(static function (array $row): array {
+                if ($row['field'] === 'rj_code') {
+                    $row['field'] = ProductField::ProductCode->value;
+                }
+
+                return $row;
+            }, $original);
+
+            $stored = json_decode(DB::table('options')->where('key', $key)->value('value'), true);
+            $this->assertSame($expected, $stored, $key);
+        }
+
+        $migration->down();
+
+        foreach ($layouts as $key => $original) {
+            $stored = json_decode(DB::table('options')->where('key', $key)->value('value'), true);
+            $this->assertSame($original, $stored, $key);
+        }
+    }
+
     public function test_quick_add_field_layouts_are_normalized_when_saved(): void
     {
         Option::setQuickAddFieldLayout([
             ['field' => ProductField::Notes->value, 'visible' => false],
-            ['field' => ProductField::RjCode->value, 'visible' => false],
+            ['field' => ProductField::ProductCode->value, 'visible' => false],
             ['field' => 'not_real', 'visible' => true],
         ]);
         Option::setBulkImportFieldLayout([
             ['field' => ProductField::Notes->value, 'visible' => false],
-            ['field' => ProductField::RjCode->value, 'visible' => false],
+            ['field' => ProductField::ProductCode->value, 'visible' => false],
         ]);
         Option::setCustomQuickAddFieldLayout([
-            ['field' => ProductField::RjCode->value, 'visible' => false],
+            ['field' => ProductField::ProductCode->value, 'visible' => false],
             ['field' => ProductField::Title->value, 'visible' => false],
             ['field' => ProductField::AgeCategory->value, 'visible' => false],
             ['field' => ProductField::Image->value, 'visible' => false],
@@ -302,12 +351,12 @@ class OptionMetadataSettingsTest extends TestCase
         $bulkImportLayout = Option::bulkImportFieldLayout();
         $customQuickAddLayout = Option::customQuickAddFieldLayout();
 
-        $rjRow = collect($quickAddLayout)->firstWhere('field', ProductField::RjCode->value);
+        $productCodeRow = collect($quickAddLayout)->firstWhere('field', ProductField::ProductCode->value);
 
-        $this->assertTrue($rjRow['visible']);
-        $this->assertTrue($rjRow['visibility_locked']);
+        $this->assertTrue($productCodeRow['visible']);
+        $this->assertTrue($productCodeRow['visibility_locked']);
         $this->assertFalse(collect($quickAddLayout)->firstWhere('field', ProductField::Notes->value)['visible']);
-        $this->assertTrue(collect($bulkImportLayout)->firstWhere('field', ProductField::RjCode->value)['visible']);
+        $this->assertTrue(collect($bulkImportLayout)->firstWhere('field', ProductField::ProductCode->value)['visible']);
         $this->assertFalse(collect($bulkImportLayout)->firstWhere('field', ProductField::Notes->value)['visible']);
         $this->assertTrue(collect($customQuickAddLayout)->firstWhere('field', ProductField::Title->value)['visible']);
         $this->assertTrue(collect($customQuickAddLayout)->firstWhere('field', ProductField::AgeCategory->value)['visible']);
@@ -320,15 +369,15 @@ class OptionMetadataSettingsTest extends TestCase
         $this->assertDatabaseMissing('options', ['key' => Option::BULK_IMPORT_FIELD_LAYOUT]);
         $this->assertDatabaseMissing('options', ['key' => Option::CUSTOM_QUICK_ADD_FIELD_LAYOUT]);
         $this->assertSame(
-            ProductField::RjCode->value,
+            ProductField::ProductCode->value,
             Option::quickAddFieldLayout()[0]['field'],
         );
         $this->assertSame(
-            ProductField::RjCode->value,
+            ProductField::ProductCode->value,
             Option::bulkImportFieldLayout()[0]['field'],
         );
         $this->assertSame(
-            ProductField::RjCode->value,
+            ProductField::ProductCode->value,
             Option::customQuickAddFieldLayout()[0]['field'],
         );
     }

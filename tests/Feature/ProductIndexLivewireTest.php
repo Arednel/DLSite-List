@@ -360,7 +360,7 @@ class ProductIndexLivewireTest extends TestCase
         $this->assertArrayNotHasKey('start_date', $attributes);
         $this->assertArrayNotHasKey('end_date', $attributes);
         $this->assertArrayNotHasKey('created_at', $attributes);
-        $this->assertArrayNotHasKey('rj_number', $attributes);
+        $this->assertArrayNotHasKey('code_number', $attributes);
         $this->assertArrayNotHasKey('start_date_sort', $attributes);
         $this->assertArrayNotHasKey('end_date_sort', $attributes);
 
@@ -527,7 +527,7 @@ class ProductIndexLivewireTest extends TestCase
         $this->assertArrayNotHasKey('start_date', $attributes);
         $this->assertArrayNotHasKey('end_date', $attributes);
         $this->assertArrayNotHasKey('created_at', $attributes);
-        $this->assertArrayNotHasKey('rj_number', $attributes);
+        $this->assertArrayNotHasKey('code_number', $attributes);
         $this->assertArrayNotHasKey('start_date_sort', $attributes);
         $this->assertArrayNotHasKey('end_date_sort', $attributes);
     }

@@ -18,6 +18,8 @@ For existing manual installations:
 
 ### Changed
 
+* Generalized internal RJ-specific naming and product-code handling.
+* Renamed database column `rj_number` to `code_number`.
 * CSS Cleanup.
 
 ### Security

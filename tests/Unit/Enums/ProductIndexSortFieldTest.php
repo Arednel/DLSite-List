@@ -10,7 +10,7 @@ class ProductIndexSortFieldTest extends TestCase
     public function test_it_exposes_sql_sort_columns_for_all_fields(): void
     {
         $expectedColumns = [
-            ProductIndexSortField::RJ->value => 'rj_number',
+            ProductIndexSortField::RJ->value => 'code_number',
             ProductIndexSortField::Score->value => 'score',
             ProductIndexSortField::Series->value => 'series',
             ProductIndexSortField::AgeCategory->value => 'age_category',

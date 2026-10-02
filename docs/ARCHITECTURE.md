@@ -399,7 +399,7 @@ Autocomplete:
 - sample-image paths
 - legacy/fallback maker metadata where required
 
-The RJ code is the product identifier.
+The product code (RJ codes only) is the product identifier.
 
 `sample_images` and `product_format` are stored as JSON and cast to PHP arrays by `Product`.
 
@@ -407,7 +407,7 @@ Partial start/finish dates remain the editable source of truth. Derived integer 
 - `start_date_sort`
 - `end_date_sort`
 
-`rj_number` is maintained for numeric RJ sorting.
+`code_number` is maintained for numeric work sorting.
 
 ### Tags
 

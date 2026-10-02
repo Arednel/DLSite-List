@@ -41,7 +41,7 @@ class StartRefetchRequest extends FormRequest
      */
     public function productIds(): array
     {
-        $query = Product::query()->orderByNumericRj();
+        $query = Product::query()->orderByNumericCode();
 
         if ($this->validated('scope') === 'selected') {
             $query->whereKey($this->validated('product_ids'));

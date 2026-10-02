@@ -20,13 +20,13 @@ class ProductSortKeysTest extends TestCase
 
         $product->refresh();
 
-        $this->assertSame(10, $product->rj_number);
+        $this->assertSame(10, $product->code_number);
         $this->assertSame(20250000, $product->start_date_sort);
         $this->assertSame(20260304, $product->end_date_sort);
 
         $this->assertDatabaseHas('products', [
             'id' => 'RJ000000010',
-            'rj_number' => 10,
+            'code_number' => 10,
             'start_date_sort' => 20250000,
             'end_date_sort' => 20260304,
         ]);
@@ -59,12 +59,12 @@ class ProductSortKeysTest extends TestCase
 
         $this->assertSame(
             ['RJ000000010', 'RJ000000002', 'RJ000000001'],
-            Product::query()->orderByNumericRj()->pluck('id')->all(),
+            Product::query()->orderByNumericCode()->pluck('id')->all(),
         );
 
         $this->assertSame(
             ['RJ000000001', 'RJ000000002', 'RJ000000010'],
-            Product::query()->orderByNumericRj('asc')->pluck('id')->all(),
+            Product::query()->orderByNumericCode('asc')->pluck('id')->all(),
         );
     }
 

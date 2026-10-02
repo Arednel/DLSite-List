@@ -9,7 +9,7 @@ enum ProductField: string
 {
     use ProvidesOptions;
 
-    case RjCode = 'rj_code';
+    case ProductCode = 'product_code';
     case Title = 'title';
     case Image = 'image';
     case SampleImages = 'sample_images';
@@ -40,7 +40,7 @@ enum ProductField: string
     public function label(): string
     {
         return match ($this) {
-            self::RjCode => __('RJ Code'),
+            self::ProductCode => __('RJ Code'),
             self::Title => __('Title'),
             self::Image => __('Image'),
             self::SampleImages => __('Sample Images'),
@@ -252,7 +252,7 @@ enum ProductField: string
             ],
             'quick_add', 'bulk_import' => [
                 'fields' => [
-                    self::RjCode,
+                    self::ProductCode,
                     self::Progress,
                     self::Score,
                     self::Series,
@@ -274,14 +274,14 @@ enum ProductField: string
                     self::DescriptionJapanese,
                     self::DescriptionEnglish,
                 ],
-                'visibility_locked' => [self::RjCode],
+                'visibility_locked' => [self::ProductCode],
                 'hidden_by_default' => self::metadataFields(hiddenAgeCategory: true),
                 'editable_by_default' => [],
-                'prefix_missing' => [self::RjCode],
+                'prefix_missing' => [self::ProductCode],
             ],
             'custom_quick_add' => [
                 'fields' => [
-                    self::RjCode,
+                    self::ProductCode,
                     self::Progress,
                     self::Score,
                     self::Series,
@@ -306,7 +306,7 @@ enum ProductField: string
                     self::DescriptionEnglish,
                 ],
                 'visibility_locked' => [
-                    self::RjCode,
+                    self::ProductCode,
                     self::Title,
                     self::AgeCategory,
                     self::Image,
