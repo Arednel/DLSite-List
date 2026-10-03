@@ -29,6 +29,10 @@ For existing manual installations:
 * Updated Import/Export schema to v2 version.
 * Standardized the internal logic for help tooltips in field layout settings.
 
+### Fixed
+
+* Index cover image borders are now hidden until the images have fully loaded.
+
 ### Security
 
 * Files in `storage/app/public` are now served through Laravel and require login when authentication is enabled.

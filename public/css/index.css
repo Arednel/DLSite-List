@@ -621,6 +621,11 @@ body.image-viewer-open {
     outline-offset: 3px;
 }
 
+/* Hide the image border until loading finishes. */
+.list-table .list-table-data .data.image .index-cover-thumbnail:not(.is-loaded) .image {
+    border-color: transparent;
+}
+
 .index-image-viewer {
     width: min(1040px, calc(100vw - 32px));
     max-width: none;

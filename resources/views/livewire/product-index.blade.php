@@ -126,18 +126,21 @@
                                         @switch($column['field'])
                                             @case('image')
                                                 @if ($imageViewerEnabled)
-                                                    <button type="button" class="product-link index-image-viewer-trigger"
+                                                    <button type="button"
+                                                        class="product-link index-image-viewer-trigger index-cover-thumbnail"
                                                         data-index-image-viewer-product="{{ $product->id }}"
                                                         data-index-image-viewer-title="{{ $product->id }} - {{ $product->workName }}"
                                                         aria-label="{{ __('View saved images for :title', ['title' => $product->workName]) }}"
                                                         aria-haspopup="dialog" aria-controls="index-image-viewer-dialog">
                                                         <img src="{{ $product->workImage }}" class="image" loading="lazy"
+                                                            onload="this.parentElement.classList.add('is-loaded')"
                                                             alt="">
                                                     </button>
                                                 @else
-                                                    <a href="{{ $product->dlsiteWorkUrl }}" class="product-link"
+                                                    <a href="{{ $product->dlsiteWorkUrl }}" class="product-link index-cover-thumbnail"
                                                         target="_blank">
                                                         <img src="{{ $product->workImage }}" class="image" loading="lazy"
+                                                            onload="this.parentElement.classList.add('is-loaded')"
                                                             alt="">
                                                     </a>
                                                 @endif

@@ -124,7 +124,7 @@ class IndexImageViewerTest extends TestCase
         $dlsiteUrl = $product->dlsiteWorkUrl(false);
 
         $component = Livewire::test(ProductIndex::class)
-            ->assertSee('class="product-link index-image-viewer-trigger"', false)
+            ->assertSee('class="product-link index-image-viewer-trigger index-cover-thumbnail"', false)
             ->assertSee('data-index-image-viewer-product="RJ100000002"', false)
             ->assertSee('data-index-image-viewer-title="RJ100000002 - VIEWER_ENABLED_WORK"', false)
             ->assertSee('index-image-viewer-dialog', false)
