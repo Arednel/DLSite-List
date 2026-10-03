@@ -2,7 +2,7 @@
 
 DLSite List is a single-user, self-hosted personal DLsite library for organizing your collection, inspired by [MyAnimeList](https://myanimelist.net)'s "Cherry Blossom" theme.
 
-It supports DLsite works that have an RJ code - Games, Manga, Music, etc.
+It supports DLsite works with RJ, BJ, and VJ codes - Voice / ASMR, Games, Manga, Music, etc.
 
 ## Features
 
@@ -76,7 +76,6 @@ docker compose --env-file docker/.env.docker up --build -d
 composer install
 php artisan key:generate
 php artisan migrate
-php artisan storage:link
 ```
 
 ### 2) Create and activate the venv:

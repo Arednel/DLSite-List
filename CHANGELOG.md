@@ -4,6 +4,10 @@ All notable changes to this project are documented in this file.
 
 ## Unreleased
 
+## 1.12.0 - 2026-10-03
+
+*BJ/VJ Work Support & Metadata Expansion*
+
 ### Upgrade notes
 
 For existing manual installations:
@@ -13,21 +17,17 @@ For existing manual installations:
 
 ### Added
 
-* Added support for DLsite's Scheduled Release Date (`announce_date`) metadata.
-* Added an option, enabled by default, to use DLsite announcement (`announce/`) links when available, falling back to regular (`work/`) links.
-* Added support for DLsite's `site_id` metadata.
 * Added support for BJ and VJ works.
-* Added support for DLSite's `publisher` and `brand` metadata.
+* Added DLsite Scheduled Release Date (`announce_date`), `site_id`, `publisher`, and `brand` metadata support.
+* Added an option, enabled by default, to use DLsite announcement (`announce/`) links when available, falling back to regular (`work/`) links.
 
 ### Changed
 
-* Generalized internal RJ-specific naming and product-code handling.
-* Renamed database column `rj_number` to `code_number`.
-* Generalized Product Code labels, Index sort preferences, and numeric sorting for RJ, BJ, and VJ identifiers.
-* CSS Cleanup.
-* DLsite links now use stored `site_id` when `available.
-* Updated Import/Export schema to v2 version.
+* Generalized product-code handling and numeric sorting for RJ, BJ, and VJ identifiers.
+* DLsite links now use stored `site_id` when available.
+* Updated the Import/Export schema to v2 version.
 * Standardized the internal logic for help tooltips in field layout settings.
+* CSS Cleanup.
 
 ### Fixed
 
