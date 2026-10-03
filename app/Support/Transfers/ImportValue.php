@@ -24,6 +24,8 @@ final class ImportValue
             'description' => __('Japanese Description'),
             'description_english' => __('English Description'),
             'maker_id', 'maker' => __('Maker ID'),
+            'publisher' => __('Publisher'),
+            'brand' => __('Brand'),
             'age_category' => __('Age'),
             'product_format' => __('Product Format'),
             'announce_date' => __('Scheduled release date'),

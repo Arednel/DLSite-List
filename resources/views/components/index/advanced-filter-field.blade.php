@@ -65,6 +65,17 @@
         </div>
     @break
 
+    @case('publisher')
+    @case('brand')
+
+    @case('maker_names')
+        <div class="filter-widget {{ $field['class'] }}">
+            <label class="widget-header" for="filter_{{ $field['field'] }}">{{ $field['label'] }}</label>
+            <input id="filter_{{ $field['field'] }}" type="text" name="{{ $field['field'] }}"
+                wire:model="draft.{{ $field['field'] }}" placeholder="{{ $field['label'] }}">
+        </div>
+    @break
+
     @case('scenario')
     @case('illustration')
 

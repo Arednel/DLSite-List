@@ -587,6 +587,9 @@ Fetched Tags are readonly by default. If made editable, editing changes only the
 - `product_format` - hidden
 - `progress`
 - `circle` - hidden
+- `publisher` - hidden
+- `brand` - hidden
+- `maker_names` (Circle / Publisher / Brand) - hidden
 - `scenario` - hidden
 - `illustration` - hidden
 - `voice_actor` - hidden
@@ -621,6 +624,8 @@ Fetched Tags are readonly by default. If made editable, editing changes only the
 - `age_category` - hidden
 - `product_format` - hidden
 - `circle` - hidden
+- `publisher` - hidden
+- `brand` - hidden
 - `scenario` - hidden
 - `illustration` - hidden
 - `voice_actor` - hidden
@@ -648,6 +653,9 @@ Fetched Tags are readonly by default. If made editable, editing changes only the
 - `created_at` - hidden
 - `updated_at` - hidden
 - `circle` - hidden
+- `publisher` - hidden
+- `brand` - hidden
+- `maker_names` (Circle / Publisher / Brand) - hidden
 - `scenario` - hidden
 - `illustration` - hidden
 - `voice_actor` - hidden
@@ -672,6 +680,8 @@ Fetched Tags are readonly by default. If made editable, editing changes only the
 - `age_category` - hidden
 - `product_format` - hidden
 - `circle` - hidden
+- `publisher` - hidden
+- `brand` - hidden
 - `scenario` - hidden
 - `illustration` - hidden
 - `voice_actor` - hidden
@@ -698,6 +708,8 @@ Hidden DLsite Quick Add metadata fields are not accepted as user overrides, but 
 - `age_category` - hidden
 - `product_format` - hidden
 - `circle` - hidden
+- `publisher` - hidden
+- `brand` - hidden
 - `scenario` - hidden
 - `illustration` - hidden
 - `voice_actor` - hidden
@@ -724,6 +736,8 @@ Hidden DLsite Quick Add metadata fields are not accepted as user overrides, but 
 - `re_listen_value`
 - `priority`
 - `circle` - hidden
+- `publisher` - hidden
+- `brand` - hidden
 - `scenario` - hidden
 - `illustration` - hidden
 - `voice_actor` - hidden
@@ -751,6 +765,9 @@ Custom Quick Add has no scraper fallback. Hidden optional description rows store
 - `created_at`
 - `updated_at` - hidden
 - `circle` - hidden
+- `publisher` - hidden
+- `brand` - hidden
+- `maker_names` (Circle / Publisher / Brand) - hidden
 - `scenario` - hidden
 - `illustration` - hidden
 - `voice_actor` - hidden

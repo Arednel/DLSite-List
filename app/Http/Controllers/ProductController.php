@@ -58,6 +58,8 @@ class ProductController extends Controller
         'age_category',
         'product_format',
         'circle',
+        'publisher',
+        'brand',
         'maker_id',
         'progress',
         'score',
@@ -152,6 +154,10 @@ class ProductController extends Controller
                 ? (($validated['product_format'] ?? []) ?: null)
                 : null,
             'circle' => $circle,
+            'publisher' => $this->createFieldSubmitted($request, $visibleCreateFields, ProductField::Publisher, 'publisher')
+                ? ($validated['publisher'] ?? null) : null,
+            'brand' => $this->createFieldSubmitted($request, $visibleCreateFields, ProductField::Brand, 'brand')
+                ? ($validated['brand'] ?? null) : null,
             'work_image' => $work_image,
             'description' => $description,
             'description_english' => $descriptionEnglish,
@@ -597,6 +603,8 @@ class ProductController extends Controller
             ProductField::Series->value => ['series' => 'series'],
             ProductField::AgeCategory->value => ['age_category' => 'age_category'],
             ProductField::ProductFormat->value => ['product_format' => 'product_format'],
+            ProductField::Publisher->value => ['publisher' => 'publisher'],
+            ProductField::Brand->value => ['brand' => 'brand'],
             ProductField::Circle->value => [
                 'circle' => 'circle',
                 'maker_id' => 'maker_id',

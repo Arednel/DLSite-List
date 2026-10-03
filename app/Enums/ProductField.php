@@ -21,6 +21,9 @@ enum ProductField: string
     case AnnouncementDate = 'announce_date';
     case Progress = 'progress';
     case Circle = 'circle';
+    case Publisher = 'publisher';
+    case Brand = 'brand';
+    case MakerNames = 'maker_names';
     case Scenario = 'scenario';
     case Illustration = 'illustration';
     case VoiceActor = 'voice_actor';
@@ -53,6 +56,9 @@ enum ProductField: string
             self::AnnouncementDate => __('Scheduled release date'),
             self::Progress => __('Progress'),
             self::Circle => __('Circle'),
+            self::Publisher => __('Publisher'),
+            self::Brand => __('Brand'),
+            self::MakerNames => __('Circle / Publisher / Brand'),
             self::Scenario => __('Scenario Author'),
             self::Illustration => __('Illustration Author'),
             self::VoiceActor => __('Voice Actor'),
@@ -103,6 +109,9 @@ enum ProductField: string
             self::CreatedAt => ProductIndexSortField::AddedToTheSiteDate,
             self::UpdatedAt => ProductIndexSortField::UpdatedAt,
             self::Circle => ProductIndexSortField::Circle,
+            self::Publisher => ProductIndexSortField::Publisher,
+            self::Brand => ProductIndexSortField::Brand,
+            self::MakerNames => ProductIndexSortField::MakerNames,
             self::Scenario => ProductIndexSortField::Scenario,
             self::Illustration => ProductIndexSortField::Illustration,
             self::VoiceActor => ProductIndexSortField::VoiceActor,
@@ -152,14 +161,6 @@ enum ProductField: string
         return in_array($this, self::surfaceMetadata($surface)['visibility_locked'], true);
     }
 
-    public function layoutNote(string $surface): ?string
-    {
-        return match ([$surface, $this]) {
-            ['index', self::Notes] => __('Notes are already shown inside Title; enable this for a separate column.'),
-            default => null,
-        };
-    }
-
     /**
      * @return array{
      *     fields: list<ProductField>,
@@ -189,6 +190,8 @@ enum ProductField: string
                     self::AgeCategory,
                     self::ProductFormat,
                     self::Circle,
+                    self::Publisher,
+                    self::Brand,
                     self::Scenario,
                     self::Illustration,
                     self::VoiceActor,
@@ -235,6 +238,9 @@ enum ProductField: string
                     self::CreatedAt,
                     self::UpdatedAt,
                     self::Circle,
+                    self::Publisher,
+                    self::Brand,
+                    self::MakerNames,
                     self::Scenario,
                     self::Illustration,
                     self::VoiceActor,
@@ -251,6 +257,7 @@ enum ProductField: string
                     self::CreatedAt,
                     self::UpdatedAt,
                     ...self::metadataFields(),
+                    self::MakerNames,
                 ],
                 'editable_by_default' => [],
                 'prefix_missing' => [self::Title],
@@ -272,6 +279,8 @@ enum ProductField: string
                     self::AgeCategory,
                     self::ProductFormat,
                     self::Circle,
+                    self::Publisher,
+                    self::Brand,
                     self::Scenario,
                     self::Illustration,
                     self::VoiceActor,
@@ -303,6 +312,8 @@ enum ProductField: string
                     self::ReListenValue,
                     self::Priority,
                     self::Circle,
+                    self::Publisher,
+                    self::Brand,
                     self::Scenario,
                     self::Illustration,
                     self::VoiceActor,
@@ -331,6 +342,9 @@ enum ProductField: string
                     self::ProductFormat,
                     self::Progress,
                     self::Circle,
+                    self::Publisher,
+                    self::Brand,
+                    self::MakerNames,
                     self::Scenario,
                     self::Illustration,
                     self::VoiceActor,
@@ -351,6 +365,7 @@ enum ProductField: string
                 'visibility_locked' => [self::Title],
                 'hidden_by_default' => [
                     ...self::metadataFields(),
+                    self::MakerNames,
                     self::SiteId,
                     self::Notes,
                     self::StartDate,
@@ -377,6 +392,8 @@ enum ProductField: string
             ...($hiddenAgeCategory ? [self::AgeCategory] : []),
             self::ProductFormat,
             self::Circle,
+            self::Publisher,
+            self::Brand,
             self::Scenario,
             self::Illustration,
             self::VoiceActor,

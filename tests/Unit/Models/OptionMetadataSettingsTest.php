@@ -269,10 +269,7 @@ class OptionMetadataSettingsTest extends TestCase
         $this->assertFalse($layout[4]['visible']);
         $this->assertNotContains('description', collect($layout)->pluck('field')->all());
         $this->assertContains(ProductField::Tags->value, collect($layout)->pluck('field')->all());
-        $this->assertSame(
-            'Notes are already shown inside Title; enable this for a separate column.',
-            collect($layout)->firstWhere('field', ProductField::Notes->value)['note'],
-        );
+        $this->assertArrayNotHasKey('note', collect($layout)->firstWhere('field', ProductField::Notes->value));
 
         $storedLayout = json_decode(DB::table('options')->where('key', Option::INDEX_FIELD_LAYOUT)->value('value'), true);
 
@@ -449,6 +446,9 @@ class OptionMetadataSettingsTest extends TestCase
         $this->assertFalse(collect($defaults->indexSortFieldLayout)->firstWhere('field', ProductIndexSortField::ProductFormat->value)['visible']);
         $this->assertFalse(collect($defaults->indexSortFieldLayout)->firstWhere('field', ProductIndexSortField::AnnouncementDate->value)['visible']);
         $this->assertFalse(collect($defaults->indexSortFieldLayout)->firstWhere('field', ProductIndexSortField::Circle->value)['visible']);
+        $this->assertFalse(collect($defaults->indexSortFieldLayout)->firstWhere('field', ProductIndexSortField::Publisher->value)['visible']);
+        $this->assertFalse(collect($defaults->indexSortFieldLayout)->firstWhere('field', ProductIndexSortField::Brand->value)['visible']);
+        $this->assertFalse(collect($defaults->indexSortFieldLayout)->firstWhere('field', ProductIndexSortField::MakerNames->value)['visible']);
         $this->assertSame(ProductField::Image->value, $defaults->indexColumns[0]['field']);
         $this->assertContains(ProductField::Title->value, $defaults->visibleIndexFields);
         $this->assertTrue($defaults->titleNotesVisible);
@@ -761,6 +761,9 @@ class OptionMetadataSettingsTest extends TestCase
             ProductIndexSortField::ProductFormat->value,
             ProductIndexSortField::AnnouncementDate->value,
             ProductIndexSortField::Circle->value,
+            ProductIndexSortField::Publisher->value,
+            ProductIndexSortField::Brand->value,
+            ProductIndexSortField::MakerNames->value,
             ProductIndexSortField::Scenario->value,
             ProductIndexSortField::Illustration->value,
             ProductIndexSortField::VoiceActor->value,

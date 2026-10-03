@@ -71,6 +71,8 @@ final class LibraryWorkValidator
             'descriptions.description_english' => ['sometimes', 'nullable', 'string', 'max:65535', new MaxBytes(65535)],
             'details' => ['sometimes', 'array:' . implode(',', LibraryData::FIELDS['details'])],
             'details.maker_id' => ['sometimes', 'nullable', 'string', 'max:200'],
+            'details.publisher' => ['sometimes', 'nullable', 'string', 'max:200'],
+            'details.brand' => ['sometimes', 'nullable', 'string', 'max:200'],
             'details.series' => ['sometimes', 'nullable', 'string', 'max:1000'],
             'details.age_category' => ['sometimes', 'nullable', Rule::enum(ProductAgeCategory::class)],
             'details.site_id' => ['sometimes', 'nullable', 'string', 'max:255', 'regex:/\A[a-z][a-z0-9_-]*\z/'],

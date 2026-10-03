@@ -46,6 +46,17 @@
         <x-fields.product-format-field :label="$field['label']" />
     @break
 
+    @case('publisher')
+    @case('brand')
+        <tr>
+            <td width="130" class="form-table-cell">{{ $field['label'] }}</td>
+            <td class="form-table-cell">
+                <input id="{{ $field['field'] }}" name="{{ $field['field'] }}" class="form-control"
+                    value="{{ old($field['field']) }}" placeholder="{{ $field['label'] }}">
+            </td>
+        </tr>
+    @break
+
     @case('circle')
         <tr>
             <td width="130" class="form-table-cell">{{ __('Circle') }}</td>

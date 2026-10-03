@@ -940,5 +940,11 @@
     "The Product Format value is invalid.": "作品形式の値が無効です。",
     "Comma-separated. You can enter a DLsite Product Format name or code, or type new name to add a custom format. Use double quotes if a format contains a comma, e.g. \"Audio, Visual\", Audiobook.": "カンマ区切りで入力します。DLsiteの作品形式名またはコードを入力するか、新しい名前を入力してカスタム形式として追加できます。形式名にカンマを含む場合は二重引用符で囲んでください。例: アドベンチャー, ボイス, \"音声, ASMR\"",
     "DLSite link settings saved.": "DLSiteリンク設定を保存しました。",
-    "DLSite link settings reset to default.": "DLSiteリンク設定を初期設定に戻しました。"
+    "DLSite link settings reset to default.": "DLSiteリンク設定を初期設定に戻しました。",
+    "Publisher": "出版社",
+    "Brand": "ブランド",
+    "Circle / Publisher / Brand": "サークル / 出版社 / ブランド",
+    "Combines the separate Circle, Publisher, and Brand fields into one Index column.": "サークル・出版社・ブランドの各項目を1つの一覧列にまとめて表示します。",
+    "Searches Circle, Publisher, and Brand together.": "サークル・出版社・ブランドをまとめて検索します。",
+    "Sorts by the first available name: Circle, then Publisher, then Brand.": "サークル、出版社、ブランドの順で最初に登録されている名前を基準に並べ替えます。"
 }

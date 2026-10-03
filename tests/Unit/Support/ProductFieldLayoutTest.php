@@ -36,6 +36,10 @@ class ProductFieldLayoutTest extends TestCase
                 ProductField::ProductFormat,
                 ProductField::Progress,
                 ProductField::Circle,
+                ProductField::Publisher,
+                ProductField::Brand,
+                ProductField::MakerNames,
+
                 ProductField::Scenario,
                 ProductField::Illustration,
                 ProductField::VoiceActor,
@@ -69,6 +73,9 @@ class ProductFieldLayoutTest extends TestCase
                 ProductField::AgeCategory,
                 ProductField::ProductFormat,
                 ProductField::Circle,
+                ProductField::Publisher,
+                ProductField::Brand,
+
                 ProductField::Scenario,
                 ProductField::Illustration,
                 ProductField::VoiceActor,
@@ -95,6 +102,10 @@ class ProductFieldLayoutTest extends TestCase
                 ProductField::CreatedAt,
                 ProductField::UpdatedAt,
                 ProductField::Circle,
+                ProductField::Publisher,
+                ProductField::Brand,
+                ProductField::MakerNames,
+
                 ProductField::Scenario,
                 ProductField::Illustration,
                 ProductField::VoiceActor,
@@ -118,6 +129,9 @@ class ProductFieldLayoutTest extends TestCase
                 ProductField::AgeCategory,
                 ProductField::ProductFormat,
                 ProductField::Circle,
+                ProductField::Publisher,
+                ProductField::Brand,
+
                 ProductField::Scenario,
                 ProductField::Illustration,
                 ProductField::VoiceActor,
@@ -143,6 +157,9 @@ class ProductFieldLayoutTest extends TestCase
                 ProductField::ReListenValue,
                 ProductField::Priority,
                 ProductField::Circle,
+                ProductField::Publisher,
+                ProductField::Brand,
+
                 ProductField::Scenario,
                 ProductField::Illustration,
                 ProductField::VoiceActor,
@@ -230,6 +247,10 @@ class ProductFieldLayoutTest extends TestCase
             ProductField::ProductFormat->value,
             ProductField::Progress->value,
             ProductField::Circle->value,
+            ProductField::Publisher->value,
+            ProductField::Brand->value,
+            ProductField::MakerNames->value,
+
             ProductField::Scenario->value,
             ProductField::Illustration->value,
             ProductField::VoiceActor->value,
@@ -261,10 +282,8 @@ class ProductFieldLayoutTest extends TestCase
         $this->assertTrue($layout[1]['visibility_locked']);
         $this->assertTrue($layout[1]['notes_visible']);
         $this->assertTrue(ProductFieldLayout::indexTitleNotesVisible($layout));
-        $this->assertSame(
-            'Notes are already shown inside Title; enable this for a separate column.',
-            collect($layout)->firstWhere('field', ProductField::Notes->value)['note'],
-        );
+        $this->assertArrayNotHasKey('note', collect($layout)->firstWhere('field', ProductField::Notes->value));
+        $this->assertArrayNotHasKey('note', collect($layout)->firstWhere('field', ProductField::MakerNames->value));
     }
 
     public function test_index_title_notes_visibility_is_normalized_and_only_applies_to_index_title(): void
@@ -314,6 +333,9 @@ class ProductFieldLayoutTest extends TestCase
             ProductField::AgeCategory->value,
             ProductField::ProductFormat->value,
             ProductField::Circle->value,
+            ProductField::Publisher->value,
+            ProductField::Brand->value,
+
             ProductField::Scenario->value,
             ProductField::Illustration->value,
             ProductField::VoiceActor->value,
@@ -365,6 +387,10 @@ class ProductFieldLayoutTest extends TestCase
             ProductField::CreatedAt->value,
             ProductField::UpdatedAt->value,
             ProductField::Circle->value,
+            ProductField::Publisher->value,
+            ProductField::Brand->value,
+            ProductField::MakerNames->value,
+
             ProductField::Scenario->value,
             ProductField::Illustration->value,
             ProductField::VoiceActor->value,
@@ -420,6 +446,9 @@ class ProductFieldLayoutTest extends TestCase
             ProductField::AgeCategory->value,
             ProductField::ProductFormat->value,
             ProductField::Circle->value,
+            ProductField::Publisher->value,
+            ProductField::Brand->value,
+
             ProductField::Scenario->value,
             ProductField::Illustration->value,
             ProductField::VoiceActor->value,
@@ -471,6 +500,9 @@ class ProductFieldLayoutTest extends TestCase
             ProductField::ReListenValue->value,
             ProductField::Priority->value,
             ProductField::Circle->value,
+            ProductField::Publisher->value,
+            ProductField::Brand->value,
+
             ProductField::Scenario->value,
             ProductField::Illustration->value,
             ProductField::VoiceActor->value,

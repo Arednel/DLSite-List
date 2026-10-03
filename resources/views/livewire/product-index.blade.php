@@ -269,6 +269,30 @@
         {{ $productDisplayValues[$product->id][$column['field']] ?? '-' }}
     @break
 
+    @case('publisher')
+        @if ($product->publisherUrl)
+            <a href="{{ $product->publisherUrl }}">{{ $product->publisher }}</a>
+        @else
+            -
+        @endif
+    @break
+
+    @case('brand')
+        @if ($product->brandUrl)
+            <a href="{{ $product->brandUrl }}">{{ $product->brand }}</a>
+        @else
+            -
+        @endif
+    @break
+
+    @case('maker_names')
+        @forelse ($product->makerNames as $makerName)
+            <a href="{{ $makerName['indexUrl'] }}">{{ $makerName['name'] }}</a>{{ !$loop->last ? ', ' : '' }}
+        @empty
+            -
+        @endforelse
+    @break
+
     @case('circle')
         @forelse ($product->contributors[$column['contributor_role']] ?? [] as $contributor)
             <a href="{{ $contributor->indexUrl }}">

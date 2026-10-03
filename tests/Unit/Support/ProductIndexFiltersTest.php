@@ -203,6 +203,9 @@ class ProductIndexFiltersTest extends TestCase
             ['series'],
             ['product_format'],
             ['circle'],
+            ['publisher'],
+            ['brand'],
+            ['maker_names'],
             ['scenario'],
             ['voice_actor'],
             ['illustration'],
@@ -268,6 +271,26 @@ class ProductIndexFiltersTest extends TestCase
             'series' => 'SERIES_ALPHA',
             'progress' => 'Listening',
         ], $filters->toQueryWithout('search'));
+    }
+
+    public function test_individual_and_combined_maker_filters_round_trip(): void
+    {
+        $filters = ProductIndexFilters::fromQuery([
+            'circle' => '  Circle Name  ',
+            'publisher' => '  Publisher Name  ',
+            'brand' => '  Brand Name  ',
+            'maker_names' => '  Any Maker  ',
+        ]);
+
+        $this->assertSame('Publisher Name', $filters->publisher);
+        $this->assertSame('Brand Name', $filters->brand);
+        $this->assertSame('Any Maker', $filters->makerNames);
+        $this->assertSame([
+            'circle' => 'Circle Name',
+            'publisher' => 'Publisher Name',
+            'brand' => 'Brand Name',
+            'maker_names' => 'Any Maker',
+        ], $filters->toQuery());
     }
 
     public function test_option_sets_can_use_configured_visible_sort_fields(): void

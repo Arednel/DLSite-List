@@ -940,5 +940,11 @@
     "The Product Format value is invalid.": "The Product Format value is invalid.",
     "Comma-separated. You can enter a DLsite Product Format name or code, or type new name to add a custom format. Use double quotes if a format contains a comma, e.g. \"Audio, Visual\", Audiobook.": "Comma-separated. You can enter a DLsite Product Format name or code, or type new name to add a custom format. Use double quotes if a format contains a comma, e.g. \"Audio, Visual\", Audiobook.",
     "DLSite link settings saved.": "DLSite link settings saved.",
-    "DLSite link settings reset to default.": "DLSite link settings reset to default."
+    "DLSite link settings reset to default.": "DLSite link settings reset to default.",
+    "Publisher": "Publisher",
+    "Brand": "Brand",
+    "Circle / Publisher / Brand": "Circle / Publisher / Brand",
+    "Combines the separate Circle, Publisher, and Brand fields into one Index column.": "Combines the separate Circle, Publisher, and Brand fields into one Index column.",
+    "Searches Circle, Publisher, and Brand together.": "Searches Circle, Publisher, and Brand together.",
+    "Sorts by the first available name: Circle, then Publisher, then Brand.": "Sorts by the first available name: Circle, then Publisher, then Brand."
 }

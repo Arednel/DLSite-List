@@ -47,6 +47,9 @@ final class ProductIndexResults
         'created_at' => ['created_at'],
         'updated_at' => ['updated_at'],
         'circle' => ['circle', 'maker_id'],
+        'publisher' => ['publisher'],
+        'brand' => ['brand'],
+        'maker_names' => ['circle', 'publisher', 'brand'],
         'description_japanese' => ['description'],
         'description_english' => ['description_english'],
     ];
@@ -203,6 +206,18 @@ final class ProductIndexResults
             ->when(
                 $filters->circle !== '',
                 fn($query) => $query->filterCircle($filters->circle)
+            )
+            ->when(
+                $filters->publisher !== '',
+                fn($query) => $query->whereLike('publisher', '%' . $filters->publisher . '%')
+            )
+            ->when(
+                $filters->brand !== '',
+                fn($query) => $query->whereLike('brand', '%' . $filters->brand . '%')
+            )
+            ->when(
+                $filters->makerNames !== '',
+                fn($query) => $query->filterMakerNames($filters->makerNames)
             )
             ->when(
                 $filters->scenario !== '',
@@ -514,6 +529,7 @@ final class ProductIndexResults
     {
         [$expression, $bindings] = match ($field) {
             ProductIndexSortField::Circle => $this->circleSortExpression($query),
+            ProductIndexSortField::MakerNames => [$this->makerNamesSortExpression($query), []],
             ProductIndexSortField::Scenario => $this->contributorSortExpression(ProductContributorRole::Scenario),
             ProductIndexSortField::Illustration => $this->contributorSortExpression(ProductContributorRole::Illustration),
             ProductIndexSortField::VoiceActor => $this->contributorSortExpression(ProductContributorRole::VoiceActor),
@@ -528,6 +544,18 @@ final class ProductIndexResults
         $this->orderByNullableExpression($query, $expression, $direction, $bindings);
 
         return true;
+    }
+
+    private function makerNamesSortExpression(Builder $query): string
+    {
+        $grammar = $query->getQuery()->getGrammar();
+
+        $names = array_map(
+            fn(string $column): string => "NULLIF(TRIM({$grammar->wrap($column)}), '')",
+            ['circle', 'publisher', 'brand'],
+        );
+
+        return 'LOWER(COALESCE(' . implode(', ', $names) . '))';
     }
 
     /**

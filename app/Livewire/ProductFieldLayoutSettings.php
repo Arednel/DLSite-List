@@ -150,14 +150,15 @@ class ProductFieldLayoutSettings extends Component
 
     public function fieldLayoutHelp(string $layout, string $field): ?string
     {
-        if ($field !== ProductIndexSortField::UpdatedAt->value) {
-            return null;
-        }
-
-        return match ($layout) {
-            'index' => __('Shows when the work was last updated in your library.'),
-            'filter' => __('Filters by when the work was last updated in your library.'),
-            'sort' => __('Sorts by when the work was last updated in your library.'),
+        return match ([$layout, $field]) {
+            ['index', 'notes_below_title'] => __('Shows each work\'s Notes beneath its title on the Index.'),
+            ['index', ProductField::Notes->value] => __('Notes are already shown inside Title; enable this for a separate column.'),
+            ['index', ProductField::MakerNames->value] => __('Combines the separate Circle, Publisher, and Brand fields into one Index column.'),
+            ['filter', ProductField::MakerNames->value] => __('Searches Circle, Publisher, and Brand together.'),
+            ['sort', ProductIndexSortField::MakerNames->value] => __('Sorts by the first available name: Circle, then Publisher, then Brand.'),
+            ['index', ProductField::UpdatedAt->value] => __('Shows when the work was last updated in your library.'),
+            ['filter', ProductField::UpdatedAt->value] => __('Filters by when the work was last updated in your library.'),
+            ['sort', ProductIndexSortField::UpdatedAt->value] => __('Sorts by when the work was last updated in your library.'),
             default => null,
         };
     }

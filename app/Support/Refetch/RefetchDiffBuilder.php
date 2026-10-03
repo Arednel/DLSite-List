@@ -46,6 +46,8 @@ final class RefetchDiffBuilder
             $contributors[ProductContributorRole::Circle->value] ?? [],
             $work->contributorsByRole[ProductContributorRole::Circle->value] ?? [],
         );
+        $this->add($changes, RefetchCategory::Publisher, 'publisher', 'Publisher', $product->publisher, $work->publisher);
+        $this->add($changes, RefetchCategory::Brand, 'brand', 'Brand', $product->brand, $work->brand);
         $this->add($changes, RefetchCategory::Maker, 'maker_id', 'Maker ID', $product->maker_id, $work->makerId);
 
         foreach (

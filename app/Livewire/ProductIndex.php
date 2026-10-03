@@ -40,6 +40,12 @@ class ProductIndex extends Component
 
     public string $circle = '';
 
+    public string $publisher = '';
+
+    public string $brand = '';
+
+    public string $maker_names = '';
+
     public string $scenario = '';
 
     public string $voice_actor = '';

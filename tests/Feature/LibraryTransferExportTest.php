@@ -353,6 +353,8 @@ class LibraryTransferExportTest extends TestCase
             'sample_images' => ['storage/Works/RJ123456/sample_2.jpeg'],
             'age_category' => 'R18',
             'site_id' => 'home', // Actual section must not be reconstructed from the age rating.
+            'publisher' => 'Independent Publisher',
+            'brand' => 'Independent Brand',
             'product_format' => ['MOV', 'MV2', 'SND', 'MS2', 'custom:Audiobook'],
             'announce_date' => '2026-09-24 00:00:00',
         ]);
@@ -432,6 +434,10 @@ class LibraryTransferExportTest extends TestCase
         $this->assertSame([3, 'R18'], array_values($work['japanese']['age_category']));
         $this->assertSame('home', $work['japanese']['site_id']);
         $this->assertSame('home', $work['english']['site_id']);
+        foreach (['japanese', 'english'] as $locale) {
+            $this->assertSame('Independent Publisher', $work[$locale]['publisher']);
+            $this->assertSame('Independent Brand', $work[$locale]['brand']);
+        }
         $this->assertSame('home', $work['dlsite_list']['site_id']);
         $this->assertSame(['MOV', 'MV2', 'SND', 'MS2', 'custom:Audiobook'], $work['japanese']['product_format']);
         $this->assertSame(['MOV', 'MV2', 'SND', 'MS2', 'custom:Audiobook'], $work['english']['product_format']);
@@ -442,10 +448,12 @@ class LibraryTransferExportTest extends TestCase
         $this->assertStringNotContainsString('storage/', json_encode($work, JSON_THROW_ON_ERROR));
         $paths = array_column($export->parts()->where('kind', 'images')->first()->manifest['entries'], 'path');
         $this->assertSame(['works/RJ123456/images/cover.png', 'works/RJ123456/images/sample_1.jpeg'], $paths);
-        $product->update(['work_image' => null, 'sample_images' => [], 'product_format' => null, 'announce_date' => null]);
+        $product->update(['work_image' => null, 'sample_images' => [], 'product_format' => null, 'announce_date' => null, 'publisher' => null, 'brand' => null]);
         $run = $this->imported($export);
         $this->apply($run);
         $this->assertSame('storage/Works/RJ123456/cover.png', $product->fresh()->work_image);
+        $this->assertSame('Independent Publisher', $product->fresh()->publisher);
+        $this->assertSame('Independent Brand', $product->fresh()->brand);
         $this->assertSame(['storage/Works/RJ123456/sample_1.jpeg'], $product->fresh()->sample_images);
         $this->assertSame(['MOV', 'MV2', 'SND', 'MS2', 'custom:Audiobook'], $product->fresh()->product_format);
         $this->assertSame('2026-09-24 00:00:00', $product->fresh()->announce_date?->format('Y-m-d H:i:s'));

@@ -12,6 +12,8 @@ enum RefetchCategory: string
     case ProductFormat = 'product_format';
     case AnnouncementDate = 'announce_date';
     case Circle = 'circle';
+    case Publisher = 'publisher';
+    case Brand = 'brand';
     case Maker = 'maker';
     case Scenario = 'scenario';
     case VoiceActor = 'voice_actor';
@@ -32,6 +34,8 @@ enum RefetchCategory: string
             self::ProductFormat => __('Product Format'),
             self::AnnouncementDate => __('Scheduled release date'),
             self::Circle => __('Circle'),
+            self::Publisher => __('Publisher'),
+            self::Brand => __('Brand'),
             self::Maker => __('Maker ID'),
             self::Scenario => __('Scenario Author'),
             self::VoiceActor => __('Voice Actor'),

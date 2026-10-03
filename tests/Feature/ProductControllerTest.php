@@ -1232,6 +1232,8 @@ class ProductControllerTest extends TestCase
         Option::setEditFieldLayout([
             ['field' => ProductField::ProductFormat->value, 'visible' => true, 'editable' => true],
             ['field' => ProductField::Circle->value, 'visible' => true, 'editable' => true],
+            ['field' => ProductField::Publisher->value, 'visible' => true, 'editable' => true],
+            ['field' => ProductField::Brand->value, 'visible' => true, 'editable' => true],
             ['field' => ProductField::Scenario->value, 'visible' => true, 'editable' => true],
             ['field' => ProductField::VoiceActor->value, 'visible' => true, 'editable' => true],
             ['field' => ProductField::Illustration->value, 'visible' => true, 'editable' => true],
@@ -1244,6 +1246,8 @@ class ProductControllerTest extends TestCase
             'work_name' => 'EDITABLE_METADATA_TOKEN',
             'product_format' => ['ADV', 'SND', 'MS2', 'custom:Audiobook'],
             'circle' => 'Old Circle',
+            'publisher' => 'Old Publisher',
+            'brand' => 'Old Brand',
             'maker_id' => null,
             'description' => null,
             'description_english' => null,
@@ -1254,6 +1258,8 @@ class ProductControllerTest extends TestCase
             ->assertSee('name="product_format"', false)
             ->assertSee('Adventure, Voice, Music, Audiobook')
             ->assertSee('name="circle"', false)
+            ->assertSee('name="publisher"', false)
+            ->assertSee('name="brand"', false)
             ->assertSee('placeholder="Circle name"', false)
             ->assertSee('name="maker_id"', false)
             ->assertSee('name="scenario"', false)
@@ -1269,6 +1275,8 @@ class ProductControllerTest extends TestCase
             'work_name' => $product->work_name,
             'product_format' => 'Video, Voice, Music, Publication, Audiobook',
             'circle' => 'New Circle',
+            'publisher' => 'New Publisher',
+            'brand' => 'New Brand',
             'maker_id' => 'RG_EDITABLE_METADATA',
             'scenario' => 'Scenario One, Scenario Two',
             'voice_actor' => 'Voice One',
@@ -1283,6 +1291,8 @@ class ProductControllerTest extends TestCase
 
         $this->assertSame(['MOV', 'SND', 'MS2', 'PBC', 'custom:Audiobook'], $product->product_format);
         $this->assertSame('New Circle', $product->circle);
+        $this->assertSame('New Publisher', $product->publisher);
+        $this->assertSame('New Brand', $product->brand);
         $this->assertSame('RG_EDITABLE_METADATA', $product->maker_id);
         $this->assertSame('Japanese metadata description', $product->description);
         $this->assertSame('English metadata description', $product->description_english);
@@ -1997,14 +2007,20 @@ class ProductControllerTest extends TestCase
     public function test_custom_create_accepts_bj_and_vj_product_codes(): void
     {
         Storage::fake('public');
+        Option::setCustomQuickAddFieldLayout([
+            ['field' => ProductField::Publisher->value, 'visible' => true],
+            ['field' => ProductField::Brand->value, 'visible' => true],
+        ]);
 
         foreach (['BJ123456', 'VJ234567'] as $productCode) {
-            $this->post('/store/custom', $this->customStorePayload($productCode))
+            $this->post('/store/custom', $this->customStorePayload($productCode, ['publisher' => 'Manual Publisher', 'brand' => 'Manual Brand']))
                 ->assertSessionHasNoErrors()
                 ->assertRedirect("/#{$productCode}");
 
             $product = Product::findOrFail($productCode);
             $this->assertNull($product->site_id);
+            $this->assertSame('Manual Publisher', $product->publisher);
+            $this->assertSame('Manual Brand', $product->brand);
             $this->assertSame('CUSTOM_RETURN_TARGET_TOKEN', $product->work_name);
         }
     }
@@ -2253,6 +2269,8 @@ class ProductControllerTest extends TestCase
         Option::setQuickAddFieldLayout([
             ['field' => ProductField::AgeCategory->value, 'visible' => true],
             ['field' => ProductField::Circle->value, 'visible' => true],
+            ['field' => ProductField::Publisher->value, 'visible' => true],
+            ['field' => ProductField::Brand->value, 'visible' => false],
             ['field' => ProductField::Scenario->value, 'visible' => true],
             ['field' => ProductField::DescriptionJapanese->value, 'visible' => true],
             ['field' => ProductField::DescriptionEnglish->value, 'visible' => true],
@@ -2263,6 +2281,8 @@ class ProductControllerTest extends TestCase
         Storage::disk('local')->put("Works/{$workId}.json", json_encode($this->scrapedWorkPayload($workId, [
             'age_category' => ['_name_' => 'R18'],
             'circle' => 'SCRAPED_CREATE_CIRCLE_TOKEN',
+            'publisher' => 'SCRAPED_CREATE_PUBLISHER_TOKEN',
+            'brand' => 'SCRAPED_CREATE_BRAND_TOKEN',
             'scenario' => ['SCRAPED_CREATE_SCENARIO_TOKEN'],
             'voice_actor' => ['SCRAPED_CREATE_VOICE_TOKEN'],
             'description' => 'SCRAPED_CREATE_DESCRIPTION_TOKEN',
@@ -2274,6 +2294,8 @@ class ProductControllerTest extends TestCase
             'id' => $workId,
             'age_category' => 'ALL_AGES',
             'circle' => 'MANUAL_CREATE_CIRCLE_TOKEN',
+            'publisher' => 'MANUAL_CREATE_PUBLISHER_TOKEN',
+            'brand' => 'SHOULD_NOT_OVERRIDE_HIDDEN_BRAND',
             'maker_id' => 'RG_MANUAL_CREATE',
             'scenario' => 'MANUAL_CREATE_SCENARIO_TOKEN',
             'voice_actor' => 'MALICIOUS_CREATE_VOICE_TOKEN',
@@ -2287,6 +2309,8 @@ class ProductControllerTest extends TestCase
 
         $this->assertSame('ALL_AGES', $product->age_category);
         $this->assertSame('MANUAL_CREATE_CIRCLE_TOKEN', $product->circle);
+        $this->assertSame('MANUAL_CREATE_PUBLISHER_TOKEN', $product->publisher);
+        $this->assertSame('SCRAPED_CREATE_BRAND_TOKEN', $product->brand);
         $this->assertSame('RG_MANUAL_CREATE', $product->maker_id);
         $this->assertSame('MANUAL_CREATE_DESCRIPTION_TOKEN', $product->description);
         $this->assertSame('MANUAL_CREATE_EN_DESCRIPTION_TOKEN', $product->description_english);

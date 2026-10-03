@@ -55,7 +55,7 @@ Tag and contributor data is loaded only when the current visible fields need it.
 
 The fetcher can retry a failed DLsite fetch up to five times. Python does not own a second retry loop.
 
-The Quick Add field layout controls which user-editable override rows are submitted. Hidden DLsite metadata such as age, product format, circle, contributors, and descriptions can still be populated from scraped data.
+The Quick Add field layout controls which user-editable override rows are submitted. Hidden DLsite metadata such as age, product format, circle, publisher, brand, contributors, and descriptions can still be populated from scraped data.
 
 The main DLsite `Product Format` is stored first; only SND (Voice), MS2 (Music), and MV2 (Animation) are accepted as additional formats from Work.options. When an additional format mirrors the fetched main format, the additional value is omitted: SOU suppresses SND, MUS suppresses MS2, and MOV suppresses MV2. An additional format is kept when its matching main format is absent. This DLsite-fetch rule does not apply to manual Edit input or Library export/import, which preserve the stored values.
 
@@ -171,7 +171,7 @@ Refetch updates scraped DLsite-owned data without immediately overwriting the ex
 9. Canonical JSON is promoted only when the accepted changes actually change the work.
 10. Obsolete images are cleaned only for works whose image state changed.
 
-Refetch has sixteen ordered review categories defined by `RefetchCategory`.
+Refetch has eighteen ordered review categories defined by `RefetchCategory`.
 
 Cover and sample-image changes are independent. Refetch uses the shared `ProductImagePromotion` boundary so interrupted image replacement can be recovered safely.
 
@@ -389,6 +389,9 @@ Autocomplete:
 - series
 - age category
 - site ID
+- circle
+- publisher
+- brand
 - product format
 - scheduled release date
 - Japanese and English descriptions

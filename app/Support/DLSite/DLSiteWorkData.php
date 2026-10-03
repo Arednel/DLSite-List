@@ -17,6 +17,8 @@ final readonly class DLSiteWorkData
         public array $productFormat,
         public ?string $announceDate,
         public ?string $circle,
+        public ?string $publisher,
+        public ?string $brand,
         public ?string $description,
         public ?string $englishDescription,
         public ?string $titleName,
@@ -51,7 +53,9 @@ final readonly class DLSiteWorkData
             ageCategory: self::text(data_get($japanese, 'age_category._name_')),
             productFormat: self::productFormat($japanese, $english),
             announceDate: self::text($japanese['announce_date'] ?? $english['announce_date'] ?? null),
-            circle: self::text($japanese['circle'] ?? $english['circle'] ?? null),
+            circle: self::text($japanese['circle'] ?? null) ?? self::text($english['circle'] ?? null),
+            publisher: self::text($japanese['publisher'] ?? null) ?? self::text($english['publisher'] ?? null),
+            brand: self::text($japanese['brand'] ?? null) ?? self::text($english['brand'] ?? null),
             description: $description,
             englishDescription: $englishDescription === $description ? null : $englishDescription,
             titleName: self::text($japanese['title_name'] ?? $english['title_name'] ?? null),
@@ -91,7 +95,7 @@ final readonly class DLSiteWorkData
 
         foreach (ProductContributorRole::cases() as $role) {
             if ($role === ProductContributorRole::Circle) {
-                $circle = self::text($japanese['circle'] ?? $english['circle'] ?? null);
+                $circle = self::text($japanese['circle'] ?? null) ?? self::text($english['circle'] ?? null);
                 $roles[$role->value] = $circle === null ? [] : [$circle];
 
                 continue;

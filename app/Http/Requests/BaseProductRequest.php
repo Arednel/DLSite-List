@@ -63,6 +63,8 @@ abstract class BaseProductRequest extends FormRequest
             'product_format' => ['nullable', 'array', 'list', 'max:50'],
             'product_format.*' => ['string', new ValidProductFormat],
             'circle' => ['nullable', 'string'],
+            'publisher' => ['nullable', 'string', 'max:200'],
+            'brand' => ['nullable', 'string', 'max:200'],
             'maker_id' => ['nullable', 'string'],
             ProductContributorRole::Scenario->value => ['nullable', 'array'],
             ProductContributorRole::VoiceActor->value => ['nullable', 'array'],

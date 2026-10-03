@@ -359,6 +359,7 @@ Covers the Livewire Index:
 - filtering/search/date ranges, including inclusive Scheduled Release Date boundaries
 - Product Format display, partial label/custom search, exact-code matching, JSON-element boundaries, and special-character search escaping
 - sort behavior, including Product Format sorting by its first stored value and announcement-date sorting with nulls last
+- individual/combined maker links, comma-separated combined display, and SQL sorting with first-nonblank Circle/Publisher/Brand fallback, case-insensitive comparison, blanks last, primary/secondary priorities, and global page-location checks
 - narrow hydration
 - batched settings
 - field visibility/order, optional-column sort mappings (including optional Site ID display, exact filtering, and sorting), and hydrated values independent of UI wording
@@ -470,7 +471,7 @@ Covers server-rendered Add/Edit modal completion fallback output and conditional
 - Covers exact-code and partial-label search, editable-field round trips for every canonical Product Format in English and Japanese, ambiguous-label fallbacks, and replacing the main format without dropping manual additional/custom values.
 
 `tests/Unit/Enums/ProductIndexSortFieldTest.php`
-- Covers valid Index sort fields, labels/backend metadata, and sort-dropdown behavior.
+- Covers valid Index sort fields (including Publisher, Brand, and the virtual combined Maker sort), labels/backend metadata, and sort-dropdown behavior.
 
 `tests/Unit/Enums/UiLanguageTest.php`
 - Covers UI language values, labels, fallback, and fetched-tag language mapping.
@@ -509,7 +510,7 @@ Covers server-rendered Add/Edit modal completion fallback output and conditional
 - Covers normalized contributor identity, maker id, role-specific sync, cross-role isolation, and Updated Date touching only on effective change.
 
 `tests/Unit/Support/ProductFieldLayoutTest.php`
-- Covers surface defaults/availability, localized fetched-tag labels, row normalization, required locks, editability, and prepared layout metadata.
+- Covers surface defaults/availability (including independent Publisher/Brand fields and the virtual Index-only combined field), localized fetched-tag labels, row normalization without stored help notes, required locks, editability, and prepared layout metadata.
 
 `tests/Unit/Support/ProductGenreSyncTest.php`
 - Covers fetched language buckets, custom/fetched preservation/precedence, recursive ancestor expansion, and Updated Date touching only on effective change.
@@ -524,7 +525,7 @@ Covers server-rendered Add/Edit modal completion fallback output and conditional
 - Covers typed Index row construction from narrow product hydration, encoded Series/Circle/contributor filter URLs, preserved Edit return state/fragment, age-aware DLSite URLs, defaults for unhydrated optional attributes, and rejection of a missing required `work_name`.
 
 `tests/Unit/Support/RefetchDiffBuilderTest.php`
-- Covers all Refetch metadata/creator/tag categories, including main-only Product Format comparison that ignores fetched additional formats, plus tag identity handling, cover hashing, and unavailable sample-image behavior.
+- Covers all Refetch metadata/creator/tag categories (including independent Publisher/Brand changes), main-only Product Format comparison that ignores fetched additional formats, plus tag identity handling, cover hashing, and unavailable sample-image behavior.
 
 `tests/Unit/Support/ReturnTargetTest.php`
 - Covers Index-only return-query/fragment normalization, malformed input fallback, legacy route rejection, and URL generation.
@@ -541,7 +542,7 @@ Covers server-rendered Add/Edit modal completion fallback output and conditional
 - Covers Laravel Process command construction, explicit output destinations, venv executable, unlimited timeout behavior, and log-retention environment.
 
 `tests/Unit/Support/DLSite/DLSiteWorkDataTest.php`
-- Covers shared scraped metadata extraction for titles/descriptions/creators/maker data, Product Format normalization, announcement-date and site-id locale fallback, product ids, and missing-id errors.
+- Covers shared scraped metadata extraction for titles/descriptions/creators/maker data (Circle, Publisher, and Brand remain independent), Product Format normalization, announcement-date and site-id locale fallback, product ids, and missing-id errors.
 
 `tests/Unit/Support/DLSite/DLSiteWorkFetcherTest.php`
 - Covers the PHP-owned five-attempt retry loop, manifest/JSON validation, partial results, immediate success, and rejection of stale JSON fallback.

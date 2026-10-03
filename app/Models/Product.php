@@ -33,6 +33,8 @@ class Product extends Model
         'product_format',
         'announce_date',
         'circle',
+        'publisher',
+        'brand',
         'work_image',
         'description',
         'description_english',
@@ -268,6 +270,18 @@ class Product extends Model
     }
 
     #[Scope]
+    protected function filterMakerNames(Builder $query, string $name): void
+    {
+        $name = trim($name);
+
+        if ($name !== '') {
+            $query->where(function (Builder $makerQuery) use ($name): void {
+                $makerQuery->whereAny(['circle', 'publisher', 'brand'], 'like', "%{$name}%");
+            });
+        }
+    }
+
+    #[Scope]
     protected function filterDescription(Builder $query, string $description): void
     {
         $query->whereLike('description', '%' . trim($description) . '%');
@@ -294,6 +308,8 @@ class Product extends Model
             'series',
             'notes',
             'circle',
+            'publisher',
+            'brand',
         ];
 
         array_push($columns, ...array_values(array_intersect(

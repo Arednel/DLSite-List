@@ -26,6 +26,9 @@ class ProductIndexSortFieldTest extends TestCase
             ProductIndexSortField::AddedToTheSiteDate->value => 'created_at',
             ProductIndexSortField::UpdatedAt->value => 'updated_at',
             ProductIndexSortField::Circle->value => 'circle',
+            ProductIndexSortField::Publisher->value => 'publisher',
+            ProductIndexSortField::Brand->value => 'brand',
+            ProductIndexSortField::MakerNames->value => 'maker_names',
             ProductIndexSortField::Scenario->value => 'scenario',
             ProductIndexSortField::Illustration->value => 'illustration',
             ProductIndexSortField::VoiceActor->value => 'voice_actor',
@@ -56,6 +59,9 @@ class ProductIndexSortFieldTest extends TestCase
             ProductIndexSortField::AddedToTheSiteDate->value,
             ProductIndexSortField::UpdatedAt->value,
             ProductIndexSortField::Circle->value,
+            ProductIndexSortField::Publisher->value,
+            ProductIndexSortField::Brand->value,
+            ProductIndexSortField::MakerNames->value,
             ProductIndexSortField::Scenario->value,
             ProductIndexSortField::Illustration->value,
             ProductIndexSortField::VoiceActor->value,
@@ -70,6 +76,7 @@ class ProductIndexSortFieldTest extends TestCase
         $this->assertArrayNotHasKey(ProductIndexSortField::SiteId->value, $visibleOptions);
         $this->assertArrayNotHasKey(ProductIndexSortField::AnnouncementDate->value, $visibleOptions);
         $this->assertArrayNotHasKey(ProductIndexSortField::Circle->value, $visibleOptions);
+        $this->assertArrayNotHasKey(ProductIndexSortField::MakerNames->value, $visibleOptions);
     }
 
     public function test_it_normalizes_sort_dropdown_layout_order_and_visibility(): void
@@ -98,6 +105,9 @@ class ProductIndexSortFieldTest extends TestCase
             ProductIndexSortField::AddedToTheSiteDate->value,
             ProductIndexSortField::UpdatedAt->value,
             ProductIndexSortField::Circle->value,
+            ProductIndexSortField::Publisher->value,
+            ProductIndexSortField::Brand->value,
+            ProductIndexSortField::MakerNames->value,
             ProductIndexSortField::Scenario->value,
             ProductIndexSortField::Illustration->value,
             ProductIndexSortField::VoiceActor->value,
@@ -136,6 +146,9 @@ class ProductIndexSortFieldTest extends TestCase
             ['field' => ProductIndexSortField::AddedToTheSiteDate->value, 'visible' => true],
             ['field' => ProductIndexSortField::UpdatedAt->value, 'visible' => false],
             ['field' => ProductIndexSortField::Circle->value, 'visible' => false],
+            ['field' => ProductIndexSortField::Publisher->value, 'visible' => false],
+            ['field' => ProductIndexSortField::Brand->value, 'visible' => false],
+            ['field' => ProductIndexSortField::MakerNames->value, 'visible' => false],
             ['field' => ProductIndexSortField::Scenario->value, 'visible' => false],
             ['field' => ProductIndexSortField::Illustration->value, 'visible' => false],
             ['field' => ProductIndexSortField::VoiceActor->value, 'visible' => false],

@@ -57,7 +57,6 @@ final class ProductFieldLayout
                 'visible' => $visible,
             ];
             $normalized += self::lockMetadata($field, $surface);
-            $normalized += self::noteMetadata($field, $surface);
             $normalized += self::titleMetadata($field, $surface, $row);
             $normalized += self::tagBucketMetadata($field, $surface, $row);
 
@@ -96,7 +95,7 @@ final class ProductFieldLayout
     public static function storageLayout(mixed $layout, string $surface): array
     {
         return collect(self::normalize($layout, $surface))
-            ->map(fn(array $row): array => Arr::except($row, ['label', 'note']))
+            ->map(fn(array $row): array => Arr::except($row, ['label']))
             ->values()
             ->all();
     }
@@ -111,7 +110,6 @@ final class ProductFieldLayout
             'visible' => $visible,
         ];
         $row += self::lockMetadata($field, $surface);
-        $row += self::noteMetadata($field, $surface);
         $row += self::defaultTitleMetadata($field, $surface);
         $row += self::defaultTagBucketMetadata($field, $surface);
 
@@ -204,13 +202,6 @@ final class ProductFieldLayout
         return $field->isVisibilityLocked($surface)
             ? ['visibility_locked' => true]
             : [];
-    }
-
-    private static function noteMetadata(ProductField $field, string $surface): array
-    {
-        $note = $field->layoutNote($surface);
-
-        return $note === null ? [] : ['note' => $note];
     }
 
     /**

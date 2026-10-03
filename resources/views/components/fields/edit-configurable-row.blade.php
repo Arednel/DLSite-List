@@ -67,6 +67,22 @@
         @endif
     @break
 
+    @case('publisher')
+    @case('brand')
+        @if ($field['editable'])
+            <tr>
+                <td width="130" class="form-table-cell">{{ $field['label'] }}</td>
+                <td class="form-table-cell">
+                    <input id="{{ $field['field'] }}" name="{{ $field['field'] }}" class="form-control form-field-long"
+                        value="{{ old($field['field'], $product->{$field['field']}) }}" placeholder="{{ $field['label'] }}">
+                </td>
+                <td class="form-table-cell form-table-cell--long-spacer" aria-hidden="true"></td>
+            </tr>
+        @else
+            <x-fields.readonly-text :label="$field['label']" :value="$product->{$field['field']}" />
+        @endif
+    @break
+
     @case('circle')
         @if ($field['editable'])
             <tr>

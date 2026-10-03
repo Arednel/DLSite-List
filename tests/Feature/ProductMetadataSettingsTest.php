@@ -572,6 +572,30 @@ class ProductMetadataSettingsTest extends TestCase
             ->assertSet('customQuickAddFields.image.visibility_locked', true);
     }
 
+    public function test_field_layout_help_is_centralized_and_surface_specific(): void
+    {
+        $component = new ProductFieldLayoutSettings();
+
+        $help = [
+            ['index', 'notes_below_title', "Shows each work's Notes beneath its title on the Index."],
+            ['index', ProductField::Notes->value, 'Notes are already shown inside Title; enable this for a separate column.'],
+            ['index', ProductField::MakerNames->value, 'Combines the separate Circle, Publisher, and Brand fields into one Index column.'],
+            ['filter', ProductField::MakerNames->value, 'Searches Circle, Publisher, and Brand together.'],
+            ['sort', ProductField::MakerNames->value, 'Sorts by the first available name: Circle, then Publisher, then Brand.'],
+            ['index', ProductField::UpdatedAt->value, 'Shows when the work was last updated in your library.'],
+            ['filter', ProductField::UpdatedAt->value, 'Filters by when the work was last updated in your library.'],
+            ['sort', ProductField::UpdatedAt->value, 'Sorts by when the work was last updated in your library.'],
+        ];
+
+        foreach ($help as [$layout, $field, $description]) {
+            $this->assertSame(__($description), $component->fieldLayoutHelp($layout, $field));
+        }
+
+        $this->assertNull($component->fieldLayoutHelp('edit', ProductField::MakerNames->value));
+        $this->assertNull($component->fieldLayoutHelp('filter', ProductField::Notes->value));
+        $this->assertNull($component->fieldLayoutHelp('index', 'unknown'));
+    }
+
     public function test_field_layout_component_saves_notes_below_title_separately(): void
     {
         Livewire::test(ProductFieldLayoutSettings::class)
@@ -1073,7 +1097,27 @@ class ProductMetadataSettingsTest extends TestCase
                 false,
             )
             ->assertSee(
+                'title="Combines the separate Circle, Publisher, and Brand fields into one Index column."',
+                false,
+            )
+            ->assertSee(
+                'title="Searches Circle, Publisher, and Brand together."',
+                false,
+            )
+            ->assertSee(
+                'title="Sorts by the first available name: Circle, then Publisher, then Brand."',
+                false,
+            )
+            ->assertSee(
                 'title="Shows when the work was last updated in your library."',
+                false,
+            )
+            ->assertSee(
+                'title="Filters by when the work was last updated in your library."',
+                false,
+            )
+            ->assertSee(
+                'title="Sorts by when the work was last updated in your library."',
                 false,
             )
             ->assertDontSee('class="field-layout-note"', false)

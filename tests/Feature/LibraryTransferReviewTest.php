@@ -387,6 +387,8 @@ class LibraryTransferReviewTest extends TestCase
             'product_format',
             'announce_date',
             'circle',
+            'publisher',
+            'brand',
             'maker',
             'scenario',
             'voice_actor',

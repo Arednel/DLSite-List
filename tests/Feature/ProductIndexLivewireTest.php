@@ -595,6 +595,258 @@ class ProductIndexLivewireTest extends TestCase
             ->assertSeeInOrder(['SITE_COMIC', 'SITE_HOME', 'SITE_UNKNOWN']);
     }
 
+    public function test_individual_and_combined_maker_index_fields_filter_render_and_sort(): void
+    {
+        $this->createProduct(1, [
+            'work_name' => 'MAKER_CIRCLE',
+            'circle' => 'Zulu Circle',
+            'publisher' => 'Zulu Publisher',
+            'brand' => 'Zulu Brand',
+        ]);
+        $this->createProduct(2, [
+            'work_name' => 'MAKER_PUBLISHER',
+            'circle' => null,
+            'publisher' => 'Alpha Publisher',
+            'brand' => null,
+        ]);
+        $this->createProduct(3, [
+            'work_name' => 'MAKER_BRAND',
+            'circle' => null,
+            'publisher' => null,
+            'brand' => 'Beta Brand',
+        ]);
+        $this->createProduct(4, [
+            'work_name' => 'MAKER_EMPTY',
+            'circle' => null,
+            'publisher' => null,
+            'brand' => null,
+        ]);
+        $results = app(ProductIndexResults::class);
+        $names = fn(array $filter): array => $results->getProducts(
+            ProductIndexFilters::fromQuery($filter),
+            Option::INDEX_PER_PAGE_UNLIMITED,
+            [],
+        )->pluck('work_name')->all();
+
+        $this->assertSame(['MAKER_CIRCLE'], $names(['maker_names' => 'Zulu']));
+        $this->assertSame(['MAKER_PUBLISHER'], $names(['maker_names' => 'Alpha']));
+        $this->assertSame(['MAKER_BRAND'], $names(['maker_names' => 'Beta']));
+        $this->assertSame(['MAKER_PUBLISHER'], $names(['publisher' => 'Alpha']));
+        $this->assertSame(['MAKER_BRAND'], $names(['brand' => 'Beta']));
+        $this->assertSame(['MAKER_CIRCLE'], $names(['circle' => 'Zulu']));
+        $this->assertSame([], $names(['maker_names' => 'Alpha', 'brand' => 'Beta']));
+
+        $this->assertSame([
+            'MAKER_PUBLISHER',
+            'MAKER_BRAND',
+            'MAKER_CIRCLE',
+            'MAKER_EMPTY',
+        ], $names(['sort_first_field' => 'maker_names', 'sort_first_direction' => 'asc']));
+        $this->assertSame([
+            'MAKER_CIRCLE',
+            'MAKER_BRAND',
+            'MAKER_PUBLISHER',
+            'MAKER_EMPTY',
+        ], $names(['sort_first_field' => 'maker_names', 'sort_first_direction' => 'desc']));
+
+        // A combined-cell link must also find the same name stored under another maker field.
+        $this->createProduct(5, ['work_name' => 'MAKER_CROSS', 'brand' => 'Zulu Circle']);
+        $this->assertSame(['MAKER_CROSS', 'MAKER_CIRCLE'], $names(['maker_names' => 'Zulu Circle']));
+
+        Option::setIndexFieldLayout([
+            ['field' => ProductField::MakerNames->value, 'visible' => true],
+            ['field' => ProductField::Publisher->value, 'visible' => true],
+            ['field' => ProductField::Brand->value, 'visible' => true],
+        ]);
+        Option::setFilterFieldLayout([
+            ['field' => ProductField::MakerNames->value, 'visible' => true],
+            ['field' => ProductField::Publisher->value, 'visible' => true],
+            ['field' => ProductField::Brand->value, 'visible' => true],
+        ]);
+        Option::setIndexSortFieldLayout([
+            ['field' => ProductIndexSortField::MakerNames->value, 'visible' => true],
+        ]);
+        Option::setIndexPerPage(Option::INDEX_PER_PAGE_UNLIMITED);
+        Livewire::test(ProductIndex::class)
+            ->assertSee('data-column="Circle / Publisher / Brand"', false)
+            ->assertDontSee('title="Combines the separate Circle, Publisher, and Brand fields into one Index column."', false)
+            ->assertSee('href="/?publisher=Zulu%20Publisher"', false)
+            ->assertSee('href="/?brand=Zulu%20Brand"', false)
+            ->assertSee('href="/?maker_names=Zulu%20Circle"', false)
+            ->assertSee('href="/?maker_names=Zulu%20Publisher"', false)
+            ->assertSee('href="/?maker_names=Zulu%20Brand"', false)
+            ->assertSee('>Zulu Circle</a>, ', false)
+            ->assertSee('>Zulu Publisher</a>, ', false)
+            ->assertSee('>Zulu Brand</a>', false)
+            ->assertDontSee('Circle: Zulu Circle')
+            ->assertDontSee('Publisher: Zulu Publisher')
+            ->assertDontSee('Brand: Zulu Brand')
+            ->assertSee('id="filter_maker_names"', false)
+            ->assertSee('value="maker_names"', false)
+            ->set('draft.maker_names', 'Alpha')
+            ->call('applyFilters')
+            ->assertSee('MAKER_PUBLISHER')
+            ->assertDontSee('MAKER_BRAND');
+    }
+
+    public function test_combined_maker_sql_sort_preserves_primary_secondary_and_page_locations(): void
+    {
+        $betaHigh = $this->createProduct(1, [
+            'work_name' => 'BETA_HIGH',
+            'circle' => 'Beta',
+            'score' => 9,
+        ]);
+        $alphaHigh = $this->createProduct(2, [
+            'work_name' => 'ALPHA_HIGH',
+            'circle' => null,
+            'publisher' => 'Alpha',
+            'score' => 9,
+        ]);
+        $alphaLow = $this->createProduct(3, [
+            'work_name' => 'ALPHA_LOW',
+            'circle' => null,
+            'brand' => 'Alpha',
+            'score' => 7,
+        ]);
+        $this->createProduct(4, [
+            'work_name' => 'BETA_LOW',
+            'circle' => 'Beta',
+            'score' => 7,
+        ]);
+        $emptyHigh = $this->createProduct(5, [
+            'work_name' => 'EMPTY_HIGH',
+            'circle' => null,
+            'score' => 9,
+        ]);
+
+        $results = app(ProductIndexResults::class);
+        $names = fn(array $query): array => $results->getProducts(
+            ProductIndexFilters::fromQuery($query),
+            Option::INDEX_PER_PAGE_UNLIMITED,
+            [],
+        )->pluck('work_name')->all();
+
+        $makerPrimary = [
+            'sort_first_field' => 'maker_names',
+            'sort_first_direction' => 'asc',
+            'sort_second_field' => 'score',
+            'sort_second_direction' => 'desc',
+        ];
+        // Publisher and Brand must affect MakerNames sorting even when the corresponding columns are hidden.
+        $this->assertSame([
+            'ALPHA_HIGH',
+            'ALPHA_LOW',
+            'BETA_HIGH',
+            'BETA_LOW',
+            'EMPTY_HIGH',
+        ], $names($makerPrimary));
+        $this->assertSame([
+            'BETA_LOW',
+            'BETA_HIGH',
+            'ALPHA_LOW',
+            'ALPHA_HIGH',
+            'EMPTY_HIGH',
+        ], $names([
+            ...$makerPrimary,
+            'sort_first_direction' => 'desc',
+            'sort_second_direction' => 'asc',
+        ]));
+
+        $scorePrimary = [
+            'sort_first_field' => 'score',
+            'sort_first_direction' => 'desc',
+            'sort_second_field' => 'maker_names',
+            'sort_second_direction' => 'asc',
+        ];
+        $this->assertSame([
+            'ALPHA_HIGH',
+            'BETA_HIGH',
+            'EMPTY_HIGH',
+            'ALPHA_LOW',
+            'BETA_LOW',
+        ], $names($scorePrimary));
+        $this->assertSame([
+            'BETA_HIGH',
+            'ALPHA_HIGH',
+            'EMPTY_HIGH',
+            'BETA_LOW',
+            'ALPHA_LOW',
+        ], $names([...$scorePrimary, 'sort_second_direction' => 'desc']));
+
+        $filters = ProductIndexFilters::fromQuery($makerPrimary);
+        $this->assertSame(1, $results->pageForProduct($filters, $alphaHigh, 2, []));
+        $this->assertSame(2, $results->pageForProduct($filters, $betaHigh, 2, []));
+        $this->assertSame(3, $results->pageForProduct($filters, $emptyHigh, 2, []));
+        $this->assertTrue($results->pageContainsProduct($filters, $emptyHigh, 2, 3, []));
+        $this->assertFalse($results->pageContainsProduct($filters, $emptyHigh, 2, 2, []));
+        $this->assertSame(1, $results->pageForProduct($filters, $alphaLow, 2, []));
+
+        Option::setIndexPerPage(2);
+        Livewire::withQueryParams($makerPrimary)
+            ->test(ProductIndex::class)
+            ->assertSeeInOrder(['ALPHA_HIGH', 'ALPHA_LOW'])
+            ->assertDontSee('BETA_HIGH')
+            ->call('nextPage')
+            ->assertSeeInOrder(['BETA_HIGH', 'BETA_LOW'])
+            ->assertDontSee('ALPHA_HIGH')
+            ->call('nextPage')
+            ->assertSee('EMPTY_HIGH')
+            ->assertDontSee('BETA_HIGH');
+    }
+
+    public function test_combined_maker_sort_ignores_blank_names_and_uses_case_insensitive_sql_order(): void
+    {
+        $this->createProduct(1, [
+            'work_name' => 'BETA_BRAND',
+            'circle' => null,
+            'publisher' => null,
+            'brand' => 'Beta',
+        ]);
+        $this->createProduct(2, [
+            'work_name' => 'ALPHA_PUBLISHER',
+            'circle' => '   ',
+            'publisher' => 'alpha',
+        ]);
+        $this->createProduct(3, [
+            'work_name' => 'BLANK_ONLY',
+            'circle' => '  ',
+            'publisher' => null,
+            'brand' => '',
+        ]);
+        $this->createProduct(4, [
+            'work_name' => 'ZULU_CIRCLE',
+            'circle' => 'Zulu',
+            'publisher' => 'Aardvark',
+        ]);
+
+        $results = app(ProductIndexResults::class);
+        $products = fn(string $direction) => $results->getProducts(
+            ProductIndexFilters::fromQuery([
+                'sort_first_field' => 'maker_names',
+                'sort_first_direction' => $direction,
+            ]),
+            Option::INDEX_PER_PAGE_UNLIMITED,
+            [],
+        );
+
+        $this->assertSame([
+            'ALPHA_PUBLISHER',
+            'BETA_BRAND',
+            'ZULU_CIRCLE',
+            'BLANK_ONLY',
+        ], $products('asc')->pluck('work_name')->all());
+        $this->assertSame([
+            'ZULU_CIRCLE',
+            'BETA_BRAND',
+            'ALPHA_PUBLISHER',
+            'BLANK_ONLY',
+        ], $products('desc')->pluck('work_name')->all());
+        // Sorting must not hydrate hidden metadata columns into Index rows.
+        $this->assertArrayNotHasKey('circle', $products('asc')->first()->getAttributes());
+        $this->assertArrayNotHasKey('publisher', $products('asc')->first()->getAttributes());
+        $this->assertArrayNotHasKey('brand', $products('asc')->first()->getAttributes());
+    }
+
     public function test_optional_product_format_column_uses_localized_labels(): void
     {
         Option::setIndexFieldLayout([

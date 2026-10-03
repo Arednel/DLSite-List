@@ -66,7 +66,7 @@
                                         <x-options.switch
                                             wire:model.live="{{ $layoutConfig['fields'] }}.{{ $row['field'] }}.notes_visible"
                                             wrapper-class="field-layout-check field-layout-check--edit field-layout-switch"
-                                            :help="__('Shows each work\'s Notes beneath its title on the Index.')">
+                                            :help="$this->fieldLayoutHelp('index', 'notes_below_title')">
                                             {{ __('Notes below Title') }}
                                         </x-options.switch>
                                     </div>
@@ -89,8 +89,7 @@
                                     <x-options.switch
                                         wire:model.live="{{ $layoutConfig['fields'] }}.{{ $row['field'] }}.visible"
                                         wrapper-class="field-layout-check field-layout-switch" :sort-ignore="true"
-                                        :disabled="$row['visibility_locked'] ?? false" :help="$row['note'] ??
-                                            $this->fieldLayoutHelp($layoutProperty, $row['field'])">
+                                        :disabled="$row['visibility_locked'] ?? false" :help="$this->fieldLayoutHelp($layoutProperty, $row['field'])">
                                         <span class="field-layout-switch-label">
                                             {{ $row['label'] }}
                                         </span>

@@ -37,6 +37,16 @@ final readonly class ProductIndexRowBuilder
             $id = Arr::string($attributes, 'id');
             $series = $attributes['series'] ?? null;
             $circle = $attributes['circle'] ?? null;
+            $publisher = $attributes['publisher'] ?? null;
+            $brand = $attributes['brand'] ?? null;
+            $makerNames = collect([$circle, $publisher, $brand])
+                ->filter(fn(?string $name): bool => filled($name))
+                ->map(fn(string $name): array => [
+                    'name' => $name,
+                    'indexUrl' => $this->indexFilterUrl($indexUrl, 'maker_names', $name),
+                ])
+                ->values()
+                ->all();
             $workImage = $attributes['work_image'] ?? null;
 
             return new ProductIndexRow(
@@ -52,6 +62,9 @@ final readonly class ProductIndexRowBuilder
                 series: $series,
                 ageCategory: $attributes['age_category'] ?? null,
                 circle: $circle,
+                publisher: $publisher,
+                brand: $brand,
+                makerNames: $makerNames,
                 makerId: $attributes['maker_id'] ?? null,
                 description: $attributes['description'] ?? null,
                 descriptionEnglish: $attributes['description_english'] ?? null,
@@ -71,6 +84,12 @@ final readonly class ProductIndexRowBuilder
                 circleUrl: empty($circle)
                     ? null
                     : $this->indexFilterUrl($indexUrl, 'circle', $circle),
+                publisherUrl: blank($publisher)
+                    ? null
+                    : $this->indexFilterUrl($indexUrl, 'publisher', $publisher),
+                brandUrl: blank($brand)
+                    ? null
+                    : $this->indexFilterUrl($indexUrl, 'brand', $brand),
             );
         });
     }

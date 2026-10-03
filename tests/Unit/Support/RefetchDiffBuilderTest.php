@@ -139,6 +139,32 @@ class RefetchDiffBuilderTest extends TestCase
         ], $withoutSite[RefetchCategory::SiteId->value]['site_id']);
     }
 
+    public function test_publisher_and_brand_are_reviewed_independently_from_circle(): void
+    {
+        $product = Product::factory()->create([
+            'circle' => 'Circle remains',
+            'publisher' => 'Previous Publisher',
+            'brand' => 'Previous Brand',
+        ]);
+        $builder = app(RefetchDiffBuilder::class);
+        $changes = $builder->build($product, new DLSiteFetchResult(
+            workData: DLSiteWorkData::fromArray([
+                'japanese' => [
+                    'product_id' => $product->id,
+                    'circle' => 'Circle remains',
+                    'publisher' => 'New Publisher',
+                    'brand' => null,
+                ],
+            ]),
+            failedImages: [],
+        ), null);
+
+        $this->assertSame('New Publisher', $changes['publisher']['publisher']['new']);
+        $this->assertSame('Previous Publisher', $changes['publisher']['publisher']['old']);
+        $this->assertNull($changes['brand']['brand']['new']);
+        $this->assertSame('Previous Brand', $changes['brand']['brand']['old']);
+    }
+
     public function test_product_format_diff_uses_dlsite_mirror_rules_and_ignores_custom_values(): void
     {
         $product = Product::factory()->create([

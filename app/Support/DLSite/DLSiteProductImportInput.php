@@ -34,6 +34,8 @@ final readonly class DLSiteProductImportInput
             'age_category',
             'product_format',
             'circle',
+            'publisher',
+            'brand',
             'maker_id',
             'description',
             'description_english',

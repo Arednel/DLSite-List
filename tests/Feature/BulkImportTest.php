@@ -572,6 +572,8 @@ class BulkImportTest extends TestCase
         $payload = $this->scrapedWorkPayload($productCode);
         $payload['japanese']['announce_date'] = '2026-09-24 00:00:00';
         $payload['japanese']['site_id'] = 'home';
+        $payload['japanese']['publisher'] = 'Bulk Publisher';
+        $payload['japanese']['brand'] = 'Bulk Brand';
         Storage::disk('local')->put("Works/{$productCode}.json", json_encode($payload, JSON_THROW_ON_ERROR));
         [$run, $item] = $this->createRunItem($productCode);
 
@@ -585,6 +587,8 @@ class BulkImportTest extends TestCase
             Product::query()->findOrFail($productCode)->announce_date?->format('Y-m-d H:i:s'),
         );
         $this->assertSame('home', Product::query()->findOrFail($productCode)->site_id);
+        $this->assertSame('Bulk Publisher', Product::query()->findOrFail($productCode)->publisher);
+        $this->assertSame('Bulk Brand', Product::query()->findOrFail($productCode)->brand);
     }
 
     public function test_successful_job_uses_scraped_product_format_when_the_field_is_hidden(): void

@@ -55,6 +55,49 @@ class DLSiteWorkDataTest extends TestCase
         $this->assertSame(['Circle Name'], $data->contributorsByRole[ProductContributorRole::Circle->value]);
     }
 
+    public function test_circle_publisher_and_brand_are_independent_and_use_english_fallback(): void
+    {
+        $work = DLSiteWorkData::fromArray([
+            'japanese' => [
+                'product_id' => 'BJ370220',
+                'circle' => 'Circle JP',
+                'publisher' => '',
+                'brand' => 'Brand JP',
+            ],
+            'english' => [
+                'circle' => 'Circle EN',
+                'publisher' => 'Publisher EN',
+                'brand' => 'Brand EN',
+            ],
+        ]);
+
+        $this->assertSame('Circle JP', $work->circle);
+        $this->assertSame('Publisher EN', $work->publisher);
+        $this->assertSame('Brand JP', $work->brand);
+        $this->assertSame(['Circle JP'], $work->contributorsByRole[ProductContributorRole::Circle->value]);
+
+        $onlyPublisher = DLSiteWorkData::fromArray([
+            'japanese' => ['product_id' => 'BJ370220', 'publisher' => 'KADOKAWA'],
+        ]);
+        $this->assertNull($onlyPublisher->circle);
+        $this->assertSame('KADOKAWA', $onlyPublisher->publisher);
+        $this->assertNull($onlyPublisher->brand);
+        $this->assertSame([], $onlyPublisher->contributorsByRole[ProductContributorRole::Circle->value]);
+    }
+
+    public function test_empty_japanese_circle_uses_english_fallback_for_property_and_contributor(): void
+    {
+        foreach (['', null] as $japaneseCircle) {
+            $work = DLSiteWorkData::fromArray([
+                'japanese' => ['product_id' => 'RJ123456', 'circle' => $japaneseCircle],
+                'english' => ['circle' => 'English Circle'],
+            ]);
+
+            $this->assertSame('English Circle', $work->circle);
+            $this->assertSame(['English Circle'], $work->contributorsByRole[ProductContributorRole::Circle->value]);
+        }
+    }
+
     public function test_product_format_uses_english_fallback_and_preserves_order_while_deduplicating(): void
     {
         $data = DLSiteWorkData::fromArray([

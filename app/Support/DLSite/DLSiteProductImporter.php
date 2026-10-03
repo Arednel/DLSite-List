@@ -48,6 +48,8 @@ final class DLSiteProductImporter
             'circle',
             $workData->circle,
         );
+        $publisher = $this->textOverride($input, ProductField::Publisher, 'publisher', $workData->publisher);
+        $brand = $this->textOverride($input, ProductField::Brand, 'brand', $workData->brand);
         $makerId = $this->textOverride(
             $input,
             ProductField::Circle,
@@ -68,6 +70,8 @@ final class DLSiteProductImporter
             $workName,
             $englishWorkName,
             $circle,
+            $publisher,
+            $brand,
             $makerId,
             $description,
             $englishDescription,
@@ -93,6 +97,8 @@ final class DLSiteProductImporter
                         $workData->ageCategory,
                     ),
                     'circle' => $circle,
+                    'publisher' => $publisher,
+                    'brand' => $brand,
                     'work_image' => "storage/Works/{$productId}/cover.jpg",
                     'description' => $description,
                     'description_english' => $englishDescription,

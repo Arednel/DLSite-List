@@ -8,6 +8,7 @@ final readonly class ProductIndexRow
 {
     /**
      * @param  Collection<string, Collection<int, ProductIndexContributorRow>>  $contributors
+     * @param  list<array{name: string, indexUrl: string}>  $makerNames
      */
     public function __construct(
         public string $id,
@@ -20,6 +21,9 @@ final readonly class ProductIndexRow
         public ?string $series,
         public ?string $ageCategory,
         public ?string $circle,
+        public ?string $publisher,
+        public ?string $brand,
+        public array $makerNames,
         public ?string $makerId,
         public ?string $description,
         public ?string $descriptionEnglish,
@@ -28,5 +32,7 @@ final readonly class ProductIndexRow
         public string $editUrl,
         public ?string $seriesUrl,
         public ?string $circleUrl,
+        public ?string $publisherUrl,
+        public ?string $brandUrl,
     ) {}
 }

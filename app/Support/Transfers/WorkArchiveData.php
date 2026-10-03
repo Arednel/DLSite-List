@@ -207,6 +207,11 @@ final class WorkArchiveData
         $details['site_id'] = array_key_exists('site_id', $custom)
             ? $custom['site_id']
             : ($document['japanese']['site_id'] ?? $document['english']['site_id'] ?? null);
+        foreach (['publisher', 'brand'] as $field) {
+            if ($this->hasEither($document, $field)) {
+                $details[$field] = $work->{$field};
+            }
+        }
         if ($this->hasEither($document, 'maker_id')) {
             $details['maker_id'] = $this->localeText($document['japanese'], 'maker_id') ?? $this->localeText($document['english'], 'maker_id');
         }
@@ -276,8 +281,8 @@ final class WorkArchiveData
             'work_name' => $title,
             'age_category' => $age === null ? null : ['_value_' => $this->ageValue($age), '_name_' => $age->value],
             'circle' => $contributors['circle'][0] ?? $product->circle,
-            'brand' => null,
-            'publisher' => null,
+            'brand' => $product->brand,
+            'publisher' => $product->publisher,
             'work_image' => $cover,
             'regist_date' => null,
             'work_type' => null,

@@ -25,6 +25,9 @@ enum ProductIndexSortField: string
     case AddedToTheSiteDate = 'created_at';
     case UpdatedAt = 'updated_at';
     case Circle = 'circle';
+    case Publisher = 'publisher';
+    case Brand = 'brand';
+    case MakerNames = 'maker_names';
     case Scenario = 'scenario';
     case Illustration = 'illustration';
     case VoiceActor = 'voice_actor';
@@ -49,6 +52,9 @@ enum ProductIndexSortField: string
             self::AddedToTheSiteDate => __('Added to the site Date'),
             self::UpdatedAt => __('Updated Date'),
             self::Circle => __('Circle'),
+            self::Publisher => __('Publisher'),
+            self::Brand => __('Brand'),
+            self::MakerNames => __('Circle / Publisher / Brand'),
             self::Scenario => __('Scenario Author'),
             self::Illustration => __('Illustration Author'),
             self::VoiceActor => __('Voice Actor'),
@@ -75,6 +81,9 @@ enum ProductIndexSortField: string
             self::ProductFormat,
             self::AnnouncementDate,
             self::Circle,
+            self::Publisher,
+            self::Brand,
+            self::MakerNames,
             self::Scenario,
             self::Illustration,
             self::VoiceActor,
