@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use App\Enums\FetchedTagLanguage;
 use App\Enums\ProductContributorRole;
 use App\Enums\ProductField;
 use App\Enums\ProductIndexSortField;
@@ -1443,9 +1444,11 @@ class ProductIndexLivewireTest extends TestCase
             ->assertDontSee('SPLIT_INDEX_FETCHED_EN_TAG');
     }
 
-    public function test_japanese_index_tags_use_custom_and_current_fetched_buckets(): void
+    public function test_index_can_use_a_manual_fetched_tag_language_independent_from_the_ui_language(): void
     {
-        App::setLocale(UiLanguage::Japanese->value);
+        App::setLocale(UiLanguage::English->value);
+        Option::setFetchedTagLanguageFollowsUi(false);
+        Option::setFetchedTagLanguage(FetchedTagLanguage::Japanese);
 
         $product = $this->createProduct(1, [
             'work_name' => 'SPLIT_JA_INDEX_TAG_WORK',

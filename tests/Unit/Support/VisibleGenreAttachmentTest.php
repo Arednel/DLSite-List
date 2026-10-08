@@ -2,8 +2,10 @@
 
 namespace Tests\Unit\Support;
 
+use App\Enums\FetchedTagLanguage;
 use App\Enums\UiLanguage;
 use App\Models\Genre;
+use App\Models\Option;
 use App\Models\Product;
 use App\Support\VisibleGenreAttachment;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -17,11 +19,10 @@ class VisibleGenreAttachmentTest extends TestCase
     use RefreshDatabase;
 
     #[DataProvider('localeVisibilityProvider')]
-    public function test_default_visibility_returns_custom_and_current_language_fetched_attachments(
+    public function test_default_visibility_returns_custom_and_followed_ui_language_fetched_attachments(
         UiLanguage $uiLanguage,
         string $expectedFetchedTitle,
-    ): void
-    {
+    ): void {
         App::setLocale($uiLanguage->value);
 
         $product = Product::factory()->create();
@@ -39,10 +40,29 @@ class VisibleGenreAttachmentTest extends TestCase
         ], $this->visibleTitlesFor($product));
     }
 
-    public function test_explicit_language_overrides_the_current_ui_language(): void
+    public function test_manual_fetched_tag_language_can_differ_from_the_ui_language(): void
     {
         App::setLocale(UiLanguage::English->value);
+        Option::setFetchedTagLanguageFollowsUi(false);
+        Option::setFetchedTagLanguage(FetchedTagLanguage::Japanese);
 
+        $product = Product::factory()->create();
+        $custom = Genre::query()->create(['title' => 'Custom Visible']);
+        $english = Genre::query()->create(['title' => 'English Hidden']);
+        $japanese = Genre::query()->create(['title' => 'Japanese Visible']);
+
+        $this->attachGenre($product, $custom, Genre::PIVOT_SOURCE_CUSTOM);
+        $this->attachGenre($product, $english, Genre::PIVOT_SOURCE_FETCHED, [Genre::LANGUAGE_ENGLISH]);
+        $this->attachGenre($product, $japanese, Genre::PIVOT_SOURCE_FETCHED, [Genre::LANGUAGE_JAPANESE]);
+
+        $this->assertSame([
+            'Custom Visible',
+            'Japanese Visible',
+        ], $this->visibleTitlesFor($product));
+    }
+
+    public function test_explicit_language_overrides_the_selected_fetched_tag_language(): void
+    {
         $product = Product::factory()->create();
         $custom = Genre::query()->create(['title' => 'Custom Visible']);
         $english = Genre::query()->create(['title' => 'English Hidden']);

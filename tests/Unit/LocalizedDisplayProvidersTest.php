@@ -31,14 +31,14 @@ class LocalizedDisplayProvidersTest extends TestCase
         $this->assertSame('Plan to Listen', ProductProgress::PlanToListen->label());
         $this->assertSame('On Hold', ProductProgress::OnHold->label());
         $this->assertSame('Dropped', ProductProgress::Dropped->label());
-        $this->assertSame('Fetched EN Tags', ProductField::FetchedTags->label());
+        $this->assertSame('Fetched Tags', ProductField::FetchedTags->label());
         $this->assertSame('Product Code', ProductIndexSortField::Code->label());
 
         App::setLocale(UiLanguage::Japanese->value);
         $this->assertSame('聴取予定', ProductProgress::PlanToListen->label());
         $this->assertSame('保留', ProductProgress::OnHold->label());
         $this->assertSame('中止', ProductProgress::Dropped->label());
-        $this->assertSame('取得済みJPタグ', ProductField::FetchedTags->label());
+        $this->assertSame('取得タグ', ProductField::FetchedTags->label());
         $this->assertSame('作品コード', ProductIndexSortField::Code->label());
 
         $this->assertSame('Plan to Listen', ProductProgress::PlanToListen->value);

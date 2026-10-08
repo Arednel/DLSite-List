@@ -77,17 +77,17 @@ class TagLibraryLocalizationTest extends TestCase
         $this->assertTrue((bool) $tag->hidden_on_index);
     }
 
-    public function test_empty_state_uses_the_current_fetched_language_code_and_japanese_messages_are_localized(): void
+    public function test_empty_state_uses_language_agnostic_fetched_tag_copy_and_japanese_messages_are_localized(): void
     {
         App::setLocale(UiLanguage::English->value);
         Livewire::test(TagLibraryManager::class)
             ->call('toggleAllTags')
-            ->assertSee('No EN, custom, or empty tags found.');
+            ->assertSee('No fetched, custom, or empty tags found.');
 
         App::setLocale(UiLanguage::Japanese->value);
         Livewire::test(TagLibraryManager::class)
             ->call('toggleAllTags')
-            ->assertSee('JPタグ、カスタムタグ、未使用タグはありません。');
+            ->assertSee('取得タグ、カスタムタグ、未使用タグはありません。');
 
         Livewire::test(TagLibraryManager::class)
             ->set('newTagTitle', '   ')

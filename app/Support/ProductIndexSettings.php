@@ -43,5 +43,6 @@ final readonly class ProductIndexSettings
         public string $productFormModalCompletionAction,
         public bool $dlsiteAgeAppropriateLinksEnabled,
         public bool $dlsiteAnnounceLinksEnabled,
+        public string $fetchedTagLanguage,
     ) {}
 }

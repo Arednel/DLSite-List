@@ -10,17 +10,17 @@ use Tests\TestCase;
 
 class ProductFieldLayoutTest extends TestCase
 {
-    public function test_fetched_tag_field_uses_a_generic_key_and_the_current_ui_language_label(): void
+    public function test_fetched_tag_field_uses_a_generic_key_and_language_agnostic_label(): void
     {
         $this->assertSame('fetched_tags', ProductField::FetchedTags->value);
 
         App::setLocale(UiLanguage::English->value);
 
-        $this->assertSame('Fetched EN Tags', ProductField::FetchedTags->label());
+        $this->assertSame('Fetched Tags', ProductField::FetchedTags->label());
 
         App::setLocale(UiLanguage::Japanese->value);
 
-        $this->assertSame('取得済みJPタグ', ProductField::FetchedTags->label());
+        $this->assertSame('取得タグ', ProductField::FetchedTags->label());
     }
 
     public function test_product_field_exposes_surface_field_order(): void

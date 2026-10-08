@@ -695,7 +695,7 @@ class ProductMetadataSettingsTest extends TestCase
             ->assertSet('editFields.tags.label', 'Custom Tags')
             ->assertSet('editFields.tags.visible', true)
             ->assertSet('editFields.tags.editable', true)
-            ->assertSet('editFields.fetched_tags.label', 'Fetched EN Tags')
+            ->assertSet('editFields.fetched_tags.label', 'Fetched Tags')
             ->assertSet('editFields.fetched_tags.visible', true)
             ->assertSet('editFields.fetched_tags.editable', false)
             ->assertSet('quickAddFields.tags.label', 'Custom Tags')
@@ -732,7 +732,7 @@ class ProductMetadataSettingsTest extends TestCase
         $this->assertArrayNotHasKey('fetched_visible', $filterStateTags);
     }
 
-    public function test_field_layout_component_uses_the_current_ui_language_for_fetched_tag_labels(): void
+    public function test_field_layout_component_localizes_the_language_agnostic_fetched_tag_label(): void
     {
         App::setLocale(UiLanguage::Japanese->value);
 
@@ -740,10 +740,10 @@ class ProductMetadataSettingsTest extends TestCase
         $indexFieldCount = count($component->get('indexOrder'));
 
         $component
-            ->assertSet('editFields.fetched_tags.label', '取得済みJPタグ')
-            ->assertSee('取得済みJPタグ')
+            ->assertSet('editFields.fetched_tags.label', '取得タグ')
+            ->assertSee('取得タグ')
             ->assertSee("{$indexFieldCount} 項目")
-            ->assertDontSee('Fetched EN Tags');
+            ->assertDontSee('Fetched Tags');
     }
 
     public function test_field_layout_component_saves_custom_order_for_each_layout_surface(): void
@@ -1071,7 +1071,7 @@ class ProductMetadataSettingsTest extends TestCase
             ->assertSee('Required')
             ->assertSee('Notes below Title')
             ->assertSee('Custom Tags')
-            ->assertSee('Fetched EN Tags')
+            ->assertSee('Fetched Tags')
             ->assertSee('Editable')
             ->assertSee('Save Index Table Columns')
             ->assertSee('Save Index Filter Fields')
@@ -1199,7 +1199,7 @@ class ProductMetadataSettingsTest extends TestCase
         $this->get('/options?tab=field-layouts')
             ->assertOk()
             ->assertSee('Field Layouts')
-            ->assertSee('Fetched EN Tags');
+            ->assertSee('Fetched Tags');
     }
 
     public function test_global_reset_modal_mentions_general_and_field_layout_tabs(): void

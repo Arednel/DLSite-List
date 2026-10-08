@@ -4,6 +4,7 @@ namespace App\Models;
 
 use App\Enums\AutocompleteOrder;
 use App\Enums\ContentFocus;
+use App\Enums\FetchedTagLanguage;
 use App\Enums\ProductIndexSortField;
 use App\Enums\UiLanguage;
 use App\Support\ProductFieldLayout;
@@ -16,6 +17,10 @@ use InvalidArgumentException;
 class Option extends Model
 {
     public const UI_LANGUAGE = 'ui_language';
+
+    public const FETCHED_TAG_LANGUAGE_FOLLOWS_UI = 'fetched_tag_language_follows_ui';
+
+    public const FETCHED_TAG_LANGUAGE = 'fetched_tag_language';
 
     public const CONTENT_FOCUS = 'content_focus';
 
@@ -168,6 +173,8 @@ class Option extends Model
 
     private const DEFAULT_OPTION_KEYS = [
         self::UI_LANGUAGE,
+        self::FETCHED_TAG_LANGUAGE_FOLLOWS_UI,
+        self::FETCHED_TAG_LANGUAGE,
         self::CONTENT_FOCUS,
         self::EXPORT_PART_MIB,
         self::INDEX_PER_PAGE,
@@ -196,6 +203,8 @@ class Option extends Model
     private const RESETTABLE_OPTIONS = [
         self::EXPORT_PART_MIB,
         self::UI_LANGUAGE,
+        self::FETCHED_TAG_LANGUAGE_FOLLOWS_UI,
+        self::FETCHED_TAG_LANGUAGE,
         self::CONTENT_FOCUS,
         self::INDEX_PER_PAGE,
         self::INDEX_SEARCH_HIDDEN_DESCRIPTIONS_ENABLED,
@@ -261,6 +270,8 @@ class Option extends Model
 
         return match ($key) {
             self::UI_LANGUAGE => UiLanguage::English->value,
+            self::FETCHED_TAG_LANGUAGE_FOLLOWS_UI => true,
+            self::FETCHED_TAG_LANGUAGE => FetchedTagLanguage::English->value,
             self::CONTENT_FOCUS => ContentFocus::General->value,
             self::EXPORT_PART_MIB => config('transfers.default_part_mib'),
             self::INDEX_PER_PAGE => self::DEFAULT_INDEX_PER_PAGE,
@@ -292,6 +303,35 @@ class Option extends Model
     {
         return UiLanguage::tryFrom((string) self::valueFor(self::UI_LANGUAGE))
             ?? UiLanguage::from((string) self::defaultFor(self::UI_LANGUAGE));
+    }
+
+    public static function fetchedTagLanguageFollowsUi(): bool
+    {
+        return self::booleanValueFor(
+            self::FETCHED_TAG_LANGUAGE_FOLLOWS_UI,
+            self::defaultFor(self::FETCHED_TAG_LANGUAGE_FOLLOWS_UI),
+        );
+    }
+
+    public static function fetchedTagLanguage(): FetchedTagLanguage
+    {
+        return FetchedTagLanguage::tryFrom((string) self::valueFor(self::FETCHED_TAG_LANGUAGE))
+            ?? FetchedTagLanguage::from((string) self::defaultFor(self::FETCHED_TAG_LANGUAGE));
+    }
+
+    public static function effectiveFetchedTagLanguage(): FetchedTagLanguage
+    {
+        $values = self::query()
+            ->whereIn('key', [
+                self::FETCHED_TAG_LANGUAGE_FOLLOWS_UI,
+                self::FETCHED_TAG_LANGUAGE,
+            ])
+            ->pluck('value', 'key');
+
+        return self::effectiveFetchedTagLanguageFromValues(
+            $values->get(self::FETCHED_TAG_LANGUAGE_FOLLOWS_UI),
+            $values->get(self::FETCHED_TAG_LANGUAGE),
+        );
     }
 
     public static function contentFocus(): ContentFocus
@@ -329,6 +369,26 @@ class Option extends Model
     public static function resetUiLanguageToDefault(): void
     {
         self::forget(self::UI_LANGUAGE);
+    }
+
+    public static function setFetchedTagLanguageFollowsUi(bool $enabled): void
+    {
+        self::setBooleanValue(self::FETCHED_TAG_LANGUAGE_FOLLOWS_UI, $enabled);
+    }
+
+    public static function setFetchedTagLanguage(FetchedTagLanguage|string $language): void
+    {
+        $normalized = $language instanceof FetchedTagLanguage
+            ? $language
+            : (FetchedTagLanguage::tryFrom($language)
+                ?? FetchedTagLanguage::from((string) self::defaultFor(self::FETCHED_TAG_LANGUAGE)));
+
+        self::setValue(self::FETCHED_TAG_LANGUAGE, $normalized->value);
+    }
+
+    public static function resetFetchedTagLanguageSettingsToDefault(): void
+    {
+        self::forget(self::FETCHED_TAG_LANGUAGE_FOLLOWS_UI, self::FETCHED_TAG_LANGUAGE);
     }
 
     public static function setContentFocus(ContentFocus|string $focus): void
@@ -846,6 +906,8 @@ class Option extends Model
                 self::PRODUCT_FORM_MODAL_COMPLETION_ACTION,
                 self::DLSITE_AGE_APPROPRIATE_LINKS_ENABLED,
                 self::DLSITE_ANNOUNCE_LINKS_ENABLED,
+                self::FETCHED_TAG_LANGUAGE_FOLLOWS_UI,
+                self::FETCHED_TAG_LANGUAGE,
             ])
             ->pluck('value', 'key');
 
@@ -862,6 +924,10 @@ class Option extends Model
             $values->get(self::INDEX_SORT_FIELD_LAYOUT),
         );
         $tableWidth = self::normalizeIndexTableWidth(self::jsonFromValue($values->get(self::INDEX_TABLE_WIDTH)));
+        $fetchedTagLanguage = self::effectiveFetchedTagLanguageFromValues(
+            $values->get(self::FETCHED_TAG_LANGUAGE_FOLLOWS_UI),
+            $values->get(self::FETCHED_TAG_LANGUAGE),
+        );
 
         return new ProductIndexSettings(
             perPage: self::normalizeIndexPerPage($values->get(self::INDEX_PER_PAGE, self::defaultFor(self::INDEX_PER_PAGE))),
@@ -910,6 +976,7 @@ class Option extends Model
                 $values->get(self::DLSITE_ANNOUNCE_LINKS_ENABLED),
                 self::defaultFor(self::DLSITE_ANNOUNCE_LINKS_ENABLED),
             ),
+            fetchedTagLanguage: $fetchedTagLanguage->value,
         );
     }
 
@@ -956,6 +1023,21 @@ class Option extends Model
     private static function setBooleanValue(string $key, bool $enabled): void
     {
         self::setValue($key, $enabled ? '1' : '0');
+    }
+
+    private static function effectiveFetchedTagLanguageFromValues(
+        mixed $followsUi,
+        mixed $language,
+    ): FetchedTagLanguage {
+        if (self::normalizeBoolean(
+            $followsUi,
+            self::defaultFor(self::FETCHED_TAG_LANGUAGE_FOLLOWS_UI),
+        )) {
+            return FetchedTagLanguage::forUiLanguage(UiLanguage::current());
+        }
+
+        return FetchedTagLanguage::tryFrom((string) $language)
+            ?? FetchedTagLanguage::from((string) self::defaultFor(self::FETCHED_TAG_LANGUAGE));
     }
 
     private static function normalizeBoolean(mixed $value, bool $default): bool

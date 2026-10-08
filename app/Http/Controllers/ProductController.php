@@ -9,7 +9,6 @@ use App\Enums\ProductFormat;
 use App\Enums\ProductPriority;
 use App\Enums\ProductProgress;
 use App\Enums\ProductReListenValue;
-use App\Enums\UiLanguage;
 use App\Http\Requests\BaseProductRequest;
 use App\Http\Requests\StoreCustomProductRequest;
 use App\Http\Requests\StoreProductRequest;
@@ -216,7 +215,7 @@ class ProductController extends Controller
      */
     public function edit(Request $request, Product $product)
     {
-        $fetchedLanguage = UiLanguage::current()->fetchedTagLanguage();
+        $fetchedLanguage = Option::effectiveFetchedTagLanguage()->value;
         $editGenres = $this->loadEditGenresForProduct($product->getKey(), $fetchedLanguage);
         $showReadonlyGenreColors = Option::tagColorSurfaceEnabled(Option::TAG_COLOR_SURFACE_EDIT_READONLY);
         $genreColorPairs = $showReadonlyGenreColors
@@ -776,7 +775,7 @@ class ProductController extends Controller
     ): bool {
         $customGenreIds = null;
         $fetchedGenreIds = null;
-        $fetchedLanguage = Genre::LANGUAGE_ENGLISH;
+        $fetchedLanguage = null;
 
         if (
             ProductFieldLayout::editable($editFieldLayout, ProductField::Tags)

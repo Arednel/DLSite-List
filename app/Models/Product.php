@@ -150,7 +150,7 @@ class Product extends Model
     }
 
     #[Scope]
-    protected function filterGenre(Builder $query, string $genreFilter): void
+    protected function filterGenre(Builder $query, string $genreFilter, ?string $fetchedLanguage = null): void
     {
         $genreFilter = trim($genreFilter);
 
@@ -158,14 +158,14 @@ class Product extends Model
             return;
         }
 
-        $query->whereHas('genres', function (Builder $genreQuery) use ($genreFilter): void {
+        $query->whereHas('genres', function (Builder $genreQuery) use ($genreFilter, $fetchedLanguage): void {
             if (ctype_digit($genreFilter)) {
                 $genreQuery->whereKey((int) $genreFilter);
             } else {
                 $genreQuery->where('title', $genreFilter);
             }
 
-            $genreQuery->where(VisibleGenreAttachment::query());
+            $genreQuery->where(VisibleGenreAttachment::query($fetchedLanguage));
         });
     }
 
@@ -299,6 +299,7 @@ class Product extends Model
         string $search,
         array $descriptionColumns = [],
         bool $searchTags = true,
+        ?string $fetchedLanguage = null,
     ): void {
         $search = '%' . trim($search) . '%';
         $columns = [
@@ -317,7 +318,7 @@ class Product extends Model
             $descriptionColumns,
         )));
 
-        $query->where(function (Builder $searchQuery) use ($columns, $search, $searchTags): void {
+        $query->where(function (Builder $searchQuery) use ($columns, $search, $searchTags, $fetchedLanguage): void {
             $searchQuery->whereAny($columns, 'like', $search)
                 ->orWhereHas('contributors', function (Builder $contributorQuery) use ($search): void {
                     $contributorQuery->whereLike('contributors.name', $search);
@@ -327,9 +328,9 @@ class Product extends Model
                 return;
             }
 
-            $searchQuery->orWhereHas('genres', function (Builder $genreQuery) use ($search): void {
+            $searchQuery->orWhereHas('genres', function (Builder $genreQuery) use ($search, $fetchedLanguage): void {
                 $genreQuery->whereLike('title', $search);
-                $genreQuery->where(VisibleGenreAttachment::query());
+                $genreQuery->where(VisibleGenreAttachment::query($fetchedLanguage));
             });
         });
     }
@@ -360,6 +361,7 @@ class Product extends Model
         Builder $query,
         array $tags,
         ProductIndexTagMatch $tagMatch = ProductIndexTagMatch::Any,
+        ?string $fetchedLanguage = null,
     ): void {
         if ($tags === []) {
             return;
@@ -376,18 +378,18 @@ class Product extends Model
                 // Resolve titles once so product queries only filter indexed attachments.
                 $genreIds = Genre::query()->whereLike('title', $tag)->pluck('id');
 
-                $query->whereIn($query->qualifyColumn('id'), function (QueryBuilder $attachmentQuery) use ($genreIds): void {
+                $query->whereIn($query->qualifyColumn('id'), function (QueryBuilder $attachmentQuery) use ($genreIds, $fetchedLanguage): void {
                     $attachmentQuery->select('genre_product.product_id')
                         ->from('genre_product')
                         ->whereIn('genre_product.genre_id', $genreIds)
-                        ->where(VisibleGenreAttachment::query());
+                        ->where(VisibleGenreAttachment::query($fetchedLanguage));
                 });
             }
 
             return;
         }
 
-        $query->whereHas('genres', function (Builder $genreQuery) use ($normalizedTags): void {
+        $query->whereHas('genres', function (Builder $genreQuery) use ($normalizedTags, $fetchedLanguage): void {
             $genreQuery->where(function (Builder $tagQuery) use ($normalizedTags): void {
                 foreach ($normalizedTags as $index => $tag) {
                     if ($index === 0) {
@@ -399,7 +401,7 @@ class Product extends Model
                     $tagQuery->orWhereLike('title', $tag);
                 }
             });
-            $genreQuery->where(VisibleGenreAttachment::query());
+            $genreQuery->where(VisibleGenreAttachment::query($fetchedLanguage));
         });
     }
 

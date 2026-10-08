@@ -1,7 +1,7 @@
 @props(['value' => '', 'language'])
 
 <tr>
-    <td width="130" class="form-table-cell">{{ __('Fetched Language Tags') }}</td>
+    <td width="130" class="form-table-cell">{{ __('Fetched Tags') }}</td>
     <td class="form-table-cell">
         <input type="hidden" name="genre_fetched_language" value="{{ $language }}">
         <textarea id="genre_fetched" name="genre_fetched" class="form-textarea form-field-long"

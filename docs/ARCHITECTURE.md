@@ -108,7 +108,7 @@ Bulk Import history cleanup deletes all persisted run/item history and is unavai
 `GET /tags` renders the Tag Library shell and mounts `app/Livewire/TagLibraryManager.php`.
 
 `TagLibraryManager` owns:
-- current-language/custom tag listing
+- selected-language fetched/custom tag listing
 - zero-use manual tags
 - tag search
 - empty tag creation/deletion
@@ -438,13 +438,15 @@ Tags are normalized instead of stored as per-product text arrays.
 
 A fetched tag can belong to both language buckets for one product. Custom attachments have no fetched-language row.
 
-`UiLanguage` maps:
+`Option::effectiveFetchedTagLanguage()` resolves the selected `FetchedTagLanguage` from the saved settings.
+
+When following the UI language, `FetchedTagLanguage` maps:
 - UI `en` -> fetched tag language `en`
 - UI `ja` -> fetched tag language `jp`
 
 `VisibleGenreAttachment` defines the normal visible set as:
 - all custom tags
-- fetched tags for the selected UI language
+- fetched tags for the selected language
 
 A shared JP/EN fetched attachment is rendered once.
 

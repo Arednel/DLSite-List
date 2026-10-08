@@ -3,13 +3,13 @@
 namespace App\Livewire;
 
 use App\Enums\ProductIndexSortDirection;
-use App\Enums\UiLanguage;
 use App\Models\Genre;
 use App\Models\GenreGroup;
 use App\Models\Option;
 use App\Support\GenreHierarchy;
 use App\Support\ProductGenreSync;
 use App\Support\TagColor;
+use App\Support\VisibleGenreAttachment;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
@@ -177,12 +177,13 @@ class TagLibraryManager extends Component
     public function render(GenreHierarchy $hierarchy): View
     {
         $this->normalizeFilters();
-        $groups = $this->groups();
+        $fetchedLanguage = Option::effectiveFetchedTagLanguage()->value;
+        $groups = $this->groups($fetchedLanguage);
         $this->syncGroupState($groups);
         $tagLibraryColorsEnabled = Option::tagColorSurfaceEnabled(Option::TAG_COLOR_SURFACE_TAG_LIBRARY);
 
         return view('livewire.tag-library-manager', [
-            'genres' => $this->visibleGenres($tagLibraryColorsEnabled),
+            'genres' => $this->visibleGenres($tagLibraryColorsEnabled, $fetchedLanguage),
             'groups' => $this->groupViewData($groups, $tagLibraryColorsEnabled),
             'groupOptions' => $this->groupOptions($groups),
             'confirmingDeleteTag' => $this->confirmingDeleteTag(),
@@ -194,7 +195,6 @@ class TagLibraryManager extends Component
             'editingAvailableParentOptions' => $this->editingAvailableParentOptions($hierarchy),
             'editingSelectedChildOptions' => $this->editingSelectedRelationshipOptions($this->editingTagChildIds),
             'editingAvailableChildOptions' => $this->editingAvailableChildOptions($hierarchy),
-            'fetchedLanguageCode' => UiLanguage::current()->fetchedTagCode(),
             'filtersActive' => $this->filtersAreActive(),
             'sortFieldOptions' => [
                 'alphabetical' => __('Alphabetical'),
@@ -770,16 +770,16 @@ class TagLibraryManager extends Component
     /**
      * @return Collection<int, object{id: int, title: string, products_count: int, pivot_count: int, group_title: string, hidden_on_index: bool, group_hidden_on_index: bool, hidden_on_index_effective: bool, color: ?string, text_color: ?string, color_style: string, has_background_color: bool, has_font_color: bool}>
      */
-    private function visibleGenres(bool $colorsEnabled): Collection
+    private function visibleGenres(bool $colorsEnabled, string $fetchedLanguage): Collection
     {
         $specificGroupId = $this->specificGroupFilterId();
 
-        return $this->visibleGenreQuery()
+        return $this->visibleGenreQuery($fetchedLanguage)
             ->get()
             ->map(fn(Genre $genre): object => $this->genreViewData($genre, $specificGroupId, $colorsEnabled));
     }
 
-    private function visibleGenreQuery(): Builder
+    private function visibleGenreQuery(string $fetchedLanguage): Builder
     {
         $search = trim($this->search);
         $specificGroupId = $this->specificGroupFilterId();
@@ -788,7 +788,7 @@ class TagLibraryManager extends Component
             ->with('groups')
             ->withCount([
                 'products as pivot_count',
-                'visibleProducts as products_count',
+                'products as products_count' => VisibleGenreAttachment::query($fetchedLanguage),
             ])
             ->when($search !== '', function ($query) use ($search): void {
                 $query->where('genres.title', 'like', '%' . $search . '%');
@@ -818,8 +818,8 @@ class TagLibraryManager extends Component
                     $group->whereKey($specificGroupId);
                 });
             })
-            ->where(function (Builder $query): void {
-                $query->whereHas('visibleProducts')
+            ->where(function (Builder $query) use ($fetchedLanguage): void {
+                $query->whereHas('products', VisibleGenreAttachment::query($fetchedLanguage))
                     ->orWhereDoesntHave('products');
             })
             ->when($this->usageFilter === 'empty', function ($query): void {
@@ -1012,14 +1012,16 @@ class TagLibraryManager extends Component
             ->exists();
     }
 
-    private function groups(): Collection
+    private function groups(string $fetchedLanguage): Collection
     {
         return $this->orderedGroups()
-            ->load(['genres' => function ($query): void {
+            ->load(['genres' => function ($query) use ($fetchedLanguage): void {
                 $query
-                    ->withCount('visibleProducts as products_count')
-                    ->where(function (Builder $query): void {
-                        $query->whereHas('visibleProducts')
+                    ->withCount([
+                        'products as products_count' => VisibleGenreAttachment::query($fetchedLanguage),
+                    ])
+                    ->where(function (Builder $query) use ($fetchedLanguage): void {
+                        $query->whereHas('products', VisibleGenreAttachment::query($fetchedLanguage))
                             ->orWhereDoesntHave('products');
                     });
             }]);

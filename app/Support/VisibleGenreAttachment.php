@@ -2,15 +2,15 @@
 
 namespace App\Support;
 
-use App\Enums\UiLanguage;
 use App\Models\Genre;
+use App\Models\Option;
 use Closure;
 
 final class VisibleGenreAttachment
 {
     public static function query(?string $fetchedLanguage = null): Closure
     {
-        $fetchedLanguage ??= UiLanguage::current()->fetchedTagLanguage();
+        $fetchedLanguage ??= Option::effectiveFetchedTagLanguage()->value;
 
         return function ($query) use ($fetchedLanguage): void {
             $query->where(function ($visibleQuery) use ($fetchedLanguage): void {

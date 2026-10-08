@@ -355,9 +355,13 @@ Choices:
 
 The setting is application-wide, not per browser/user.
 
-The UI language also selects the fetched-tag display bucket:
+`Follow UI language automatically` is enabled by default:
 - `en` UI -> `en` fetched tags
 - `ja` UI -> `jp` fetched tags
+
+When disabled, `Fetched Tags language` selects which fetched tags are shown and available for editing:
+- `English` (`en`)
+- `日本語` (`jp`)
 
 #### UI Wording
 
@@ -568,13 +572,13 @@ Index Title is locked visible but reorderable. Its independent `Notes below Titl
 
 Index Tags has separate visibility switches for:
 - Custom Tags
-- current-language Fetched Tags
+- selected-language Fetched Tags
 
 Edit uses separate rows for:
 - Custom Tags
-- current-language Fetched Tags
+- selected-language Fetched Tags
 
-Fetched Tags are readonly by default. If made editable, editing changes only the current UI language's fetched bucket.
+Fetched Tags are readonly by default. If made editable, editing changes only the selected language's fetched bucket.
 
 #### Index Table Columns Default Order
 
@@ -596,7 +600,7 @@ Fetched Tags are readonly by default. If made editable, editing changes only the
 - `author` - hidden
 - `description_japanese` - hidden
 - `description_english` - hidden
-- `tags` - Custom and current-language Fetched Tags visible
+- `tags` - Custom and selected-language Fetched Tags visible
 - `notes` - hidden
 - `start_date` - hidden
 - `end_date` - hidden

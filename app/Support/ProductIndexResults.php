@@ -73,12 +73,14 @@ final class ProductIndexResults
         int|string $perPage,
         array $visibleFields,
         bool $searchHiddenDescriptionsEnabled = false,
+        ?string $fetchedLanguage = null,
     ): EloquentCollection|LengthAwarePaginator {
         $query = $this->filteredQuery(
             $filters,
             $this->indexColumns($visibleFields),
             $this->descriptionSearchColumns($visibleFields, $searchHiddenDescriptionsEnabled),
             in_array(ProductField::Tags->value, $visibleFields, true),
+            $fetchedLanguage,
         );
         $query = $this->applySqlSorting($query, $filters->sorts());
 
@@ -92,8 +94,9 @@ final class ProductIndexResults
         Product $product,
         array $descriptionSearchColumns,
         bool $searchTags = true,
+        ?string $fetchedLanguage = null,
     ): bool {
-        return $this->filteredQuery($filters, null, $descriptionSearchColumns, $searchTags)
+        return $this->filteredQuery($filters, null, $descriptionSearchColumns, $searchTags, $fetchedLanguage)
             ->whereKey($product->getKey())
             ->exists();
     }
@@ -105,12 +108,13 @@ final class ProductIndexResults
         int $page,
         array $descriptionSearchColumns,
         bool $searchTags = true,
+        ?string $fetchedLanguage = null,
     ): bool {
         if ($perPage === Option::INDEX_PER_PAGE_UNLIMITED) {
-            return $this->containsProduct($filters, $product, $descriptionSearchColumns, $searchTags);
+            return $this->containsProduct($filters, $product, $descriptionSearchColumns, $searchTags, $fetchedLanguage);
         }
 
-        return $this->applySqlSorting($this->filteredQuery($filters, null, $descriptionSearchColumns, $searchTags), $filters->sorts())
+        return $this->applySqlSorting($this->filteredQuery($filters, null, $descriptionSearchColumns, $searchTags, $fetchedLanguage), $filters->sorts())
             ->forPage(max(1, $page), max(1, (int) $perPage))
             ->pluck('id')
             ->containsStrict((string) $product->getKey());
@@ -122,12 +126,13 @@ final class ProductIndexResults
         int|string $perPage,
         array $descriptionSearchColumns,
         bool $searchTags = true,
+        ?string $fetchedLanguage = null,
     ): ?int {
         if ($perPage === Option::INDEX_PER_PAGE_UNLIMITED) {
             return null;
         }
 
-        $position = $this->applySqlSorting($this->filteredQuery($filters, null, $descriptionSearchColumns, $searchTags), $filters->sorts())
+        $position = $this->applySqlSorting($this->filteredQuery($filters, null, $descriptionSearchColumns, $searchTags, $fetchedLanguage), $filters->sorts())
             ->pluck('id')
             ->search((string) $product->getKey(), true);
 
@@ -141,13 +146,14 @@ final class ProductIndexResults
         int|string $perPage,
         array $descriptionSearchColumns,
         bool $searchTags = true,
+        ?string $fetchedLanguage = null,
     ): ?int {
         if ($perPage === Option::INDEX_PER_PAGE_UNLIMITED) {
             return null;
         }
 
         $perPage = max(1, (int) $perPage);
-        $total = $this->filteredQuery($filters, null, $descriptionSearchColumns, $searchTags)->count();
+        $total = $this->filteredQuery($filters, null, $descriptionSearchColumns, $searchTags, $fetchedLanguage)->count();
 
         return max(1, (int) ceil($total / $perPage));
     }
@@ -176,7 +182,16 @@ final class ProductIndexResults
         ?array $columns = null,
         array $descriptionSearchColumns = [],
         bool $searchTags = true,
+        ?string $fetchedLanguage = null,
     ): Builder {
+        if ($fetchedLanguage === null && (
+            $filters->genre !== ''
+            || $filters->tags !== ''
+            || ($filters->search !== '' && $searchTags)
+        )) {
+            $fetchedLanguage = Option::effectiveFetchedTagLanguage()->value;
+        }
+
         return Product::query()
             ->select($columns ?? ['id'])
             ->when(
@@ -193,7 +208,7 @@ final class ProductIndexResults
             )
             ->when(
                 $filters->genre !== '',
-                fn($query) => $query->filterGenre($filters->genre)
+                fn($query) => $query->filterGenre($filters->genre, $fetchedLanguage)
             )
             ->when(
                 $filters->series !== '',
@@ -312,11 +327,12 @@ final class ProductIndexResults
                 fn($query) => $query->filterTags(
                     $filters->parsedTags(),
                     $filters->resolvedTagMatch(),
+                    $fetchedLanguage,
                 )
             )
             ->when(
                 $filters->search !== '',
-                fn($query) => $query->searchIndex($filters->search, $descriptionSearchColumns, $searchTags)
+                fn($query) => $query->searchIndex($filters->search, $descriptionSearchColumns, $searchTags, $fetchedLanguage)
             );
     }
 
@@ -326,18 +342,21 @@ final class ProductIndexResults
         bool $includeColors = false,
         bool $hasHiddenGroups = false,
         array $visibleTagBuckets = ['custom' => true, 'fetched' => true],
+        ?string $fetchedLanguage = null,
     ): Collection {
         if ($productIds === [] || ! (($visibleTagBuckets['custom'] ?? false) || ($visibleTagBuckets['fetched'] ?? false))) {
             return collect();
         }
 
-        // Index only needs visible current-language/custom tags, so use one lightweight query
+        $fetchedLanguage ??= Option::effectiveFetchedTagLanguage()->value;
+
+        // Index only needs visible selected-language/custom tags, so use one lightweight query
         // instead of hydrating genre relationships for every listed product.
         if (! $useGroupOrdering) {
             $query = DB::table('genre_product')
                 ->join('genres', 'genres.id', '=', 'genre_product.genre_id')
                 ->whereIn('genre_product.product_id', $productIds)
-                ->where(VisibleGenreAttachment::query())
+                ->where(VisibleGenreAttachment::query($fetchedLanguage))
                 ->where('genres.hidden_on_index', false)
                 ->orderBy('genres.title')
                 ->orderBy('genres.id');
@@ -374,7 +393,7 @@ final class ProductIndexResults
             ->join('genre_group_genre', 'genre_group_genre.genre_id', '=', 'genres.id')
             ->join('genre_groups', 'genre_groups.id', '=', 'genre_group_genre.genre_group_id')
             ->whereIn('genre_product.product_id', $productIds)
-            ->where(VisibleGenreAttachment::query())
+            ->where(VisibleGenreAttachment::query($fetchedLanguage))
             ->where('genres.hidden_on_index', false)
             ->where('genre_groups.hidden_on_index', false)
             ->orderBy('genre_groups.order')
@@ -421,7 +440,7 @@ final class ProductIndexResults
         $ungroupedGenres = DB::table('genre_product')
             ->join('genres', 'genres.id', '=', 'genre_product.genre_id')
             ->whereIn('genre_product.product_id', $productIds)
-            ->where(VisibleGenreAttachment::query())
+            ->where(VisibleGenreAttachment::query($fetchedLanguage))
             ->where('genres.hidden_on_index', false)
             ->whereNotExists(function ($query): void {
                 $query

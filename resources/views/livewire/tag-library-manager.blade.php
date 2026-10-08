@@ -233,7 +233,7 @@
                 </span>
             @empty
                 <p class="tag-library-empty">
-                    {{ __('No :language, custom, or empty tags found.', ['language' => $fetchedLanguageCode]) }}</p>
+                    {{ __('No fetched, custom, or empty tags found.') }}</p>
             @endforelse
         </div>
     @else

@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use App\Enums\FetchedTagLanguage;
 use App\Enums\UiLanguage;
 use App\Livewire\TagLibraryManager;
 use App\Models\Genre;
@@ -19,6 +20,29 @@ use Tests\TestCase;
 class TagLibraryManagerTest extends TestCase
 {
     use RefreshDatabase;
+
+    public function test_render_resolves_fetched_tag_language_once(): void
+    {
+        Option::setFetchedTagLanguageFollowsUi(false);
+        Option::setFetchedTagLanguage(FetchedTagLanguage::Japanese);
+
+        $fetchedLanguageOptionQueries = [];
+        DB::listen(function ($query) use (&$fetchedLanguageOptionQueries): void {
+            $bindings = array_map('strval', $query->bindings);
+
+            if (array_intersect([
+                Option::FETCHED_TAG_LANGUAGE_FOLLOWS_UI,
+                Option::FETCHED_TAG_LANGUAGE,
+            ], $bindings) !== []) {
+                $fetchedLanguageOptionQueries[] = $query->sql;
+            }
+        });
+
+        Livewire::test(TagLibraryManager::class)
+            ->assertSet('search', '');
+
+        $this->assertCount(1, $fetchedLanguageOptionQueries, implode("\n", $fetchedLanguageOptionQueries));
+    }
 
     public function test_lists_visible_and_empty_tags_but_excludes_attached_japanese_only_tags(): void
     {

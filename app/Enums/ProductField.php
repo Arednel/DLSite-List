@@ -66,7 +66,7 @@ enum ProductField: string
             self::DescriptionJapanese => __('Japanese Description'),
             self::DescriptionEnglish => __('English Description'),
             self::Tags => __('Tags'),
-            self::FetchedTags => __('Fetched Language Tags'),
+            self::FetchedTags => __('Fetched Tags'),
             self::Notes => __('Notes'),
             self::StartDate => __('Start Date'),
             self::FinishDate => __('Finish Date'),

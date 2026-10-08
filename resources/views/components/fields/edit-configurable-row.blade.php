@@ -163,7 +163,7 @@
         @if ($field['editable'])
             <x-fields.genre-fetched-editable :value="$genreFetchedInput" :language="$genreFetchedLanguage" />
         @else
-            <x-fields.genre-readonly :label="__('Fetched Language Tags')" :genres="$fetchedGenres" :show-color-chips="$showReadonlyGenreColors" />
+            <x-fields.genre-readonly :label="__('Fetched Tags')" :genres="$fetchedGenres" :show-color-chips="$showReadonlyGenreColors" />
         @endif
     @break
 

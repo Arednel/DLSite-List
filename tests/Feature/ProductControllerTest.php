@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use App\Enums\FetchedTagLanguage;
 use App\Enums\ProductContributorRole;
 use App\Enums\ProductField;
 use App\Enums\ProductPriority;
@@ -1462,7 +1463,7 @@ class ProductControllerTest extends TestCase
     }
 
     #[DataProvider('fetchedTagRenderingProvider')]
-    public function test_edit_renders_only_the_current_language_fetched_tags(
+    public function test_edit_renders_only_the_selected_fetched_tags(
         UiLanguage $uiLanguage,
         bool $editable,
         string $expectedLabel,
@@ -1576,7 +1577,7 @@ class ProductControllerTest extends TestCase
 
         $response = $this->get("/edit/{$product->id}")
             ->assertOk()
-            ->assertSee('Fetched EN Tags')
+            ->assertSee('Fetched Tags')
             ->assertSee('READONLY_INLINE_FIRST_TAG')
             ->assertSee('READONLY_INLINE_SECOND_TAG')
             ->assertSee(', ', false)
@@ -1584,7 +1585,40 @@ class ProductControllerTest extends TestCase
             ->assertDontSee('readonly-tag-chip', false);
     }
 
-    public function test_update_rejects_a_fetched_language_that_no_longer_matches_the_ui_locale(): void
+    public function test_custom_tag_only_update_does_not_query_fetched_tag_language_options_separately(): void
+    {
+        $this->setTagEditLayout(visible: true, customEditable: true, fetchedEditable: false);
+        $product = Product::factory()->create([
+            'work_name' => 'CUSTOM_ONLY_TAG_UPDATE',
+        ]);
+
+        $fetchedLanguageOptionQueries = [];
+        DB::listen(function ($query) use (&$fetchedLanguageOptionQueries): void {
+            $bindings = array_map('strval', $query->bindings);
+
+            // Return navigation loads these options in the existing Index settings batch.
+            if (in_array(Option::INDEX_PER_PAGE, $bindings, true)) {
+                return;
+            }
+
+            if (array_intersect([
+                Option::FETCHED_TAG_LANGUAGE_FOLLOWS_UI,
+                Option::FETCHED_TAG_LANGUAGE,
+            ], $bindings) !== []) {
+                $fetchedLanguageOptionQueries[] = $query->sql;
+            }
+        });
+
+        $this->post("/update/{$product->id}", [
+            'work_name' => $product->work_name,
+            'genre_custom' => 'CUSTOM_ONLY_TAG',
+        ])->assertRedirect()->assertSessionHasNoErrors();
+
+        $this->assertSame([], $fetchedLanguageOptionQueries, implode("\n", $fetchedLanguageOptionQueries));
+        $this->assertSame(['CUSTOM_ONLY_TAG'], $product->customGenres()->pluck('title')->all());
+    }
+
+    public function test_update_rejects_a_fetched_language_that_no_longer_matches_the_selected_fetched_tag_language(): void
     {
         $this->setTagEditLayout(visible: true, customEditable: false, fetchedEditable: true);
         [$product, $englishGenre, $japaneseGenre] = $this->createBilingualFetchedProduct('RENDERED_LANGUAGE');
@@ -1593,12 +1627,13 @@ class ProductControllerTest extends TestCase
 
         $this->get($editUrl)
             ->assertOk()
-            ->assertSee('Fetched EN Tags')
+            ->assertSee('Fetched Tags')
             ->assertSee('name="genre_fetched_language" value="en"', false)
             ->assertSee($englishGenre->title)
             ->assertDontSee($japaneseGenre->title);
 
-        Option::setUiLanguage(UiLanguage::Japanese);
+        Option::setFetchedTagLanguageFollowsUi(false);
+        Option::setFetchedTagLanguage(FetchedTagLanguage::Japanese);
 
         $this->from($editUrl)
             ->post("/update/{$product->id}", [
@@ -1611,7 +1646,7 @@ class ProductControllerTest extends TestCase
 
         $this->get($editUrl)
             ->assertOk()
-            ->assertSee('取得済みJPタグ')
+            ->assertSee('Fetched Tags')
             ->assertSee('name="genre_fetched_language" value="jp"', false)
             ->assertSee($japaneseGenre->title)
             ->assertDontSee($englishGenre->title)
@@ -1636,7 +1671,7 @@ class ProductControllerTest extends TestCase
 
         $this->get($editUrl)
             ->assertOk()
-            ->assertSee('Fetched EN Tags')
+            ->assertSee('Fetched Tags')
             ->assertSee('name="genre_fetched_language" value="en"', false)
             ->assertSee($englishGenre->title);
 
@@ -1650,7 +1685,7 @@ class ProductControllerTest extends TestCase
 
         $this->get($editUrl)
             ->assertOk()
-            ->assertSee('Fetched EN Tags')
+            ->assertSee('Fetched Tags')
             ->assertSee('name="genre_fetched_language" value="en"', false)
             ->assertSee($englishGenre->title)
             ->assertDontSee('RETRY_LANGUAGE_TYPED_EN')
@@ -1689,7 +1724,7 @@ class ProductControllerTest extends TestCase
             ->assertSeeInOrder([
                 'Custom Tags',
                 'ORDER_CUSTOM_TAG_TOKEN',
-                'Fetched EN Tags',
+                'Fetched Tags',
                 'ORDER_FETCHED_EN_TAG_TOKEN',
             ])
             ->assertSee('name="genre_custom"', false)
@@ -4221,10 +4256,10 @@ class ProductControllerTest extends TestCase
 
     public static function fetchedTagRenderingProvider(): iterable
     {
-        yield 'English readonly' => [UiLanguage::English, false, 'Fetched EN Tags', Genre::LANGUAGE_ENGLISH];
-        yield 'Japanese readonly' => [UiLanguage::Japanese, false, '取得済みJPタグ', Genre::LANGUAGE_JAPANESE];
-        yield 'English editable' => [UiLanguage::English, true, 'Fetched EN Tags', Genre::LANGUAGE_ENGLISH];
-        yield 'Japanese editable' => [UiLanguage::Japanese, true, '取得済みJPタグ', Genre::LANGUAGE_JAPANESE];
+        yield 'English readonly' => [UiLanguage::English, false, 'Fetched Tags', Genre::LANGUAGE_ENGLISH];
+        yield 'Japanese readonly' => [UiLanguage::Japanese, false, '取得タグ', Genre::LANGUAGE_JAPANESE];
+        yield 'English editable' => [UiLanguage::English, true, 'Fetched Tags', Genre::LANGUAGE_ENGLISH];
+        yield 'Japanese editable' => [UiLanguage::Japanese, true, '取得タグ', Genre::LANGUAGE_JAPANESE];
     }
 
     public static function invalidFetchedLanguageProvider(): iterable

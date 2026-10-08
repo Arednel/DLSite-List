@@ -147,6 +147,7 @@ class ProductIndex extends Component
             $settings->perPage,
             $hydratedIndexFields,
             $settings->searchHiddenDescriptionsEnabled,
+            $settings->fetchedTagLanguage,
         );
 
         $isUnlimited = $settings->perPage === Option::INDEX_PER_PAGE_UNLIMITED;
@@ -173,6 +174,7 @@ class ProductIndex extends Component
                 $indexTagColorsEnabled,
                 $visibleProductIds !== [] && GenreGroup::query()->hiddenOnIndex()->exists(),
                 $visibleTagBuckets,
+                $settings->fetchedTagLanguage,
             )
             : collect();
 

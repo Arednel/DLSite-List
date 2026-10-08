@@ -2,7 +2,6 @@
 
 namespace App\Support;
 
-use App\Enums\UiLanguage;
 use App\Models\Genre;
 use App\Models\Product;
 use Illuminate\Database\Eloquent\Builder;
@@ -66,7 +65,7 @@ final class ProductGenreSync
     {
         return $this->syncEditableTagBuckets(
             $product,
-            UiLanguage::current()->fetchedTagLanguage(),
+            null,
             null,
             $customGenreIds,
         );
@@ -78,13 +77,17 @@ final class ProductGenreSync
      */
     public function syncEditableTagBuckets(
         Product $product,
-        string $fetchedLanguage,
+        ?string $fetchedLanguage,
         ?array $fetchedGenreIds,
         ?array $customGenreIds,
     ): bool {
         $fetchedGenreIdsByLanguage = $this->currentFetchedGenreIdsByLanguage($product);
 
         if ($fetchedGenreIds !== null) {
+            if ($fetchedLanguage === null) {
+                throw new \InvalidArgumentException('Fetched tag language is required when fetched tags are being changed.');
+            }
+
             $fetchedGenreIdsByLanguage[$fetchedLanguage] = $this->normalizeGenreIds($fetchedGenreIds);
         }
 
@@ -115,7 +118,7 @@ final class ProductGenreSync
             ->eachById(function (Product $product): void {
                 $this->syncEditableTagBuckets(
                     $product,
-                    UiLanguage::current()->fetchedTagLanguage(),
+                    null,
                     null,
                     null,
                 );

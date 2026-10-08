@@ -82,7 +82,7 @@
                                         <x-options.switch
                                             wire:model.live="{{ $layoutConfig['fields'] }}.{{ $row['field'] }}.fetched_visible"
                                             wrapper-class="field-layout-check field-layout-check--edit field-layout-switch">
-                                            {{ __('Fetched Language Tags') }}
+                                            {{ __('Fetched Tags') }}
                                         </x-options.switch>
                                     </div>
                                 @else

@@ -3,7 +3,6 @@
 namespace App\Http\Requests;
 
 use App\Enums\ProductField;
-use App\Enums\UiLanguage;
 use App\Models\Option;
 use App\Support\ProductFieldLayout;
 use Illuminate\Validation\Rule;
@@ -25,20 +24,28 @@ class UpdateProductRequest extends BaseProductRequest
      */
     public function rules(): array
     {
+        $editFieldLayout = Option::editFieldLayout();
+        $validateFetchedLanguage = ProductFieldLayout::fetchedTagsEditable($editFieldLayout)
+            && $this->wasSubmitted('genre_fetched');
+        $fetchedLanguageRules = [
+            Rule::requiredIf($validateFetchedLanguage),
+        ];
+
+        if ($validateFetchedLanguage) {
+            $fetchedLanguageRules[] = Rule::in([Option::effectiveFetchedTagLanguage()->value]);
+        }
+
         return array_merge([
             'work_name' => [
                 Rule::requiredIf(fn(): bool => ProductFieldLayout::editable(
-                    Option::editFieldLayout(),
+                    $editFieldLayout,
                     ProductField::Title,
                 )),
                 'nullable',
                 'string',
             ],
             'genre_fetched' => ['nullable', 'array'],
-            'genre_fetched_language' => [
-                Rule::requiredIf(fn(): bool => $this->wasSubmitted('genre_fetched')),
-                Rule::in([UiLanguage::current()->fetchedTagLanguage()]),
-            ],
+            'genre_fetched_language' => $fetchedLanguageRules,
         ], $this->commonRules());
     }
 

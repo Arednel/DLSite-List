@@ -4,6 +4,10 @@ All notable changes to this project are documented in this file.
 
 ## Unreleased
 
+### Added
+
+* Added a Fetched Tags language option that follows the UI language by default.
+
 ## 1.12.0 - 2026-10-03
 
 *BJ/VJ Work Support & Metadata Expansion*

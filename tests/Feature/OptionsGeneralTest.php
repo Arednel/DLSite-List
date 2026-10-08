@@ -63,7 +63,7 @@ class OptionsGeneralTest extends TestCase
             ->assertSee('Field Layouts')
             ->assertSee('Index Table Columns')
             ->assertSee('Index Sort Menu')
-            ->assertSee('Fetched EN Tags')
+            ->assertSee('Fetched Tags')
             ->assertDontSee('Index page size')
             ->assertDontSee('Refetch all works');
     }

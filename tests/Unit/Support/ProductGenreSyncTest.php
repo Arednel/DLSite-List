@@ -66,6 +66,24 @@ class ProductGenreSyncTest extends TestCase
         $this->assertSame(['Custom'], $product->customGenres->pluck('title')->all());
     }
 
+
+    public function test_custom_sync_does_not_query_language_options(): void
+    {
+        $product = Product::factory()->create();
+        $genre = Genre::query()->create(['title' => 'Custom Without Option Lookup']);
+        $optionQueries = [];
+
+        DB::listen(function ($query) use (&$optionQueries): void {
+            if (str_contains(strtolower($query->sql), 'options')) {
+                $optionQueries[] = $query->sql;
+            }
+        });
+
+        app(ProductGenreSync::class)->syncCustom($product, [$genre->getKey()]);
+
+        $this->assertSame([], $optionQueries);
+    }
+
     public function test_custom_tag_changes_touch_the_product_but_an_unchanged_sync_does_not(): void
     {
         $product = Product::factory()->create();

@@ -339,7 +339,7 @@ Covers the main product HTTP workflows:
 - tag/contributor synchronization
 - metadata and partial-date updates
 - automatic Series
-- current-language fetched/custom tags
+- selected-language fetched/custom tags
 - Index-aware return navigation
 - modal completion responses
 - deletion and cleanup-error handling
@@ -414,7 +414,7 @@ Covers server-rendered DLSite Quick Add fetching-status markup across standalone
 
 #### `tests/Feature/ReturnTargetProductTest.php`
 
-Covers product-aware Index return URLs, visibility checks, pagination/page cleanup, filters, hidden-description behavior, and current-language tag filtering.
+Covers product-aware Index return URLs, visibility checks, pagination/page cleanup, filters, hidden-description behavior, and selected-language tag filtering.
 
 #### `tests/Feature/SetUiLocaleTest.php`
 
@@ -426,12 +426,12 @@ Covers Tag Library expanded/collapsed default, Index group-ordering setting, and
 
 #### `tests/Feature/TagLibraryLocalizationTest.php`
 
-Covers localized Tag Library labels, controls, and current-language behavior.
+Covers localized Tag Library labels, controls, and selected-language behavior.
 
 #### `tests/Feature/TagLibraryManagerTest.php`
 
 Covers Tag Library behavior:
-- current-language/custom/empty tags
+- selected-language fetched/custom/empty tags
 - create/rename/delete
 - groups and multi-group membership
 - saved ordering
@@ -446,7 +446,7 @@ Covers Tag Library behavior:
 
 #### `tests/Feature/UiLanguageSettingsTest.php`
 
-Covers saving/resetting the global UI language and resulting locale/redirect/notice behavior.
+Covers saving/resetting UI and fetched tag language settings and resulting locale/redirect/notice behavior.
 
 #### `tests/Feature/WorkFormModalTest.php`
 
@@ -473,8 +473,11 @@ Covers server-rendered Add/Edit modal completion fallback output and conditional
 `tests/Unit/Enums/ProductIndexSortFieldTest.php`
 - Covers valid Index sort fields (including Publisher, Brand, and the virtual combined Maker sort), labels/backend metadata, and sort-dropdown behavior.
 
+`tests/Unit/Enums/FetchedTagLanguageTest.php`
+- Covers fetched tag language values, labels, and UI language mapping.
+
 `tests/Unit/Enums/UiLanguageTest.php`
-- Covers UI language values, labels, fallback, and fetched-tag language mapping.
+- Covers UI language values, labels, and locale fallback.
 
 #### Logging
 
@@ -534,7 +537,7 @@ Covers server-rendered Add/Edit modal completion fallback output and conditional
 - Covers tag/group color normalization and effective group-over-tag background/text color selection.
 
 `tests/Unit/Support/VisibleGenreAttachmentTest.php`
-- Covers custom/current-language fetched visibility and one-row handling for shared JP/EN attachments.
+- Covers custom/selected-language fetched visibility, language overrides, and one-row handling for shared JP/EN attachments.
 
 #### DLSite Support
 

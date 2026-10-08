@@ -226,7 +226,6 @@ class ProductSurfaceLocalizationTest extends TestCase
         $english = json_decode(file_get_contents(lang_path('en.json')), true, 512, JSON_THROW_ON_ERROR);
         $japanese = json_decode(file_get_contents(lang_path('ja.json')), true, 512, JSON_THROW_ON_ERROR);
         $englishDisplayOverrides = [
-            'Fetched Language Tags' => 'Fetched EN Tags',
             'Custom->Fetched' => 'Custom -> Fetched',
             'Custom->Fetched JP' => 'Custom -> Fetched JP',
             'Custom->Fetched EN' => 'Custom -> Fetched EN',

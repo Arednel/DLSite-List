@@ -3,12 +3,14 @@
 namespace Tests\Unit\Models;
 
 use App\Enums\ContentFocus;
+use App\Enums\FetchedTagLanguage;
 use App\Enums\ProductField;
 use App\Enums\ProductIndexSortField;
 use App\Enums\UiLanguage;
 use App\Models\Option;
 use App\Support\ProductIndexContentOverflow;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\App;
 use Illuminate\Support\Facades\DB;
 use Tests\TestCase;
 
@@ -45,6 +47,57 @@ class OptionMetadataSettingsTest extends TestCase
 
         $this->assertSame(UiLanguage::English, Option::uiLanguage());
         $this->assertDatabaseMissing('options', ['key' => Option::UI_LANGUAGE]);
+    }
+
+    public function test_fetched_tag_language_follows_ui_by_default_and_can_be_selected_independently(): void
+    {
+        $this->assertTrue(Option::fetchedTagLanguageFollowsUi());
+        $this->assertSame(FetchedTagLanguage::English, Option::fetchedTagLanguage());
+        $this->assertSame(FetchedTagLanguage::English, Option::effectiveFetchedTagLanguage());
+
+        App::setLocale(UiLanguage::Japanese->value);
+
+        $this->assertSame(FetchedTagLanguage::Japanese, Option::effectiveFetchedTagLanguage());
+
+        Option::setFetchedTagLanguageFollowsUi(false);
+        Option::setFetchedTagLanguage(FetchedTagLanguage::English);
+
+        $this->assertFalse(Option::fetchedTagLanguageFollowsUi());
+        $this->assertSame(FetchedTagLanguage::English, Option::effectiveFetchedTagLanguage());
+
+        Option::setFetchedTagLanguage('unsupported');
+
+        $this->assertSame(FetchedTagLanguage::English, Option::fetchedTagLanguage());
+    }
+
+
+    public function test_effective_fetched_tag_language_reads_its_options_in_one_query(): void
+    {
+        Option::setFetchedTagLanguageFollowsUi(false);
+        Option::setFetchedTagLanguage(FetchedTagLanguage::Japanese);
+
+        $optionQueries = [];
+        DB::listen(function ($query) use (&$optionQueries): void {
+            if (str_contains(strtolower($query->sql), 'options')) {
+                $optionQueries[] = $query->sql;
+            }
+        });
+
+        $this->assertSame(FetchedTagLanguage::Japanese, Option::effectiveFetchedTagLanguage());
+        $this->assertCount(1, $optionQueries, implode("\n", $optionQueries));
+    }
+
+    public function test_fetched_tag_language_settings_can_be_reset_to_defaults(): void
+    {
+        Option::setFetchedTagLanguageFollowsUi(false);
+        Option::setFetchedTagLanguage(FetchedTagLanguage::Japanese);
+
+        Option::resetFetchedTagLanguageSettingsToDefault();
+
+        $this->assertTrue(Option::fetchedTagLanguageFollowsUi());
+        $this->assertSame(FetchedTagLanguage::English, Option::fetchedTagLanguage());
+        $this->assertDatabaseMissing('options', ['key' => Option::FETCHED_TAG_LANGUAGE_FOLLOWS_UI]);
+        $this->assertDatabaseMissing('options', ['key' => Option::FETCHED_TAG_LANGUAGE]);
     }
 
     public function test_content_focus_defaults_to_general_and_can_be_saved_and_reset(): void
@@ -717,6 +770,7 @@ class OptionMetadataSettingsTest extends TestCase
     {
         $resetCases = [
             [[Option::INDEX_PER_PAGE], fn() => Option::resetIndexPerPageToDefault()],
+            [[Option::FETCHED_TAG_LANGUAGE_FOLLOWS_UI, Option::FETCHED_TAG_LANGUAGE], fn() => Option::resetFetchedTagLanguageSettingsToDefault()],
             [[Option::INDEX_SEARCH_HIDDEN_DESCRIPTIONS_ENABLED], fn() => Option::resetIndexSearchHiddenDescriptionsEnabledToDefault()],
             [[Option::TAG_AUTOCOMPLETE_ORDER, Option::SERIES_AUTOCOMPLETE_ORDER], fn() => Option::resetAutocompleteToDefault()],
             [[Option::AUTO_SERIES_FROM_TITLE_NAME], fn() => Option::resetAutoSeriesFromTitleNameToDefault()],

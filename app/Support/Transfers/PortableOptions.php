@@ -4,6 +4,7 @@ namespace App\Support\Transfers;
 
 use App\Enums\AutocompleteOrder;
 use App\Enums\ContentFocus;
+use App\Enums\FetchedTagLanguage;
 use App\Enums\ProductIndexSortField;
 use App\Enums\UiLanguage;
 use App\Models\Option;
@@ -20,6 +21,8 @@ final class PortableOptions
 {
     private const PORTABLE_KEYS = [
         Option::UI_LANGUAGE,
+        Option::FETCHED_TAG_LANGUAGE_FOLLOWS_UI,
+        Option::FETCHED_TAG_LANGUAGE,
         Option::CONTENT_FOCUS,
         Option::INDEX_PER_PAGE,
         Option::INDEX_SEARCH_HIDDEN_DESCRIPTIONS_ENABLED,
@@ -140,6 +143,7 @@ final class PortableOptions
     {
         return match ($key) {
             Option::UI_LANGUAGE => ['value' => ['required', Rule::enum(UiLanguage::class)]],
+            Option::FETCHED_TAG_LANGUAGE => ['value' => ['required', Rule::enum(FetchedTagLanguage::class)]],
             Option::CONTENT_FOCUS => ['value' => ['required', Rule::enum(ContentFocus::class)]],
             Option::INDEX_PER_PAGE => [
                 'value' => [
@@ -151,6 +155,7 @@ final class PortableOptions
                     ),
                 ],
             ],
+            Option::FETCHED_TAG_LANGUAGE_FOLLOWS_UI,
             Option::INDEX_SEARCH_HIDDEN_DESCRIPTIONS_ENABLED,
             Option::INDEX_IMAGE_VIEWER_ENABLED,
             Option::AUTO_SERIES_FROM_TITLE_NAME,
