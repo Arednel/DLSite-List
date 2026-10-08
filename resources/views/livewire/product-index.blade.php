@@ -357,7 +357,7 @@
                         <div id="index-tags-{{ $product->id }}"
                             x-bind:class="{ 'index-content-overflow__content--collapsed': !expanded }">
                 @endif
-                @foreach ($productGenres[$product->id] ?? [] as $genre)
+                @forelse ($productGenres[$product->id] ?? [] as $genre)
                     @if (($genre->has_background_color ?? false) || ($genre->has_font_color ?? false))
                         <a @class([
                             'index-tag-chip',
@@ -372,7 +372,9 @@
                         <a
                             href="{{ $tagHrefPrefix }}genre={{ $genre->id }}">{{ $genre->title }}</a>{{ !$loop->last ? ',' : '' }}
                     @endif
-                @endforeach
+                @empty
+                    -
+                @endforelse
                 @if ($contentOverflow['tags']['enabled'])
             </div>
             <button type="button" class="index-content-overflow__toggle" aria-controls="index-tags-{{ $product->id }}"
