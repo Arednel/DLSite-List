@@ -8,10 +8,16 @@ use App\Livewire\OptionsResetDefaults;
 use App\Livewire\ProductIndex;
 use App\Models\Option;
 use App\Models\Product;
+use DOMDocument;
+use DOMElement;
+use DOMXPath;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Testing\TestResponse;
 use Livewire\Livewire;
+use PHPUnit\Framework\Attributes\DataProvider;
 use Tests\TestCase;
 
 class IndexImageViewerTest extends TestCase
@@ -58,6 +64,15 @@ class IndexImageViewerTest extends TestCase
 
         $this->assertFalse(Option::indexImageViewerEnabled());
         $this->assertDatabaseMissing('options', ['key' => Option::INDEX_IMAGE_VIEWER_ENABLED]);
+    }
+
+    public function test_index_image_viewer_always_uses_cherry_theme(): void
+    {
+        Option::setProductFormTheme(Option::PRODUCT_FORM_THEME_BLACK);
+
+        $this->get(route('index'))
+            ->assertOk()
+            ->assertSee('class="product-form-theme-cherry"', false);
     }
 
     public function test_disabled_viewer_keeps_remote_image_link_and_omits_viewer_assets(): void
@@ -185,6 +200,69 @@ class IndexImageViewerTest extends TestCase
             ]);
     }
 
+    #[DataProvider('coverlessIndexCases')]
+    public function test_coverless_works_use_the_placeholder_and_the_viewer_returns_only_samples(?string $cover, bool $withSamples, bool $viewerEnabled): void
+    {
+        Storage::fake('public');
+        Option::setIndexImageViewerEnabled($viewerEnabled);
+        $sample = 'Works/RJ100000006/sample_1.png';
+        $file = UploadedFile::fake()->image('sample.png', 25, 35);
+        $bytes = file_get_contents($file->getRealPath());
+        if ($withSamples) {
+            Storage::disk('public')->put($sample, $bytes);
+        }
+        $product = Product::factory()->create([
+            'id' => 'RJ100000006',
+            'work_name' => 'Coverless work',
+            'work_image' => $cover,
+            'sample_images' => $withSamples ? ['storage/' . $sample] : [],
+        ]);
+
+        $page = $this->get(route('index'))->assertOk()->assertSee('Coverless work');
+        $xpath = $this->responseXPath($page);
+        $cell = '//tr[@id="RJ100000006"]//td[contains(@class, "image")]';
+        $this->assertCount(0, $xpath->query($cell . '//img'));
+        $placeholders = $xpath->query($cell . '//div[contains(concat(" ", normalize-space(@class), " "), " index-image-viewer__placeholder ")]');
+        $this->assertCount(1, $placeholders);
+        $placeholder = $placeholders->item(0);
+        $this->assertInstanceOf(DOMElement::class, $placeholder);
+
+        $parent = $placeholder->parentNode;
+        $this->assertInstanceOf(DOMElement::class, $parent);
+
+        $this->assertTrue($placeholder->hasAttribute('data-index-image-viewer-placeholder'));
+        $this->assertSame('status', $placeholder->getAttribute('role'));
+        $this->assertSame('No image', trim($placeholder->textContent));
+        $this->assertCount(1, $xpath->query('.//i[contains(concat(" ", normalize-space(@class), " "), " fa-image ")]', $placeholder));
+        $this->assertSame($cover, $product->fresh()->work_image);
+
+        if (! $viewerEnabled) {
+            $this->assertSame($product->dlsiteWorkUrl(false), $parent->getAttribute('href'));
+            $page->assertDontSee('index-image-viewer-dialog', false);
+            return;
+        }
+
+        $this->assertSame($product->id, $parent->getAttribute('data-index-image-viewer-product'));
+        Livewire::test(ProductIndex::class)->call('workImages', $product->id)->assertReturned(
+            $withSamples ? [asset('storage/' . $sample . '?v=' . filemtime(Storage::disk('public')->path($sample)))] : [],
+        );
+        if ($withSamples) {
+            $response = $this->get('/storage/' . $sample)->assertOk();
+            $this->assertSame($bytes, file_get_contents($response->baseResponse->getFile()->getPathname()));
+        }
+    }
+
+    public static function coverlessIndexCases(): array
+    {
+        return [
+            'null cover, viewer disabled' => [null, false, false],
+            'empty cover, viewer disabled' => ['', false, false],
+            'null cover, samples available' => [null, true, true],
+            'empty cover, samples available' => ['', true, true],
+            'no saved images' => [null, false, true],
+        ];
+    }
+
     public function test_hidden_image_column_does_not_render_a_viewer_trigger(): void
     {
         Option::setIndexImageViewerEnabled(true);
@@ -240,4 +318,15 @@ class IndexImageViewerTest extends TestCase
         $this->assertSame('storage/Works/RJ100000004/cover.jpg', $malformedProduct->work_image);
         $this->assertSame([], $malformedProduct->sample_images);
     }
+
+    private function responseXPath(TestResponse $response): DOMXPath
+    {
+        $response->assertOk();
+
+        $document = new DOMDocument;
+        @$document->loadHTML($response->getContent());
+
+        return new DOMXPath($document);
+    }
+
 }

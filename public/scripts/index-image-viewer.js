@@ -95,6 +95,24 @@
         return candidates.filter((item) => typeof item === 'string' && item !== '');
     };
 
+    const editorImages = (trigger) => {
+        const form = trigger.closest('form');
+        if (!form) {
+            return [];
+        }
+
+        const cover = form.querySelector(
+            '[data-product-image-editor-kind="cover"] [data-product-image-editor-viewer]',
+        );
+        const samples = form.querySelectorAll(
+            '[data-product-image-editor-kind="samples"] [data-product-image-editor-viewer]',
+        );
+
+        return [cover, ...samples]
+            .filter((item) => item && !item.closest('[hidden]'))
+            .map((item) => item.dataset.indexImageViewerSource);
+    };
+
     const open = async (trigger) => {
         const request = ++requestSequence;
         opener = trigger;
@@ -119,20 +137,30 @@
         document.body.classList.add('image-viewer-open');
 
         try {
-            const componentId = trigger.closest('[wire\\:id]')?.getAttribute('wire:id');
-            const component = componentId ? window.Livewire?.find(componentId) : null;
+            let candidates;
 
-            if (!component) {
-                throw new Error('Image viewer Livewire component was not found.');
+            if (trigger.hasAttribute('data-product-image-editor-viewer')) {
+                candidates = editorImages(trigger);
+            } else {
+                const componentId = trigger.closest('[wire\\:id]')?.getAttribute('wire:id');
+                const component = componentId ? window.Livewire?.find(componentId) : null;
+
+                if (!component) {
+                    throw new Error('Image viewer Livewire component was not found.');
+                }
+
+                candidates = await component.workImages(trigger.dataset.indexImageViewerProduct);
             }
-
-            const candidates = await component.workImages(trigger.dataset.indexImageViewerProduct);
 
             if (request !== requestSequence) {
                 return;
             }
 
             images = normalizeImages(candidates);
+
+            const requestedSource = trigger.dataset.indexImageViewerSource;
+            const requestedIndex = requestedSource ? images.indexOf(requestedSource) : -1;
+            currentIndex = requestedIndex >= 0 ? requestedIndex : 0;
 
             if (images.length === 0) {
                 showUnavailableGallery();
@@ -180,7 +208,9 @@
             return;
         }
 
-        const trigger = event.target.closest('[data-index-image-viewer-product]');
+        const trigger = event.target.closest(
+            '[data-index-image-viewer-product], [data-product-image-editor-viewer]',
+        );
 
         if (trigger) {
             open(trigger);

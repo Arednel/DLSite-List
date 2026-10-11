@@ -948,5 +948,15 @@
     "Circle / Publisher / Brand": "サークル / 出版社 / ブランド",
     "Combines the separate Circle, Publisher, and Brand fields into one Index column.": "サークル・出版社・ブランドの各項目を1つの一覧列にまとめて表示します。",
     "Searches Circle, Publisher, and Brand together.": "サークル・出版社・ブランドをまとめて検索します。",
-    "Sorts by the first available name: Circle, then Publisher, then Brand.": "サークル、出版社、ブランドの順で最初に登録されている名前を基準に並べ替えます。"
+    "Sorts by the first available name: Circle, then Publisher, then Brand.": "サークル、出版社、ブランドの順で最初に登録されている名前を基準に並べ替えます。",
+    "Remove cover image": "カバー画像を削除",
+    "Preview cover image": "カバー画像をプレビュー",
+    "Drag image to reorder": "ドラッグして画像を並べ替え",
+    "Drag to reorder": "ドラッグして並べ替え",
+    "Remove sample image": "サンプル画像を削除",
+    "Preview sample image": "サンプル画像をプレビュー",
+    "New work": "新しい作品",
+    "Images cannot be saved while another library operation is in progress. Try again.": "別のライブラリ操作が進行中のため、画像を保存できません。もう一度お試しください。",
+    "Sample image order is no longer valid. Reload the form and try again.": "サンプル画像の並び順が無効になりました。フォームを再読み込みして、もう一度お試しください。",
+    "An image already exists at the destination. Remove the leftover file and try again.": "保存先に画像がすでに存在します。残っているファイルを削除して、もう一度お試しください。"
 }

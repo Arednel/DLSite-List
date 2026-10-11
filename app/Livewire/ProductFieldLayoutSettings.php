@@ -301,7 +301,9 @@ class ProductFieldLayoutSettings extends Component
             $fields[$field->value] = [
                 ...$row,
                 'field' => $field->value,
-                'label' => (string) ($row['label'] ?? $field->label()),
+                'label' => $field === ProductField::Image
+                    ? __('Cover Image')
+                    : (string) ($row['label'] ?? $field->label()),
             ];
         }
 

@@ -418,8 +418,10 @@ The explicit Japanese/English description filters are independent of this settin
 Default: disabled.
 
 When enabled:
-- clicking an Index thumbnail opens the saved cover and sample images in "Image Viewer"
+- clicking an Index cover thumbnail or `No image` placeholder opens the saved cover and sample images in "Image Viewer"
+- coverless works can still open sample-only galleries
 - the viewer operates only while the Image Index field is visible
+- the Index viewer keeps Cherry styling independently of the Add/Edit Form Theme
 
 Hiding the Image field does not reset the saved Image Viewer option.
 
@@ -494,6 +496,8 @@ This theme applies to:
 - Custom Quick Add
 - Edit Details
 
+The cover/sample image editor and viewer inside Custom Quick Add/Edit follow this theme. The Index Image Viewer does not; it keeps Cherry styling.
+
 #### Add/Edit Modal
 
 Default:
@@ -566,7 +570,7 @@ Each layout can be saved independently. `Save all field layouts` saves all seven
 
 Rows can be reordered and shown/hidden where allowed. Edit rows can also expose an `Editable` setting where supported.
 
-Required fields remain visible.
+Required fields remain visible. The `image` field is shown as `Cover Image` in Field Layout settings; the Index table column itself remains `Image`.
 
 Index Title is locked visible but reorderable. Its independent `Notes below Title` switch is enabled by default.
 
@@ -617,6 +621,8 @@ Fetched Tags are readonly by default. If made editable, editing changes only the
 - `score`
 - `series`
 - `title` - locked visible
+- `image`
+- `sample_images`
 - `fetched_tags`
 - `tags`
 - `notes`
@@ -732,7 +738,7 @@ Hidden DLsite Quick Add metadata fields are not accepted as user overrides, but 
 - `notes`
 - `age_category` - locked visible
 - `product_format` - hidden
-- `image` - locked visible
+- `image`
 - `sample_images`
 - `start_date`
 - `end_date`
@@ -749,7 +755,7 @@ Hidden DLsite Quick Add metadata fields are not accepted as user overrides, but 
 - `description_japanese` - hidden
 - `description_english` - hidden
 
-Custom Quick Add has no scraper fallback. Hidden optional description rows store `null`.
+Custom Quick Add has no scraper fallback. Cover and sample images are optional; hiding either image field removes it from the form/submission. Hidden optional description rows store `null`.
 
 #### Index Sort Menu Default Order
 

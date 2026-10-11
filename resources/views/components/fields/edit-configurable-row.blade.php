@@ -27,6 +27,14 @@
         @endif
     @break
 
+    @case('image')
+        <x-fields.work-image-upload :product="$product" :editable="$field['editable']" :viewer-title="$product->id . ' - ' . $product->work_name" />
+    @break
+
+    @case('sample_images')
+        <x-fields.sample-images-upload :product="$product" :editable="$field['editable']" :viewer-title="$product->id . ' - ' . $product->work_name" />
+    @break
+
     @case('score')
         @if ($field['editable'])
             <x-fields.score-select :value="$product->score" />

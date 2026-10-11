@@ -9,6 +9,10 @@
 
     <link rel="stylesheet" href="{{ asset('css/edit.css') }}?v={{ filemtime(public_path('css/edit.css')) }}">
     <link rel="stylesheet"
+        href="{{ asset('css/image-viewer.css') }}?v={{ filemtime(public_path('css/image-viewer.css')) }}">
+    <link rel="stylesheet"
+        href="{{ asset('css/product-image-editor.css') }}?v={{ filemtime(public_path('css/product-image-editor.css')) }}">
+    <link rel="stylesheet"
         href="{{ asset('css/autocomplete.css') }}?v={{ filemtime(public_path('css/autocomplete.css')) }}">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/7.0.1/css/all.min.css">
     <link rel="stylesheet"
@@ -35,7 +39,8 @@
                                     </div>
                                     <div class="dialog-body">
                                         <form name="edit_work" method="post" id="main-form"
-                                            action="{{ route('products.update', ['product' => $product]) }}">
+                                            action="{{ route('products.update', ['product' => $product]) }}"
+                                            enctype="multipart/form-data">
                                             @csrf
                                             @if ($isModal)
                                                 <input type="hidden" name="modal" value="1">
@@ -114,6 +119,8 @@
         </div>
     </div>
 
+    <x-image-viewer-dialog />
+
     <div id="deleteModal" class="modal">
         <div class="modal-content">
             <p>{{ __('Are you sure you want to delete this work?') }}</p>
@@ -128,6 +135,12 @@
 <script
     src="{{ asset('scripts/deleteConfirmation.js') }}?v={{ filemtime(public_path('scripts/deleteConfirmation.js')) }}">
 </script>
+<script
+    src="{{ asset('scripts/product-image-editor.js') }}?v={{ filemtime(public_path('scripts/product-image-editor.js')) }}"
+    defer></script>
+<script
+    src="{{ asset('scripts/index-image-viewer.js') }}?v={{ filemtime(public_path('scripts/index-image-viewer.js')) }}"
+    defer></script>
 <script src="{{ asset('scripts/dateInsert.js') }}?v={{ filemtime(public_path('scripts/dateInsert.js')) }}"></script>
 <script
     src="{{ asset('scripts/autocomplete-text.js') }}?v={{ filemtime(public_path('scripts/autocomplete-text.js')) }}">

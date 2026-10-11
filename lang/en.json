@@ -948,5 +948,15 @@
     "Circle / Publisher / Brand": "Circle / Publisher / Brand",
     "Combines the separate Circle, Publisher, and Brand fields into one Index column.": "Combines the separate Circle, Publisher, and Brand fields into one Index column.",
     "Searches Circle, Publisher, and Brand together.": "Searches Circle, Publisher, and Brand together.",
-    "Sorts by the first available name: Circle, then Publisher, then Brand.": "Sorts by the first available name: Circle, then Publisher, then Brand."
+    "Sorts by the first available name: Circle, then Publisher, then Brand.": "Sorts by the first available name: Circle, then Publisher, then Brand.",
+    "Remove cover image": "Remove cover image",
+    "Preview cover image": "Preview cover image",
+    "Drag image to reorder": "Drag image to reorder",
+    "Drag to reorder": "Drag to reorder",
+    "Remove sample image": "Remove sample image",
+    "Preview sample image": "Preview sample image",
+    "New work": "New work",
+    "Images cannot be saved while another library operation is in progress. Try again.": "Images cannot be saved while another library operation is in progress. Try again.",
+    "Sample image order is no longer valid. Reload the form and try again.": "Sample image order is no longer valid. Reload the form and try again.",
+    "An image already exists at the destination. Remove the leftover file and try again.": "An image already exists at the destination. Remove the leftover file and try again."
 }

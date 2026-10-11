@@ -25,7 +25,7 @@ class ProductSurfaceLocalizationTest extends TestCase
 
         $this->get(route('index'))
             ->assertOk()
-            ->assertSee('<html lang="en">', false);
+            ->assertSee('<html lang="en"', false);
         $this->get(route('products.create'))
             ->assertOk()
             ->assertSee('<html lang="en"', false);
@@ -89,7 +89,7 @@ class ProductSurfaceLocalizationTest extends TestCase
 
         $html = $this->get('/?progress=Listening')
             ->assertOk()
-            ->assertSee('<html lang="ja">', false)
+            ->assertSee('<html lang="ja"', false)
             ->assertSee('USER_WORK_NAME_TOKEN')
             ->assertSee('href="/?progress=Listening"', false)
             ->assertSee('placeholder="検索..."', false)
@@ -130,6 +130,7 @@ class ProductSurfaceLocalizationTest extends TestCase
 
     public function test_japanese_modal_completion_localizes_fallback_copy_and_preserves_redirect_target(): void
     {
+        Storage::fake('local');
         Storage::fake('public');
         Option::setUiLanguage(UiLanguage::Japanese);
         $workId = Product::factory()->make()->id;
@@ -150,6 +151,9 @@ class ProductSurfaceLocalizationTest extends TestCase
             ->assertSee('変更を保存しました')
             ->assertSee('>続行</a>', false)
             ->assertSee("redirectUrl: '\\/#{$workId}'", false);
+
+        $this->assertSame("storage/Works/{$workId}/cover.png", Product::findOrFail($workId)->work_image);
+        Storage::disk('public')->assertExists("Works/{$workId}/cover.png");
     }
 
     public function test_japanese_custom_validation_is_localized_while_framework_validation_stays_english(): void

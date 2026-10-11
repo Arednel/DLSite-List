@@ -204,7 +204,7 @@ Covers Refetch queue failure recovery, cancellation, continued processing after 
 
 #### `tests/Feature/BulkImportTest.php`
 
-Covers Bulk Import parsing/validation, shared-input snapshots, queued item processing, skips/failures, transactional persistence (including failed completion writes, worker interruption before commit, and stale item/run state), and run completion. Product Format coverage verifies fetched values when the field is hidden or blank and manual override behavior when a visible value is supplied. Also verifies announcement dates and Site IDs are saved by the shared importer.
+Covers Bulk Import parsing/validation, shared-input snapshots, queued item processing, skips/failures, transactional persistence (including failed completion writes, worker interruption before commit, and stale item/run state), and run completion. Product Format coverage verifies fetched values when the field is hidden or blank and manual override behavior when a visible value is supplied. Also verifies announcement dates and Site IDs are saved by the shared importer, and failed cover/sample downloads are omitted from persisted image references.
 
 #### `tests/Feature/OptionsBulkImportsTest.php`
 
@@ -255,8 +255,10 @@ Covers saving/resetting Index Notes/Tags overflow settings and their validation/
 #### `tests/Feature/IndexImageViewerTest.php`
 
 Covers the Image Viewer option and Index viewer rendering/data:
+- Index viewer always uses Cherry styling independently of the Add/Edit Form Theme
 - enable/disable behavior
 - image ordering/path handling
+- Index placeholder and sample-only/empty galleries for works without cover paths
 - accessible controls
 - safe full-image links
 - conditional script/dialog output
@@ -335,7 +337,8 @@ Covers the main product HTTP workflows:
 - hidden/read-only field preservation
 - DLsite Quick Add fetch/store/error behavior and shared importer regression coverage
 - Product Format Edit/Custom Quick Add input, fetched Quick Add fallback, visible override, blank fallback, and localized validation
-- Custom Quick Add uploads
+- Custom Quick Add/Edit browser-local image editor rendering and normal multipart uploads
+- cover/sample add, remove, readonly, mixed existing/new ordering, and optional-cover behavior
 - tag/contributor synchronization
 - metadata and partial-date updates
 - automatic Series
@@ -351,6 +354,12 @@ Covers migration of legacy product genre data into normalized tag/product relati
 #### `tests/Feature/ProductImageCleanupTest.php`
 
 Covers `works:cleanup-images`, including preservation of referenced images and protection of orphan/unknown/nested/non-image files.
+
+#### `tests/Feature/ProductImageEditorTest.php`
+
+Covers Custom Quick Add and Edit image handling: optional covers, add/replace/remove cover states, multi-file sample selection, removal and reordering, mixed existing/new images, old-input restoration, readonly/hidden field handling, validation, destination collisions, recovery, and rollback behavior.
+
+The tests cover the server-side multipart contract and rendered form structure. Browser previews, multi-file card creation, reordering, and native drag-and-drop are handled by `public/scripts/product-image-editor.js`. Newly selected files are lost after a full validation redirect as expected for native file inputs, while existing-image removal and order are restored through Laravel old input.
 
 #### `tests/Feature/ProductIndexLivewireTest.php`
 
@@ -638,11 +647,21 @@ These checks remain manual because they depend on browser behavior, JavaScript e
 ### Image Viewer
 
 - Enable the viewer and confirm clicking an Index thumbnail opens the saved cover first.
+- Confirm a coverless work shows `No image` and can still open a sample-only gallery.
+- Confirm the Index viewer keeps Cherry styling regardless of the Add/Edit Form Theme.
 - Confirm Previous/Next wrap through the cover and ordered sample images.
 - Confirm keyboard navigation and close controls.
 - Open another work and confirm the viewer starts from that work's cover.
 - Confirm `View in full` opens the currently displayed image in a new tab.
 - Check behavior when one of the saved image paths is missing/unavailable and confirm the viewer remains usable.
+
+### Cover / Sample Image Editor
+
+- In Custom Quick Add and an Edit form with image fields enabled, select a cover/sample and confirm the preview appears immediately without a request/upload step.
+- Open the shared image viewer from existing and newly selected images and confirm it follows the current cover/sample order and selected Add/Edit Form Theme.
+- Add several samples, mix them with existing samples, drag them into a new order, remove individual items, and remove all samples.
+- Replace and remove the optional cover, then Save and confirm the final canonical files and saved sample order match the visible editor state.
+- Confirm a full validation redirect/reload clears newly selected local files, requiring them to be selected again as normal browser file-input behavior.
 
 ### Quick Add Fetch Status
 

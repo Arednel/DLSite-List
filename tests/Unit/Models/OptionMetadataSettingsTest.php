@@ -436,7 +436,7 @@ class OptionMetadataSettingsTest extends TestCase
         $this->assertFalse(collect($bulkImportLayout)->firstWhere('field', ProductField::Notes->value)['visible']);
         $this->assertTrue(collect($customQuickAddLayout)->firstWhere('field', ProductField::Title->value)['visible']);
         $this->assertTrue(collect($customQuickAddLayout)->firstWhere('field', ProductField::AgeCategory->value)['visible']);
-        $this->assertTrue(collect($customQuickAddLayout)->firstWhere('field', ProductField::Image->value)['visible']);
+        $this->assertFalse(collect($customQuickAddLayout)->firstWhere('field', ProductField::Image->value)['visible']);
         $this->assertFalse(collect($customQuickAddLayout)->firstWhere('field', ProductField::SampleImages->value)['visible']);
 
         Option::resetFieldLayoutsToDefault();

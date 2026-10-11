@@ -62,6 +62,8 @@ class ProductFieldLayoutTest extends TestCase
                 ProductField::Score,
                 ProductField::Series,
                 ProductField::Title,
+                ProductField::Image,
+                ProductField::SampleImages,
                 ProductField::FetchedTags,
                 ProductField::Tags,
                 ProductField::Notes,
@@ -196,9 +198,15 @@ class ProductFieldLayoutTest extends TestCase
 
         $this->assertTrue(ProductField::Title->isVisibilityLocked(ProductFieldLayout::SURFACE_EDIT));
         $this->assertTrue(ProductField::Title->isEditableByDefault(ProductFieldLayout::SURFACE_EDIT));
+        $this->assertTrue(ProductField::Image->isAvailableOn(ProductFieldLayout::SURFACE_EDIT));
+        $this->assertTrue(ProductField::SampleImages->isAvailableOn(ProductFieldLayout::SURFACE_EDIT));
+        $this->assertTrue(ProductField::Image->isEditableByDefault(ProductFieldLayout::SURFACE_EDIT));
+        $this->assertTrue(ProductField::SampleImages->isEditableByDefault(ProductFieldLayout::SURFACE_EDIT));
+        $this->assertTrue(ProductField::Image->isHiddenByDefault(ProductFieldLayout::SURFACE_EDIT));
+        $this->assertTrue(ProductField::SampleImages->isHiddenByDefault(ProductFieldLayout::SURFACE_EDIT));
         $this->assertTrue(ProductField::ProductCode->isVisibilityLocked(ProductFieldLayout::SURFACE_QUICK_ADD));
         $this->assertTrue(ProductField::ProductCode->isVisibilityLocked(ProductFieldLayout::SURFACE_BULK_IMPORT));
-        $this->assertTrue(ProductField::Image->isVisibilityLocked(ProductFieldLayout::SURFACE_CUSTOM_QUICK_ADD));
+        $this->assertFalse(ProductField::Image->isVisibilityLocked(ProductFieldLayout::SURFACE_CUSTOM_QUICK_ADD));
 
         $this->assertTrue(ProductField::AgeCategory->isHiddenByDefault(ProductFieldLayout::SURFACE_EDIT));
         $this->assertTrue(ProductField::AgeCategory->isHiddenByDefault(ProductFieldLayout::SURFACE_QUICK_ADD));
@@ -322,6 +330,8 @@ class ProductFieldLayoutTest extends TestCase
             ProductField::Score->value,
             ProductField::Series->value,
             ProductField::Title->value,
+            ProductField::Image->value,
+            ProductField::SampleImages->value,
             ProductField::FetchedTags->value,
             ProductField::Tags->value,
             ProductField::Notes->value,
@@ -360,11 +370,17 @@ class ProductFieldLayoutTest extends TestCase
         ], ProductFieldLayout::visibleFields($editLayout));
 
         $titleRow = collect($editLayout)->firstWhere('field', ProductField::Title->value);
+        $imageRow = collect($editLayout)->firstWhere('field', ProductField::Image->value);
+        $sampleImagesRow = collect($editLayout)->firstWhere('field', ProductField::SampleImages->value);
         $ageRow = collect($editLayout)->firstWhere('field', ProductField::AgeCategory->value);
 
         $this->assertTrue($titleRow['visible']);
         $this->assertTrue($titleRow['visibility_locked']);
         $this->assertTrue($titleRow['editable']);
+        $this->assertFalse($imageRow['visible']);
+        $this->assertFalse($imageRow['editable']);
+        $this->assertFalse($sampleImagesRow['visible']);
+        $this->assertFalse($sampleImagesRow['editable']);
         $this->assertFalse($ageRow['visible']);
         $this->assertFalse($ageRow['editable']);
 
@@ -529,12 +545,32 @@ class ProductFieldLayoutTest extends TestCase
             ProductField::Priority->value,
         ], ProductFieldLayout::visibleFields($layout));
 
-        foreach ([ProductField::ProductCode, ProductField::Title, ProductField::AgeCategory, ProductField::Image] as $field) {
+        foreach ([ProductField::ProductCode, ProductField::Title, ProductField::AgeCategory] as $field) {
             $row = collect($layout)->firstWhere('field', $field->value);
 
             $this->assertTrue($row['visible']);
             $this->assertTrue($row['visibility_locked']);
         }
+
+        $imageRow = collect($layout)->firstWhere('field', ProductField::Image->value);
+        $this->assertTrue($imageRow['visible']);
+        $this->assertArrayNotHasKey('visibility_locked', $imageRow);
+    }
+
+
+    public function test_custom_quick_add_can_reorder_and_hide_cover_and_sample_images(): void
+    {
+        $layout = ProductFieldLayout::normalize([
+            ['field' => ProductField::SampleImages->value, 'visible' => false],
+            ['field' => ProductField::Image->value, 'visible' => false],
+        ], ProductFieldLayout::SURFACE_CUSTOM_QUICK_ADD);
+
+        $this->assertSame([
+            ProductField::SampleImages->value,
+            ProductField::Image->value,
+        ], array_slice(collect($layout)->pluck('field')->all(), 0, 2));
+        $this->assertFalse(collect($layout)->firstWhere('field', ProductField::SampleImages->value)['visible']);
+        $this->assertFalse(collect($layout)->firstWhere('field', ProductField::Image->value)['visible']);
     }
 
     public function test_quick_add_layouts_normalize_invalid_duplicate_hidden_and_locked_rows(): void
@@ -564,10 +600,11 @@ class ProductFieldLayoutTest extends TestCase
             ['field' => ProductField::SampleImages->value, 'visible' => false],
         ], ProductFieldLayout::SURFACE_CUSTOM_QUICK_ADD);
 
-        foreach ([ProductField::ProductCode, ProductField::Title, ProductField::AgeCategory, ProductField::Image] as $field) {
+        foreach ([ProductField::ProductCode, ProductField::Title, ProductField::AgeCategory] as $field) {
             $this->assertTrue(collect($customLayout)->firstWhere('field', $field->value)['visible']);
         }
 
+        $this->assertFalse(collect($customLayout)->firstWhere('field', ProductField::Image->value)['visible']);
         $this->assertFalse(collect($customLayout)->firstWhere('field', ProductField::SampleImages->value)['visible']);
     }
 

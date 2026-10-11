@@ -16,7 +16,7 @@ class ListMenuFloatLocalizationTest extends TestCase
         $english = $this->get(route('index'))->assertOk();
 
         $english
-            ->assertSee('<html lang="en">', false)
+            ->assertSee('<html lang="en"', false)
             ->assertSee('aria-label="Open navigation menu"', false)
             ->assertSee('<span class="menu-label">Quick Add</span>', false)
             ->assertSee('<span class="menu-label">All Works</span>', false)
@@ -27,7 +27,7 @@ class ListMenuFloatLocalizationTest extends TestCase
 
         $this->get(route('index'))
             ->assertOk()
-            ->assertSee('<html lang="ja">', false)
+            ->assertSee('<html lang="ja"', false)
             ->assertSee('aria-label="ナビゲーションメニューを開く"', false)
             ->assertSee('<span class="menu-label">クイック追加</span>', false)
             ->assertSee('<span class="menu-label">すべての作品</span>', false)

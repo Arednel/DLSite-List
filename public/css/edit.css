@@ -354,7 +354,6 @@ body.product-form-page {
 .product-form-theme-black .product-form-page input,
 .product-form-theme-black .product-form-page textarea,
 .product-form-theme-black .product-form-page select {
-    background-color: var(--form-input-bg);
     border-color: var(--form-input-border);
     color: var(--form-text);
 }

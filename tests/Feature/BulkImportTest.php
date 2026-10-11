@@ -687,9 +687,12 @@ class BulkImportTest extends TestCase
             '*' => Process::result(output: '{"failed_images":["cover.jpg","sample_1.jpg"]}'),
         ])->preventStrayProcesses();
         $productCode = 'RJ000000402';
+        $payload = $this->scrapedWorkPayload($productCode);
+        $payload['japanese']['work_image'] = 'cover-url';
+        $payload['japanese']['sample_images'] = ['sample-one-url', 'sample-two-url'];
         Storage::disk('local')->put(
             "Works/{$productCode}.json",
-            json_encode($this->scrapedWorkPayload($productCode), JSON_THROW_ON_ERROR),
+            json_encode($payload, JSON_THROW_ON_ERROR),
         );
         [, $item] = $this->createRunItem($productCode);
 
@@ -703,6 +706,9 @@ class BulkImportTest extends TestCase
             ]),
             $item->warning,
         );
+        $product = Product::findOrFail($productCode);
+        $this->assertNull($product->work_image);
+        $this->assertSame(["storage/Works/{$productCode}/sample_2.jpg"], $product->sample_images);
     }
 
     /** @return array{0: BulkImportRun, 1: \App\Models\BulkImportItem} */

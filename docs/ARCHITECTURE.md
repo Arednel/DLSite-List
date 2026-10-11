@@ -50,10 +50,10 @@ Tag and contributor data is loaded only when the current visible fields need it.
 4. `DLSiteWorkFetcher` calls `DLSitePythonRunner`, which invokes `python/DLSiteScraper.py` with explicit JSON/image/log destinations.
 5. PHP owns the fetch retry loop and validates the scraper result.
 6. Scraped metadata is converted by `DLSiteWorkData`; explicit visible Quick Add values override the fetched values where supported.
-7. `DLSiteProductImporter` creates the Product and synchronizes tags/contributors.
+7. `DLSiteProductImporter` creates the Product, persists only successfully downloaded cover/sample image paths, and synchronizes tags/contributors.
 8. The created work returns to the appropriate Index destination.
 
-The fetcher can retry a failed DLsite fetch up to five times. Python does not own a second retry loop.
+A failed cover download is stored as no cover, and failed sample downloads are omitted from the saved sample list. The fetcher can retry a failed DLsite fetch up to five times. Python does not own a second retry loop.
 
 The Quick Add field layout controls which user-editable override rows are submitted. Hidden DLsite metadata such as age, product format, circle, publisher, brand, contributors, and descriptions can still be populated from scraped data.
 
@@ -65,10 +65,11 @@ The main DLsite `Product Format` is stored first; only SND (Voice), MS2 (Music),
 
 Custom Quick Add:
 - does not call the DLsite scraper
-- requires a local cover image
-- can store optional sample images
+- can store optional cover image and sample images
 - uses the Custom Quick Add field layout
 - stores only submitted visible optional metadata because there is no scraped fallback
+
+Custom Quick Add and Edit keep newly selected image files in the browser until Save. Previews use browser object URLs, while removal/reordering state is represented by the form and submitted through the normal multipart request. `ProductImageSubmission` converts that submitted state into the final cover/sample image set and delegates filesystem-changing saves to `ProductImagePromotion`. Existing-image removal/order can be restored through Laravel old input after validation; newly selected local files must be selected again after a full redirect.
 
 Custom works still use the normal product/tag/contributor model and can participate in the library and Refetch selection workflow.
 
@@ -562,7 +563,7 @@ Staged Refetch images:
 storage/app/public/Refetch/{run}/Works/{product_code}/...
 ```
 
-Refetch and Import share `ProductImagePromotion` for canonical image replacement. It keeps private backups plus a durable recovery journal under:
+Refetch, Import, and final Custom Quick Add/Edit image saves share `ProductImagePromotion` for canonical image replacement. It keeps private backups plus a durable recovery journal under:
 
 ```text
 storage/app/ImagePromotions/active.json

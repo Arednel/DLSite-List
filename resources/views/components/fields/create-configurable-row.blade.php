@@ -106,11 +106,11 @@
     @break
 
     @case('image')
-        <x-fields.work-image-upload />
+        <x-fields.work-image-upload :viewer-title="__('New work')" />
     @break
 
     @case('sample_images')
-        <x-fields.sample-images-upload />
+        <x-fields.sample-images-upload :viewer-title="__('New work')" />
     @break
 
     @case('start_date')

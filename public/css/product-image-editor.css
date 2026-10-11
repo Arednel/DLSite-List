@@ -1,0 +1,275 @@
+.product-form-page .image-editor-row-label,
+.product-form-page .image-editor-row-content {
+    vertical-align: top;
+}
+
+.product-form-page .image-editor-row-content .image-editor-field {
+    padding-top: 0;
+}
+
+.image-editor-cover {
+    align-items: flex-start;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.image-editor-cover__preview {
+    align-items: flex-start;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.image-editor-cover__preview[hidden] {
+    display: none;
+}
+
+.image-editor-cover__media {
+    position: relative;
+}
+
+.image-editor-cover__remove {
+    position: absolute;
+    right: 3px;
+    top: 3px;
+    z-index: 2;
+}
+
+.image-editor-native-picker {
+    box-sizing: border-box;
+    min-width: 0;
+    position: relative;
+}
+
+.image-editor-native-picker--cover.image-editor-native-picker--empty,
+.image-editor-native-picker--samples {
+    align-items: center;
+    background: color-mix(in srgb, var(--form-surface, #fff) 92%, var(--form-border, #ddd));
+    border: 1px dashed var(--form-border-soft, #ddd);
+    border-radius: 3px;
+    box-sizing: border-box;
+    display: flex;
+    justify-content: center;
+    min-height: 123px;
+    padding: 8px;
+    width: 115px;
+}
+
+.image-editor-native-picker__plus {
+    color: color-mix(in srgb, var(--form-text, #555) 70%, transparent);
+    font-size: 24px;
+    font-weight: 300;
+    left: 50%;
+    line-height: 1;
+    pointer-events: none;
+    position: absolute;
+    top: 31px;
+    transform: translateX(-50%);
+}
+
+.image-editor-native-picker--cover:not(.image-editor-native-picker--empty) .image-editor-native-picker__plus {
+    display: none;
+}
+
+.image-editor-native-input {
+    background: transparent;
+    border: 0;
+    box-sizing: border-box;
+    color: transparent;
+    cursor: pointer;
+    display: block;
+    font-size: 0;
+    min-width: 0;
+    overflow: hidden;
+    padding: 0;
+}
+
+.image-editor-native-picker--cover.image-editor-native-picker--empty .image-editor-native-input,
+.image-editor-native-picker--samples .image-editor-native-input {
+    height: 100%;
+    inset: 0;
+    padding: 65px 8px 8px;
+    position: absolute;
+    width: 100%;
+}
+
+.image-editor-native-input::file-selector-button,
+.image-editor-native-input::-webkit-file-upload-button {
+    background: var(--form-button-bg, #4065ba);
+    border: 0;
+    border-radius: 2px;
+    color: var(--form-button-text, #fff);
+    cursor: pointer;
+    font-family: lucida grande, tahoma, verdana, arial, sans-serif;
+    font-size: 11px;
+    line-height: 1;
+    margin: 0;
+    padding: 6px 9px;
+}
+
+.image-editor-native-picker--cover.image-editor-native-picker--empty .image-editor-native-input::file-selector-button,
+.image-editor-native-picker--cover.image-editor-native-picker--empty .image-editor-native-input::-webkit-file-upload-button,
+.image-editor-native-picker--samples .image-editor-native-input::file-selector-button,
+.image-editor-native-picker--samples .image-editor-native-input::-webkit-file-upload-button {
+    display: block;
+    margin: 0 auto;
+}
+
+.image-editor-native-input:hover::file-selector-button,
+.image-editor-native-input:hover::-webkit-file-upload-button {
+    background: var(--form-button-hover-bg, #5676c2);
+}
+
+.image-editor-native-input:focus-visible {
+    outline: 3px solid var(--form-input-focus, #7D6A6A);
+    outline-offset: -3px;
+}
+
+.image-editor-cover-thumb,
+.image-editor-thumb {
+    background: #171717;
+    border: 1px solid var(--form-border-soft, #ddd);
+    box-sizing: border-box;
+    cursor: zoom-in;
+    align-items: center;
+    display: inline-flex;
+    justify-content: center;
+    line-height: 0;
+    overflow: hidden;
+    padding: 0;
+    position: relative;
+    text-decoration: none;
+}
+
+.image-editor-cover-thumb img,
+.image-editor-thumb img {
+    display: block;
+    height: auto;
+    max-height: 60px;
+    object-fit: contain;
+    width: auto;
+}
+
+.image-editor-grid {
+    align-items: start;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
+.image-editor-card {
+    background: color-mix(in srgb, var(--form-surface, #fff) 92%, var(--form-border, #ddd));
+    border: 1px solid var(--form-border-soft, #ddd);
+    border-radius: 3px;
+    box-sizing: border-box;
+    min-height: 110px;
+    padding: 28px 2px 5px;
+    position: relative;
+}
+
+.image-editor-card.is-dragging {
+    opacity: 0.55;
+}
+
+
+.image-editor-card__toolbar {
+    align-items: center;
+    display: flex;
+    gap: 4px;
+    justify-content: space-between;
+    left: 4px;
+    position: absolute;
+    right: 4px;
+    top: 3px;
+    z-index: 2;
+}
+
+.image-editor-drag-handle,
+.image-editor-remove-icon {
+    align-items: center;
+    backdrop-filter: blur(4px);
+    background: var(--image-editor-control-bg, rgba(20, 20, 20, .72));
+    border: 0;
+    border-radius: 2px;
+    color: var(--image-editor-control-text, #fff);
+    display: inline-flex;
+    font-size: 11px;
+    height: 21px;
+    justify-content: center;
+    min-width: 21px;
+    padding: 0 5px;
+}
+
+.image-editor-drag-handle {
+    cursor: grab;
+    font-size: 14px;
+    letter-spacing: -2px;
+    user-select: none;
+}
+
+.image-editor-remove-icon {
+    cursor: pointer;
+    font-size: 15px;
+    line-height: 1;
+}
+
+.image-editor-drag-handle:hover {
+    background: var(--image-editor-control-hover-bg, #363b46);
+}
+
+.image-editor-remove-icon:hover {
+    background: var(--image-editor-remove-hover-bg, rgba(145, 47, 47, .92));
+}
+
+.image-editor-card__meta {
+    align-items: center;
+    display: flex;
+    gap: 4px;
+    justify-content: space-between;
+    min-width: 0;
+    padding-top: 5px;
+}
+
+.image-editor-card__name {
+    color: var(--form-text, #555);
+    font-size: 8px;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.image-editor-card__position {
+    color: color-mix(in srgb, var(--form-text, #555) 58%, transparent);
+    flex: 0 0 auto;
+    font-size: 8px;
+}
+
+.image-editor-empty {
+    color: var(--form-text, #555);
+}
+
+.image-editor-field .index-image-viewer-trigger {
+    color: inherit;
+    font: inherit;
+}
+
+.image-editor-field .index-image-viewer-trigger:focus-visible {
+    outline: 3px solid var(--form-input-focus, #7D6A6A);
+    outline-offset: 3px;
+}
+
+.product-form-theme-cherry {
+    --image-editor-control-bg: rgba(125, 106, 106, .88);
+    --image-editor-control-hover-bg: #9F5F5F;
+    --image-editor-remove-hover-bg: #C86E6E;
+    --image-editor-control-text: #fff;
+}
+
+.product-form-theme-black {
+    --image-editor-control-bg: rgba(20, 20, 20, .72);
+    --image-editor-control-hover-bg: #363b46;
+    --image-editor-remove-hover-bg: rgba(145, 47, 47, .92);
+    --image-editor-control-text: #fff;
+}

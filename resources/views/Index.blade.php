@@ -1,6 +1,6 @@
 <!DOCTYPE html>
 
-<html lang="{{ app()->getLocale() }}">
+<html lang="{{ app()->getLocale() }}" class="product-form-theme-cherry">
 
 <head>
     <title>DLSite List</title>
@@ -10,6 +10,8 @@
     <link rel="stylesheet"
         href="{{ asset('css/sort-direction.css') }}?v={{ filemtime(public_path('css/sort-direction.css')) }}">
     <link rel="stylesheet" href="{{ asset('css/index.css') }}?v={{ filemtime(public_path('css/index.css')) }}">
+    <link rel="stylesheet"
+        href="{{ asset('css/image-viewer.css') }}?v={{ filemtime(public_path('css/image-viewer.css')) }}">
     <link rel="stylesheet"
         href="{{ asset('css/list-menu-float.css') }}?v={{ filemtime(public_path('css/list-menu-float.css')) }}">
     <link rel="stylesheet"

@@ -13,11 +13,20 @@ For existing manual installations:
 ### Added
 
 * Added a Fetched Tags language option that follows the UI language by default.
+* Added ability to manually upload cover and sample images in Edit.
 
 ### Changed
 
 * Show a placeholder in the Tags column for works without tags.
+* Cover images are now optional for Custom Quick Add and DLSite imports.
+* Works without a cover now show a `No image` placeholder.
+* Renamed `Image` to `Cover Image` in Field Layout settings for clarity.
 * Updated Livewire to 4.4.7.
+
+### Fixed
+
+* Failed DLSite cover/sample downloads no longer create database references to missing image files.
+* Fixed image promotion cleanup on failed filesystem publication, including leftover temporary `.incoming` files.
 
 ## 1.12.0 - 2026-10-03
 

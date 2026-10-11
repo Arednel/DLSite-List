@@ -17,6 +17,8 @@ use App\Models\Option;
 use App\Models\Product;
 use App\Support\ProductContributorSync;
 use App\Support\ProductGenreSync;
+use DOMDocument;
+use DOMXPath;
 use Illuminate\Contracts\Filesystem\Filesystem;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
@@ -24,6 +26,7 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Process;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Testing\TestResponse;
 use Livewire\Livewire;
 use Mockery;
 use PHPUnit\Framework\Attributes\DataProvider;
@@ -743,7 +746,8 @@ class ProductControllerTest extends TestCase
             ->assertSee('id="age_category" name="age_category" class="form-control"', false)
             ->assertSee('name="work_image"', false)
             ->assertSee('name="sample_images[]"', false)
-            ->assertSee('file-upload-input', false)
+            ->assertSee('scripts/product-image-editor.js', false)
+            ->assertSee('index-image-viewer-dialog', false)
             ->assertSee('Select age category');
     }
 
@@ -824,12 +828,11 @@ class ProductControllerTest extends TestCase
             ->assertSee('name="id"', false)
             ->assertSee('name="work_name"', false)
             ->assertSee('name="age_category"', false)
-            ->assertSee('name="work_image"', false)
+            ->assertDontSee('name="work_image"', false)
             ->assertSeeInOrder([
                 'Product Code or Link',
                 'Japanese Title',
                 'Age Category',
-                'Cover Image',
                 'Priority',
             ])
             ->assertDontSee('name="sample_images[]"', false)
@@ -898,7 +901,7 @@ class ProductControllerTest extends TestCase
             ->post('/store/custom', ['modal' => '1'])
             ->assertRedirect('/create/custom?modal=1')
             ->assertSessionHasErrors(['id' => 'Enter a product code or a link containing one.'])
-            ->assertSessionHasErrors(['id', 'work_name', 'age_category', 'work_image']);
+            ->assertSessionHasErrors(['id', 'work_name', 'age_category']);
     }
 
     public function test_create_go_back_uses_previous_url_with_index_fallback(): void
@@ -1126,6 +1129,9 @@ class ProductControllerTest extends TestCase
             ->assertSee($product->id)
             ->assertSee($product->work_name)
             ->assertSee($product->work_name_english)
+            ->assertDontSee('name="work_image"', false)
+            ->assertDontSee('name="sample_images[]"', false)
+            ->assertSee('index-image-viewer-dialog', false)
             ->assertSeeInOrder([
                 'name="progress"',
                 'name="score"',
@@ -2128,6 +2134,7 @@ class ProductControllerTest extends TestCase
         $this->assertSame('SCRAPED_TITLE_NAME_SERIES', $product->series);
         $this->assertSame(['MOV', 'SND', 'MS2'], $product->product_format);
         $this->assertSame('Completed', $product->progress);
+        $this->assertNull($product->work_image);
         $this->assertSame([
             "storage/Works/{$workId}/sample_1.jpg",
             "storage/Works/{$workId}/sample_2.jpg",
@@ -2196,7 +2203,9 @@ class ProductControllerTest extends TestCase
                 'DLSite data was fetched, but these images could not be downloaded: cover.jpg, sample_1.jpg',
             );
 
-        $this->assertDatabaseHas('products', ['id' => $workId]);
+        $product = Product::findOrFail($workId);
+        $this->assertNull($product->work_image);
+        $this->assertSame([], $product->sample_images);
         Process::assertRanTimes(fn(): bool => true, 5);
     }
 
@@ -2534,12 +2543,16 @@ class ProductControllerTest extends TestCase
 
     public function test_custom_store_saves_local_uploads_and_sets_work_image_path(): void
     {
+        Storage::fake('local');
         Storage::fake('public');
 
         $workId = Product::factory()->make()->id;
         $cover = UploadedFile::fake()->image('cover.png')->size(1024);
-        $sampleOne = UploadedFile::fake()->image('sample-one.jpg')->size(1024);
-        $sampleTwo = UploadedFile::fake()->image('sample-two.png')->size(1024);
+        $coverBytes = file_get_contents($cover->getRealPath());
+        $samples = [
+            UploadedFile::fake()->image('sample-one.jpg')->size(1024),
+            UploadedFile::fake()->image('sample-two.png')->size(1024),
+        ];
 
         $response = $this->post('/store/custom', [
             'id' => strtolower($workId),
@@ -2552,7 +2565,7 @@ class ProductControllerTest extends TestCase
             'genre_custom' => 'Custom One, Custom Two',
             'notes' => 'CUSTOM_STORE_NOTES_TOKEN',
             'work_image' => $cover,
-            'sample_images' => [$sampleOne, $sampleTwo],
+            'sample_images' => $samples,
             'add' => [
                 'start_date' => [
                     'month' => '04',
@@ -2573,7 +2586,7 @@ class ProductControllerTest extends TestCase
         $response->assertSessionHasNoErrors();
         $response->assertRedirect('/#' . $workId);
 
-        $this->assertTrue(Storage::disk('public')->exists("Works/{$workId}/cover.png"));
+        $this->assertSame($coverBytes, Storage::disk('public')->get("Works/{$workId}/cover.png"));
         $this->assertTrue(Storage::disk('public')->exists("Works/{$workId}/sample_1.jpg"));
         $this->assertTrue(Storage::disk('public')->exists("Works/{$workId}/sample_2.png"));
 
@@ -2605,7 +2618,7 @@ class ProductControllerTest extends TestCase
         $this->get('/')
             ->assertOk()
             ->assertSee("src=\"{$coverPath}?v={$coverVersion}\"", false)
-            ->assertDontSee('images/No Image.png', false);
+            ->assertDontSee('data-index-image-viewer-placeholder=""', false);
     }
 
     public function test_custom_quick_add_can_store_product_format_when_the_field_is_visible(): void
@@ -2652,8 +2665,9 @@ class ProductControllerTest extends TestCase
             'description' => 'CUSTOM_VISIBLE_DESCRIPTION_TOKEN',
             'description_english' => 'CUSTOM_VISIBLE_EN_DESCRIPTION_TOKEN',
             'sample_images' => [
-                UploadedFile::fake()->image('hidden-sample.jpg')->size(1024),
+                UploadedFile::fake()->create('hidden-sample.txt', 1, 'text/plain'),
             ],
+            'sample_image_order' => ['not-a-valid-image-order'],
         ]));
 
         $response->assertSessionHasNoErrors();
@@ -2693,11 +2707,13 @@ class ProductControllerTest extends TestCase
         $this->assertNull($product->description_english);
     }
 
-    public function test_custom_store_rejects_missing_cover_image(): void
+    public function test_custom_store_accepts_missing_cover_image(): void
     {
         Storage::fake('public');
 
         $workId = Product::factory()->make()->id;
+        $form = $this->get('/create/custom');
+        $this->assertCount(0, $this->responseXPath($form)->query('//input[@type="file" and @required]'));
 
         $response = $this->from('/create/custom')->post('/store/custom', [
             'id' => $workId,
@@ -2705,9 +2721,14 @@ class ProductControllerTest extends TestCase
             'age_category' => 'ALL_AGES',
         ]);
 
-        $response->assertRedirect('/create/custom');
-        $response->assertSessionHasErrors(['work_image']);
-        $this->assertDatabaseMissing('products', ['id' => $workId]);
+        $response->assertRedirect('/#' . $workId);
+        $response->assertSessionHasNoErrors();
+        $this->assertDatabaseHas('products', ['id' => $workId, 'work_image' => null]);
+        $this->assertSame([], Storage::disk('public')->allFiles('Works'));
+        $index = $this->get('/')->assertOk()->assertSee('CUSTOM_NO_COVER_TOKEN');
+        $xpath = $this->responseXPath($index);
+        $this->assertCount(1, $xpath->query('//tr[@id="' . $workId . '"]//div[@data-index-image-viewer-placeholder]'));
+        $index->assertDontSee('images/No Image.png', false);
     }
 
     public function test_index_image_uses_stored_work_image_path(): void
@@ -2721,7 +2742,7 @@ class ProductControllerTest extends TestCase
             ->assertOk()
             ->assertSee('IMAGE_PRIMARY_TOKEN')
             ->assertSee('src="storage/Works/PRIMARY/cover.webp"', false)
-            ->assertDontSee('images/No Image.png', false);
+            ->assertDontSee('data-index-image-viewer-placeholder=""', false);
     }
 
     public function test_custom_store_keeps_matching_existing_genre_editable_as_custom_tag(): void
@@ -2731,13 +2752,10 @@ class ProductControllerTest extends TestCase
         $existingGenre = $this->createGenre('Existing Store Auto Genre', Genre::TYPE_AUTO_GENERATED_ENGLISH);
         $workId = Product::factory()->make()->id;
 
-        $response = $this->post('/store/custom', [
-            'id' => $workId,
+        $response = $this->post('/store/custom', $this->customStorePayload($workId, [
             'work_name' => 'CUSTOM_EXISTING_GENRE_TOKEN',
-            'age_category' => 'ALL_AGES',
             'genre_custom' => 'Existing Store Auto Genre',
-            'work_image' => UploadedFile::fake()->image('cover.png')->size(1024),
-        ]);
+        ]));
 
         $response->assertSessionHasNoErrors();
 
@@ -2889,7 +2907,7 @@ class ProductControllerTest extends TestCase
         ]);
 
         $response->assertRedirect('/create/custom');
-        $response->assertSessionHasErrors(['work_name', 'age_category', 'work_image']);
+        $response->assertSessionHasErrors(['work_name', 'age_category']);
     }
 
     public function test_custom_store_rejects_duplicate_product_code(): void
@@ -2902,7 +2920,6 @@ class ProductControllerTest extends TestCase
             'id' => $existing->id,
             'work_name' => 'CUSTOM_DUPLICATE_TOKEN',
             'age_category' => 'ALL_AGES',
-            'work_image' => UploadedFile::fake()->image('cover.png')->size(1024),
         ]);
 
         $response->assertRedirect('/create/custom');
@@ -2917,7 +2934,6 @@ class ProductControllerTest extends TestCase
             'id' => Product::factory()->make()->id,
             'work_name' => 'CUSTOM_INVALID_AGE_TOKEN',
             'age_category' => 'NOT_VALID',
-            'work_image' => UploadedFile::fake()->image('cover.png')->size(1024),
         ]);
 
         $response->assertRedirect('/create/custom');
@@ -2937,24 +2953,6 @@ class ProductControllerTest extends TestCase
 
         $response->assertRedirect('/create/custom');
         $response->assertSessionHasErrors(['work_image']);
-    }
-
-    public function test_custom_store_rejects_oversized_sample_image_upload(): void
-    {
-        Storage::fake('public');
-
-        $response = $this->from('/create/custom')->post('/store/custom', [
-            'id' => Product::factory()->make()->id,
-            'work_name' => 'CUSTOM_OVERSIZED_IMAGE_TOKEN',
-            'age_category' => 'ALL_AGES',
-            'work_image' => UploadedFile::fake()->image('cover.png')->size(1024),
-            'sample_images' => [
-                UploadedFile::fake()->image('sample.jpg')->size(20481),
-            ],
-        ]);
-
-        $response->assertRedirect('/create/custom');
-        $response->assertSessionHasErrors(['sample_images.0']);
     }
 
     public function test_update_requires_work_name(): void
@@ -4336,7 +4334,6 @@ class ProductControllerTest extends TestCase
             'id' => strtolower($workId),
             'work_name' => 'CUSTOM_RETURN_TARGET_TOKEN',
             'age_category' => 'ALL_AGES',
-            'work_image' => UploadedFile::fake()->image('cover.png')->size(1024),
         ], $overrides);
     }
 
@@ -4364,4 +4361,14 @@ class ProductControllerTest extends TestCase
             ], $englishOverrides),
         ];
     }
+    private function responseXPath(TestResponse $response): DOMXPath
+    {
+        $response->assertOk();
+
+        $document = new DOMDocument;
+        @$document->loadHTML($response->getContent());
+
+        return new DOMXPath($document);
+    }
+
 }

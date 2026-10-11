@@ -8,6 +8,12 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
 
     <link rel="stylesheet" href="{{ asset('css/edit.css') }}?v={{ filemtime(public_path('css/edit.css')) }}">
+    @if ($isCustomCreate)
+        <link rel="stylesheet"
+            href="{{ asset('css/image-viewer.css') }}?v={{ filemtime(public_path('css/image-viewer.css')) }}">
+        <link rel="stylesheet"
+            href="{{ asset('css/product-image-editor.css') }}?v={{ filemtime(public_path('css/product-image-editor.css')) }}">
+    @endif
     <link rel="stylesheet"
         href="{{ asset('css/autocomplete.css') }}?v={{ filemtime(public_path('css/autocomplete.css')) }}">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/7.0.1/css/all.min.css">
@@ -108,6 +114,10 @@
             </div>
         </div>
     </div>
+
+    @if ($isCustomCreate)
+        <x-image-viewer-dialog />
+    @endif
 </body>
 
 <script src="{{ asset('scripts/dateInsert.js') }}?v={{ filemtime(public_path('scripts/dateInsert.js')) }}"></script>
@@ -116,6 +126,14 @@
 </script>
 <script src="{{ asset('scripts/work-form-frame.js') }}?v={{ filemtime(public_path('scripts/work-form-frame.js')) }}">
 </script>
+@if ($isCustomCreate)
+    <script
+        src="{{ asset('scripts/product-image-editor.js') }}?v={{ filemtime(public_path('scripts/product-image-editor.js')) }}"
+        defer></script>
+    <script
+        src="{{ asset('scripts/index-image-viewer.js') }}?v={{ filemtime(public_path('scripts/index-image-viewer.js')) }}"
+        defer></script>
+@endif
 @if (!$isCustomCreate && !$isBulkImport)
     <script
         src="{{ asset('scripts/dlsite-create-status.js') }}?v={{ filemtime(public_path('scripts/dlsite-create-status.js')) }}">

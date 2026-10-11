@@ -24,13 +24,13 @@ use App\Support\PartialDateFormatter;
 use App\Support\ProductContributorSync;
 use App\Support\ProductFieldLayout;
 use App\Support\ProductGenreSync;
+use App\Support\ProductImageSubmission;
 use App\Support\ReturnTarget;
 use App\Support\TagColor;
 use App\Support\TagInput;
 use App\Support\VisibleGenreAttachment;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
-use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
@@ -45,6 +45,7 @@ class ProductController extends Controller
     public function __construct(
         private readonly ProductGenreSync $genreSync,
         private readonly ProductContributorSync $contributorSync,
+        private readonly ProductImageSubmission $imageSubmission,
     ) {}
 
     private const VISIBILITY_AFFECTING_PRODUCT_FIELDS = [
@@ -131,11 +132,8 @@ class ProductController extends Controller
         $validated = $request->validated();
         $workID = $validated['id'];
         $visibleCreateFields = ProductFieldLayout::visibleFields(Option::customQuickAddFieldLayout());
-
-        $work_image = $this->storeCustomCoverImage($request->file('work_image'), $workID);
-        $sampleImages = $this->createFieldVisible($visibleCreateFields, ProductField::SampleImages)
-            ? $this->storeCustomSampleImages($request, $workID)
-            : [];
+        $coverVisible = $this->createFieldVisible($visibleCreateFields, ProductField::Image);
+        $samplesVisible = $this->createFieldVisible($visibleCreateFields, ProductField::SampleImages);
         [$description, $descriptionEnglish] = $this->customCreateDescriptionValues(
             $request,
             $validated,
@@ -143,65 +141,84 @@ class ProductController extends Controller
         );
         [$circle, $makerId] = $this->customCreateCircleValues($request, $validated, $visibleCreateFields);
 
-        $product = Product::create([
-            'id' => $workID,
-            'maker_id' => $makerId,
-            'work_name' => $validated['work_name'],
-            'work_name_english' => $validated['work_name_english'] ?? null,
-            'age_category' => $validated['age_category'],
-            'product_format' => $this->createFieldSubmitted($request, $visibleCreateFields, ProductField::ProductFormat, 'product_format')
-                ? (($validated['product_format'] ?? []) ?: null)
-                : null,
-            'circle' => $circle,
-            'publisher' => $this->createFieldSubmitted($request, $visibleCreateFields, ProductField::Publisher, 'publisher')
-                ? ($validated['publisher'] ?? null) : null,
-            'brand' => $this->createFieldSubmitted($request, $visibleCreateFields, ProductField::Brand, 'brand')
-                ? ($validated['brand'] ?? null) : null,
-            'work_image' => $work_image,
-            'description' => $description,
-            'description_english' => $descriptionEnglish,
-            'notes' => $this->createFieldSubmitted($request, $visibleCreateFields, ProductField::Notes, 'notes')
-                ? ($validated['notes'] ?? null)
-                : null,
-            'series' => $this->createFieldSubmitted($request, $visibleCreateFields, ProductField::Series, 'series')
-                ? ($validated['series'] ?? null)
-                : null,
-            'sample_images' => $sampleImages,
-            'score' => $this->createFieldSubmitted($request, $visibleCreateFields, ProductField::Score, 'score')
-                ? ($validated['score'] ?? null)
-                : null,
-            'progress' => $this->createFieldSubmitted($request, $visibleCreateFields, ProductField::Progress, 'progress')
-                ? ($validated['progress'] ?? null)
-                : null,
-            'start_date' => $this->createFieldSubmitted($request, $visibleCreateFields, ProductField::StartDate, 'add.start_date')
-                ? ($validated['start_date'] ?? null)
-                : null,
-            'end_date' => $this->createFieldSubmitted($request, $visibleCreateFields, ProductField::FinishDate, 'add.finish_date')
-                ? ($validated['end_date'] ?? null)
-                : null,
-            'num_re_listen_times' => $this->createFieldSubmitted($request, $visibleCreateFields, ProductField::TotalTimesReListened, 'add.num_re_listen_times')
-                ? ($validated['num_re_listen_times'] ?? null)
-                : null,
-            're_listen_value' => $this->createFieldSubmitted($request, $visibleCreateFields, ProductField::ReListenValue, 'add.re_listen_value')
-                ? ($validated['re_listen_value'] ?? null)
-                : null,
-            'priority' => $this->createFieldSubmitted($request, $visibleCreateFields, ProductField::Priority, 'add.priority')
-                ? ($validated['priority'] ?? null)
-                : null,
-        ]);
+        $product = $this->imageSubmission->create(
+            $request,
+            $workID,
+            $coverVisible,
+            $samplesVisible,
+            function (array $images) use (
+                $request,
+                $validated,
+                $visibleCreateFields,
+                $workID,
+                $description,
+                $descriptionEnglish,
+                $circle,
+                $makerId,
+            ): Product {
+                $product = Product::create([
+                    'id' => $workID,
+                    'maker_id' => $makerId,
+                    'work_name' => $validated['work_name'],
+                    'work_name_english' => $validated['work_name_english'] ?? null,
+                    'age_category' => $validated['age_category'],
+                    'product_format' => $this->createFieldSubmitted($request, $visibleCreateFields, ProductField::ProductFormat, 'product_format')
+                        ? (($validated['product_format'] ?? []) ?: null)
+                        : null,
+                    'circle' => $circle,
+                    'publisher' => $this->createFieldSubmitted($request, $visibleCreateFields, ProductField::Publisher, 'publisher')
+                        ? ($validated['publisher'] ?? null) : null,
+                    'brand' => $this->createFieldSubmitted($request, $visibleCreateFields, ProductField::Brand, 'brand')
+                        ? ($validated['brand'] ?? null) : null,
+                    'work_image' => $images['work_image'],
+                    'description' => $description,
+                    'description_english' => $descriptionEnglish,
+                    'notes' => $this->createFieldSubmitted($request, $visibleCreateFields, ProductField::Notes, 'notes')
+                        ? ($validated['notes'] ?? null)
+                        : null,
+                    'series' => $this->createFieldSubmitted($request, $visibleCreateFields, ProductField::Series, 'series')
+                        ? ($validated['series'] ?? null)
+                        : null,
+                    'sample_images' => $images['sample_images'],
+                    'score' => $this->createFieldSubmitted($request, $visibleCreateFields, ProductField::Score, 'score')
+                        ? ($validated['score'] ?? null)
+                        : null,
+                    'progress' => $this->createFieldSubmitted($request, $visibleCreateFields, ProductField::Progress, 'progress')
+                        ? ($validated['progress'] ?? null)
+                        : null,
+                    'start_date' => $this->createFieldSubmitted($request, $visibleCreateFields, ProductField::StartDate, 'add.start_date')
+                        ? ($validated['start_date'] ?? null)
+                        : null,
+                    'end_date' => $this->createFieldSubmitted($request, $visibleCreateFields, ProductField::FinishDate, 'add.finish_date')
+                        ? ($validated['end_date'] ?? null)
+                        : null,
+                    'num_re_listen_times' => $this->createFieldSubmitted($request, $visibleCreateFields, ProductField::TotalTimesReListened, 'add.num_re_listen_times')
+                        ? ($validated['num_re_listen_times'] ?? null)
+                        : null,
+                    're_listen_value' => $this->createFieldSubmitted($request, $visibleCreateFields, ProductField::ReListenValue, 'add.re_listen_value')
+                        ? ($validated['re_listen_value'] ?? null)
+                        : null,
+                    'priority' => $this->createFieldSubmitted($request, $visibleCreateFields, ProductField::Priority, 'add.priority')
+                        ? ($validated['priority'] ?? null)
+                        : null,
+                ]);
 
-        $this->genreSync->syncCustom(
-            $product,
-            Genre::resolveIdsFromTitles(
-                $this->createFieldVisible($visibleCreateFields, ProductField::Tags)
-                    ? ($validated['genre_custom'] ?? [])
-                    : [],
-            ),
-        );
-        $this->contributorSync->sync(
-            $product,
-            $this->customCreateContributorsByRole($validated, $visibleCreateFields, $circle),
-            $makerId,
+                $this->genreSync->syncCustom(
+                    $product,
+                    Genre::resolveIdsFromTitles(
+                        $this->createFieldVisible($visibleCreateFields, ProductField::Tags)
+                            ? ($validated['genre_custom'] ?? [])
+                            : [],
+                    ),
+                );
+                $this->contributorSync->sync(
+                    $product,
+                    $this->customCreateContributorsByRole($validated, $visibleCreateFields, $circle),
+                    $makerId,
+                );
+
+                return $product;
+            },
         );
 
         $returnTarget = ReturnTarget::fromRequest($request)
@@ -268,15 +285,44 @@ class ProductController extends Controller
 
         $editFieldLayout = Option::editFieldLayout();
         $editableFields = ProductFieldLayout::editableFields($editFieldLayout);
-        $product->fill($this->updatePayload($request, $data, $editableFields, $product));
-        $productFieldsChanged = $product->isDirty(self::VISIBILITY_AFFECTING_PRODUCT_FIELDS);
+        $updatePayload = $this->updatePayload($request, $data, $editableFields, $product);
+        $applyEdit = function (array $images) use (
+            $request,
+            $product,
+            $data,
+            $editableFields,
+            $editFieldLayout,
+            $updatePayload,
+        ): array {
+            $product->fill([
+                ...$updatePayload,
+                'work_image' => $images['work_image'],
+                'sample_images' => $images['sample_images'],
+            ]);
+            $productFieldsChanged = $product->isDirty(self::VISIBILITY_AFFECTING_PRODUCT_FIELDS);
 
-        if ($product->isDirty()) {
-            $product->save();
-        }
+            if ($product->isDirty()) {
+                $product->save();
+            }
 
-        $contributorsChanged = $this->syncProductEditContributors($request, $product, $data, $editableFields);
-        $genresChanged = $this->syncProductEditGenres($request, $product, $data, $editFieldLayout);
+            return [
+                'product_fields_changed' => $productFieldsChanged,
+                'contributors_changed' => $this->syncProductEditContributors($request, $product, $data, $editableFields),
+                'genres_changed' => $this->syncProductEditGenres($request, $product, $data, $editFieldLayout),
+            ];
+        };
+
+        $changes = $this->imageSubmission->update(
+            $request,
+            $product,
+            ProductFieldLayout::editable($editFieldLayout, ProductField::Image),
+            ProductFieldLayout::editable($editFieldLayout, ProductField::SampleImages),
+            $applyEdit,
+        );
+
+        $productFieldsChanged = $changes['product_fields_changed'];
+        $contributorsChanged = $changes['contributors_changed'];
+        $genresChanged = $changes['genres_changed'];
 
         $returnTarget = ReturnTarget::fromRequest($request, $product->getKey());
         $newProgress = in_array(ProductField::Progress->value, $editableFields, true) && $request->wasSubmitted('progress')
@@ -515,29 +561,6 @@ class ProductController extends Controller
             'completionStatus' => $completionStatus,
             'completionDescription' => $completionDescription,
         ]);
-    }
-
-    private function storeCustomCoverImage(UploadedFile $file, string $workID): string
-    {
-        $path = "Works/{$workID}/cover.{$file->extension()}";
-
-        Storage::disk('public')->putFileAs("Works/{$workID}", $file, basename($path));
-
-        return "storage/{$path}";
-    }
-
-    private function storeCustomSampleImages(Request $request, string $workID): array
-    {
-        return collect($request->file('sample_images', []))
-            ->values()
-            ->map(function (UploadedFile $file, int $index) use ($workID): string {
-                $path = "Works/{$workID}/sample_" . ($index + 1) . '.' . $file->extension();
-
-                Storage::disk('public')->putFileAs("Works/{$workID}", $file, basename($path));
-
-                return "storage/{$path}";
-            })
-            ->all();
     }
 
     private function updatePayload(

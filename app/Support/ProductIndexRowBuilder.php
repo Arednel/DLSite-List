@@ -55,7 +55,7 @@ final readonly class ProductIndexRowBuilder
                 workNameEnglish: $attributes['work_name_english'] ?? null,
                 notes: $attributes['notes'] ?? null,
                 progress: $attributes['progress'] ?? null,
-                workImage: $workImage === null
+                workImage: blank($workImage)
                     ? null
                     : Product::versionedImagePath($workImage),
                 score: isset($attributes['score']) ? (int) $attributes['score'] : null,

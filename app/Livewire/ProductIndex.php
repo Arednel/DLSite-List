@@ -251,10 +251,10 @@ class ProductIndex extends Component
 
         return array_map(
             fn(string $path): string => asset(Product::versionedImagePath($path)),
-            [
+            array_values(array_filter([
                 $product->work_image,
                 ...($product->sample_images ?? []),
-            ],
+            ], fn(?string $path): bool => filled($path))),
         );
     }
 

@@ -62,6 +62,15 @@ final class DLSiteProductImporter
             ? (array) $input->value('genre_custom', [])
             : [];
         $productFormat = $this->productFormatValue($input, $workData);
+        $failedImages = array_flip($fetchResult->failedImages);
+        $workImage = $workData->workImage !== null && ! isset($failedImages['cover.jpg'])
+            ? "storage/Works/{$productId}/cover.jpg"
+            : null;
+        $sampleImages = Collection::times(count($workData->sampleImages))
+            ->reject(fn(int $position): bool => isset($failedImages["sample_{$position}.jpg"]))
+            ->map(fn(int $position): string => "storage/Works/{$productId}/sample_{$position}.jpg")
+            ->values()
+            ->all();
 
         $product = DB::transaction(function () use (
             $input,
@@ -78,6 +87,8 @@ final class DLSiteProductImporter
             $contributorsByRole,
             $customGenres,
             $productFormat,
+            $workImage,
+            $sampleImages,
             $onCreated,
             $fetchResult,
         ): Product {
@@ -99,17 +110,14 @@ final class DLSiteProductImporter
                     'circle' => $circle,
                     'publisher' => $publisher,
                     'brand' => $brand,
-                    'work_image' => "storage/Works/{$productId}/cover.jpg",
+                    'work_image' => $workImage,
                     'description' => $description,
                     'description_english' => $englishDescription,
                     'notes' => $input->fieldSubmitted(ProductField::Notes, 'notes')
                         ? $input->value('notes')
                         : null,
                     'series' => $this->seriesValue($input, $workData),
-                    'sample_images' => Collection::times(
-                        count($workData->sampleImages),
-                        fn(int $position): string => "storage/Works/{$productId}/sample_{$position}.jpg",
-                    )->all(),
+                    'sample_images' => $sampleImages,
                     'score' => $input->fieldSubmitted(ProductField::Score, 'score')
                         ? $input->value('score')
                         : null,

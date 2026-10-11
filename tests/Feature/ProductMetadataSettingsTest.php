@@ -21,6 +21,7 @@ use App\Livewire\ProductFormThemeSettings;
 use App\Livewire\TagLibraryDisplaySettings;
 use App\Livewire\UiLanguageSettings;
 use App\Models\Option;
+use App\Models\Product;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\App;
 use Illuminate\Support\Facades\DB;
@@ -569,7 +570,7 @@ class ProductMetadataSettingsTest extends TestCase
             ->assertSet('customQuickAddFields.product_code.visibility_locked', true)
             ->assertSet('customQuickAddFields.title.visibility_locked', true)
             ->assertSet('customQuickAddFields.age_category.visibility_locked', true)
-            ->assertSet('customQuickAddFields.image.visibility_locked', true);
+            ->assertSet('customQuickAddFields.image.visible', true);
     }
 
     public function test_field_layout_help_is_centralized_and_surface_specific(): void
@@ -614,11 +615,16 @@ class ProductMetadataSettingsTest extends TestCase
     public function test_field_layout_component_saves_visibility_and_editability(): void
     {
         Livewire::test(ProductFieldLayoutSettings::class)
+            ->assertSet('indexFields.image.label', 'Cover Image')
             ->set('indexFields.score.visible', false)
             ->set('editFields.title.editable', false)
             ->set('editFields.voice_actor.visible', true)
             ->set('editFields.voice_actor.editable', true)
             ->set('editFields.notes.visible', false)
+            ->set('editFields.image.visible', true)
+            ->set('editFields.image.editable', true)
+            ->set('editFields.sample_images.visible', true)
+            ->set('editFields.sample_images.editable', false)
             ->set('editFields.tags.visible', true)
             ->set('editFields.fetched_tags.editable', true)
             ->set('quickAddFields.notes.visible', false)
@@ -635,10 +641,18 @@ class ProductMetadataSettingsTest extends TestCase
         $this->assertTrue($this->layoutRow(Option::editFieldLayout(), ProductField::VoiceActor)['visible']);
         $this->assertTrue($this->layoutRow(Option::editFieldLayout(), ProductField::VoiceActor)['editable']);
         $this->assertFalse($this->layoutRow(Option::editFieldLayout(), ProductField::Notes)['visible']);
+        $this->assertTrue($this->layoutRow(Option::editFieldLayout(), ProductField::Image)['visible']);
+        $this->assertTrue($this->layoutRow(Option::editFieldLayout(), ProductField::Image)['editable']);
+        $this->assertTrue($this->layoutRow(Option::editFieldLayout(), ProductField::SampleImages)['visible']);
+        $this->assertFalse($this->layoutRow(Option::editFieldLayout(), ProductField::SampleImages)['editable']);
         $this->assertTrue($this->layoutRow(Option::editFieldLayout(), ProductField::FetchedTags)['editable']);
         $this->assertFalse($this->layoutRow(Option::quickAddFieldLayout(), ProductField::Notes)['visible']);
         $this->assertFalse($this->layoutRow(Option::bulkImportFieldLayout(), ProductField::Notes)['visible']);
         $this->assertFalse($this->layoutRow(Option::customQuickAddFieldLayout(), ProductField::SampleImages)['visible']);
+
+        $this->get(route('products.edit', Product::factory()->create()))
+            ->assertOk()->assertSee('name="work_image"', false)
+            ->assertSee('Sample Images')->assertDontSee('name="sample_images[]"', false);
     }
 
     #[DataProvider('separateFieldLayoutSaveProvider')]
