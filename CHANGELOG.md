@@ -27,6 +27,7 @@ For existing manual installations:
 
 * Failed DLSite cover/sample downloads no longer create database references to missing image files.
 * Fixed image promotion cleanup on failed filesystem publication, including leftover temporary `.incoming` files.
+* DLsite work JSON no longer stores Python Enum internals.
 
 ## 1.12.0 - 2026-10-03
 

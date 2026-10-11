@@ -5,6 +5,7 @@ import logging
 import os
 import re
 import sys
+from enum import Enum
 from pathlib import Path
 
 import requests
@@ -54,6 +55,11 @@ def configure_logging(log_directory):
 def to_serializable(obj):
     if isinstance(obj, WorkOption):
         return obj.value
+    if isinstance(obj, Enum):
+        return {
+            "_value_": to_serializable(obj.value),
+            "_name_": obj.name,
+        }
     if isinstance(obj, dict):
         return {k: to_serializable(v) for k, v in obj.items()}
     elif isinstance(obj, list):

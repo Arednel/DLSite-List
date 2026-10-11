@@ -5,7 +5,7 @@ from types import SimpleNamespace
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
-from dlsite_async.work import AgeCategory, WorkOption, WorkType
+from dlsite_async.work import AgeCategory, BookType, WorkOption, WorkType
 from DLSiteScraper import product_format_codes, to_serializable
 
 
@@ -81,11 +81,28 @@ class DLSiteScraperProductFormatTest(unittest.TestCase):
     def test_work_option_serializes_to_its_stable_code(self):
         self.assertEqual("SND", to_serializable(WorkOption.VOICE))
 
-    def test_existing_age_category_serialization_contract_is_unchanged(self):
-        serialized = to_serializable(AgeCategory.R18)
+    def test_existing_enum_serialization_contract_excludes_python_internals(self):
+        cases = [
+            (AgeCategory.R18, {"_value_": 3, "_name_": "R18"}),
+            (WorkType.MANGA, {"_value_": "MNG", "_name_": "MANGA"}),
+            (BookType.BOOK, {"_value_": "comic", "_name_": "BOOK"}),
+        ]
 
-        self.assertIsInstance(serialized, dict)
-        self.assertEqual("R18", serialized.get("_name_"))
+        for enum_value, expected in cases:
+            with self.subTest(enum_value=enum_value):
+                self.assertEqual(expected, to_serializable(enum_value))
+
+    def test_serialized_enums_do_not_include_python_enum_internals(self):
+        serialized = to_serializable(
+            SimpleNamespace(
+                age_category=AgeCategory.ALL_AGES,
+                work_type=WorkType.MANGA,
+                book_type=BookType.BOOK,
+            )
+        )
+
+        self.assertNotIn("__objclass__", str(serialized))
+        self.assertNotIn("_sort_order_", str(serialized))
 
 
 if __name__ == "__main__":
