@@ -4,6 +4,12 @@ All notable changes to this project are documented in this file.
 
 ## Unreleased
 
+### Upgrade notes
+
+For existing manual installations:
+
+* Run `composer install`.
+
 ### Added
 
 * Added a Fetched Tags language option that follows the UI language by default.
@@ -11,6 +17,7 @@ All notable changes to this project are documented in this file.
 ### Changed
 
 * Show a placeholder in the Tags column for works without tags.
+* Updated Livewire to 4.4.7.
 
 ## 1.12.0 - 2026-10-03
 
