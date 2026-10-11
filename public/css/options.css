@@ -1221,7 +1221,8 @@ body.options-page {
     display: none !important;
 }
 
-.options-page .refetch-change-list>.result-card>label {
+.options-page .refetch-change-list>.result-card>label,
+.options-page .refetch-change-list>.result-card>.notice {
     width: auto;
     min-width: 0;
     max-width: 100%;

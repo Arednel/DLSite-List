@@ -22,6 +22,7 @@ For existing manual installations:
 * Works without a cover now show a `No image` placeholder.
 * Renamed `Image` to `Cover Image` in Field Layout settings for clarity.
 * Updated Livewire to 4.4.7.
+* Import now allows incomplete image archives.
 
 ### Fixed
 

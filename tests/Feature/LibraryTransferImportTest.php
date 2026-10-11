@@ -231,6 +231,142 @@ class LibraryTransferImportTest extends TestCase
         $this->assertNull(Product::findOrFail('RJ123456')->product_format);
     }
 
+    public function test_incomplete_sample_images_remain_reviewable_and_overwrite_with_available_images(): void
+    {
+        $product = Product::factory()->create([
+            'id' => 'RJ123456',
+            'sample_images' => [
+                'storage/Works/RJ123456/sample_1.png',
+                'storage/Works/RJ123456/sample_2.png',
+            ],
+        ]);
+        $incomingHash = $this->saveImage('Works/RJ123456/sample_1.png', 10);
+        $export = $this->exported(['works', 'images']);
+
+        $localHash = $this->saveImage('Works/RJ123456/local.png', 20);
+        $product->update(['sample_images' => ['storage/Works/RJ123456/local.png']]);
+
+        $run = $this->imported($export);
+        $item = $run->items()->where('section', 'works')->where('category', 'sample_images')->firstOrFail();
+
+        $this->assertSame('pending', $item->status->value);
+        $this->assertNull($item->error);
+        $this->assertFalse($item->incoming['complete']);
+        $this->assertCount(1, $item->incoming['files']);
+        $this->assertSame(
+            'Archive images are incomplete. You can import only available images.',
+            $item->metadata['warning'] ?? null,
+        );
+        Livewire::test(OptionsTransferRun::class, ['run' => $run])
+            ->call('tab', 'works', 'sample_images')
+            ->assertSee('Archive images are incomplete. You can import only available images.')
+            ->assertSee('wire:change="decide(' . $item->id . ', $event.target.value)"', false);
+
+        $this->apply($run);
+
+        $paths = $product->fresh()->sample_images;
+        $this->assertCount(1, $paths);
+        $this->assertNotSame('storage/Works/RJ123456/local.png', $paths[0]);
+        $this->assertSame($incomingHash, hash_file('sha256', Storage::disk('public')->path(substr($paths[0], 8))));
+        $this->assertNotSame($localHash, $incomingHash);
+        $this->assertSame(LibraryTransferRunStatus::CompletedWithWarnings, $run->fresh()->status);
+    }
+
+    public function test_incomplete_sample_images_can_merge_available_images_with_local_images(): void
+    {
+        $product = Product::factory()->create([
+            'id' => 'RJ123456',
+            'sample_images' => [
+                'storage/Works/RJ123456/sample_1.png',
+                'storage/Works/RJ123456/sample_2.png',
+            ],
+        ]);
+        $incomingHash = $this->saveImage('Works/RJ123456/sample_1.png', 10);
+        $export = $this->exported(['works', 'images']);
+
+        $localHash = $this->saveImage('Works/RJ123456/local.png', 20);
+        $product->update(['sample_images' => ['storage/Works/RJ123456/local.png']]);
+
+        $run = $this->imported($export);
+        $this->apply($run, 'merge');
+
+        $paths = $product->fresh()->sample_images;
+        $this->assertCount(2, $paths);
+        $hashes = array_map(
+            fn(string $path): string => hash_file('sha256', Storage::disk('public')->path(substr($path, 8))),
+            $paths,
+        );
+        $this->assertEqualsCanonicalizing([$localHash, $incomingHash], $hashes);
+        $this->assertSame(LibraryTransferRunStatus::CompletedWithWarnings, $run->fresh()->status);
+    }
+
+    public function test_incomplete_empty_cover_does_not_clear_a_local_cover_on_overwrite(): void
+    {
+        $product = Product::factory()->create([
+            'id' => 'RJ123456',
+            'work_image' => 'storage/Works/RJ123456/missing.png',
+        ]);
+        $export = $this->exported(['works', 'images']);
+
+        $localHash = $this->saveImage('Works/RJ123456/local.png', 20);
+        $product->update(['work_image' => 'storage/Works/RJ123456/local.png']);
+
+        $run = $this->imported($export);
+        $item = $run->items()->where('section', 'works')->where('category', 'cover')->firstOrFail();
+        $this->assertSame('pending', $item->status->value);
+        $this->assertFalse($item->incoming['complete']);
+        $this->assertSame([], $item->incoming['files']);
+
+        $this->apply($run);
+
+        $product->refresh();
+        $this->assertSame('storage/Works/RJ123456/local.png', $product->work_image);
+        $this->assertSame($localHash, hash_file('sha256', Storage::disk('public')->path('Works/RJ123456/local.png')));
+        $this->assertSame(LibraryTransferRunStatus::CompletedWithWarnings, $run->fresh()->status);
+    }
+
+    public function test_new_work_imports_available_images_from_incomplete_categories(): void
+    {
+        $product = Product::factory()->create([
+            'id' => 'RJ123456',
+            'work_image' => 'storage/Works/RJ123456/missing-cover.png',
+            'sample_images' => [
+                'storage/Works/RJ123456/sample_1.png',
+                'storage/Works/RJ123456/missing-sample.png',
+            ],
+        ]);
+        $incomingHash = $this->saveImage('Works/RJ123456/sample_1.png', 10);
+        $export = $this->exported(['works', 'images']);
+        $product->delete();
+        Storage::disk('public')->deleteDirectory('Works/RJ123456');
+
+        $run = $this->imported($export);
+        $item = $run->items()->where('section', 'works')->where('category', 'new_works')->firstOrFail();
+
+        $this->assertSame(
+            'Archive images are incomplete. You can import only available images.',
+            $item->metadata['warning'] ?? null,
+        );
+        $this->assertFalse($item->incoming['cover']['complete']);
+        $this->assertSame([], $item->incoming['cover']['files']);
+        $this->assertFalse($item->incoming['sample_images']['complete']);
+        $this->assertCount(1, $item->incoming['sample_images']['files']);
+        Livewire::test(OptionsTransferRun::class, ['run' => $run])
+            ->call('mainTab', 'new_works')
+            ->assertSee('Archive images are incomplete. You can import only available images.');
+
+        $this->apply($run);
+
+        $imported = Product::findOrFail('RJ123456');
+        $this->assertNull($imported->work_image);
+        $this->assertCount(1, $imported->sample_images);
+        $this->assertSame(
+            $incomingHash,
+            hash_file('sha256', Storage::disk('public')->path(substr($imported->sample_images[0], 8))),
+        );
+        $this->assertSame(LibraryTransferRunStatus::CompletedWithWarnings, $run->fresh()->status);
+    }
+
     public function test_announcement_date_round_trips_when_importing_a_deleted_local_record(): void
     {
         $product = Product::factory()->create([

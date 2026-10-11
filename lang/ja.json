@@ -155,7 +155,6 @@
     "Cancel this Export? Already applied changes are retained.": "このエクスポートをキャンセルしますか？適用済みの変更は保持されます。",
     "A transfer operation is in progress. Retry shortly.": "転送処理中です。しばらくしてから再試行してください。",
     "Wait for the current import to finish applying before starting another import.": "現在のインポートの適用が完了してから、新しいインポートを開始してください。",
-    "Incomplete image categories will be skipped when adding this work.": "この作品を追加する際、不完全な画像カテゴリはスキップされます。",
     "Open navigation menu": "ナビゲーションメニューを開く",
     "Close navigation menu": "ナビゲーションメニューを閉じる",
     "Quick Add": "クイック追加",
@@ -958,5 +957,6 @@
     "New work": "新しい作品",
     "Images cannot be saved while another library operation is in progress. Try again.": "別のライブラリ操作が進行中のため、画像を保存できません。もう一度お試しください。",
     "Sample image order is no longer valid. Reload the form and try again.": "サンプル画像の並び順が無効になりました。フォームを再読み込みして、もう一度お試しください。",
-    "An image already exists at the destination. Remove the leftover file and try again.": "保存先に画像がすでに存在します。残っているファイルを削除して、もう一度お試しください。"
+    "An image already exists at the destination. Remove the leftover file and try again.": "保存先に画像がすでに存在します。残っているファイルを削除して、もう一度お試しください。",
+    "Archive images are incomplete. You can import only available images.": "アーカイブ内の画像が不完全です。利用可能な画像のみインポートできます。"
 }

@@ -156,7 +156,6 @@
     "Cancel this Export? Already applied changes are retained.": "Cancel this Export? Already applied changes are retained.",
     "A transfer operation is in progress. Retry shortly.": "A transfer operation is in progress. Retry shortly.",
     "Wait for the current import to finish applying before starting another import.": "Wait for the current import to finish applying before starting another import.",
-    "Incomplete image categories will be skipped when adding this work.": "Incomplete image categories will be skipped when adding this work.",
     "Open navigation menu": "Open navigation menu",
     "Close navigation menu": "Close navigation menu",
     "Quick Add": "Quick Add",
@@ -958,5 +957,6 @@
     "New work": "New work",
     "Images cannot be saved while another library operation is in progress. Try again.": "Images cannot be saved while another library operation is in progress. Try again.",
     "Sample image order is no longer valid. Reload the form and try again.": "Sample image order is no longer valid. Reload the form and try again.",
-    "An image already exists at the destination. Remove the leftover file and try again.": "An image already exists at the destination. Remove the leftover file and try again."
+    "An image already exists at the destination. Remove the leftover file and try again.": "An image already exists at the destination. Remove the leftover file and try again.",
+    "Archive images are incomplete. You can import only available images.": "Archive images are incomplete. You can import only available images."
 }

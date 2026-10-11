@@ -114,7 +114,7 @@ class LibraryTransferReviewTest extends TestCase
         $this->assertSame('storage/Works/RJ123456/cover.png', $product->fresh()->work_image);
     }
 
-    public function test_complete_empty_images_can_clear_but_unavailable_categories_never_clear(): void
+    public function test_complete_empty_images_can_clear_but_incomplete_empty_categories_never_clear(): void
     {
         $product = Product::factory()->create(['id' => 'RJ123456', 'work_image' => null]);
         $export = $this->exported(['works', 'images']);
@@ -125,7 +125,15 @@ class LibraryTransferReviewTest extends TestCase
         $product->refresh()->update(['work_image' => 'storage/Works/RJ123456/missing.jpg']);
         $export = $this->exported(['works', 'images']);
         $run = $this->imported($export);
-        $this->assertSame(LibraryImportItemStatus::Unavailable, $run->items()->where('category', 'cover')->first()->status);
+        $item = $run->items()->where('category', 'cover')->firstOrFail();
+        $this->assertSame(LibraryImportItemStatus::Pending, $item->status);
+        $this->assertNull($item->error);
+        $this->assertFalse($item->incoming['complete']);
+        $this->assertSame([], $item->incoming['files']);
+        $this->assertSame(
+            'Archive images are incomplete. You can import only available images.',
+            $item->metadata['warning'] ?? null,
+        );
         $this->apply($run);
         $this->assertSame('storage/Works/RJ123456/missing.jpg', $product->fresh()->work_image);
     }

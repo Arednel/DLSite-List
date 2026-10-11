@@ -210,7 +210,7 @@ final class ImportReview
             $metadata = [...$source, 'title' => $record['titles']['work_name'], ...Arr::only($record, ['created_at', 'updated_at'])];
             if (! $product) {
                 if ((isset($record['cover']) && ! $record['cover']['complete']) || (isset($record['sample_images']) && ! $record['sample_images']['complete'])) {
-                    $metadata['warning'] = 'Incomplete image categories will be skipped when adding this work.';
+                    $metadata['warning'] = 'Archive images are incomplete. You can import only available images.';
                 }
                 $this->item($run, $section, 'new_works', $record['product_code'], null, $record, $metadata);
 
@@ -243,6 +243,10 @@ final class ImportReview
                 if (! array_key_exists($category, $record)) {
                     continue;
                 }
+                $imageMetadata = $metadata;
+                if (! $record[$category]['complete']) {
+                    $imageMetadata['warning'] = 'Archive images are incomplete. You can import only available images.';
+                }
                 $this->item(
                     $run,
                     $section,
@@ -250,8 +254,7 @@ final class ImportReview
                     $product->id,
                     $this->imageBaseline($product, $category, $current[$category]),
                     $record[$category],
-                    $metadata,
-                    $record[$category]['complete'] ? null : 'Archive image category is incomplete.'
+                    $imageMetadata,
                 );
             }
         } elseif ($section === 'options') {
@@ -727,7 +730,7 @@ final class ImportReview
             $this->contributors($product, $value['contributors'] ?? []);
             $this->tags($product, $value['tags'] ?? [], $item);
             foreach (['cover', 'sample_images'] as $category) {
-                if ($value[$category]['complete'] ?? false) {
+                if (isset($value[$category])) {
                     $this->images($product, $item, $category, $value[$category], false);
                 }
             }
@@ -835,7 +838,7 @@ final class ImportReview
 
     private function images(Product $product, LibraryImportItem $item, string $category, array $value, bool $merge): void
     {
-        if (! $value['complete'] || ($item->run->settings['without_images'] ?? false)) {
+        if (($item->run->settings['without_images'] ?? false) || (! $value['complete'] && $value['files'] === [])) {
             return;
         }
         $current = $this->data->imageCategory($product, $category);

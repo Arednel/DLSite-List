@@ -210,6 +210,8 @@ Each bounded export planning phase locks and rechecks the run, then commits inve
 
 Partial work imports include only contributor roles explicitly present in either language document. Omitted roles are preserved; explicitly empty roles can be cleared with Overwrite.
 
+Incomplete image categories remain importable. Import applies the valid image files present in the archive and records a warning; an incomplete category with no available files is treated as unavailable data rather than an explicit empty category, so it does not clear existing images. New works follow the same rule and import any available images.
+
 #### Archive boundary
 
 New exports use schema v2, while imports support both the released schema v1 and schema v2. Both use one archive-set identity across independent data and image ZIP parts. Every part contains `manifest.json`, which identifies the schema, part kind/count, scopes, and declared entries with sizes and SHA-256 checksums. Parts from different schema versions cannot be mixed.
