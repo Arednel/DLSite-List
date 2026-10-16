@@ -186,6 +186,46 @@ class AuthenticationTest extends TestCase
         $this->assertSame(0, RateLimiter::attempts('admin-login:192.0.2.10'));
     }
 
+    #[DataProvider('loginThrottleMessageProvider')]
+    public function test_login_throttle_message_uses_localized_pluralization(string $locale, int $seconds, string $message): void
+    {
+        $this->freezeTime();
+        $this->createAdmin();
+        Option::setUserAuthenticationEnabled(true);
+        Option::setUiLanguage($locale);
+        $this->withServerVariables(['REMOTE_ADDR' => '192.0.2.10']);
+        RateLimiter::increment('admin-login:192.0.2.10', decaySeconds: $seconds, amount: 5);
+
+        $this->post(route('login.authenticate'), [
+            'username' => 'admin',
+            'password' => 'correct-password',
+        ])->assertSessionHasErrors(['username' => $message]);
+
+        $this->assertGuest();
+    }
+
+    public static function loginThrottleMessageProvider(): iterable
+    {
+        yield 'english singular' => ['en', 1, 'Too many login attempts. Try again in 1 second.'];
+        yield 'english plural' => ['en', 2, 'Too many login attempts. Try again in 2 seconds.'];
+        yield 'japanese one second' => ['ja', 1, 'ログイン試行回数が多すぎます。1秒後に再試行してください。'];
+        yield 'japanese multiple seconds' => ['ja', 2, 'ログイン試行回数が多すぎます。2秒後に再試行してください。'];
+    }
+
+    public function test_login_error_uses_the_operational_catalog_in_japanese(): void
+    {
+        $this->createAdmin();
+        Option::setUserAuthenticationEnabled(true);
+        Option::setUiLanguage('ja');
+
+        $this->post(route('login.authenticate'), [
+            'username' => 'admin',
+            'password' => 'wrong-password',
+        ])->assertSessionHasErrors([
+            'username' => 'ユーザー名またはパスワードが正しくありません。',
+        ]);
+    }
+
     public function test_login_requires_the_exact_username_case(): void
     {
         User::factory()->create([

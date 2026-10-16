@@ -163,7 +163,7 @@ Covers optional administrator authentication:
 - exact-case usernames
 - protected routes/mutations/Livewire requests
 - public auth/help routes
-- throttling
+- throttling and localized authentication failures through the operational error catalog, including English singular/plural and Japanese login-throttle messages
 - intended redirects
 - themes/locales
 - Remember me persistence
@@ -206,9 +206,11 @@ Covers Refetch queue failure recovery, cancellation, continued processing after 
 
 Covers Bulk Import parsing/validation, shared-input snapshots, queued item processing, skips/failures, transactional persistence (including failed completion writes, worker interruption before commit, and stale item/run state), and run completion. Product Format coverage verifies fetched values when the field is hidden or blank and manual override behavior when a visible value is supplied. Also verifies announcement dates and Site IDs are saved by the shared importer, and failed cover/sample downloads are omitted from persisted image references.
 
+Busy-start coverage checks the wrapped cache lock timeout and ensures unrelated dispatch exceptions with the same message are not misclassified as lock contention.
+
 #### `tests/Feature/OptionsBulkImportsTest.php`
 
-Covers Bulk Import history, progress/errors, imported-work titles and fallback product codes, 10-run pagination, cleanup, stable Livewire identity, and active-run-only polling.
+Covers Bulk Import history, progress/errors, imported-work titles and fallback product codes, 10-run pagination, cleanup, stable Livewire identity, and active-run-only polling. Error/warning coverage verifies known canonical operational messages use the dedicated error catalog in the current UI locale while unknown/raw diagnostics and legacy warnings remain unchanged.
 
 #### `tests/Feature/LibraryTransferTest.php`
 
@@ -216,13 +218,13 @@ Covers core transfer contracts, route/review smoke coverage, compact collapsed E
 
 #### `tests/Feature/LibraryTransferExportTest.php`
 
-Covers export selection/planning, deterministic work/image inventory, Tag Library/Options fragmentation, multipart manifests and size boundaries, work-level progress, source-change replanning, and downloads. Product Format coverage verifies that ordered canonical/custom values are written to both locale documents and survive export/import round trips; announcement dates are exported in both locales.
+Covers export selection/planning, deterministic work/image inventory, Tag Library/Options fragmentation, multipart manifests and size boundaries, work-level progress, source-change replanning, downloads, and English/Japanese download failure messages rendered by the transfer view. Product Format coverage verifies that ordered canonical/custom values are written to both locale documents and survive export/import round trips; announcement dates are exported in both locales.
 
-Regression coverage injects failures after successor-job insertion in every planning phase, verifies transaction rollback and successful retry, and checks stale planning calls.
+Regression coverage injects failures after successor-job insertion in every planning phase, verifies transaction rollback and successful retry, and checks stale planning calls. Empty-library and empty-selection export errors are checked in English and Japanese, including that no transfer is started.
 
 #### `tests/Feature/LibraryTransferImportTest.php`
 
-Covers multipart upload/validation, missing or replacement parts, archive/path/checksum safety, bounded analysis/checkpoint retries, image validation, existing/new work analysis, incomplete-image imports for existing and new works, and data-only continuation. Product Format coverage includes custom/empty values, invalid-value quarantine, locale fallback, and compatibility with archives created before the field existed. `announce_date` tests cover round trips, omitted fields, and invalid-date quarantine. Site ID tests cover round trips and locale metadata fallback when importing older archives without an explicit stored site. Archive compatibility tests cover v2 output, released v1 manifests and legacy `rj_code`/Index sort Options layouts.
+Covers multipart upload/validation, missing or replacement parts, archive/path/checksum safety, bounded analysis/checkpoint retries, image validation, existing/new work analysis, incomplete-image imports for existing and new works, and data-only continuation. Incomplete-image warnings remain canonical in staged metadata and are rendered from the operational error catalog in the current UI locale. Product Format coverage includes custom/empty values, invalid-value quarantine, locale fallback, and compatibility with archives created before the field existed. `announce_date` tests cover round trips, omitted fields, and invalid-date quarantine. Site ID tests cover round trips and locale metadata fallback when importing older archives without an explicit stored site. Archive compatibility tests cover v2 output, released v1 manifests and legacy `rj_code`/Index sort Options layouts.
 
 #### `tests/Feature/LibraryTransferReviewTest.php`
 
@@ -322,7 +324,7 @@ Covers Livewire Refetch progress polling, running/cancelling state, counts, Canc
 
 #### `tests/Feature/OptionsRefetchReviewTest.php`
 
-Covers Refetch review tabs, compact collapsed failed-result/warning errors, per-change choices, bulk overwrite presets, Apply Tab/Apply All/Reject/finish confirmations, validation, read-only state, and accessible tab/tabpanel relationships. Also covers 100-change pagination, pagination by individual changes rather than works, page navigation, category-switch page resets, choice preservation across pages, and applying choices from the complete run rather than only the visible page.
+Covers Refetch review tabs, compact collapsed failed-result/warning errors, current-locale rendering of known image-download warnings and image-recovery failures during apply, per-change choices, bulk overwrite presets, Apply Tab/Apply All/Reject/finish confirmations, validation, read-only state, and accessible tab/tabpanel relationships. Also covers 100-change pagination, pagination by individual changes rather than works, page navigation, category-switch page resets, choice preservation across pages, and applying choices from the complete run rather than only the visible page.
 
 #### `tests/Feature/OptionsWorkSearchTest.php`
 
@@ -409,7 +411,7 @@ Covers derived numeric product-code and partial-date sort keys, supported-prefix
 
 #### `tests/Feature/ProductSurfaceLocalizationTest.php`
 
-Covers localization across Index/Create/Edit product surfaces, including:
+Covers localization across Index/Create/Edit product surfaces, including grouped UI/error catalog parity and placeholder consistency, plus:
 - document language
 - field/help/accessibility text
 - delete confirmation
@@ -435,7 +437,7 @@ Covers Tag Library expanded/collapsed default, Index group-ordering setting, and
 
 #### `tests/Feature/TagLibraryLocalizationTest.php`
 
-Covers localized Tag Library labels, controls, and selected-language behavior.
+Covers localized Tag Library labels, controls, selected-language behavior, and duplicate-tag warnings without creating duplicate records; notices retain their canonical text and translate at display time.
 
 #### `tests/Feature/TagLibraryManagerTest.php`
 
@@ -469,7 +471,16 @@ Covers server-rendered Add/Edit modal completion fallback output and conditional
 - Covers localized enum/Option display values, locale-independent stored field-layout data, and localized partial-date formatting while keeping stable underlying values.
 
 `tests/Unit/UserFacingDisplayStateTest.php`
-- Covers localized Refetch status/error presentation while stable status values and unknown scraper details remain unchanged.
+- Covers localized Refetch status/error presentation and Import Review warnings, while stable status values remain unchanged and unknown scraper errors/warnings remain verbatim.
+
+`tests/Unit/Support/Localization/ErrorMessageTest.php`
+- Covers exact known error/warning lookup through the grouped `errors.php` catalogs, verbatim fallback for unknown diagnostics (including strings that match normal UI labels), parameter substitution that preserves external values, and current-locale rendering of known DLSite image warnings.
+
+`tests/Unit/Support/ProductImageMessageTest.php`
+- Covers image-promotion errors at Transfer and Refetch display boundaries; combined recovery failures translate known causes and use Laravel's key fallback for unknown causes, while preserving canonical stored messages.
+
+`tests/Unit/Support/Transfers/TransferMessageTest.php`
+- Covers localized Transfer progress stages, shared `ImportValue` section/field labels (including Site ID), upload failure messages rendered directly by the Blade component, bounded dynamic diagnostic templates, canonical static error lookup, verbatim fallback for unknown diagnostics, and verbatim entity values, including tag/group names ending in `for export`.
 
 #### Enums
 

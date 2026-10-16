@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use App\Enums\RefetchCategory;
+use App\Support\ProductImageMessage;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
@@ -92,12 +93,6 @@ class RefetchWorkResult extends Model
 
     public function displayError(): ?string
     {
-        if ($this->error === null) {
-            return null;
-        }
-
-        $translated = __($this->error);
-
-        return is_string($translated) ? $translated : $this->error;
+        return ProductImageMessage::display($this->error);
     }
 }

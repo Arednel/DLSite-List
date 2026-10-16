@@ -14,6 +14,7 @@ use App\Models\Option;
 use App\Support\Transfers\ImportReview;
 use App\Support\Transfers\ImportValue;
 use App\Support\Transfers\LibraryTransferService;
+use App\Support\Transfers\TransferMessage;
 use App\Support\Transfers\TransferArchive;
 use Closure;
 use Illuminate\Contracts\Cache\LockTimeoutException;
@@ -209,15 +210,26 @@ class OptionsTransferRun extends Component
         if ($run->direction === LibraryTransferDirection::Import && $run->acceptsNewParts()) {
             $pendingPart = $run->parts()->awaitingInspection()->orderBy('id')->first(['kind', 'number']);
             $description = $pendingPart
-                ? __('Validating :kind part :number', ['kind' => $pendingPart->kind, 'number' => $pendingPart->number])
-                : __('Waiting for ZIP files');
+                ? "Validating {$pendingPart->kind} part {$pendingPart->number}"
+                : 'Waiting for ZIP files';
         }
 
         return [
             'processed' => $run->processed,
             'total' => $run->total,
-            'description' => __($description),
+            'description' => TransferMessage::stage($description),
         ];
+    }
+
+    /** @return list<string> */
+    #[Computed]
+    public function displayWarnings(): array
+    {
+        return collect($this->run->warnings ?? [])
+            ->filter(fn($warning): bool => is_string($warning) && $warning !== '')
+            ->map(fn(string $warning): string => TransferMessage::diagnostic($warning))
+            ->values()
+            ->all();
     }
 
     #[Computed]
@@ -267,7 +279,7 @@ class OptionsTransferRun extends Component
             $callback();
             unset($this->run, $this->reviewData);
         } catch (LockTimeoutException | RuntimeException $exception) {
-            $this->addError('transfer', $exception->getMessage() ?: __('A transfer operation is in progress. Retry shortly.'));
+            $this->addError('transfer', TransferMessage::diagnostic($exception->getMessage() ?: 'A transfer operation is in progress. Retry shortly.'));
         }
     }
 
@@ -317,7 +329,7 @@ class OptionsTransferRun extends Component
                 $this->redirectRoute('options.index', ['tab' => 'transfers']);
             }
         } catch (Throwable $exception) {
-            $this->addError('transfer', $exception->getMessage() ?: __('A transfer operation is in progress. Retry shortly.'));
+            $this->addError('transfer', TransferMessage::diagnostic($exception->getMessage() ?: 'A transfer operation is in progress. Retry shortly.'));
         }
     }
 
@@ -372,14 +384,14 @@ class OptionsTransferRun extends Component
             });
         }
         $items = $itemQuery->orderByDesc('collection')->orderBy('id')
-            ->paginate(self::REVIEW_PAGE_SIZE, ['id', 'library_transfer_run_id', 'section', 'category', 'entity_key', 'status', 'decision', 'decision_override', 'metadata', 'error', 'baseline_preview', 'incoming_preview']);
+            ->paginate(self::REVIEW_PAGE_SIZE, ['id', 'library_transfer_run_id', 'section', 'category', 'entity_key', 'status', 'decision', 'decision_override', 'metadata', 'error', 'baseline_preview', 'incoming_preview', 'collection']);
         $reviewItems = $items->getCollection();
+        $itemLabels = $reviewItems
+            ->mapWithKeys(fn(LibraryImportItem $item): array => [$item->id => $this->reviewItemLabel($item)])
+            ->all();
         $labels = collect(array_keys($categories))
             ->merge(collect($categories)->flatten())
-            ->merge($reviewItems->flatMap(fn(LibraryImportItem $item): array => [
-                $item->entity_key,
-                $item->metadata['field'] ?? null,
-            ]))
+            ->merge($reviewItems->map(fn(LibraryImportItem $item): mixed => $item->metadata['field'] ?? null))
             ->filter(fn($key): bool => is_string($key) && $key !== '')
             ->unique()
             ->mapWithKeys(fn(string $key): array => [$key => ImportValue::label($key)])
@@ -419,7 +431,7 @@ class OptionsTransferRun extends Component
             ->keys()
             ->all();
 
-        return compact('counts', 'items', 'labels', 'newWorkChanges', 'newWorkCounts', 'previews', 'decisionOptions', 'decisionLoading', 'decisionHelp') + [
+        return compact('counts', 'items', 'itemLabels', 'labels', 'newWorkChanges', 'newWorkCounts', 'previews', 'decisionOptions', 'decisionLoading', 'decisionHelp') + [
             'section' => $this->section,
             'category' => $this->category,
             'tabDecisionOptions' => $this->category === 'new_works'
@@ -427,6 +439,24 @@ class OptionsTransferRun extends Component
                 : $decisionOptions,
             'availableMainTabs' => $availableMainTabs,
         ];
+    }
+
+    private function reviewItemLabel(LibraryImportItem $item): string
+    {
+        // Only application-owned labels are translated. Entity, user-entered, and fetched data stay verbatim.
+        if ($item->section === 'tag-library' && $item->category === 'groups' && $item->collection) {
+            return __('Group order and missing groups');
+        }
+
+        if ($item->section === 'options') {
+            return ImportValue::label($item->entity_key);
+        }
+
+        if ($item->section === 'tag-library' && is_string($item->metadata['title'] ?? null)) {
+            return $item->metadata['title'];
+        }
+
+        return $item->entity_key;
     }
 
     private function advanceAfterAppliedTab(LibraryTransferRun $run, string $section, string $category): void
@@ -537,10 +567,15 @@ class OptionsTransferRun extends Component
         $parts = $slots->isEmpty() ? collect() : $run->parts()
             ->get(['id', 'kind', 'number', 'filename', 'status', 'bytes', 'error', 'candidate'])
             ->keyBy(fn($part) => $part->kind . '.' . $part->number);
-        $partSlots = $slots->map(fn(array $slot): array => [
-            ...$slot,
-            'part' => $parts->get($slot['kind'] . '.' . $slot['number']),
-        ]);
+        $partSlots = $slots->map(function (array $slot) use ($parts): array {
+            $part = $parts->get($slot['kind'] . '.' . $slot['number']);
+
+            return [
+                ...$slot,
+                'part' => $part,
+                'displayError' => TransferMessage::diagnostic($part?->error),
+            ];
+        });
         $downloadParts = $run->direction === LibraryTransferDirection::Export && $run->status === LibraryTransferRunStatus::Ready
             ? $run->parts()->where('status', LibraryTransferPartStatus::Ready)->orderBy('kind')->orderBy('number')->get(['id', 'library_transfer_run_id', 'filename'])
             : collect();
@@ -613,12 +648,12 @@ class OptionsTransferRun extends Component
 
         if ($run->direction->isExport()) {
             if (is_string($run->error) && $run->error !== '') {
-                $errors['export'][] = $run->error;
+                $errors['export'][] = TransferMessage::diagnostic($run->error);
             }
 
             foreach ($run->warnings ?? [] as $warning) {
                 if (is_string($warning) && $warning !== '') {
-                    $errors['export'][] = $warning;
+                    $errors['export'][] = TransferMessage::diagnostic($warning);
                 }
             }
 
@@ -626,7 +661,7 @@ class OptionsTransferRun extends Component
         }
 
         if (is_string($run->error) && $run->error !== '') {
-            $errors['review'][] = $run->error;
+            $errors['review'][] = TransferMessage::diagnostic($run->error);
         }
 
         if (! $run->reviewVisible()) {
@@ -639,7 +674,7 @@ class OptionsTransferRun extends Component
             ->orderBy('id')
             ->get(['entity_key', 'error'])
             ->each(function (LibraryImportItem $item) use (&$errors): void {
-                $errors['review'][] = "{$item->entity_key}: {$item->error}";
+                $errors['review'][] = "{$item->entity_key}: " . TransferMessage::diagnostic($item->error);
             });
 
         return $errors;
@@ -666,6 +701,7 @@ class OptionsTransferRun extends Component
             'uploadMaxBytes' => $partData['uploadMaxBytes'],
             'counts' => $reviewData['counts'] ?? null,
             'items' => $reviewData['items'] ?? null,
+            'itemLabels' => $reviewData['itemLabels'] ?? [],
             'labels' => $reviewData['labels'] ?? null,
             'newWorkChanges' => $reviewData['newWorkChanges'] ?? null,
             'newWorkCounts' => $reviewData['newWorkCounts'] ?? [],

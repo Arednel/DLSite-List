@@ -156,8 +156,8 @@ final class TransferArchive
         $stage = $last === null
             ? $this->phaseLabel($planning['phase'], $settings['scopes'])
             : ($withImages
-                ? __('Preparing :code and its images for export', ['code' => $last])
-                : __('Preparing :code for export', ['code' => $last]));
+                ? "Preparing {$last} and its images for export"
+                : "Preparing {$last} for export");
         $this->continuePlanning($run, $planning, $stage, $offset, $warnings);
     }
 
@@ -532,7 +532,7 @@ final class TransferArchive
                 $this->dispatcher->checkpoint($run, [
                     'status' => LibraryTransferRunStatus::Ready,
                     'processed' => $run->parts()->where('status', LibraryTransferPartStatus::Ready)->count(),
-                    'stage' => __('Archive parts'),
+                    'stage' => 'Archive parts',
                 ]);
             }
 
@@ -561,7 +561,7 @@ final class TransferArchive
             }
             $this->storage->delete($part->path);
         }
-        $this->dispatcher->checkpoint($run, ['stage' => __('Building :kind part :number', ['kind' => $part->kind, 'number' => $part->number])]);
+        $this->dispatcher->checkpoint($run, ['stage' => "Building {$part->kind} part {$part->number}"]);
         $files = $part->entries()->orderBy('position')->get()->map(fn(LibraryTransferEntry $entry): array => [
             'path' => $entry->path,
             'source' => $entry->source_path,
@@ -620,7 +620,7 @@ final class TransferArchive
                 throw new SourceChanged('Export source changed during build: ' . $file['path']);
             }
         }
-        $this->dispatcher->checkpoint($run, ['stage' => __('Validating :kind part :number', ['kind' => $part->kind, 'number' => $part->number])]);
+        $this->dispatcher->checkpoint($run, ['stage' => "Validating {$part->kind} part {$part->number}"]);
         $this->inspect($disk->path($temporary), true);
         if ($run->settings['part_bytes'] !== null && $disk->size($temporary) > $run->settings['part_bytes']) {
             throw new RuntimeException('Final ZIP exceeds the configured part size.');
@@ -642,7 +642,7 @@ final class TransferArchive
     {
         DB::transaction(function () use ($run, $part): void {
             $ready = $run->parts()->where('status', LibraryTransferPartStatus::Ready)->count();
-            if ($this->dispatcher->checkpoint($run, ['processed' => $ready, 'stage' => __('Built :kind part :number', ['kind' => $part->kind, 'number' => $part->number]), 'status' => $ready === (int) $run->total ? LibraryTransferRunStatus::Ready : LibraryTransferRunStatus::Building])) {
+            if ($this->dispatcher->checkpoint($run, ['processed' => $ready, 'stage' => "Built {$part->kind} part {$part->number}", 'status' => $ready === (int) $run->total ? LibraryTransferRunStatus::Ready : LibraryTransferRunStatus::Building])) {
                 $this->nextBuild($run);
             }
         });

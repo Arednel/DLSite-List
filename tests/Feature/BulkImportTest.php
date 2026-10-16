@@ -5,6 +5,7 @@ namespace Tests\Feature;
 use App\Enums\BulkImportItemStatus;
 use App\Enums\BulkImportRunStatus;
 use App\Enums\ProductField;
+use App\Enums\UiLanguage;
 use App\Jobs\FinishBulkImportRunJob;
 use App\Jobs\ImportBulkWorkJob;
 use App\Models\BulkImportItem;
@@ -15,6 +16,7 @@ use App\Models\Product;
 use App\Support\BulkImport\BulkImportService;
 use App\Support\DLSite\DLSiteProductImporter;
 use App\Support\DLSite\DLSiteProductImportInput;
+use Illuminate\Contracts\Cache\LockTimeoutException;
 use Illuminate\Database\QueryException;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Queue\Middleware\WithoutOverlapping;
@@ -73,6 +75,7 @@ class BulkImportTest extends TestCase
                 $this->fail('Expected the shared Bulk Import lifecycle lock to block run creation.');
             } catch (RuntimeException $exception) {
                 $this->assertSame(BulkImportService::BUSY_MESSAGE, $exception->getMessage());
+                $this->assertInstanceOf(LockTimeoutException::class, $exception->getPrevious());
             }
         } finally {
             $lock->release();
@@ -80,6 +83,66 @@ class BulkImportTest extends TestCase
 
         $this->assertDatabaseCount('bulk_import_runs', 0);
         Bus::assertNothingDispatched();
+    }
+
+    public function test_busy_start_error_is_localized_at_the_controller_boundary(): void
+    {
+        Bus::fake();
+        Option::setUiLanguage(UiLanguage::Japanese);
+        $lock = Cache::lock(BulkImportRun::LIFECYCLE_LOCK, BulkImportRun::LIFECYCLE_LOCK_SECONDS);
+
+        $this->assertTrue($lock->get());
+
+        try {
+            $this->from(route('products.create.bulk'))
+                ->post(route('products.store.bulk'), [
+                    'product_code_list' => 'RJ000000099',
+                ])
+                ->assertRedirect(route('products.create.bulk'))
+                ->assertSessionHasErrors([
+                    'product_code_list' => '別の一括インポート操作が進行中のため、一括インポートを開始できません。',
+                ]);
+        } finally {
+            $lock->release();
+        }
+
+        $this->assertDatabaseCount('bulk_import_runs', 0);
+        Bus::assertNothingDispatched();
+    }
+
+    public function test_non_lock_exception_with_busy_message_is_not_reported_as_a_busy_import(): void
+    {
+        Bus::shouldReceive('chain')
+            ->once()
+            ->andThrow(new RuntimeException(BulkImportService::BUSY_MESSAGE));
+
+        $this->withoutExceptionHandling();
+
+        try {
+            $this->post(route('products.store.bulk'), [
+                'product_code_list' => 'RJ000000099',
+            ]);
+            $this->fail('Expected the dispatch exception to propagate.');
+        } catch (RuntimeException $exception) {
+            $this->assertSame(BulkImportService::BUSY_MESSAGE, $exception->getMessage());
+            $this->assertNull($exception->getPrevious());
+        }
+
+        $this->assertDatabaseHas('bulk_import_runs', [
+            'status' => BulkImportRunStatus::Failed->value,
+        ]);
+    }
+
+    public function test_bulk_import_validation_errors_use_the_operational_catalog_in_japanese(): void
+    {
+        Option::setUiLanguage(UiLanguage::Japanese);
+
+        $this->from(route('products.create.bulk'))
+            ->post(route('products.store.bulk'), ['product_code_list' => ''])
+            ->assertRedirect(route('products.create.bulk'))
+            ->assertSessionHasErrors([
+                'product_code_list' => '作品コードを1つ以上含むテキストを入力してください。',
+            ]);
     }
 
     public function test_bulk_import_page_reuses_quick_add_form_with_product_code_list_input(): void
@@ -678,7 +741,7 @@ class BulkImportTest extends TestCase
         );
     }
 
-    public function test_image_warning_is_stored_as_formatted_text(): void
+    public function test_image_warning_is_stored_canonically_and_localized_when_displayed(): void
     {
         app()->setLocale('ja');
         Storage::fake('local');
@@ -701,10 +764,12 @@ class BulkImportTest extends TestCase
         $item->refresh();
         $this->assertSame(BulkImportItemStatus::Imported, $item->status);
         $this->assertSame(
-            __('DLSite data was fetched, but these images could not be downloaded: :images', [
-                'images' => 'cover.jpg, sample_1.jpg',
-            ]),
+            'DLSite data was fetched, but these images could not be downloaded: cover.jpg, sample_1.jpg',
             $item->warning,
+        );
+        $this->assertSame(
+            'DLSite情報は取得できましたが、次の画像をダウンロードできませんでした: cover.jpg, sample_1.jpg',
+            $item->displayWarning(),
         );
         $product = Product::findOrFail($productCode);
         $this->assertNull($product->work_image);

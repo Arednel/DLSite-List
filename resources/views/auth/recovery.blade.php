@@ -19,7 +19,7 @@
     @elseif ($accountCount !== 1)
         <div class="auth-help">
             <div class="auth-error">
-                {{ __('Password recovery requires exactly one administrator account.') }}
+                {{ __('errors.Password recovery requires exactly one administrator account.') }}
             </div>
             <p>{{ __('Run php artisan admin:reset to clear unsupported user rows, then remove the recovery variable and restart.') }}
             </p>

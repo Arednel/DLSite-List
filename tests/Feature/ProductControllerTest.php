@@ -1043,6 +1043,12 @@ class ProductControllerTest extends TestCase
                 'GeoBlocked DLSite work' => '地域制限によりアクセスできないDLSite作品',
                 'This work was deleted or could not be found on DLSite' => 'この作品は削除されたか、DLSiteで見つかりませんでした。',
                 'This work could not be found on DLSite' => 'この作品はDLSiteで見つかりませんでした。',
+                'DLSite work fetch did not create JSON.' => 'DLSite作品データの取得でJSONファイルが作成されませんでした。',
+                'DLSite work fetch returned invalid JSON.' => 'DLSite作品データの取得で無効なJSONが返されました。',
+                'DLSite work fetch returned an invalid manifest.' => 'DLSite作品データの取得で無効なマニフェストが返されました。',
+                'DLSite work data is missing a product id.' => 'DLSite作品データに作品IDがありません。',
+                'DLSite fetch failed.' => 'DLSite情報の取得に失敗しました。',
+                'DLSite import failed.' => 'DLSiteからのインポートに失敗しました。',
             ] as $stderr => $localized
         ) {
             Process::fake([
@@ -2175,8 +2181,9 @@ class ProductControllerTest extends TestCase
         }
     }
 
-    public function test_store_saves_and_redirects_with_a_warning_when_images_still_fail(): void
+    public function test_store_saves_and_redirects_with_a_localized_warning_when_images_still_fail(): void
     {
+        Option::setUiLanguage(UiLanguage::Japanese);
         Storage::fake('local');
         Storage::fake('public');
         $workId = Product::factory()->make()->id;
@@ -2200,7 +2207,7 @@ class ProductControllerTest extends TestCase
             ->assertRedirect("/#{$workId}")
             ->assertSessionHas(
                 'dlsite_image_warning',
-                'DLSite data was fetched, but these images could not be downloaded: cover.jpg, sample_1.jpg',
+                'DLSite情報は取得できましたが、次の画像をダウンロードできませんでした: cover.jpg, sample_1.jpg',
             );
 
         $product = Product::findOrFail($workId);
@@ -4370,5 +4377,4 @@ class ProductControllerTest extends TestCase
 
         return new DOMXPath($document);
     }
-
 }

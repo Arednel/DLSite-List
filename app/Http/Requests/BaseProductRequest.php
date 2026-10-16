@@ -141,10 +141,10 @@ abstract class BaseProductRequest extends FormRequest
     {
         return [
             function (Validator $validator): void {
-                $this->aliasDatePartErrors($validator, 'add.start_date', __('Start date is invalid.'));
-                $this->aliasDatePartErrors($validator, 'add.finish_date', __('Finish date is invalid.'));
-                $this->validateCompleteDate($validator, 'start_date', 'add.start_date', __('Start date is invalid.'));
-                $this->validateCompleteDate($validator, 'end_date', 'add.finish_date', __('Finish date is invalid.'));
+                $this->aliasDatePartErrors($validator, 'add.start_date', __('errors.Start date is invalid.'));
+                $this->aliasDatePartErrors($validator, 'add.finish_date', __('errors.Finish date is invalid.'));
+                $this->validateCompleteDate($validator, 'start_date', 'add.start_date', __('errors.Start date is invalid.'));
+                $this->validateCompleteDate($validator, 'end_date', 'add.finish_date', __('errors.Finish date is invalid.'));
                 $this->validateDateOrder($validator);
             },
         ];
@@ -200,7 +200,7 @@ abstract class BaseProductRequest extends FormRequest
         }
 
         if ($startDate->gt($endDate)) {
-            $validator->errors()->add('add.finish_date', __('Finish date must be on or after start date.'));
+            $validator->errors()->add('add.finish_date', __('errors.Finish date must be on or after start date.'));
         }
     }
 

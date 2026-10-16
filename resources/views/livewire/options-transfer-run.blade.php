@@ -20,7 +20,7 @@
                     <div>{{ __('Total') }} <strong>{{ $this->progressData['total'] }}</strong></div>
                 </div>
                 @if ($this->run->direction->isImport())
-                    @foreach ($this->run->warnings ?? [] as $warning)
+                    @foreach ($this->displayWarnings as $warning)
                         <div class="notice" role="status">{{ $warning }}</div>
                     @endforeach
                 @endif
@@ -100,8 +100,8 @@
                                         ? __('Replacement file attached; validation is pending.')
                                         : __('Expected replacement file: :file', ['file' => $slot['filename'] ?? $slot['part']->filename]) }}
                                 @endif
-                                @if ($slot['part']->error)
-                                    <span class="notice--error">{{ $slot['part']->error }}</span>
+                                @if ($slot['displayError'])
+                                    <span class="notice--error">{{ $slot['displayError'] }}</span>
                                 @endif
                             @else
                                 {{ $slot['filename']
@@ -119,8 +119,8 @@
             <div class="option-actions" data-transfer-downloads
                 data-started="{{ __('Choose a folder for the archive files.') }}"
                 data-complete="{{ trans_choice(':count archive file saved.|:count archive files saved.', $downloadParts->count(), ['count' => $downloadParts->count()]) }}"
-                data-cancelled="{{ __('Download cancelled.') }}"
-                data-failed="{{ __('Unable to save every archive file.') }}">
+                data-cancelled="{{ __('errors.Download cancelled.') }}"
+                data-failed="{{ __('errors.Unable to save every archive file.') }}">
                 <button class="tag tag--gradient tag--lg is-clickable" type="button" data-download-all>
                     {{ __('Download all') }}
                 </button>
@@ -245,7 +245,7 @@
                             <article class="result-card"
                                 wire:key="review-item-{{ $item->id }}-{{ $category === 'new_works' ? $newWorkCategory : $category }}">
                                 <header>
-                                    <strong>{{ $section === 'options' ? $labels[$item->entity_key] : $item->entity_key }}</strong>
+                                    <strong>{{ $itemLabels[$item->id] }}</strong>
                                     @if ($category === 'new_works')
                                         <span>{{ __('New work import') }}</span>
                                     @elseif ($section === 'works')
@@ -255,8 +255,8 @@
                                 @if ($section === 'works' && $category !== 'new_works')
                                     <h3>{{ $labels[$item->metadata['field'] ?? $category] }}</h3>
                                 @endif
-                                @if ($item->metadata['warning'] ?? null)
-                                    <div class="notice" role="status">{{ __($item->metadata['warning']) }}</div>
+                                @if ($warning = $item->displayWarning())
+                                    <div class="notice" role="status">{{ $warning }}</div>
                                 @endif
                                 @if ($category === 'new_works')
                                     @forelse ($newWorkChanges[$item->id] ?? [] as $change)

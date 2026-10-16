@@ -8,6 +8,7 @@ use App\Models\Option;
 use App\Models\Product;
 use App\Support\Transfers\LibraryTransferCleanupService;
 use App\Support\Transfers\LibraryTransferService;
+use App\Support\Transfers\TransferMessage;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
 use Illuminate\View\View;
@@ -94,7 +95,7 @@ class OptionsTransfers extends Component
             $run = $service->export($this->scopes, $this->mode, $this->selectedIds);
             $this->redirectRoute('options.transfers.show', ['run' => $run]);
         } catch (RuntimeException $exception) {
-            $this->addError('transfer', $exception->getMessage());
+            $this->addError('transfer', TransferMessage::diagnostic($exception->getMessage()));
         }
     }
 
@@ -103,7 +104,7 @@ class OptionsTransfers extends Component
     {
         if ($fileCount < 1) {
             throw ValidationException::withMessages([
-                'transfer' => __('Choose at least one ZIP file before starting the import.'),
+                'transfer' => __('errors.Choose at least one ZIP file before starting the import.'),
             ]);
         }
 
@@ -116,7 +117,7 @@ class OptionsTransfers extends Component
                 'showUrl' => route('options.transfers.show', $run),
             ];
         } catch (RuntimeException $exception) {
-            throw ValidationException::withMessages(['transfer' => $exception->getMessage()]);
+            throw ValidationException::withMessages(['transfer' => TransferMessage::diagnostic($exception->getMessage())]);
         }
     }
 
@@ -126,7 +127,7 @@ class OptionsTransfers extends Component
         $this->resetErrorBag('cleanup');
 
         if ($cleanupService->unavailable()) {
-            $this->addError('cleanup', __(LibraryTransferCleanupService::UNAVAILABLE_MESSAGE));
+            $this->addError('cleanup', TransferMessage::diagnostic(LibraryTransferCleanupService::UNAVAILABLE_MESSAGE));
 
             return;
         }
@@ -149,7 +150,7 @@ class OptionsTransfers extends Component
             $cleanupService->cleanup();
         } catch (RuntimeException $exception) {
             $this->confirmingCleanup = false;
-            $this->addError('cleanup', __($exception->getMessage()));
+            $this->addError('cleanup', TransferMessage::diagnostic($exception->getMessage()));
 
             if ($exception->getPrevious() !== null) {
                 report($exception);

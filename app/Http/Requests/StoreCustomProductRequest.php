@@ -43,9 +43,9 @@ class StoreCustomProductRequest extends BaseProductRequest
     public function messages(): array
     {
         return [
-            'id.required' => __('Enter a product code or a link containing one.'),
-            'id.regex' => __('Could not find a product code (RJ, BJ or VJ followed by numbers) in your input.'),
-            'id.unique' => __('Work with this product code is already in your library'),
+            'id.required' => __('errors.Enter a product code or a link containing one.'),
+            'id.regex' => __('errors.Could not find a product code (RJ, BJ or VJ followed by numbers) in your input.'),
+            'id.unique' => __('errors.Work with this product code is already in your library'),
         ];
     }
 

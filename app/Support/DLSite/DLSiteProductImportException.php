@@ -2,6 +2,7 @@
 
 namespace App\Support\DLSite;
 
+use App\Support\Localization\ErrorMessage;
 use RuntimeException;
 
 class DLSiteProductImportException extends RuntimeException
@@ -21,14 +22,9 @@ class DLSiteProductImportException extends RuntimeException
         $message = trim($this->getMessage());
 
         if ($message === '') {
-            return __('DLSite import failed.');
+            $message = 'DLSite import failed.';
         }
 
-        return match ($message) {
-            'GeoBlocked DLSite work',
-            'This work was deleted or could not be found on DLSite',
-            'This work could not be found on DLSite' => __($message),
-            default => $message,
-        };
+        return ErrorMessage::display($message);
     }
 }

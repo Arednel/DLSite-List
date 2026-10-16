@@ -26,7 +26,7 @@
 
     @if ($notice !== '')
         <div class="tag-library-toast" wire:key="tag-library-notice-{{ $noticeId }}" role="status">
-            {{ __($notice) }}
+            {{ $this->displayNotice() }}
         </div>
     @endif
 

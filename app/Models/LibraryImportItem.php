@@ -4,6 +4,7 @@ namespace App\Models;
 
 use App\Enums\LibraryImportDecision;
 use App\Enums\LibraryImportItemStatus;
+use App\Support\Localization\ErrorMessage;
 use Illuminate\Database\Eloquent\Attributes\Scope;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
@@ -27,6 +28,15 @@ class LibraryImportItem extends Model
         'collection' => 'boolean',
         'decision_override' => 'boolean',
     ];
+
+    public function displayWarning(): ?string
+    {
+        $warning = $this->metadata['warning'] ?? null;
+
+        return is_string($warning) && $warning !== ''
+            ? ErrorMessage::display($warning)
+            : null;
+    }
 
     public function run(): BelongsTo
     {

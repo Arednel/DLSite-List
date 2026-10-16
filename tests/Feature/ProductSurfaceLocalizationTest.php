@@ -3,11 +3,14 @@
 namespace Tests\Feature;
 
 use App\Enums\ContentFocus;
+use App\Enums\ProductContributorRole;
+use App\Enums\ProductField;
 use App\Enums\ProductProgress;
 use App\Enums\UiLanguage;
 use App\Livewire\ProductIndex;
 use App\Models\Option;
 use App\Models\Product;
+use App\Support\ProductContributorSync;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\App;
@@ -128,6 +131,44 @@ class ProductSurfaceLocalizationTest extends TestCase
             ->assertSee('削除する');
     }
 
+    public function test_japanese_ui_preserves_library_content_values_verbatim(): void
+    {
+        Option::setUiLanguage(UiLanguage::Japanese);
+        Option::setEditFieldLayout([
+            ['field' => ProductField::Series->value, 'visible' => true, 'editable' => true],
+            ['field' => ProductField::Title->value, 'visible' => true, 'editable' => true],
+            ['field' => ProductField::Circle->value, 'visible' => true, 'editable' => true],
+            ['field' => ProductField::Scenario->value, 'visible' => true, 'editable' => true],
+            ['field' => ProductField::VoiceActor->value, 'visible' => true, 'editable' => true],
+            ['field' => ProductField::Illustration->value, 'visible' => true, 'editable' => true],
+            ['field' => ProductField::Author->value, 'visible' => true, 'editable' => true],
+        ]);
+        App::setLocale(UiLanguage::Japanese->value);
+        $product = Product::factory()->create([
+            'work_name' => 'Errors',
+            'work_name_english' => 'Apply All',
+            'series' => 'Site ID',
+            'circle' => 'Archive parts',
+        ]);
+        app(ProductContributorSync::class)->sync($product, [
+            ProductContributorRole::Scenario->value => ['Data'],
+            ProductContributorRole::VoiceActor->value => ['Images'],
+            ProductContributorRole::Illustration->value => ['Works'],
+            ProductContributorRole::Author->value => ['Options'],
+        ], null);
+
+        $this->get(route('products.edit', $product))
+            ->assertOk()
+            ->assertSee('>Errors</textarea>', false)
+            ->assertSee('>Apply All</textarea>', false)
+            ->assertSee('>Site ID</textarea>', false)
+            ->assertSee('value="Archive parts"', false)
+            ->assertSee('>Data</textarea>', false)
+            ->assertSee('>Images</textarea>', false)
+            ->assertSee('>Works</textarea>', false)
+            ->assertSee('>Options</textarea>', false);
+    }
+
     public function test_japanese_modal_completion_localizes_fallback_copy_and_preserves_redirect_target(): void
     {
         Storage::fake('local');
@@ -225,10 +266,41 @@ class ProductSurfaceLocalizationTest extends TestCase
             ->assertSee('全2件を表示');
     }
 
+    public function test_missing_user_facing_labels_have_japanese_translations(): void
+    {
+        App::setLocale(UiLanguage::Japanese->value);
+
+        $this->assertSame('サイトID', __('Site ID'));
+        $this->assertSame('エラー', __('Errors'));
+        $this->assertSame('すべて適用', __('Apply All'));
+        $this->assertSame(
+            '一覧の「メモ」と「タグ」に高さ制限を設定します。制限を超える内容は「すべて表示」で展開できます。',
+            __('Set height limits for Notes and Tags on the Index. Content that exceeds the limit can be expanded with ‘Show all’.'),
+        );
+        $this->assertSame(
+            'DLSite作品データの取得でJSONファイルが作成されませんでした。',
+            __('errors.DLSite work fetch did not create JSON.'),
+        );
+        $this->assertSame(
+            'DLSite作品データの取得で無効なJSONが返されました。',
+            __('errors.DLSite work fetch returned invalid JSON.'),
+        );
+        $this->assertSame(
+            'DLSite作品データの取得で無効なマニフェストが返されました。',
+            __('errors.DLSite work fetch returned an invalid manifest.'),
+        );
+        $this->assertSame(
+            'DLSite作品データに作品IDがありません。',
+            __('errors.DLSite work data is missing a product id.'),
+        );
+    }
+
     public function test_translation_catalogs_have_matching_keys_placeholders_and_supported_english_overrides(): void
     {
         $english = json_decode(file_get_contents(lang_path('en.json')), true, 512, JSON_THROW_ON_ERROR);
         $japanese = json_decode(file_get_contents(lang_path('ja.json')), true, 512, JSON_THROW_ON_ERROR);
+        $englishErrors = require lang_path('en/errors.php');
+        $japaneseErrors = require lang_path('ja/errors.php');
         $englishDisplayOverrides = [
             'Custom->Fetched' => 'Custom -> Fetched',
             'Custom->Fetched JP' => 'Custom -> Fetched JP',
@@ -247,6 +319,8 @@ class ProductSurfaceLocalizationTest extends TestCase
         };
 
         $this->assertEqualsCanonicalizing(array_keys($english), array_keys($japanese));
+        $this->assertArrayNotHasKey('errors', $english);
+        $this->assertArrayNotHasKey('errors', $japanese);
 
         foreach ($english as $key => $value) {
             if ($key !== $value) {
@@ -258,5 +332,23 @@ class ProductSurfaceLocalizationTest extends TestCase
         }
 
         $this->assertSame($englishDisplayOverrides, $actualEnglishOverrides);
+
+        $this->assertEqualsCanonicalizing(array_keys($englishErrors), array_keys($japaneseErrors));
+        $this->assertSame([], array_values(array_intersect(array_keys($english), array_keys($englishErrors))));
+
+        foreach ($englishErrors as $message => $value) {
+            $this->assertNotSame('', trim($japaneseErrors[$message]));
+
+            if ($message === 'login_throttled') {
+                foreach (explode('|', $value) as $form) {
+                    $this->assertSame($placeholders($form), $placeholders($japaneseErrors[$message]));
+                }
+
+                continue;
+            }
+
+            $this->assertSame($message, $value);
+            $this->assertSame($placeholders($message), $placeholders($japaneseErrors[$message]));
+        }
     }
 }

@@ -30,6 +30,7 @@ final class ImportValue
             'product_format' => __('Product Format'),
             'announce_date' => __('Scheduled release date'),
             'product_code' => __('Product Code'),
+            'site_id' => __('Site ID'),
             'tag-library' => __('Tag Library'),
             'jp' => __('Japanese'),
             'en' => __('English'),

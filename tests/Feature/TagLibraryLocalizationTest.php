@@ -94,12 +94,26 @@ class TagLibraryLocalizationTest extends TestCase
             ->call('createTag')
             ->assertHasErrors(['newTagTitle' => 'タグ名を入力してください。']);
 
-        Livewire::test(TagLibraryManager::class)
+        $component = Livewire::test(TagLibraryManager::class)
             ->set('newTagTitle', 'RAW_CREATED_TAG_TITLE')
             ->call('createTag')
-            ->assertSee('タグを作成しました。');
+            ->assertSet('notice', 'Tag created.')
+            ->assertSet('noticeIsError', false)
+            ->assertSee('タグを作成しました。')
+            ->set('newTagTitle', 'RAW_CREATED_TAG_TITLE')
+            ->call('createTag')
+            ->assertSet('notice', 'Tag already exists.')
+            ->assertSet('noticeIsError', true)
+            ->assertSee('タグはすでに存在します。')
+            ->assertDontSee('Tag already exists.')
+            ->assertHasNoErrors();
+
+        $this->assertSame('タグはすでに存在します。', $component->instance()->displayNotice());
+        App::setLocale(UiLanguage::English->value);
+        $this->assertSame('Tag already exists.', $component->instance()->displayNotice());
 
         $this->assertDatabaseHas('genres', ['title' => 'RAW_CREATED_TAG_TITLE']);
+        $this->assertSame(1, Genre::where('title', 'RAW_CREATED_TAG_TITLE')->count());
     }
 
     private function attachTagToGroup(GenreGroup $group, Genre $tag): void

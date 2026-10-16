@@ -269,7 +269,7 @@ final class ImportReview
             $value = $record['value'];
             $model = $type === 'tag' ? Genre::where('title_key', $record['key'])->first() : $this->group($record['key']);
             $domainValue = Arr::only($value, LibraryData::METADATA);
-            $reviewMetadata = [...$source, 'archive_order' => $record['_order'] ?? 0, 'parents' => $value['parents'] ?? [], 'model_id' => $model?->id];
+            $reviewMetadata = [...$source, 'archive_order' => $record['_order'] ?? 0, 'parents' => $value['parents'] ?? [], 'title' => $value['title'], 'model_id' => $model?->id];
             $this->item($run, $section, $type === 'tag' ? 'tags' : 'groups', $record['key'], $model ? Arr::only($model->attributesToArray(), array_keys($domainValue)) : null, $domainValue, $reviewMetadata);
             if ($type === 'group') {
                 $this->item($run, $section, 'memberships', $record['key'], $model ? $model->genres->pluck('title')->all() : [], $value['members'] ?? [], [...$source, 'title' => $value['title'], 'model_id' => $model?->id]);
@@ -604,7 +604,7 @@ final class ImportReview
                 }
                 $current = $this->current($item);
                 if (LibraryData::hash($current) !== LibraryData::hash($item->baseline)) {
-                    $item->update(['status' => LibraryImportItemStatus::Conflict, 'error' => 'Local data changed after review. Refresh this conflict to review it again.']);
+                    $item->update(['status' => LibraryImportItemStatus::Conflict, 'error' => 'Local data changed after review. Click `Refresh conflicts` to review the latest changes.']);
 
                     return;
                 }

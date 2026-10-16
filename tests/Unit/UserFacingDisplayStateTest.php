@@ -3,6 +3,9 @@
 namespace Tests\Unit;
 
 use App\Enums\UiLanguage;
+use App\Models\BulkImportItem;
+use App\Models\BulkImportRun;
+use App\Models\LibraryImportItem;
 use App\Models\RefetchRun;
 use App\Models\RefetchWorkResult;
 use App\Support\Refetch\RefetchService;
@@ -11,6 +14,39 @@ use Tests\TestCase;
 
 class UserFacingDisplayStateTest extends TestCase
 {
+    public function test_empty_errors_remain_empty_at_display_boundaries(): void
+    {
+        foreach ([BulkImportRun::class, BulkImportItem::class, RefetchWorkResult::class] as $model) {
+            foreach ([null, ''] as $message) {
+                $result = new $model(['error' => $message]);
+
+                $this->assertSame($message, $result->displayError());
+            }
+        }
+    }
+
+    public function test_import_review_warnings_use_current_locale_and_preserve_unknown_messages(): void
+    {
+        $item = new LibraryImportItem(['metadata' => [
+            'warning' => 'Archive images are incomplete. You can import only available images.',
+        ]]);
+
+        App::setLocale(UiLanguage::Japanese->value);
+        $this->assertSame('アーカイブ内の画像が不完全です。利用可能な画像のみインポートできます。', $item->displayWarning());
+
+        App::setLocale(UiLanguage::English->value);
+        $this->assertSame('Archive images are incomplete. You can import only available images.', $item->displayWarning());
+
+        $item->metadata = ['warning' => 'External warning: Options'];
+        App::setLocale(UiLanguage::Japanese->value);
+        $this->assertSame('External warning: Options', $item->displayWarning());
+
+        foreach ([[], ['warning' => ''], ['warning' => ['not a string']]] as $metadata) {
+            $item->metadata = $metadata;
+            $this->assertNull($item->displayWarning());
+        }
+    }
+
     protected function tearDown(): void
     {
         App::setLocale(UiLanguage::English->value);
@@ -51,7 +87,7 @@ class UserFacingDisplayStateTest extends TestCase
         }
     }
 
-    public function test_known_errors_are_localized_while_scraper_details_pass_through(): void
+    public function test_known_errors_are_localized_while_scraper_details_stay_verbatim(): void
     {
         App::setLocale(UiLanguage::Japanese->value);
 
@@ -75,7 +111,7 @@ class UserFacingDisplayStateTest extends TestCase
             $this->assertSame($message, $result->error);
         }
 
-        foreach (['validation', 'Unexpected scraper detail'] as $message) {
+        foreach (['validation', 'Unexpected scraper detail', 'Errors'] as $message) {
             $result = new RefetchWorkResult(['error' => $message]);
 
             $this->assertSame($message, $result->displayError());

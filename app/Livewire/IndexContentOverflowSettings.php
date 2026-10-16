@@ -50,7 +50,7 @@ class IndexContentOverflowSettings extends Component
                 'regex:' . ProductIndexContentOverflow::HEIGHT_PATTERN,
             ],
         ], [
-            'overflow.*.height.regex' => __('Use a positive CSS length with one of the supported units.'),
+            'overflow.*.height.regex' => __('errors.Use a positive CSS length with one of the supported units.'),
         ]);
 
         Option::setIndexContentOverflow($this->overflow);

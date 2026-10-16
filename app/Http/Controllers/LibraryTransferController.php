@@ -12,6 +12,7 @@ use App\Models\LibraryTransferPart;
 use App\Models\LibraryTransferRun;
 use App\Models\Option;
 use App\Support\Transfers\LibraryTransferService;
+use App\Support\Transfers\TransferMessage;
 use Illuminate\Contracts\Cache\LockTimeoutException;
 use Illuminate\Support\Facades\Storage;
 use RuntimeException;
@@ -30,14 +31,14 @@ class LibraryTransferController extends Controller
 
             return response()->json(['part' => $part->id, 'status' => $part->status->value]);
         } catch (RuntimeException | LockTimeoutException $exception) {
-            return response()->json(['message' => $exception->getMessage() ?: 'A transfer operation is in progress. Retry this file shortly.'], 422);
+            return response()->json(['message' => TransferMessage::diagnostic($exception->getMessage() ?: 'A transfer operation is in progress. Retry this file shortly.')], 422);
         }
     }
 
     public function download(LibraryTransferRun $run, LibraryTransferPart $part, LibraryTransferService $service)
     {
         abort_unless($run->direction === LibraryTransferDirection::Export && $run->status === LibraryTransferRunStatus::Ready && $part->status === LibraryTransferPartStatus::Ready, 404);
-        abort_unless($service->exportPartAvailable($run, $part), 409, 'The archive file is missing or corrupt. Return to this transfer and retry it.');
+        abort_unless($service->exportPartAvailable($run, $part), 409, __('errors.The archive file is missing or corrupt. Return to this transfer and retry it.'));
 
         return response()->download(Storage::disk('local')->path($part->path), $part->filename, ['Content-Type' => 'application/zip', 'Cache-Control' => 'private, no-store']);
     }

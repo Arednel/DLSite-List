@@ -4,6 +4,7 @@ namespace App\Models;
 
 use App\Enums\BulkImportItemStatus;
 use App\Enums\BulkImportRunStatus;
+use App\Support\Localization\ErrorMessage;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
@@ -57,13 +58,7 @@ class BulkImportRun extends Model
 
     public function displayError(): ?string
     {
-        if ($this->error === null) {
-            return null;
-        }
-
-        $translated = __($this->error);
-
-        return is_string($translated) ? $translated : $this->error;
+        return ErrorMessage::display($this->error);
     }
 
     public function remainingCount(): int

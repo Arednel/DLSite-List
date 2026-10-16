@@ -33,6 +33,47 @@ class LibraryTransferExportTest extends TestCase
         return array_map(fn($phase) => [$phase], ['works', 'tag-library', 'options', 'pack-data', 'pack-images', 'normalize-fragments', 'finalize']);
     }
 
+    public static function emptyExportMessages(): array
+    {
+        return [
+            'English selection' => ['en', 'selected', 'Select at least one work.'],
+            'Japanese selection' => ['ja', 'selected', '作品を1件以上選択してください。'],
+            'English library' => ['en', 'all', 'There are no works to export.'],
+            'Japanese library' => ['ja', 'all', 'エクスポートできる作品がありません。'],
+        ];
+    }
+
+    #[DataProvider('emptyExportMessages')]
+    public function test_empty_export_errors_use_the_ui_language(string $locale, string $mode, string $message): void
+    {
+        Option::setUiLanguage($locale);
+        app()->setLocale($locale);
+        if ($mode === 'selected') {
+            Product::factory()->create(['id' => 'RJ123456']);
+        }
+
+        Livewire::test(OptionsTransfers::class)
+            ->set('scopes', ['works'])
+            ->set('mode', $mode)
+            ->call('export')
+            ->assertHasErrors('transfer')
+            ->assertSee($message);
+
+        $this->assertDatabaseCount('library_transfer_runs', 0);
+        Bus::assertNothingDispatched();
+    }
+
+    public function test_progress_stages_are_stored_in_canonical_english_regardless_of_locale(): void
+    {
+        Product::factory()->create(['id' => 'RJ123456']);
+        app()->setLocale('ja');
+
+        $run = $this->service()->export(['works'], 'selected', ['RJ123456']);
+        $this->archive()->plan($run->fresh());
+
+        $this->assertSame('Preparing RJ123456 for export', $run->fresh()->stage);
+    }
+
     #[DataProvider('planningPhases')]
     public function test_planning_phase_and_successor_roll_back_together_and_retry(string $phase): void
     {
@@ -243,6 +284,8 @@ class LibraryTransferExportTest extends TestCase
             ->assertSee('Download all')
             ->assertSee('data-transfer-downloads', false)
             ->assertSee('data-started="Choose a folder for the archive files."', false)
+            ->assertSee('data-cancelled="Download cancelled."', false)
+            ->assertSee('data-failed="Unable to save every archive file."', false)
             ->assertSee('data-download-all', false)
             ->assertSee('class="transfer-parts__heading"', false);
 
@@ -250,6 +293,11 @@ class LibraryTransferExportTest extends TestCase
             $export->parts()->count(),
             substr_count($response->getContent(), 'data-download-part'),
         );
+
+        Option::setUiLanguage('ja');
+        $this->get(route('options.transfers.show', $export))->assertOk()
+            ->assertSee('data-cancelled="ダウンロードをキャンセルしました。"', false)
+            ->assertSee('data-failed="すべてのアーカイブファイルを保存できませんでした。"', false);
 
         $export->update(['status' => 'building']);
         $this->get(route('options.transfers.show', $export->fresh()))

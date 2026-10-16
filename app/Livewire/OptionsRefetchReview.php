@@ -8,6 +8,8 @@ use App\Models\Genre;
 use App\Models\Option;
 use App\Models\RefetchRun;
 use App\Models\RefetchWorkResult;
+use App\Support\Localization\ErrorMessage;
+use App\Support\ProductImageMessage;
 use App\Support\Refetch\RefetchService;
 use App\Support\TagColor;
 use Illuminate\Pagination\LengthAwarePaginator;
@@ -114,7 +116,7 @@ class OptionsRefetchReview extends Component
         $category = RefetchCategory::tryFrom($value);
 
         if ($category === null) {
-            $this->addError('category', __('The selected category is invalid.'));
+            $this->addError('category', __('errors.The selected category is invalid.'));
 
             return;
         }
@@ -164,7 +166,7 @@ class OptionsRefetchReview extends Component
                 $validated['tagActions'] ?? [],
             );
         } catch (RuntimeException $exception) {
-            $this->addError('run', __($exception->getMessage()));
+            $this->addError('run', ProductImageMessage::display($exception->getMessage()));
 
             return;
         }
@@ -187,7 +189,7 @@ class OptionsRefetchReview extends Component
                 $validated['tagActions'] ?? [],
             );
         } catch (RuntimeException $exception) {
-            $this->addError('run', __($exception->getMessage()));
+            $this->addError('run', ProductImageMessage::display($exception->getMessage()));
 
             return;
         }
@@ -211,7 +213,7 @@ class OptionsRefetchReview extends Component
         try {
             $service->rejectOrFinish($this->run());
         } catch (RuntimeException $exception) {
-            $this->addError('run', __($exception->getMessage()));
+            $this->addError('run', ProductImageMessage::display($exception->getMessage()));
 
             return;
         }
@@ -261,7 +263,7 @@ class OptionsRefetchReview extends Component
             foreach ($result->warnings ?? [] as $warning) {
                 $key = (string) ($warning['key'] ?? '');
                 $replace = is_array($warning['replace'] ?? null) ? $warning['replace'] : [];
-                $message = $key !== '' ? __($key, $replace) : '';
+                $message = $key !== '' ? ErrorMessage::format($key, $replace) : '';
 
                 if (is_string($message) && $message !== '') {
                     $errors['review'][] = "{$result->product_id}: {$message}";

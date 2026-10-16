@@ -11,7 +11,7 @@ final class ValidProductFormat implements ValidationRule
     public function validate(string $attribute, mixed $value, Closure $fail): void
     {
         if (! ProductFormat::isValidStoredValue($value)) {
-            $fail(__('The Product Format value is invalid.'));
+            $fail(__('errors.The Product Format value is invalid.'));
         }
     }
 }

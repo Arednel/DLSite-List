@@ -257,9 +257,11 @@ class LibraryTransferImportTest extends TestCase
             'Archive images are incomplete. You can import only available images.',
             $item->metadata['warning'] ?? null,
         );
+        Option::setUiLanguage(\App\Enums\UiLanguage::Japanese);
+        app()->setLocale('ja');
         Livewire::test(OptionsTransferRun::class, ['run' => $run])
             ->call('tab', 'works', 'sample_images')
-            ->assertSee('Archive images are incomplete. You can import only available images.')
+            ->assertSee('アーカイブ内の画像が不完全です。利用可能な画像のみインポートできます。')
             ->assertSee('wire:change="decide(' . $item->id . ', $event.target.value)"', false);
 
         $this->apply($run);

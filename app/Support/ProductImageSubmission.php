@@ -58,7 +58,7 @@ final class ProductImageSubmission
                     $field = str_contains($item['destination'], '/cover.') ? 'work_image' : 'sample_images';
 
                     throw ValidationException::withMessages([
-                        $field => __('An image already exists at the destination. Remove the leftover file and try again.'),
+                        $field => __('errors.An image already exists at the destination. Remove the leftover file and try again.'),
                     ]);
                 }
             }
@@ -259,7 +259,7 @@ final class ProductImageSubmission
     private function invalidSampleOrder(): never
     {
         throw ValidationException::withMessages([
-            'sample_image_order' => __('Sample image order is no longer valid. Reload the form and try again.'),
+            'sample_image_order' => __('errors.Sample image order is no longer valid. Reload the form and try again.'),
         ]);
     }
 
@@ -269,7 +269,7 @@ final class ProductImageSubmission
             return $this->mutationLock->run(fn(): mixed => $this->promotion->imageMutationTransaction($callback));
         } catch (LockTimeoutException) {
             throw ValidationException::withMessages([
-                $errorField => __('Images cannot be saved while another library operation is in progress. Try again.'),
+                $errorField => __('errors.Images cannot be saved while another library operation is in progress. Try again.'),
             ]);
         }
     }

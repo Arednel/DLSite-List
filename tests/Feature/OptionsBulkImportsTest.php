@@ -175,7 +175,7 @@ class OptionsBulkImportsTest extends TestCase
             ]);
     }
 
-    public function test_history_translates_known_errors_and_preserves_stored_warning_text(): void
+    public function test_history_translates_known_errors_and_known_warnings_while_preserving_unknown_warning_text(): void
     {
         $run = BulkImportRun::create([
             'status' => BulkImportRunStatus::Failed,
@@ -215,9 +215,10 @@ class OptionsBulkImportsTest extends TestCase
         $this->get(route('options.index', ['tab' => 'bulk-imports']))
             ->assertOk()
             ->assertSee('一括インポートの完了処理に失敗しました。')
-            ->assertSee(__('Already in library.'))
+            ->assertSee('エラー (5)')
+            ->assertSee(__('errors.Already in library.'))
             ->assertSee('地域制限によりアクセスできないDLSite作品')
-            ->assertSee('DLSite data was fetched, but these images could not be downloaded: cover.jpg, sample_1.jpg')
+            ->assertSee('DLSite情報は取得できましたが、次の画像をダウンロードできませんでした: cover.jpg, sample_1.jpg')
             ->assertSee('RJ000000704 -')
             ->assertSee('Unexpected scraper detail')
             ->assertSee('Legacy warning: <upstream detail>')
@@ -231,6 +232,24 @@ class OptionsBulkImportsTest extends TestCase
             ->assertSee('GeoBlocked DLSite work')
             ->assertSee('DLSite data was fetched, but these images could not be downloaded: cover.jpg, sample_1.jpg')
             ->assertSee('Legacy warning: <upstream detail>');
+    }
+
+    public function test_unknown_bulk_import_errors_and_warnings_stay_verbatim(): void
+    {
+        Option::setUiLanguage(UiLanguage::Japanese);
+        app()->setLocale(UiLanguage::Japanese->value);
+
+        $run = new BulkImportRun(['error' => 'Errors']);
+        $knownRun = new BulkImportRun(['error' => 'DLSite work fetch returned invalid JSON.']);
+        $item = new \App\Models\BulkImportItem([
+            'error' => 'Apply All',
+            'warning' => 'Site ID',
+        ]);
+
+        $this->assertSame('Errors', $run->displayError());
+        $this->assertSame('DLSite作品データの取得で無効なJSONが返されました。', $knownRun->displayError());
+        $this->assertSame('Apply All', $item->displayError());
+        $this->assertSame('Site ID', $item->displayWarning());
     }
 
     public function test_completed_history_stops_polling_when_no_run_is_active(): void

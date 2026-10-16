@@ -51,7 +51,7 @@
                                 - {{ $item->displayError() }}
                             @endif
                             @if ($item->warning)
-                                - {{ __('Warning: :message', ['message' => $item->warning]) }}
+                                - {{ __('Warning: :message', ['message' => $item->displayWarning()]) }}
                             @endif
                         </li>
                     @endforeach

@@ -3,13 +3,17 @@
 namespace Tests\Feature;
 
 use App\Enums\RefetchCategory;
+use App\Enums\UiLanguage;
 use App\Livewire\OptionsRefetchReview;
+use App\Models\Option;
 use App\Models\Product;
 use App\Models\RefetchRun;
 use App\Models\RefetchWorkResult;
 use App\Support\Refetch\RefetchService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Storage;
 use Livewire\Livewire;
+use RuntimeException;
 use Tests\TestCase;
 
 class OptionsRefetchReviewTest extends TestCase
@@ -52,6 +56,45 @@ class OptionsRefetchReviewTest extends TestCase
             ->assertSee("{$result->product_id}: Sample image download failed after five attempts: sample_8.jpg")
             ->assertSee('<details class="review-errors">', false)
             ->assertHasNoErrors();
+    }
+
+    public function test_known_refetch_warnings_use_the_operational_catalog_in_japanese(): void
+    {
+        Option::setUiLanguage(UiLanguage::Japanese);
+        app()->setLocale(UiLanguage::Japanese->value);
+
+        [$run,, $result] = $this->reviewRun();
+        $result->forceFill([
+            'status' => RefetchWorkResult::STATUS_FAILED,
+            'error' => 'Refetch failed.',
+            'warnings' => [[
+                'key' => 'Sample image download failed after five attempts: :images',
+                'replace' => ['images' => 'sample_8.jpg'],
+            ]],
+        ])->save();
+
+        Livewire::test(OptionsRefetchReview::class, ['run' => $run->fresh()])
+            ->assertSee("{$result->product_id}: Refetch failed.")
+            ->assertSee("{$result->product_id}: 5回試行してもサンプル画像をダウンロードできませんでした: sample_8.jpg")
+            ->assertHasNoErrors();
+    }
+
+    public function test_apply_failure_displays_the_localized_image_recovery_message(): void
+    {
+        Option::setUiLanguage(UiLanguage::Japanese);
+        app()->setLocale(UiLanguage::Japanese->value);
+        [$run] = $this->reviewRun();
+
+        Storage::shouldReceive('disk')->once()->with('local')
+            ->andThrow(new RuntimeException(
+                'Image recovery failed; backups were retained. Unable to finish image recovery.',
+            ));
+
+        Livewire::test(OptionsRefetchReview::class, ['run' => $run])
+            ->call('askApplyAll')
+            ->call('applyAll')
+            ->assertHasErrors('run')
+            ->assertSee('画像の復元に失敗しました。バックアップは保持されています。 画像の復元処理を完了できませんでした。');
     }
 
     public function test_review_paginates_changes_and_resets_when_switching_categories(): void

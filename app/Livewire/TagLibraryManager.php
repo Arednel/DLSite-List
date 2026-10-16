@@ -6,6 +6,7 @@ use App\Enums\ProductIndexSortDirection;
 use App\Models\Genre;
 use App\Models\GenreGroup;
 use App\Models\Option;
+use App\Support\Localization\ErrorMessage;
 use App\Support\GenreHierarchy;
 use App\Support\ProductGenreSync;
 use App\Support\TagColor;
@@ -89,6 +90,8 @@ class TagLibraryManager extends Component
 
     public string $notice = '';
 
+    public bool $noticeIsError = false;
+
     public int $noticeId = 0;
 
     public array $groupTitles = [];
@@ -162,8 +165,8 @@ class TagLibraryManager extends Component
     protected function messages(): array
     {
         return [
-            'newTagTitle.required' => __('Enter a tag title.'),
-            'newTagTitle.max' => __('Tag titles may not be greater than 255 characters.'),
+            'newTagTitle.required' => __('errors.Enter a tag title.'),
+            'newTagTitle.max' => __('errors.Tag titles may not be greater than 255 characters.'),
         ];
     }
 
@@ -280,7 +283,11 @@ class TagLibraryManager extends Component
         $this->newTagTitle = '';
         $this->search = $genre->wasRecentlyCreated ? '' : $genre->title;
         $this->showAllTags = true;
-        $this->setNotice($genre->wasRecentlyCreated ? 'Tag created.' : 'Tag already exists.');
+        if ($genre->wasRecentlyCreated) {
+            $this->setNotice('Tag created.');
+        } else {
+            $this->setErrorNotice('Tag already exists.');
+        }
     }
 
     public function askDeleteTag(int $genreId): void
@@ -289,7 +296,7 @@ class TagLibraryManager extends Component
 
         if (! $this->isEmptyTag($genreId)) {
             $this->confirmingDeleteTagId = null;
-            $this->setNotice('Only empty tags can be deleted.');
+            $this->setErrorNotice('Only empty tags can be deleted.');
 
             return;
         }
@@ -317,7 +324,7 @@ class TagLibraryManager extends Component
             ->delete();
 
         if ($deleted === 0) {
-            $this->setNotice('Only empty tags can be deleted.');
+            $this->setErrorNotice('Only empty tags can be deleted.');
 
             return;
         }
@@ -332,7 +339,7 @@ class TagLibraryManager extends Component
         Validator::make(
             ['newGroupTitle' => $title],
             ['newGroupTitle' => [Rule::unique(GenreGroup::class, 'title')]],
-            ['newGroupTitle.unique' => __('Tag group title already exists.')],
+            ['newGroupTitle.unique' => __('errors.Tag group title already exists.')],
         )->validate();
 
         GenreGroup::query()->create(['title' => $title]);
@@ -360,7 +367,7 @@ class TagLibraryManager extends Component
             ['title' => $title],
             ['title' => [Rule::unique(GenreGroup::class, 'title')->ignore($group)]],
         )->fails()) {
-            $this->setNotice('Tag group title already exists.');
+            $this->setErrorNotice('Tag group title already exists.');
             $this->groupTitles[$groupId] = $group->title;
 
             return;
@@ -426,7 +433,7 @@ class TagLibraryManager extends Component
         if ($group->genres()->whereKey($genre->getKey())->exists()) {
             $this->groupTagInputs[$groupId] = '';
             $this->tagHidden[$genre->getKey()] = (bool) $genre->hidden_on_index;
-            $this->setNotice('Tag is already in this group.');
+            $this->setErrorNotice('Tag is already in this group.');
 
             return;
         }
@@ -634,8 +641,8 @@ class TagLibraryManager extends Component
             ['editingTagTitle' => $title],
             ['editingTagTitle' => ['required', 'string', 'max:255']],
             [
-                'editingTagTitle.required' => __('Enter a tag title.'),
-                'editingTagTitle.max' => __('Tag titles may not be greater than 255 characters.'),
+                'editingTagTitle.required' => __('errors.Enter a tag title.'),
+                'editingTagTitle.max' => __('errors.Tag titles may not be greater than 255 characters.'),
             ],
         )->validate();
         $hiddenOnIndex = $this->editingTagHidden;
@@ -674,7 +681,7 @@ class TagLibraryManager extends Component
                         Rule::unique(Genre::class, 'title_key')->ignore($genre),
                     ],
                 ],
-                ['editingTagTitle.unique' => __('Tag title already exists.')],
+                ['editingTagTitle.unique' => __('errors.Tag title already exists.')],
             )->validate();
 
             $genre->forceFill([
@@ -705,7 +712,7 @@ class TagLibraryManager extends Component
 
         if (! $saved) {
             $this->closeTagSettings();
-            $this->setNotice('Tag no longer exists.');
+            $this->setErrorNotice('Tag no longer exists.');
 
             return;
         }
@@ -1357,7 +1364,7 @@ class TagLibraryManager extends Component
         $validator = Validator::make(
             ['title' => $title],
             ['title' => ['required', 'string', 'max:' . $max]],
-            ['title.required' => __('Enter a :label.', ['label' => $label])],
+            ['title.required' => ErrorMessage::format('Enter a :label.', ['label' => $label])],
             ['title' => $label],
         );
 
@@ -1380,7 +1387,7 @@ class TagLibraryManager extends Component
 
         if (! TagColor::isValid($color)) {
             throw ValidationException::withMessages([
-                $field => __('Use a hex color like #ff6699.'),
+                $field => __('errors.Use a hex color like #ff6699.'),
             ]);
         }
 
@@ -1550,14 +1557,29 @@ class TagLibraryManager extends Component
         return [(int) $groupId, (int) $genreId];
     }
 
+    public function displayNotice(): string
+    {
+        return $this->noticeIsError
+            ? (ErrorMessage::display($this->notice) ?? '')
+            : __($this->notice);
+    }
+
+    private function setErrorNotice(string $message): void
+    {
+        $this->setNotice($message);
+        $this->noticeIsError = true;
+    }
+
     private function setNotice(string $notice): void
     {
         $this->notice = $notice;
+        $this->noticeIsError = false;
         $this->noticeId++;
     }
 
     private function clearNotice(): void
     {
         $this->notice = '';
+        $this->noticeIsError = false;
     }
 }

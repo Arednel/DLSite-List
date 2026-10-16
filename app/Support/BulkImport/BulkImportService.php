@@ -74,7 +74,7 @@ final class BulkImportService
                     return $run->fresh();
                 });
         } catch (LockTimeoutException $exception) {
-            throw new RuntimeException(__(self::BUSY_MESSAGE), previous: $exception);
+            throw new RuntimeException(self::BUSY_MESSAGE, previous: $exception);
         }
     }
 }

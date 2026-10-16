@@ -3,6 +3,7 @@
 namespace App\Livewire;
 
 use App\Models\RefetchRun;
+use App\Support\ProductImageMessage;
 use App\Support\Refetch\RefetchCleanupService;
 use Illuminate\View\View;
 use Livewire\Attributes\Locked;
@@ -30,7 +31,7 @@ class OptionsRefetchActions extends Component
         $this->resetErrorBag('cleanup');
 
         if ($cleanupService->unavailable()) {
-            $this->addError('cleanup', __(RefetchCleanupService::UNAVAILABLE_MESSAGE));
+            $this->addError('cleanup', ProductImageMessage::display(RefetchCleanupService::UNAVAILABLE_MESSAGE));
 
             return;
         }
@@ -53,7 +54,7 @@ class OptionsRefetchActions extends Component
             $cleanupService->cleanup();
         } catch (RuntimeException $exception) {
             $this->confirmingCleanup = false;
-            $this->addError('cleanup', __($exception->getMessage()));
+            $this->addError('cleanup', ProductImageMessage::display($exception->getMessage()));
 
             if ($exception->getPrevious() !== null) {
                 report($exception);

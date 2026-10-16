@@ -31,8 +31,8 @@ class StartRefetchRequest extends FormRequest
     public function messages(): array
     {
         return [
-            'product_ids.required_if' => __('Select at least one work to refetch.'),
-            'product_ids.min' => __('Select at least one work to refetch.'),
+            'product_ids.required_if' => __('errors.Select at least one work to refetch.'),
+            'product_ids.min' => __('errors.Select at least one work to refetch.'),
         ];
     }
 

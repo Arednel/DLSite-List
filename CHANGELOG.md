@@ -23,12 +23,15 @@ For existing manual installations:
 * Renamed `Image` to `Cover Image` in Field Layout settings for clarity.
 * Updated Livewire to 4.4.7.
 * Import now allows incomplete image archives.
+* Errors and warnings now use dedicated `errors.php` translation files.
 
 ### Fixed
 
 * Failed DLSite cover/sample downloads no longer create database references to missing image files.
 * Fixed image promotion cleanup on failed filesystem publication, including leftover temporary `.incoming` files.
 * DLsite work JSON no longer stores Python Enum internals.
+* Added missing Japanese translations for messages, labels, and progress updates.
+feat(localization): centralize error translations and complete Japanese localization
 
 ## 1.12.0 - 2026-10-03
 

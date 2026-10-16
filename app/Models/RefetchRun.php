@@ -106,10 +106,10 @@ class RefetchRun extends Model
     public function applyUnavailableMessage(): string
     {
         if (! $this->isReview()) {
-            return __('This refetch run is not ready to apply.');
+            return 'This refetch run is not ready to apply.';
         }
 
-        return __('Only the newest refetch run can be applied.');
+        return 'Only the newest refetch run can be applied.';
     }
 
     public function statusLabel(): string

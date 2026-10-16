@@ -8,12 +8,16 @@ use App\Http\Requests\StartBulkImportRequest;
 use App\Models\Option;
 use App\Support\BulkImport\BulkImportService;
 use App\Support\DLSite\DLSiteProductImportInput;
+use App\Support\Localization\ErrorMessage;
 use App\Support\ProductFieldLayout;
 use App\Support\ReturnTarget;
+use Illuminate\Contracts\Cache\LockTimeoutException;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\URL;
+use Illuminate\Validation\ValidationException;
 use Illuminate\View\View;
+use RuntimeException;
 
 class BulkImportController extends Controller
 {
@@ -68,7 +72,17 @@ class BulkImportController extends Controller
             $request->validated(),
             $layout,
         );
-        $run = $service->start($request->productCodes(), $input);
+        try {
+            $run = $service->start($request->productCodes(), $input);
+        } catch (RuntimeException $exception) {
+            if (! $exception->getPrevious() instanceof LockTimeoutException) {
+                throw $exception;
+            }
+
+            throw ValidationException::withMessages([
+                'product_code_list' => ErrorMessage::display($exception->getMessage()),
+            ]);
+        }
         $redirectUrl = route('options.index', [
             'tab' => 'bulk-imports',
             'bulk_import_run' => $run->getKey(),

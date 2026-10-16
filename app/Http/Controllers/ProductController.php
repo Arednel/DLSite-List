@@ -16,6 +16,7 @@ use App\Http\Requests\UpdateProductRequest;
 use App\Models\Genre;
 use App\Models\Option;
 use App\Models\Product;
+use App\Support\DLSite\DLSiteFetchResult;
 use App\Support\DLSite\DLSiteProductAlreadyExistsException;
 use App\Support\DLSite\DLSiteProductImportException;
 use App\Support\DLSite\DLSiteProductImporter;
@@ -109,7 +110,7 @@ class ProductController extends Controller
             );
         } catch (DLSiteProductAlreadyExistsException) {
             throw ValidationException::withMessages([
-                'id' => __('Work with this product code is already in your library'),
+                'id' => __('errors.Work with this product code is already in your library'),
             ]);
         } catch (DLSiteProductImportException $exception) {
             throw ValidationException::withMessages([
@@ -123,7 +124,7 @@ class ProductController extends Controller
         return $this->productMutationResponse(
             $request,
             $returnTarget->toUrl(),
-            $result->warning,
+            DLSiteFetchResult::displayImageFailureMessage($result->warning),
         );
     }
 

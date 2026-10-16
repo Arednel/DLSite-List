@@ -155,7 +155,7 @@ final class LibraryTransferService
                         ->get(['id', 'status']);
 
                     if ($previous->contains('status', LibraryTransferRunStatus::Applying)) {
-                        throw new RuntimeException(__('Wait for the current import to finish applying before starting another import.'));
+                        throw new RuntimeException('Wait for the current import to finish applying before starting another import.');
                     }
 
                     $supersededIds = $previous
@@ -265,7 +265,7 @@ final class LibraryTransferService
             return;
         }
         if ($part->status === LibraryTransferPartStatus::Pending) {
-            $this->dispatcher->checkpoint($run, ['stage' => __('Validating :kind part :number', ['kind' => $part->kind, 'number' => $part->number])]);
+            $this->dispatcher->checkpoint($run, ['stage' => "Validating {$part->kind} part {$part->number}"]);
             $uploadPath = $part->upload_path;
             if (! is_string($uploadPath)) {
                 throw new RuntimeException('The uploaded archive is unavailable. Upload this part again.');
@@ -493,7 +493,7 @@ final class LibraryTransferService
                     $this->dispatcher->checkpoint($run, [
                         'settings' => [...$run->settings, 'analysis_fragment' => $nextFragment, 'analysis_record' => $recordComplete ? 0 : $i + 1, 'analysis_group_order' => $groupOrder],
                         'processed' => $nextFragment,
-                        'stage' => __('Preparing :section / :entity', ['section' => $section, 'entity' => $key]),
+                        'stage' => "Preparing {$section} / {$key}",
                     ], LibraryTransferOperation::Analyze);
 
                     return;
@@ -808,7 +808,7 @@ final class LibraryTransferService
                 $remaining = (clone $query)->count();
                 $this->dispatcher->checkpoint($run, [
                     'processed' => $run->total - $remaining,
-                    'stage' => __('Applying :section / :category / :entity', ['section' => 'works', 'category' => 'work', 'entity' => $workIds->last()]),
+                    'stage' => "Applying works / work / {$workIds->last()}",
                 ], LibraryTransferOperation::Apply);
 
                 return;
@@ -838,7 +838,7 @@ final class LibraryTransferService
                             $remaining = (clone $query)->count();
                             $this->dispatcher->checkpoint($run, [
                                 'processed' => $run->total - $remaining,
-                                'stage' => __('Applying :section / :category / :entity', ['section' => $section, 'category' => $category, 'entity' => $item->entity_key]),
+                                'stage' => "Applying {$section} / {$category} / {$item->entity_key}",
                             ], $remaining > 0 ? LibraryTransferOperation::Apply : null);
                             if ($remaining > 0) {
                                 return;

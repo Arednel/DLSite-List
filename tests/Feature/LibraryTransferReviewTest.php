@@ -89,6 +89,15 @@ class LibraryTransferReviewTest extends TestCase
         $this->assertNull($product->fresh()->notes);
         $conflicts = $run->items()->where('status', 'conflict')->count();
         $this->assertGreaterThan(1, $conflicts);
+        $staleError = 'Another selected change for this work became stale. Refresh this work before applying it.';
+        $this->assertSame(
+            $staleError,
+            $run->items()->where('status', 'conflict')->firstOrFail()->error,
+        );
+        Option::setUiLanguage('ja');
+        app()->setLocale('ja');
+        Livewire::test(OptionsTransferRun::class, ['run' => $run->fresh()])
+            ->assertSee('この作品で選択した別の変更が古くなりました。適用する前にこの作品を再確認してください。');
         $this->service()->action($run->fresh(), LibraryTransferAction::Refresh);
         $this->assertSame($conflicts, $run->items()->where('status', 'pending')->where('decision', 'ignore')->count());
     }
@@ -166,7 +175,17 @@ class LibraryTransferReviewTest extends TestCase
         $group = GenreGroup::create(['title' => 'New local group']);
         $this->apply($run);
         $this->assertNotNull($group->fresh());
-        $this->assertSame(LibraryImportItemStatus::Conflict, $run->items()->where('category', 'groups')->first()->status);
+        $item = $run->items()->where('category', 'groups')->where('collection', true)->firstOrFail();
+        $this->assertSame(LibraryImportItemStatus::Conflict, $item->status);
+        $this->assertSame(
+            'Local data changed after review. Click `Refresh conflicts` to review the latest changes.',
+            $item->error,
+        );
+        Option::setUiLanguage('ja');
+        app()->setLocale('ja');
+        Livewire::test(OptionsTransferRun::class, ['run' => $run->fresh()])
+            ->call('tab', 'tag-library', 'groups')
+            ->assertSee('レビュー後にローカルデータが変更されました。「競合を再確認」をクリックして最新の変更内容を確認してください。');
     }
 
     public function test_options_merge_preserves_absent_subkeys_and_overwrite_resets_absent_portable_keys(): void
@@ -526,16 +545,27 @@ class LibraryTransferReviewTest extends TestCase
         $this->assertFalse($run->items()->where('entity_key', 'b → c')->first()->incoming);
     }
 
-    public function test_real_group_title_cannot_collide_with_internal_collection_ordering(): void
+    public function test_real_tag_library_titles_are_verbatim_while_the_collection_label_is_localized(): void
     {
         GenreGroup::create(['title' => 'Group order and missing groups', 'description' => 'Imported']);
+        Genre::create(['title' => 'Errors', 'description' => 'Imported']);
         $export = $this->exported(['tag-library']);
         GenreGroup::first()->update(['description' => 'Local']);
+        Genre::where('title', 'Errors')->firstOrFail()->update(['description' => 'Local']);
         $run = $this->imported($export);
         $this->assertSame(2, $run->items()->where('category', 'groups')->count());
+        Option::setUiLanguage('ja');
+        app()->setLocale('ja');
+        Livewire::test(OptionsTransferRun::class, ['run' => $run->fresh()])
+            ->call('tab', 'tag-library', 'groups')
+            ->assertSee('>Group order and missing groups</strong>', false)
+            ->assertSee('>グループ順序と不足しているグループ</strong>', false)
+            ->call('tab', 'tag-library', 'tags')
+            ->assertSee('>Errors</strong>', false);
         $this->apply($run);
         $this->assertSame(0, $run->items()->where('status', 'conflict')->count());
         $this->assertSame('Imported', GenreGroup::first()->description);
+        $this->assertSame('Imported', Genre::where('title', 'Errors')->firstOrFail()->description);
     }
 
     public function test_later_options_apply_never_restores_already_finalized_work_timestamps(): void
