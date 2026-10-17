@@ -23,7 +23,7 @@ It supports DLsite works with RJ, BJ, and VJ codes - Voice / ASMR, Games, Manga,
 
 - **Display options:** Customize pagination, search behavior, table width, columns, and how Notes and Tags are displayed.
 - **Field layouts:** Configure field visibility and order for filters, sort menus, add and edit forms.
-- **UI Wording**: Choose general or content-focused UI wording for listening, reading, games, video, music, and artwork.
+- **UI Wording:** Choose general or content-focused UI wording for listening, reading, games, video, music, and artwork.
 - **Authentication:** Optional single-user authentication.
 - **Languages:** English and Japanese UI with separate fetched tags for each language. The Japanese UI is mostly auto-translated, so quality may vary.
 

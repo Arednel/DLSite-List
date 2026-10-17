@@ -4,6 +4,10 @@ All notable changes to this project are documented in this file.
 
 ## Unreleased
 
+## 1.13.0 - 2026-10-17
+
+*Image Management & Localization Improvements*
+
 ### Upgrade notes
 
 For existing manual installations:
@@ -12,26 +16,25 @@ For existing manual installations:
 
 ### Added
 
-* Added a Fetched Tags language option that follows the UI language by default.
 * Added ability to manually upload cover and sample images in Edit.
+* Added a Fetched Tags language option that follows the UI language by default.
 
 ### Changed
 
-* Show a placeholder in the Tags column for works without tags.
 * Cover images are now optional for Custom Quick Add and DLSite imports.
 * Works without a cover now show a `No image` placeholder.
 * Renamed `Image` to `Cover Image` in Field Layout settings for clarity.
-* Updated Livewire to 4.4.7.
 * Import now allows incomplete image archives.
+* Show a placeholder in the Tags column for works without tags.
 * Errors and warnings now use dedicated `errors.php` translation files.
+* Updated Livewire to 4.4.7.
 
 ### Fixed
 
 * Failed DLSite cover/sample downloads no longer create database references to missing image files.
 * Fixed image promotion cleanup on failed filesystem publication, including leftover temporary `.incoming` files.
-* DLsite work JSON no longer stores Python Enum internals.
 * Added missing Japanese translations for messages, labels, and progress updates.
-feat(localization): centralize error translations and complete Japanese localization
+* DLsite work JSON no longer stores Python Enum internals.
 
 ## 1.12.0 - 2026-10-03
 
