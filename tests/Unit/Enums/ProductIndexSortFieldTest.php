@@ -2,11 +2,20 @@
 
 namespace Tests\Unit\Enums;
 
+use App\Enums\ContentFocus;
 use App\Enums\ProductIndexSortField;
+use App\Support\ContentTerminology;
 use Tests\TestCase;
 
 class ProductIndexSortFieldTest extends TestCase
 {
+    protected function setUp(): void
+    {
+        parent::setUp();
+
+        $this->app->instance(ContentTerminology::class, new ContentTerminology(ContentFocus::General));
+    }
+
     public function test_it_exposes_sql_sort_columns_for_all_fields(): void
     {
         $expectedColumns = [

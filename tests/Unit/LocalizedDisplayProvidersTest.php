@@ -16,6 +16,13 @@ use Tests\TestCase;
 
 class LocalizedDisplayProvidersTest extends TestCase
 {
+    protected function setUp(): void
+    {
+        parent::setUp();
+
+        $this->app->instance(ContentTerminology::class, new ContentTerminology(ContentFocus::General));
+    }
+
     protected function tearDown(): void
     {
         App::setLocale(UiLanguage::English->value);

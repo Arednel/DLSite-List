@@ -11,6 +11,8 @@ For test setup, commands, and the current tests, see [TESTING.md](TESTING.md).
 
 Docker is the recommended self-hosted setup.
 
+Requires [Docker Engine 26.0+](https://docs.docker.com/engine) and [Docker Compose 2.26.0+](https://docs.docker.com/compose).
+
 From the project root run:
 
 ```bash
@@ -40,6 +42,14 @@ phpMyAdmin is disabled/commented out by default. If enabled in `compose.yaml`, i
 ```text
 http://localhost:8888
 ```
+
+#### Docker Secrets
+
+Leave `APP_KEY` and `DB_PASSWORD` empty in `docker/.env.docker` to generate them automatically on first startup. Docker saves them in the `secrets` volume and reuses them on later starts. Non-empty values in the environment file override and replace the saved values.
+
+Changing `DB_PASSWORD` after first startup does not change an existing MySQL account's password.
+
+For an existing old installations, set `DB_PASSWORD` to its current MySQL password before upgrading (default was `laravel`).
 
 ### Run Artisan Commands in Docker
 
@@ -228,8 +238,8 @@ Runtime files:
 | `.env.example` | Local/manual environment template |
 | `.env.testing` | Local test runtime |
 | `.env.testing.example` | Local test environment template |
-| `docker/.env.docker` | Docker application runtime |
-| `docker/.env.testing.docker` | Docker test runtime |
+| `docker/.env.docker` | Docker application runtime and optional secret overrides |
+| `docker/.env.testing.docker` | Docker test runtime and optional test secret overrides |
 
 Testing-specific configuration is documented in [TESTING.md](TESTING.md).
 

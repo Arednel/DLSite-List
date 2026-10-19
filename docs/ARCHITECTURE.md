@@ -260,6 +260,14 @@ Static application assets under `public/` remain directly web-accessible and are
 
 Laravel remains the application boundary. Python is a scraper process invoked by Laravel, not a second web service.
 
+### Docker Startup
+
+Before MySQL starts, `secrets-init` runs `docker/init-secrets.php` to save `APP_KEY`, `DB_PASSWORD`, and a complete `laravel.env` in the `secrets` volume.
+
+The app and queue mount this volume read-only. Their `.env` symlink points to `laravel.env`, so Laravel loads configuration normally. MySQL and optional phpMyAdmin mount only `db_password` through `volume.subpath` and read it through their `_FILE` environment variables.
+
+The test services use the same flow with a separate `secrets_test` volume. For generation, overrides, and upgrades, see [Docker Secrets](CONFIGURATION.md#docker-secrets).
+
 ### Routes and Controllers
 
 Routes are defined in `routes/web.php`.

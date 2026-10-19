@@ -4,6 +4,16 @@ All notable changes to this project are documented in this file.
 
 ## Unreleased
 
+### Upgrade notes
+
+For existing Docker installations:
+
+* After upgrading, set the existing database password in `docker/.env.docker`. See [Docker Secrets](docs/CONFIGURATION.md#docker-secrets).
+
+### Security
+
+* Docker automatically generates `APP_KEY` and `DB_PASSWORD` on first startup and reuses the saved values afterward.
+
 ## 1.13.0 - 2026-10-17
 
 *Image Management & Localization Improvements*

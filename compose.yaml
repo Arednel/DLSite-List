@@ -6,8 +6,38 @@ x-app-volumes: &app_volumes
   - storage_app:/var/www/dlsite_list/storage/app
   - storage_framework:/var/www/dlsite_list/storage/framework
   - storage_logs:/var/www/dlsite_list/storage/logs
+  - secrets:/run/dlsite-secrets:ro
 
 services:
+    # Secrets initialization
+    secrets-init:
+        build: *app_build
+        working_dir: /var/www/dlsite_list
+        entrypoint: []
+        command: ["php", "docker/init-secrets.php"]
+        user: "0:0"
+        volumes:
+            - secrets:/run/dlsite-secrets
+            - dbdata:/var/lib/mysql-existing:ro
+            - ./docker/.env.docker:/run/dlsite-env/.env:ro
+        env_file: "docker/.env.docker"
+        restart: "no"
+
+    # Secrets initialization for tests
+    secrets-init-test:
+        profiles: ["test"]
+        build: *app_build
+        working_dir: /var/www/dlsite_list
+        entrypoint: []
+        command: ["php", "docker/init-secrets.php"]
+        user: "0:0"
+        volumes:
+            - secrets_test:/run/dlsite-secrets
+            - dbdata_test:/var/lib/mysql-existing:ro
+            - ./docker/.env.testing.docker:/run/dlsite-env/.env:ro
+        env_file: "docker/.env.testing.docker"
+        restart: "no"
+
     # Application
     app:
         build: *app_build
@@ -15,13 +45,14 @@ services:
         working_dir: /var/www/dlsite_list
         volumes: *app_volumes
         depends_on:
+            secrets-init:
+                condition: service_completed_successfully
             database:
                 condition: service_healthy
         healthcheck:
             test: ["CMD", "php", "artisan", "about", "--only=environment"]
             timeout: 20s
             retries: 10
-        env_file: "docker/.env.docker"
 
     queue:
         build: *app_build
@@ -29,11 +60,13 @@ services:
         command: ["php", "artisan", "queue:work"]
         volumes: *app_volumes
         depends_on:
+            secrets-init:
+                condition: service_completed_successfully
+                restart: true
             app:
                 condition: service_healthy
             database:
                 condition: service_healthy
-        env_file: docker/.env.docker
         restart: unless-stopped
 
     # One-off test runner
@@ -42,10 +75,13 @@ services:
         build: *app_build
         working_dir: /var/www/dlsite_list
         command: ["php", "artisan", "test"]
+        volumes:
+            - secrets_test:/run/dlsite-secrets:ro
         depends_on:
+            secrets-init-test:
+                condition: service_completed_successfully
             database_test:
                 condition: service_healthy
-        env_file: docker/.env.testing.docker
 
     # Web Server
     web:
@@ -63,16 +99,25 @@ services:
         image: mysql:8.0
         volumes:
             - dbdata:/var/lib/mysql
+            - type: volume
+              source: secrets
+              target: /run/dlsite-secrets/db_password
+              read_only: true
+              volume:
+                  nocopy: true
+                  subpath: db_password
+        depends_on:
+            secrets-init:
+                condition: service_completed_successfully
         environment:
             MYSQL_DATABASE: ${DB_DATABASE}
-            MYSQL_ROOT_PASSWORD: ${DB_PASSWORD}
-            MYSQL_PASSWORD: ${DB_PASSWORD}
+            MYSQL_ROOT_PASSWORD_FILE: /run/dlsite-secrets/db_password
+            MYSQL_PASSWORD_FILE: /run/dlsite-secrets/db_password
             MYSQL_USER: ${DB_USERNAME}
         healthcheck:
             test: ["CMD", "mysqladmin" ,"ping", "-h", "localhost"]
             timeout: 20s
             retries: 10
-        env_file: "docker/.env.docker"
 
     # Test Database
     database_test:
@@ -80,16 +125,25 @@ services:
         image: mysql:8.0
         volumes:
             - dbdata_test:/var/lib/mysql
+            - type: volume
+              source: secrets_test
+              target: /run/dlsite-secrets/db_password
+              read_only: true
+              volume:
+                  nocopy: true
+                  subpath: db_password
+        depends_on:
+            secrets-init-test:
+                condition: service_completed_successfully
         environment:
             MYSQL_DATABASE: dlsite_list_test
-            MYSQL_ROOT_PASSWORD: laravel
-            MYSQL_PASSWORD: laravel
+            MYSQL_ROOT_PASSWORD_FILE: /run/dlsite-secrets/db_password
+            MYSQL_PASSWORD_FILE: /run/dlsite-secrets/db_password
             MYSQL_USER: laravel
         healthcheck:
             test: ["CMD", "mysqladmin" ,"ping", "-h", "localhost"]
             timeout: 20s
             retries: 10
-        env_file: "docker/.env.testing.docker"
 
     # Database management (phpMyAdmin)
     # pma:
@@ -98,14 +152,21 @@ services:
     #         - PMA_ARBITRARY=1
     #         - PMA_HOST=${DB_HOST}
     #         - PMA_USER=${DB_USERNAME}
-    #         - PMA_PASSWORD=${DB_PASSWORD}
+    #         - PMA_PASSWORD_FILE=/run/dlsite-secrets/db_password
     #         - PMA_PORT=${DB_PORT}
+    #     volumes:
+    #         - type: volume
+    #           source: secrets
+    #           target: /run/dlsite-secrets/db_password
+    #           read_only: true
+    #           volume:
+    #               nocopy: true
+    #               subpath: db_password
     #     depends_on:
     #         database:
     #             condition: service_healthy
     #     ports:
     #         - 8888:80
-    #     env_file: "docker/.env.docker"
 
 
 volumes:
@@ -114,3 +175,5 @@ volumes:
     storage_logs:
     dbdata:
     dbdata_test:
+    secrets:
+    secrets_test:

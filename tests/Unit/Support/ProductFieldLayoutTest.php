@@ -2,14 +2,23 @@
 
 namespace Tests\Unit\Support;
 
+use App\Enums\ContentFocus;
 use App\Enums\ProductField;
 use App\Enums\UiLanguage;
+use App\Support\ContentTerminology;
 use App\Support\ProductFieldLayout;
 use Illuminate\Support\Facades\App;
 use Tests\TestCase;
 
 class ProductFieldLayoutTest extends TestCase
 {
+    protected function setUp(): void
+    {
+        parent::setUp();
+
+        $this->app->instance(ContentTerminology::class, new ContentTerminology(ContentFocus::General));
+    }
+
     public function test_fetched_tag_field_uses_a_generic_key_and_language_agnostic_label(): void
     {
         $this->assertSame('fetched_tags', ProductField::FetchedTags->value);

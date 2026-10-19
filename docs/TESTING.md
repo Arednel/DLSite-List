@@ -17,6 +17,8 @@ php artisan test
 
 This is the normal Laravel test command for the project's Unit and Feature coverage.
 
+Docker initializer tests run on Linux and they are skipped on other operating systems.
+
 ### Performance
 
 Performance tests are separate:
@@ -121,11 +123,12 @@ Feature tests use Laravel `RefreshDatabase`, so use a dedicated test database.
 Docker tests use:
 - `docker/.env.testing.docker`
 - MySQL host `database_test`
-- separate `dbdata_test` volume
+- separate `dbdata_test` and `secrets_test` volumes
+- automatically generated test `APP_KEY` and `DB_PASSWORD` values unless supplied in the test environment file
 - synchronous queue
 - array cache/session/mail settings where configured by the supplied testing environment
 
-The test database is separate from the normal Docker application database.
+The test database and secrets are separate from the application. When reusing an older test database, set its current password in `docker/.env.testing.docker`. Secret generation and reuse follow the [Docker Secrets](CONFIGURATION.md#docker-secrets) setup.
 
 ## Current Automated Test Inventory
 
@@ -464,6 +467,14 @@ Covers saving/resetting UI and fetched tag language settings and resulting local
 Covers server-rendered Add/Edit modal completion fallback output and conditional completion-script behavior.
 
 ### Unit Tests
+
+#### Docker
+
+`tests/Unit/Docker/DockerSecretsInitializerTest.php`
+- Covers secret generation, reuse, overrides, and refusal to generate a new password for an existing database.
+
+`tests/Unit/Docker/DockerRuntimeEnvironmentTest.php`
+- Covers the generated Laravel environment, passwords with special characters, and missing environment files.
 
 #### Top Level
 
