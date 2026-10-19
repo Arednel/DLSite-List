@@ -10,6 +10,10 @@ For existing Docker installations:
 
 * After upgrading, set the existing database password in `docker/.env.docker`. See [Docker Secrets](docs/CONFIGURATION.md#docker-secrets).
 
+### Changed
+
+* Docker now uses `dlsite-list` as the default project name.
+
 ### Security
 
 * Docker automatically generates `APP_KEY` and `DB_PASSWORD` on first startup and reuses the saved values afterward.

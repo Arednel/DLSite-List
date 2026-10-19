@@ -1,3 +1,5 @@
+name: dlsite-list
+
 x-app-build: &app_build
   context: .
   dockerfile: docker/app.dockerfile
