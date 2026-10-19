@@ -1,0 +1,98 @@
+name: Publish Docker images
+
+on:
+  release:
+    types: [published]
+
+permissions:
+  contents: read
+  packages: write
+
+jobs:
+  publish:
+    name: Publish ${{ matrix.name }} image
+    runs-on: ubuntu-latest
+
+    strategy:
+      matrix:
+        include:
+          - name: app
+            image: ghcr.io/arednel/dlsite-list-app
+            dockerfile: docker/app.dockerfile
+
+          - name: web
+            image: ghcr.io/arednel/dlsite-list-web
+            dockerfile: docker/web.dockerfile
+
+    steps:
+      - name: Check out release
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803
+        with:
+          ref: ${{ github.event.release.tag_name }}
+
+      - name: Log in to GHCR
+        uses: docker/login-action@65b78e6e13532edd9afa3aa52ac7964289d1a9c1
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Extract image metadata
+        id: metadata
+        uses: docker/metadata-action@9ec57ed1fcdbf14dcef7dfbe97b2010124a938b7
+        with:
+          images: ${{ matrix.image }}
+          tags: |
+            type=semver,pattern={{version}},value=${{ github.event.release.tag_name }}
+
+      - name: Build and push image
+        uses: docker/build-push-action@f2a1d5e99d037542a71f64918e516c093c6f3fc4
+        with:
+          context: .
+          file: ${{ matrix.dockerfile }}
+          push: true
+          tags: ${{ steps.metadata.outputs.tags }}
+          labels: ${{ steps.metadata.outputs.labels }}
+
+  publish-compose:
+    name: Publish Compose application
+    needs: publish
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check out release
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803
+        with:
+          ref: ${{ github.event.release.tag_name }}
+
+      - name: Log in to GHCR
+        uses: docker/login-action@65b78e6e13532edd9afa3aa52ac7964289d1a9c1
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Get release version
+        id: version
+        env:
+          RELEASE_TAG: ${{ github.event.release.tag_name }}
+        run: echo "value=${RELEASE_TAG#v}" >> "$GITHUB_OUTPUT"
+
+      - name: Publish Compose application
+        env:
+          DLSITE_LIST_VERSION: ${{ steps.version.outputs.value }}
+        run: |
+          docker compose -f compose.yaml publish \
+            --resolve-image-digests \
+            --yes \
+            ghcr.io/arednel/dlsite-list:${{ steps.version.outputs.value }}
+
+      - name: Publish latest Compose application
+        if: ${{ !github.event.release.prerelease }}
+        env:
+          DLSITE_LIST_VERSION: ${{ steps.version.outputs.value }}
+        run: |
+          docker compose -f compose.yaml publish \
+            --resolve-image-digests \
+            --yes \
+            ghcr.io/arednel/dlsite-list:latest

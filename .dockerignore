@@ -54,3 +54,5 @@ yarn-error.log
 # Custom ignore
 /storage
 /python/venv
+/docs
+/.github

@@ -1,8 +1,6 @@
 name: dlsite-list
 
-x-app-build: &app_build
-  context: .
-  dockerfile: docker/app.dockerfile
+x-app-image: &app_image ghcr.io/arednel/dlsite-list-app:${DLSITE_LIST_VERSION:-latest}
 
 x-app-volumes: &app_volumes
   - storage_app:/var/www/dlsite_list/storage/app
@@ -13,7 +11,7 @@ x-app-volumes: &app_volumes
 services:
     # Secrets initialization
     secrets-init:
-        build: *app_build
+        image: *app_image
         working_dir: /var/www/dlsite_list
         entrypoint: []
         command: ["php", "docker/init-secrets.php"]
@@ -21,28 +19,29 @@ services:
         volumes:
             - secrets:/run/dlsite-secrets
             - dbdata:/var/lib/mysql-existing:ro
-            - ./docker/.env.docker:/run/dlsite-env/.env:ro
-        env_file: "docker/.env.docker"
         restart: "no"
 
     # Secrets initialization for tests
     secrets-init-test:
         profiles: ["test"]
-        build: *app_build
+        image: *app_image
         working_dir: /var/www/dlsite_list
         entrypoint: []
-        command: ["php", "docker/init-secrets.php"]
+        command:
+            - "php"
+            - "docker/init-secrets.php"
+            - "/run/dlsite-secrets"
+            - "/var/lib/mysql-existing"
+            - "/var/www/dlsite_list/docker/.env.testing.docker"
         user: "0:0"
         volumes:
             - secrets_test:/run/dlsite-secrets
             - dbdata_test:/var/lib/mysql-existing:ro
-            - ./docker/.env.testing.docker:/run/dlsite-env/.env:ro
-        env_file: "docker/.env.testing.docker"
         restart: "no"
 
     # Application
     app:
-        build: *app_build
+        image: *app_image
         entrypoint: ["/usr/local/bin/docker-app-entrypoint.sh"] # Run Laravel migrations after db startup
         working_dir: /var/www/dlsite_list
         volumes: *app_volumes
@@ -57,7 +56,7 @@ services:
             retries: 10
 
     queue:
-        build: *app_build
+        image: *app_image
         working_dir: /var/www/dlsite_list
         command: ["php", "artisan", "queue:work"]
         volumes: *app_volumes
@@ -74,7 +73,7 @@ services:
     # One-off test runner
     tests:
         profiles: ["test"]
-        build: *app_build
+        image: *app_image
         working_dir: /var/www/dlsite_list
         command: ["php", "artisan", "test"]
         volumes:
@@ -87,9 +86,7 @@ services:
 
     # Web Server
     web:
-        build:
-            context: .
-            dockerfile: docker/web.dockerfile
+        image: ghcr.io/arednel/dlsite-list-web:${DLSITE_LIST_VERSION:-latest}
         working_dir: /var/www/dlsite_list
         depends_on:
             - "app"
@@ -112,10 +109,10 @@ services:
             secrets-init:
                 condition: service_completed_successfully
         environment:
-            MYSQL_DATABASE: ${DB_DATABASE}
+            MYSQL_DATABASE: dlsite_list
             MYSQL_ROOT_PASSWORD_FILE: /run/dlsite-secrets/db_password
             MYSQL_PASSWORD_FILE: /run/dlsite-secrets/db_password
-            MYSQL_USER: ${DB_USERNAME}
+            MYSQL_USER: laravel
         healthcheck:
             test: ["CMD", "mysqladmin" ,"ping", "-h", "localhost"]
             timeout: 20s
@@ -152,10 +149,10 @@ services:
     #     image: phpmyadmin:5.2
     #     environment:
     #         - PMA_ARBITRARY=1
-    #         - PMA_HOST=${DB_HOST}
-    #         - PMA_USER=${DB_USERNAME}
+    #         - PMA_HOST=database
+    #         - PMA_USER=laravel
     #         - PMA_PASSWORD_FILE=/run/dlsite-secrets/db_password
-    #         - PMA_PORT=${DB_PORT}
+    #         - PMA_PORT=3306
     #     volumes:
     #         - type: volume
     #           source: secrets

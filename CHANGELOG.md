@@ -14,6 +14,7 @@ For existing Docker installations:
 
 * Docker now uses `dlsite-list` as the default project name.
 * Docker installations now have Laravel debug mode disabled by default.
+* Reduced Docker build context by excluding `docs/` and `.github/`.
 
 ### Security
 

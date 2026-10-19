@@ -2,7 +2,7 @@
 
 $secretsDirectory = $argv[1] ?? '/run/dlsite-secrets';
 $mysqlDataDirectory = $argv[2] ?? '/var/lib/mysql-existing';
-$environmentSource = $argv[3] ?? '/run/dlsite-env/.env';
+$environmentSource = $argv[3] ?? '/var/www/dlsite_list/docker/.env.docker';
 
 function environmentValue(string $name): ?string
 {

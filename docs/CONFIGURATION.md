@@ -11,7 +11,7 @@ For test setup, commands, and the current tests, see [TESTING.md](TESTING.md).
 
 Docker is the recommended self-hosted setup.
 
-Requires [Docker Engine 26.0+](https://docs.docker.com/engine) and [Docker Compose 2.26.0+](https://docs.docker.com/compose).
+Requires [Docker Engine 26.0+](https://docs.docker.com/engine) and [Docker Compose 2.34.0+](https://docs.docker.com/compose).
 
 From the project root run:
 
