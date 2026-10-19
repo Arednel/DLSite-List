@@ -4,6 +4,10 @@ All notable changes to this project are documented in this file.
 
 ## Unreleased
 
+## 2.0.0 - 2026-10-20
+
+*Docker Deployment & Security Improvements*
+
 ### Upgrade notes
 
 For existing Docker installations:
@@ -12,6 +16,7 @@ For existing Docker installations:
 
 ### Added
 
+* Docker images are now published on GHCR, with one-command installation via Docker Compose.
 * Added a contributor guide.
 
 ### Changed

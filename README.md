@@ -45,21 +45,17 @@ It supports DLsite works with RJ, BJ, and VJ codes - Voice / ASMR, Games, Manga,
   <a href="docs/screenshots/tag-library_1.png" target="_blank"><img src="docs/screenshots/tag-library_1.png" alt="Tag Library" width="31%"></a>
 </p>
 
-## Quick Start (requires [Git](https://git-scm.com) and [Docker Compose](https://docs.docker.com/compose))
+## Quick Start (requires [Docker Compose 2.34.0+](https://docs.docker.com/compose))
 
-### 1) Run these commands
+### 1) Run this command:
 
 ```bash
-git clone https://github.com/Arednel/DLSite-List.git
-
-cd DLSite-List
-
-docker compose --env-file docker/.env.docker up --build -d
+docker compose -f oci://ghcr.io/arednel/dlsite-list:latest up -d -y
 ```
 
 ### 2) After startup
 - DLSite List available at: `http://localhost:8080`
-- Optional phpMyAdmin: http://localhost:8888 after enabling it in compose.yaml (disabled by default).
+- Optional phpMyAdmin can be enabled for local source builds; see [Configuration](docs/CONFIGURATION.md#local-docker-build).
 - Authentication is disabled by default. To add username and password, open `Options -> Authentication` and turn on `Require administrator login`.
 
 ## Manual installation process
@@ -108,16 +104,17 @@ php artisan test
 To run the test suite inside Docker with a dedicated test database:
 
 ```bash
-docker compose --env-file docker/.env.docker --profile test run --rm --build tests
+docker compose --env-file docker/.env.docker -f compose.dev.yaml --profile test run --rm --build tests
 ```
 
-## Additional docs
+## Documentation
 - [Configuration](docs/CONFIGURATION.md)
 - [Architecture](docs/ARCHITECTURE.md)
 - [Testing](docs/TESTING.md)
 
 ## Contributing
 Contributions are very welcome.
+To learn more, see the [Contributor Guide](CONTRIBUTING.md).
 
 ## License
 
