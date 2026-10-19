@@ -10,6 +10,10 @@ For existing Docker installations:
 
 * Set the existing database password before starting the updated application. See [Upgrade an existing Docker installation](docs/CONFIGURATION.md#upgrade-an-existing-docker-installation).
 
+### Added
+
+* Added a contributor guide.
+
 ### Changed
 
 * Docker now uses `dlsite-list` as the default project name.
