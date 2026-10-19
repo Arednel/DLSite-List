@@ -262,6 +262,8 @@ Laravel remains the application boundary. Python is a scraper process invoked by
 
 ### Docker Startup
 
+`compose.yaml` is the published runtime definition. Release automation publishes it as the `ghcr.io/arednel/dlsite-list` OCI Compose application, and it references the pre-built application and web images in GHCR. `compose.dev.yaml` is the standalone local source-build definition used to build those images from the checked-out repository.
+
 Before MySQL starts, `secrets-init` runs `docker/init-secrets.php` to save `APP_KEY`, `DB_PASSWORD`, and a complete `laravel.env` in the `secrets` volume.
 
 The app and queue mount this volume read-only. Their `.env` symlink points to `laravel.env`, so Laravel loads configuration normally. MySQL and optional phpMyAdmin mount only `db_password` through `volume.subpath` and read it through their `_FILE` environment variables.

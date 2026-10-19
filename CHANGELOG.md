@@ -8,7 +8,7 @@ All notable changes to this project are documented in this file.
 
 For existing Docker installations:
 
-* After upgrading, set the existing database password in `docker/.env.docker`. See [Docker Secrets](docs/CONFIGURATION.md#docker-secrets).
+* Set the existing database password before starting the updated application. See [Upgrade an existing Docker installation](docs/CONFIGURATION.md#upgrade-an-existing-docker-installation).
 
 ### Changed
 

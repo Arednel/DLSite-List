@@ -13,17 +13,21 @@ Docker is the recommended self-hosted setup.
 
 Requires [Docker Engine 26.0+](https://docs.docker.com/engine) and [Docker Compose 2.34.0+](https://docs.docker.com/compose).
 
-From the project root run:
+#### Published Docker installation
+
+Run the latest published release with:
 
 ```bash
-docker compose --env-file docker/.env.docker up --build -d
+docker compose -f oci://ghcr.io/arednel/dlsite-list:latest up -d -y
 ```
 
+This fetches the published Compose application and pre-built application/web images from GHCR.
+
 This starts:
-- Laravel/PHP-FPM from `docker/app.dockerfile`
+- Laravel/PHP-FPM
 - Laravel queue worker
-- Nginx from `docker/web.dockerfile`
-- MySQL 8 database
+- Nginx
+- MySQL 8
 
 The app container runs migrations during startup.
 
@@ -33,11 +37,23 @@ After that DLSite List is available at:
 http://localhost:8080
 ```
 
-For Import / Export, the supplied Docker configuration allows individual ZIP uploads up to 256 MiB. PHP uses `upload_max_filesize = 256M` and `post_max_size = 260M`, while Nginx uses `client_max_body_size 260M`. If larger import files are needed, raise the PHP and Nginx limits together and keep the request/post limit above the file-size limit.
+Re-running the same command updates a `latest` installation to the current published Compose application and referenced images.
+
+#### Local Docker build
+
+To build the Docker images from the checked-out source, run from the project root:
+
+```bash
+docker compose --env-file docker/.env.docker -f compose.dev.yaml up --build -d
+```
+
+`compose.dev.yaml` is the standalone source-build configuration. It builds `docker/app.dockerfile` and `docker/web.dockerfile` locally and uses `docker/.env.docker` for local Docker configuration. It uses the `dlsite-list-dev` Compose project name so local development resources stay separate from the published `dlsite-list` installation.
 
 The test database/services are behind the Compose `test` profile and do not start with the normal application command.
 
-phpMyAdmin is disabled/commented out by default. If enabled in `compose.yaml`, its configured access point is:
+For Import / Export, the supplied Docker configuration allows individual ZIP uploads up to 256 MiB. PHP uses `upload_max_filesize = 256M` and `post_max_size = 260M`, while Nginx uses `client_max_body_size 260M`. If larger import files are needed, raise the PHP and Nginx limits together and keep the request/post limit above the file-size limit.
+
+phpMyAdmin is disabled/commented out by default. If enabled in `compose.dev.yaml`, its configured access point is:
 
 ```text
 http://localhost:8888
@@ -45,26 +61,52 @@ http://localhost:8888
 
 #### Docker Secrets
 
-Leave `APP_KEY` and `DB_PASSWORD` empty in `docker/.env.docker` to generate them automatically on first startup. Docker saves them in the `secrets` volume and reuses them on later starts. Non-empty values in the environment file override and replace the saved values.
+For a published Docker installation, `APP_KEY` and `DB_PASSWORD` are generated automatically on first startup. Docker saves them in the `secrets` volume and reuses them on later starts.
+
+For a local Docker build, leave `APP_KEY` and `DB_PASSWORD` empty in `docker/.env.docker` to use the same automatic generation. Non-empty values in the environment file override and replace the saved values.
 
 Changing `DB_PASSWORD` after first startup does not change an existing MySQL account's password.
 
-For an existing old installations, set `DB_PASSWORD` to its current MySQL password before upgrading (default was `laravel`).
+#### Upgrade an existing Docker installation
+
+When upgrading from a version before v2.0.0, provide the password used by your existing MySQL database. The previous default was `laravel`; if you changed it, use your existing value instead.
+
+First, run `docker compose ls --all` to find your existing project name. Replace `<existing-project-name>` below with that name.
+
+**Local builds:** set `DB_PASSWORD` in `docker/.env.docker`, then start the updated application using your existing project name:
+
+```bash
+docker compose -p <existing-project-name> -f compose.dev.yaml --env-file docker/.env.docker up --build -d
+```
+
+**Published images:** run `secrets-init` once with the existing password, replacing `laravel` below if needed. After it succeeds, run the second command to start the updated application:
+
+```bash
+docker compose -p <existing-project-name> -f oci://ghcr.io/arednel/dlsite-list:latest run --rm -e DB_PASSWORD=laravel secrets-init
+
+docker compose -p <existing-project-name> -f oci://ghcr.io/arednel/dlsite-list:latest up -d
+```
 
 ### Run Artisan Commands in Docker
 
-To run Artisan command inside the running Docker app container run:
+For a running published Docker installation, use its project name. The default is `dlsite-list`; use `docker compose ls` to check yours.
 
 ```bash
-docker compose --env-file docker/.env.docker exec app php artisan <command>
+docker compose -p dlsite-list exec app php artisan <command>
 ```
 
-Examples:
+For a local Docker build:
 
 ```bash
-docker compose --env-file docker/.env.docker exec app php artisan admin:reset-password
-docker compose --env-file docker/.env.docker exec app php artisan admin:reset
-docker compose --env-file docker/.env.docker exec app php artisan works:cleanup-images
+docker compose --env-file docker/.env.docker -f compose.dev.yaml exec app php artisan <command>
+```
+
+Examples (using local Docker build):
+
+```bash
+docker compose --env-file docker/.env.docker -f compose.dev.yaml exec app php artisan admin:reset-password
+docker compose --env-file docker/.env.docker -f compose.dev.yaml exec app php artisan admin:reset
+docker compose --env-file docker/.env.docker -f compose.dev.yaml exec app php artisan works:cleanup-images
 ```
 
 ### Local / Manual Setup
@@ -133,7 +175,7 @@ php artisan queue:work
 
 ### Reset Administrator Password
 
-If administrator exists:
+If an administrator account exists:
 
 ```bash
 php artisan admin:reset-password
@@ -143,10 +185,16 @@ This command:
 - prompts for a new password and confirmation without echoing the password
 - refuses to choose an account when there are zero or multiple user rows
 
-Docker equivalent:
+Local Docker build:
 
 ```bash
-docker compose --env-file docker/.env.docker exec app php artisan admin:reset-password
+docker compose --env-file docker/.env.docker -f compose.dev.yaml exec app php artisan admin:reset-password
+```
+
+Published Docker installation (GHCR):
+
+```bash
+docker compose -p dlsite-list exec app php artisan admin:reset-password
 ```
 
 ### Reset Administrator Account
@@ -161,10 +209,16 @@ The command requires destructive confirmation and does not disable the Authentic
 
 If authentication remains enabled, the next application request opens administrator setup.
 
-Docker equivalent:
+Local Docker build:
 
 ```bash
-docker compose --env-file docker/.env.docker exec app php artisan admin:reset
+docker compose --env-file docker/.env.docker -f compose.dev.yaml exec app php artisan admin:reset
+```
+
+Published Docker installation (GHCR):
+
+```bash
+docker compose -p dlsite-list exec app php artisan admin:reset
 ```
 
 ### Trusted Environment Password Recovery
@@ -174,21 +228,40 @@ Use this only when:
 - console recovery is unavailable
 - application is on a trusted local environment/network
 
-1. Set in the active `.env` or `docker/.env.docker`:
+1. For manual installations or local Docker builds, set in `.env` or `docker/.env.docker`:
 
 ```dotenv
 ADMIN_PASSWORD_RESET=true
 ```
 
-2. Restart the PHP/web process. For Docker, recreate the app container:
+For published Docker installations, create `compose.recovery.yaml` in your current directory:
+
+```yaml
+services:
+  app:
+    environment:
+      ADMIN_PASSWORD_RESET: "true"
+```
+
+2. Restart the PHP/web process for manual installations. For Docker, recreate the app container using the appropriate command:
+
+Local Docker build:
 
 ```bash
-docker compose --env-file docker/.env.docker up -d --force-recreate app
+docker compose --env-file docker/.env.docker -f compose.dev.yaml up -d --force-recreate app
+```
+
+Published Docker installation (GHCR):
+
+Replace `<installed-version>` with your currently installed release tag (without the leading `v`).
+
+```bash
+docker compose -f oci://ghcr.io/arednel/dlsite-list:<installed-version> -f compose.recovery.yaml up -d --no-deps app
 ```
 
 3. Open the application and complete the forced password reset.
 4. Set `ADMIN_PASSWORD_RESET` back to `false`.
-5. Restart/recreate the PHP/web process again.
+5. Restart the PHP/web process or rerun the same Docker command to recreate the app container.
 
 After one recovery is consumed, normal pages remain blocked until the running process sees the flag disabled after restart.
 
@@ -200,10 +273,16 @@ Run:
 php artisan works:cleanup-images
 ```
 
-Docker:
+Local Docker build:
 
 ```bash
-docker compose --env-file docker/.env.docker exec app php artisan works:cleanup-images
+docker compose --env-file docker/.env.docker -f compose.dev.yaml exec app php artisan works:cleanup-images
+```
+
+Published Docker installation (GHCR):
+
+```bash
+docker compose -p dlsite-list exec app php artisan works:cleanup-images
 ```
 
 The command scans existing product folders and removes obsolete cover/sample images that are no longer referenced by their work.
@@ -238,8 +317,8 @@ Runtime files:
 | `.env.example` | Local/manual environment template |
 | `.env.testing` | Local test runtime |
 | `.env.testing.example` | Local test environment template |
-| `docker/.env.docker` | Docker application runtime and optional secret overrides |
-| `docker/.env.testing.docker` | Docker test runtime and optional test secret overrides |
+| `docker/.env.docker` | Local Docker source-build runtime and optional secret overrides |
+| `docker/.env.testing.docker` | Local Docker test runtime and optional test secret overrides |
 
 Testing-specific configuration is documented in [TESTING.md](TESTING.md).
 

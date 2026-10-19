@@ -60,13 +60,13 @@ php artisan test --filter=<TestClassOrMethod>
 ### Docker Unit + Feature
 
 ```bash
-docker compose --env-file docker/.env.docker --profile test run --rm --build tests
+docker compose --env-file docker/.env.docker -f compose.dev.yaml --profile test run --rm --build tests
 ```
 
 ### Docker Performance
 
 ```bash
-docker compose --env-file docker/.env.docker --profile test run --rm --build tests php artisan test --testsuite=Performance
+docker compose --env-file docker/.env.docker -f compose.dev.yaml --profile test run --rm --build tests php artisan test --testsuite=Performance
 ```
 
 The Docker `tests` service is one-off and does not start during normal application startup.
@@ -120,7 +120,7 @@ Feature tests use Laravel `RefreshDatabase`, so use a dedicated test database.
 
 ### Docker
 
-Docker tests use:
+Docker tests use the standalone local source-build configuration `compose.dev.yaml` and:
 - `docker/.env.testing.docker`
 - MySQL host `database_test`
 - separate `dbdata_test` and `secrets_test` volumes
