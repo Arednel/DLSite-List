@@ -13,6 +13,7 @@ For existing Docker installations:
 ### Changed
 
 * Docker now uses `dlsite-list` as the default project name.
+* Docker installations now have Laravel debug mode disabled by default.
 
 ### Security
 
