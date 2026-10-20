@@ -167,7 +167,7 @@ Covers Laravel-served `storage/app/public` files, including authentication-off g
 
 #### `tests/Feature/AutocompleteControllerTest.php`
 
-Covers tag/series autocomplete endpoints, matching/order rules, result limits, tag color payloads, group-over-tag color precedence, and autocomplete asset/data-attribute rendering.
+Covers tag/series autocomplete endpoints, matching/order rules, result limits, tag color payloads, group-over-tag color precedence, and the rendered autocomplete script/field contract on Index, Create, and Edit surfaces.
 
 #### `tests/Feature/AutocompleteSettingsTest.php`
 
@@ -203,11 +203,11 @@ Busy-start coverage checks the wrapped cache lock timeout and ensures unrelated 
 
 #### `tests/Feature/OptionsBulkImportsTest.php`
 
-Covers Bulk Import history, progress/errors, imported-work titles and fallback product codes, 10-run pagination, cleanup, stable Livewire identity, and active-run-only polling. Error/warning coverage verifies known canonical operational messages use the dedicated error catalog in the current UI locale while unknown/raw diagnostics and legacy warnings remain unchanged.
+Covers Bulk Import history, progress/errors, imported-work titles and fallback product codes, 10-run pagination, cleanup availability, and active-run-only polling through the refresh handler. Error/warning coverage verifies known canonical operational messages use the dedicated error catalog in the current UI locale while unknown/raw diagnostics remain unchanged.
 
 #### `tests/Feature/LibraryTransferTest.php`
 
-Covers core transfer contracts, route/review smoke coverage, compact collapsed Export/Import error lists, portable Options, new-work round trips, controlled downloads, and the shared library-mutation lock.
+Covers core transfer contracts, route/review smoke coverage, transfer error rendering, portable Options, new-work round trips, controlled downloads, and the shared library-mutation lock.
 
 #### `tests/Feature/LibraryTransferExportTest.php`
 
@@ -285,7 +285,6 @@ Covers On Hold/Dropped configuration across Add/Edit forms, Index progress navig
 
 Covers:
 - General-tab rendering and default selection
-- Field Layouts content
 - active-tab accessibility state
 - invalid-tab fallback
 - Refetch empty/latest-run presentation
@@ -373,7 +372,6 @@ Covers the Livewire Index:
 - Add/Edit modal links
 - tags/colors/group ordering
 - optional statuses
-- responsive rendered structure
 - content overflow
 - return/query behavior
 
@@ -388,7 +386,7 @@ Covers metadata-backfill behavior when canonical work JSON is missing or invalid
 #### `tests/Feature/ProductMetadataSettingsTest.php`
 
 Covers metadata-related UI settings:
-- field layouts, including collapsed section rendering
+- field layouts, including collapsed section rendering and sortable-control interaction isolation
 - Series Metadata
 - DLsite Links, including the age-based fallback, default-on announcement toggle, save/reset behavior, and tooltip
 - Form Page Theme
@@ -414,7 +412,7 @@ Covers localization across Index/Create/Edit product surfaces, including grouped
 
 #### `tests/Feature/QuickAddFetchStatusTest.php`
 
-Covers server-rendered DLSite Quick Add fetching-status markup across standalone/modal, theme, and locale variants; confirms Custom Quick Add excludes the DLSite status behavior.
+Covers the server-rendered DLSite Quick Add fetching-status contract across standalone/modal and locale variants, including status accessibility semantics and the required frontend script; confirms Custom Quick Add excludes both the DLSite status hooks and script.
 
 #### `tests/Feature/ReturnTargetProductTest.php`
 
@@ -441,7 +439,7 @@ Covers Tag Library behavior:
 - saved ordering
 - Index visibility
 - background/text colors
-- Edit Tags mode
+- Edit Tags mode and accessible visibility/edit-mode switch semantics
 - group assignment UI
 - parent/child relationships and cycle rejection
 - ancestor backfill
@@ -543,7 +541,7 @@ Covers server-rendered Add/Edit modal completion fallback output and conditional
 - Covers overflow defaults, malformed stored data, target filtering, canonical CSS-length normalization, and accepted/rejected units.
 
 `tests/Unit/Support/ProductIndexFiltersTest.php`
-- Covers Index query normalization, filter/date round trips, defaults, sort options, input keys, visibility groups, and query export.
+- Covers Index query normalization, invalid-value rejection, filter/date round trips, defaults, sort options, input keys, visibility groups, and query export.
 
 `tests/Unit/Support/ProductIndexRowBuilderTest.php`
 - Covers typed Index row construction from narrow product hydration, encoded Series/Circle/contributor filter URLs, preserved Edit return state/fragment, age-aware DLSite URLs, defaults for unhydrated optional attributes, and rejection of a missing required `work_name`.

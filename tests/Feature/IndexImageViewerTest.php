@@ -89,7 +89,14 @@ class IndexImageViewerTest extends TestCase
             ->assertDontSee('index-image-viewer-trigger', false)
             ->assertDontSee('index-image-viewer-dialog', false);
 
-        $this->assertSame(3, substr_count($component->html(), $dlsiteUrl));
+        $xpath = $this->htmlXPath($component->html());
+        $coverLinks = $xpath->query(
+            '//tr[@id="RJ100000001"]//td[contains(concat(" ", normalize-space(@class), " "), " image ")]//a[contains(concat(" ", normalize-space(@class), " "), " index-cover-thumbnail ")]',
+        );
+        $this->assertCount(1, $coverLinks);
+        $coverLink = $coverLinks->item(0);
+        $this->assertInstanceOf(DOMElement::class, $coverLink);
+        $this->assertSame($dlsiteUrl, $coverLink->getAttribute('href'));
 
         Livewire::flushState();
 
@@ -139,7 +146,6 @@ class IndexImageViewerTest extends TestCase
         $dlsiteUrl = $product->dlsiteWorkUrl(false);
 
         $component = Livewire::test(ProductIndex::class)
-            ->assertSee('class="product-link index-image-viewer-trigger index-cover-thumbnail"', false)
             ->assertSee('data-index-image-viewer-product="RJ100000002"', false)
             ->assertSee('data-index-image-viewer-title="RJ100000002 - VIEWER_ENABLED_WORK"', false)
             ->assertSee('index-image-viewer-dialog', false)
@@ -154,7 +160,15 @@ class IndexImageViewerTest extends TestCase
             ->assertSee('rel="noopener noreferrer" hidden', false)
             ->assertSee($versionedPaths[0], false);
 
-        $this->assertSame(2, substr_count($component->html(), $dlsiteUrl));
+        $xpath = $this->htmlXPath($component->html());
+        $productLinks = $xpath->query(
+            '//tr[@id="RJ100000002"]//a[contains(concat(" ", normalize-space(@class), " "), " product-link ")]',
+        );
+        $this->assertGreaterThanOrEqual(1, $productLinks->length);
+        foreach ($productLinks as $productLink) {
+            $this->assertInstanceOf(DOMElement::class, $productLink);
+            $this->assertSame($dlsiteUrl, $productLink->getAttribute('href'));
+        }
 
         Livewire::test(ProductIndex::class)
             ->call('workImages', $product->id)
@@ -323,10 +337,14 @@ class IndexImageViewerTest extends TestCase
     {
         $response->assertOk();
 
+        return $this->htmlXPath($response->getContent());
+    }
+
+    private function htmlXPath(string $html): DOMXPath
+    {
         $document = new DOMDocument;
-        @$document->loadHTML($response->getContent());
+        @$document->loadHTML($html);
 
         return new DOMXPath($document);
     }
-
 }

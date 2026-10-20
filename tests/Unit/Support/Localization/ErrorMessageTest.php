@@ -71,8 +71,8 @@ class ErrorMessageTest extends TestCase
             ErrorMessage::display('The Product Format value is invalid.'),
         );
         $this->assertSame(
-            'Legacy warning: <upstream detail>',
-            DLSiteFetchResult::displayImageFailureMessage('Legacy warning: <upstream detail>'),
+            'Unknown warning: <upstream detail>',
+            DLSiteFetchResult::displayImageFailureMessage('Unknown warning: <upstream detail>'),
         );
     }
 

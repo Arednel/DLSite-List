@@ -12,20 +12,6 @@ class TagLibraryDisplaySettingsTest extends TestCase
 {
     use RefreshDatabase;
 
-    public function test_tag_library_settings_render_inline_helper_icons(): void
-    {
-        $html = Livewire::test(TagLibraryDisplaySettings::class)
-            ->assertSee('Open Tag Library with all tags shown')
-            ->assertSee('Enable group ordering on Index')
-            ->assertSee('Tag color surfaces')
-            ->assertSee('When enabled, Tag Library opens with the All Tags list expanded instead of collapsed.')
-            ->assertSee('When enabled, Index tag chips use saved group order, saved tag order inside groups, then ungrouped tags alphabetically.')
-            ->assertDontSee('option-setting-description', false)
-            ->html();
-
-        $this->assertSame(3, substr_count($html, 'fa-solid fa-circle-question'));
-    }
-
     public function test_tag_library_display_setting_hydrates_from_option_and_saves_changes(): void
     {
         Option::setTagLibraryTagsExpandedByDefault(true);

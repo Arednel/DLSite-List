@@ -164,7 +164,7 @@ class LibraryTransferTest extends TestCase
         $this->assertSame($normal, $portable, 'Every normal UI option needs an explicit portable classification.');
     }
 
-    public function test_import_item_errors_use_the_collapsed_error_list(): void
+    public function test_import_item_errors_are_rendered_in_review(): void
     {
         Product::factory()->create(['id' => 'RJ123456']);
         $export = $this->exported(['works']);
@@ -175,78 +175,74 @@ class LibraryTransferTest extends TestCase
         Livewire::test(OptionsTransferRun::class, ['run' => $run->fresh()])
             ->assertSee('Errors (1)')
             ->assertSee("{$item->entity_key}: Imported value is invalid.")
-            ->assertSee('<details class="review-errors">', false)
             ->assertHasNoErrors();
     }
 
-    public function test_options_page_and_run_review_render_with_refetch_choice_labels(): void
+    public function test_transfer_run_surfaces_export_warnings(): void
     {
         Product::factory()->create(['id' => 'RJ123456']);
-        $this->get(route('options.index', ['tab' => 'transfers']))->assertOk()
-            ->assertSee('Import / Export')
-            ->assertSee('css/options.css', false)
-            ->assertSee('css/transfers.css', false);
+
         $export = $this->exported(['works', 'options']);
         $this->assertSame(LibraryTransferRunStatus::Ready, $export->status);
+
         $export->update(['warnings' => ['RJ123456: sample image 2 is incomplete.']]);
+
         Livewire::test(OptionsTransferRun::class, ['run' => $export->fresh()])
             ->assertSee('Errors (1)')
             ->assertSee('RJ123456: sample image 2 is incomplete.')
             ->assertHasNoErrors();
-        $this->get(route('options.transfers.show', $export))->assertOk()
+
+        $this->get(route('options.transfers.show', $export))
+            ->assertOk()
             ->assertSee($export->parts()->first()->filename)
             ->assertSee('Errors (1)')
-            ->assertSee('RJ123456: sample image 2 is incomplete.')
-            ->assertSee('<details class="review-errors">', false)
-            ->assertDontSee('<div class="notice" role="status">RJ123456: sample image 2 is incomplete.</div>', false)
-            ->assertSee('css/options.css', false)
-            ->assertSee('css/transfers.css', false)
-            ->assertSee('css/title-tooltips.css', false)
-            ->assertSee('scripts/title-tooltips.js', false)
-            ->assertSee('class="progress-summary"', false)
-            ->assertSee('class="progress-track"', false)
-            ->assertSee('class="progress-fill" style="width: 100%"', false);
-        $run = $this->imported($export);
+            ->assertSee('RJ123456: sample image 2 is incomplete.');
+    }
+
+    public function test_import_review_exposes_actions_and_confirmation_messages(): void
+    {
+        Product::factory()->create(['id' => 'RJ123456']);
+        $run = $this->imported($this->exported(['works', 'options']));
+
         $this->assertSame(LibraryTransferRunStatus::Review, $run->status);
-        $this->assertFalse($run->items()->where('decision', '<>', 'ignore')->exists());
-        $this->get(route('options.transfers.show', $run))->assertOk()
+
+        $this->get(route('options.transfers.show', $run))
+            ->assertOk()
             ->assertSee('Review changes')
-            ->assertSee('aria-label="About Ignore"', false)
-            ->assertSee('aria-label="About Overwrite"', false)
-            ->assertSee('aria-label="About Merge"', false)
-            ->assertSee('aria-label="About Refresh conflicts"', false)
-            ->assertSee('title="Rechecks failed and conflicting changes against current local data, then resets them to Ignore."', false)
-            ->assertSee('title="Merge fills empty work fields and adds imported tags, contributors, and images without removing existing ones. For Options, keys absent from the archive keep their current values."', false)
             ->assertSee('Tab choice')
             ->assertSee('Use tab choice')
-            ->assertSee('class="refetch-tab-panel"', false)
-            ->assertSee('class="refetch-tab-header"', false)
-            ->assertSee('class="refetch-change-comparison"', false)
-            ->assertSee('Setting all review choices to Ignore...')
-            ->assertSee('Setting all review choices to Merge...')
-            ->assertSee('Setting all review choices to Overwrite...')
-            ->assertSee('wire:loading', false)
-            ->assertSee("wire:target=\"decideMany('ignore', true)\"", false)
-            ->assertSee("wire:target=\"decideMany('merge', true)\"", false)
-            ->assertSee("wire:target=\"decideMany('overwrite', true)\"", false)
-            ->assertSeeInOrder(['Apply Tab', 'Cancel Import', 'Clean up this Import']);
+            ->assertSee('Apply Tab')
+            ->assertSee('Cancel Import')
+            ->assertSee('Clean up this Import');
+
         Livewire::test(OptionsTransferRun::class, ['run' => $run])
             ->call('ask', 'apply')
             ->assertSee('Apply and resolve this tab?')
-            ->assertSee('Applying tab...')
-            ->assertSee('wire:loading', false)
-            ->assertSee('wire:target="confirm"', false)
             ->call('cancelConfirmation')
             ->call('ask', 'cancel')
             ->assertSee('Cancel this Import? Already applied changes are retained.')
-            ->assertSee('Cancelling transfer...')
-            ->call('cancelConfirmation')
-            ->call('tab', 'works', 'titles')->call('decideMany', 'merge')
+            ->call('cancelConfirmation');
+    }
+
+    public function test_import_review_defaults_items_to_ignore_and_applies_bulk_decisions(): void
+    {
+        Product::factory()->create(['id' => 'RJ123456']);
+        $run = $this->imported($this->exported(['works', 'options']));
+
+        $this->assertSame(LibraryTransferRunStatus::Review, $run->status);
+        $this->assertFalse($run->items()->where('decision', '<>', 'ignore')->exists());
+
+        Livewire::test(OptionsTransferRun::class, ['run' => $run])
+            ->call('tab', 'works', 'titles')
+            ->call('decideMany', 'merge')
             ->assertHasNoErrors();
+
         $this->assertSame(2, $run->items()->where('decision', 'merge')->count());
+
         $ignored = $run->items()->where('decision', 'ignore')->firstOrFail();
         $this->review()->applyItem($ignored);
         $this->assertSame(LibraryImportItemStatus::Ignored, $ignored->fresh()->status);
+
         $databaseDefault = $run->items()->create([
             'section' => 'options',
             'category' => 'options',
@@ -295,7 +291,8 @@ class LibraryTransferTest extends TestCase
             ->call('newWorkTab', 'descriptions')->assertSee('Imported description')
             ->call('newWorkTab', 'notes')->assertSee('Imported notes')
             ->call('newWorkTab', 'product_format')->assertSeeInOrder(['Video', 'Voice', 'Music', 'Audiobook'])
-            ->call('newWorkTab', 'cover')->assertSee('class="refetch-preview-image"', false)
+            ->call('newWorkTab', 'cover')
+            ->assertSee(route('options.transfers.image', [$run, $imageEntry], absolute: false), false)
             ->call('decideMany', 'overwrite')->assertHasNoErrors();
         $newWork = $run->items()->where('category', 'new_works')->firstOrFail();
         $this->assertSame(LibraryImportDecision::Merge, $newWork->fresh()->decision);

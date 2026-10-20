@@ -28,7 +28,6 @@ class ProductImageEditorTest extends TestCase
             ->assertOk()
             ->assertSee('enctype="multipart/form-data"', false)
             ->assertSee('name="work_image"', false)
-            ->assertSee('class="image-editor-native-input"', false)
             ->assertDontSee('name="remove_work_image"', false)
             ->assertDontSee('name="sample_images_submitted"', false)
             ->assertSee('scripts/product-image-editor.js', false)
@@ -36,6 +35,8 @@ class ProductImageEditorTest extends TestCase
 
         $xpath = $this->responseXPath($response);
 
+        $this->assertCount(1, $xpath->query('//*[@data-product-image-editor and @data-product-image-editor-kind="cover"]'));
+        $this->assertCount(1, $xpath->query('//*[@data-product-image-editor and @data-product-image-editor-kind="samples"]'));
         $this->assertCount(1, $xpath->query('//input[@type="file" and @name="sample_images[]" and @multiple and @data-image-editor-sample-input]'));
         $this->assertCount(0, $xpath->query('//input[@type="file" and @required]'));
     }

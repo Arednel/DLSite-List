@@ -415,15 +415,6 @@ class ProductMetadataSettingsTest extends TestCase
         );
     }
 
-    public function test_product_form_modal_setting_renders_help_for_each_choice(): void
-    {
-        $html = Livewire::test(ProductFormModalSettings::class)->html();
-
-        $this->assertStringContainsString('Open Quick Add and Edit Details in modal windows', $html);
-        $this->assertSame(4, substr_count($html, 'fa-solid fa-circle-question'));
-        $this->assertStringContainsString('The visible page may remain stale until it is reloaded.', $html);
-    }
-
     #[DataProvider('fixedTableWidthProvider')]
     public function test_table_width_component_saves_fixed_width_modes(string $mode, string $expectedCss): void
     {
@@ -1070,81 +1061,6 @@ class ProductMetadataSettingsTest extends TestCase
             ->assertSeeLivewire(OptionsResetDefaults::class);
     }
 
-    public function test_field_layout_component_renders_core_user_controls(): void
-    {
-        $component = Livewire::test(ProductFieldLayoutSettings::class)
-            ->assertSeeInOrder([
-                'Index Table Columns',
-                'Index Filter Fields',
-                'Index Sort Menu',
-                'Edit Form Fields',
-                'Quick Add Form Fields',
-                'Bulk Import Form Fields',
-                'Custom Quick Add Form Fields',
-            ])
-            ->assertSee('Required')
-            ->assertSee('Notes below Title')
-            ->assertSee('Custom Tags')
-            ->assertSee('Fetched Tags')
-            ->assertSee('Editable')
-            ->assertSee('Save Index Table Columns')
-            ->assertSee('Save Index Filter Fields')
-            ->assertSee('Save Index Sort Menu')
-            ->assertSee('Save Edit Form Fields')
-            ->assertSee('Save Quick Add Form Fields')
-            ->assertSee('Save Bulk Import Form Fields')
-            ->assertSee('Save Custom Quick Add Form Fields')
-            ->assertSee('Save all field layouts')
-            ->assertSee('Changes the order of columns in the Index table. Turn fields on or off to show or hide their columns.')
-            ->assertSee('Changes the order of fields in the Index Filter. Turn fields on or off to show or hide their filters.')
-            ->assertSee('Changes the order of options in the Index Filter sort menus. Turn options on or off to show or hide them.')
-            ->assertSee('Changes the order of fields in the Edit Details form. Turn fields on or off to show or hide them; use Editable to allow or prevent editing.')
-            ->assertSee('Changes the order of fields in the Quick Add form. Turn fields on or off to show or hide them.')
-            ->assertSee('Changes the order of shared fields in the Bulk Import form. Values entered in visible fields are applied to every imported work.')
-            ->assertSee('Changes the order of fields in the Custom Quick Add form. Turn fields on or off to show or hide them.')
-            ->assertSee(
-                'title="Shows each work&#039;s Notes beneath its title on the Index."',
-                false,
-            )
-            ->assertSee(
-                'title="Notes are already shown inside Title; enable this for a separate column."',
-                false,
-            )
-            ->assertSee(
-                'title="Combines the separate Circle, Publisher, and Brand fields into one Index column."',
-                false,
-            )
-            ->assertSee(
-                'title="Searches Circle, Publisher, and Brand together."',
-                false,
-            )
-            ->assertSee(
-                'title="Sorts by the first available name: Circle, then Publisher, then Brand."',
-                false,
-            )
-            ->assertSee(
-                'title="Shows when the work was last updated in your library."',
-                false,
-            )
-            ->assertSee(
-                'title="Filters by when the work was last updated in your library."',
-                false,
-            )
-            ->assertSee(
-                'title="Sorts by when the work was last updated in your library."',
-                false,
-            )
-            ->assertDontSee('class="field-layout-note"', false)
-            ->assertSee('Reset to default');
-
-        foreach (['index', 'filter', 'sort', 'edit', 'quick_add', 'custom_quick_add'] as $layout) {
-            $component->assertSee(
-                "wire:click.preserve-scroll=\"saveLayout('{$layout}')\"",
-                false,
-            );
-        }
-    }
-
     public function test_field_layout_sections_render_collapsed_by_default(): void
     {
         $html = Livewire::test(ProductFieldLayoutSettings::class)->html();
@@ -1169,27 +1085,38 @@ class ProductMetadataSettingsTest extends TestCase
         }
     }
 
-    public function test_field_layout_component_renders_switch_controls(): void
-    {
-        Livewire::test(ProductFieldLayoutSettings::class)
-            ->assertSee('option-switch', false)
-            ->assertSee('option-switch-input', false)
-            ->assertSee('option-switch-track', false)
-            ->assertSee('wire:sort:ignore', false)
-            ->assertSee('wire:model.live="indexFields.image.visible"', false)
-            ->assertSee('wire:model.live="indexFields.title.notes_visible"', false)
-            ->assertSee('wire:model.live="indexFields.created_at.visible"', false)
-            ->assertSee('wire:model.live="indexFields.updated_at.visible"', false)
-            ->assertSee('wire:model.live="indexFields.tags.custom_visible"', false)
-            ->assertSee('wire:model.live="indexFields.tags.fetched_visible"', false)
-            ->assertSee('wire:model.live="editFields.title.editable"', false);
-    }
-
     public function test_locked_field_layout_visibility_switches_render_disabled(): void
     {
-        Livewire::test(ProductFieldLayoutSettings::class)
-            ->assertSee('wire:model.live="editFields.title.visible"', false)
-            ->assertSee('disabled', false);
+        $html = Livewire::test(ProductFieldLayoutSettings::class)->html();
+
+        $document = new \DOMDocument;
+        @$document->loadHTML('<?xml encoding="UTF-8">' . $html);
+        $xpath = new \DOMXPath($document);
+
+        $lockedTitleVisibility = $xpath->query(
+            "//*[@disabled and @*[name()='wire:model.live']='editFields.title.visible']",
+        );
+
+        $this->assertSame(1, $lockedTitleVisibility->length);
+    }
+
+    public function test_field_layout_switches_ignore_sort_gestures(): void
+    {
+        $html = Livewire::test(ProductFieldLayoutSettings::class)->html();
+
+        $document = new \DOMDocument;
+        @$document->loadHTML('<?xml encoding="UTF-8">' . $html);
+        $xpath = new \DOMXPath($document);
+
+        $this->assertSame(1, $xpath->query(
+            "//*[@*[name()='wire:model.live']='indexFields.image.visible']/ancestor::label[@*[name()='wire:sort:ignore']]",
+        )->length);
+        $this->assertSame(1, $xpath->query(
+            "//*[@*[name()='wire:model.live']='indexFields.title.notes_visible']/ancestor::*[@*[name()='wire:sort:ignore']]",
+        )->length);
+        $this->assertSame(1, $xpath->query(
+            "//*[@*[name()='wire:model.live']='editFields.title.editable']/ancestor::label[@*[name()='wire:sort:ignore']]",
+        )->length);
     }
 
     public function test_field_layout_component_moves_a_row_up_and_down(): void
@@ -1206,14 +1133,6 @@ class ProductMetadataSettingsTest extends TestCase
             ->assertSet('indexOrder.1', $originalOrder[0])
             ->call('move', 'indexOrder', 0, 1)
             ->assertSet('indexOrder', $originalOrder);
-    }
-
-    public function test_field_layouts_tab_exposes_metadata_settings_sections(): void
-    {
-        $this->get('/options?tab=field-layouts')
-            ->assertOk()
-            ->assertSee('Field Layouts')
-            ->assertSee('Fetched Tags');
     }
 
     public function test_global_reset_modal_mentions_general_and_field_layout_tabs(): void

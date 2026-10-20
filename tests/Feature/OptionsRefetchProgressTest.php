@@ -6,6 +6,8 @@ use App\Livewire\OptionsRefetchProgress;
 use App\Models\Product;
 use App\Models\RefetchRun;
 use App\Support\Refetch\RefetchService;
+use DOMDocument;
+use DOMXPath;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Livewire\Livewire;
 use Tests\TestCase;
@@ -19,21 +21,21 @@ class OptionsRefetchProgressTest extends TestCase
         $product = Product::factory()->create();
         $run = app(RefetchService::class)->createRun([$product->id], false);
 
-        Livewire::test(OptionsRefetchProgress::class, ['run' => $run])
-            ->assertSee('wire:poll.1s="refreshProgress"', false)
+        $running = Livewire::test(OptionsRefetchProgress::class, ['run' => $run])
             ->assertSee('0 / 1 work processed')
             ->assertSeeInOrder(['Fetched', 'Failed', 'Total'])
             ->assertSee('Cancel Refetch');
+        $this->assertSame(['refreshProgress'], $this->pollingHandlers($running->html()));
 
         $run->forceFill([
             'status' => RefetchRun::STATUS_CANCELLING,
             'cancelled_at' => now(),
         ])->save();
 
-        Livewire::test(OptionsRefetchProgress::class, ['run' => $run])
-            ->assertSee('wire:poll.1s="refreshProgress"', false)
+        $cancelling = Livewire::test(OptionsRefetchProgress::class, ['run' => $run])
             ->assertSee('Cancelling')
             ->assertDontSee('Cancel Refetch');
+        $this->assertSame(['refreshProgress'], $this->pollingHandlers($cancelling->html()));
 
         $run->forceFill([
             'status' => RefetchRun::STATUS_REVIEW,
@@ -42,9 +44,9 @@ class OptionsRefetchProgressTest extends TestCase
             'completed_at' => now(),
         ])->save();
 
-        Livewire::test(OptionsRefetchProgress::class, ['run' => $run])
-            ->assertDontSee('wire:poll.1s="refreshProgress"', false)
+        $review = Livewire::test(OptionsRefetchProgress::class, ['run' => $run])
             ->assertSee('1 / 1 work processed');
+        $this->assertSame([], $this->pollingHandlers($review->html()));
     }
 
     public function test_progress_component_redirects_when_run_completes_during_poll(): void
@@ -91,5 +93,24 @@ class OptionsRefetchProgressTest extends TestCase
         $component
             ->call('refreshProgress')
             ->assertRedirectToRoute('options.refetch.show', $run);
+    }
+
+    /** @return list<string> */
+    private function pollingHandlers(string $html): array
+    {
+        $document = new DOMDocument;
+        @$document->loadHTML('<?xml encoding="UTF-8">' . $html);
+        $xpath = new DOMXPath($document);
+        $handlers = [];
+
+        foreach ($xpath->query('//*') as $element) {
+            foreach ($element->attributes ?? [] as $attribute) {
+                if (str_starts_with($attribute->nodeName, 'wire:poll')) {
+                    $handlers[] = trim($attribute->nodeValue);
+                }
+            }
+        }
+
+        return $handlers;
     }
 }

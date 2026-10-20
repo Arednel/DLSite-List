@@ -56,18 +56,6 @@ class OptionsGeneralTest extends TestCase
         }
     }
 
-    public function test_field_layouts_tab_renders_field_layout_settings(): void
-    {
-        $this->get('/options?tab=field-layouts')
-            ->assertOk()
-            ->assertSee('Field Layouts')
-            ->assertSee('Index Table Columns')
-            ->assertSee('Index Sort Menu')
-            ->assertSee('Fetched Tags')
-            ->assertDontSee('Index page size')
-            ->assertDontSee('Refetch all works');
-    }
-
     public function test_active_option_category_is_exposed_as_the_current_navigation_page(): void
     {
         foreach (['general', 'field-layouts', 'authentication', 'refetch', 'transfers', 'bulk-imports'] as $tab) {

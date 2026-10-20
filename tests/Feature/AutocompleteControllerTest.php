@@ -9,6 +9,9 @@ use App\Models\GenreGroup;
 use App\Models\Option;
 use App\Models\Product;
 use App\Support\ProductGenreSync;
+use DOMDocument;
+use DOMElement;
+use DOMXPath;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
 use Tests\TestCase;
@@ -188,30 +191,20 @@ class AutocompleteControllerTest extends TestCase
             ->assertJsonPath('1.count', 3);
     }
 
-    public function test_autocomplete_assets_and_field_attributes_render_on_index_and_create(): void
+    public function test_autocomplete_fields_expose_the_expected_frontend_contract_on_index_and_create(): void
     {
-        $this->get('/')
-            ->assertOk()
-            ->assertSee('css/autocomplete.css', false)
-            ->assertSee('scripts/autocomplete-text.js', false)
-            ->assertSee('id="filter_tags"', false)
-            ->assertSee('data-autocomplete-source="tags"', false)
-            ->assertSee('data-autocomplete-mode="csv"', false)
-            ->assertSee('id="filter_series"', false)
-            ->assertSee('data-autocomplete-source="series"', false)
-            ->assertSee('data-autocomplete-mode="single"', false);
+        $index = $this->get('/')->assertOk();
+        $this->assertScriptLoaded($index->getContent(), 'scripts/autocomplete-text.js');
+        $this->assertAutocompleteField($index->getContent(), 'filter_tags', 'tags', 'csv');
+        $this->assertAutocompleteField($index->getContent(), 'filter_series', 'series', 'single');
 
-        $this->get('/create')
-            ->assertOk()
-            ->assertSee('css/autocomplete.css', false)
-            ->assertSee('scripts/autocomplete-text.js', false)
-            ->assertSee('id="genre_custom"', false)
-            ->assertSee('data-autocomplete-source="tags"', false)
-            ->assertSee('id="series"', false)
-            ->assertSee('data-autocomplete-source="series"', false);
+        $create = $this->get('/create')->assertOk();
+        $this->assertScriptLoaded($create->getContent(), 'scripts/autocomplete-text.js');
+        $this->assertAutocompleteField($create->getContent(), 'genre_custom', 'tags', 'csv');
+        $this->assertAutocompleteField($create->getContent(), 'series', 'series', 'single');
     }
 
-    public function test_autocomplete_assets_and_generic_fetched_field_attributes_render_on_edit(): void
+    public function test_editable_fetched_tags_expose_the_autocomplete_frontend_contract(): void
     {
         Option::setEditFieldLayout(array_map(
             fn(array $row): array => $row['field'] === ProductField::FetchedTags->value
@@ -221,14 +214,33 @@ class AutocompleteControllerTest extends TestCase
         ));
 
         $product = Product::factory()->create();
+        $response = $this->get("/edit/{$product->id}")->assertOk();
 
-        $this->get("/edit/{$product->id}")
-            ->assertOk()
-            ->assertSee('css/autocomplete.css', false)
-            ->assertSee('scripts/autocomplete-text.js', false)
-            ->assertSee('id="genre_fetched"', false)
-            ->assertSee('data-autocomplete-source="tags"', false)
-            ->assertSee('data-autocomplete-mode="csv"', false);
+        $this->assertScriptLoaded($response->getContent(), 'scripts/autocomplete-text.js');
+        $this->assertAutocompleteField($response->getContent(), 'genre_fetched', 'tags', 'csv');
+    }
+
+    private function assertScriptLoaded(string $html, string $scriptPath): void
+    {
+        $document = new DOMDocument;
+        @$document->loadHTML($html);
+        $xpath = new DOMXPath($document);
+
+        $this->assertCount(1, $xpath->query('//script[contains(@src, "' . $scriptPath . '")]'));
+    }
+
+    private function assertAutocompleteField(string $html, string $id, string $source, string $mode): void
+    {
+        $document = new DOMDocument;
+        @$document->loadHTML($html);
+        $xpath = new DOMXPath($document);
+        $fields = $xpath->query('//*[@id="' . $id . '"]');
+
+        $this->assertCount(1, $fields);
+        $field = $fields->item(0);
+        $this->assertInstanceOf(DOMElement::class, $field);
+        $this->assertSame($source, $field->getAttribute('data-autocomplete-source'));
+        $this->assertSame($mode, $field->getAttribute('data-autocomplete-mode'));
     }
 
     private function createGenre(string $title, string $type): Genre

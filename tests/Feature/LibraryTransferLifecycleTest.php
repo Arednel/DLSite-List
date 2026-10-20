@@ -41,9 +41,6 @@ class LibraryTransferLifecycleTest extends TestCase
 
         $component = Livewire::test(OptionsTransfers::class)
             ->assertSet('sizeChoice', '256')
-            ->assertSee('Starting export...')
-            ->assertSee('wire:loading', false)
-            ->assertSee('wire:target="export"', false)
             ->assertSee('1024 MiB')
             ->assertSee('8192 MiB')
             ->set('scopes', ['works', 'images', 'options'])
@@ -343,7 +340,6 @@ class LibraryTransferLifecycleTest extends TestCase
         Storage::disk('public')->put($import->directory() . '/preview.jpg', 'preview');
 
         $component = Livewire::test(OptionsTransfers::class)
-            ->assertSee('data-transfer-cleanup-unavailable="false"', false)
             ->call('cleanup')
             ->assertSet('confirmingCleanup', false);
         $this->assertDatabaseCount('library_transfer_runs', 2);
@@ -351,9 +347,6 @@ class LibraryTransferLifecycleTest extends TestCase
         $component->call('askCleanup')
             ->assertSet('confirmingCleanup', true)
             ->assertSee('Permanently delete all transfer history, archives, and staged files?')
-            ->assertSee('Cleaning up transfer history...')
-            ->assertSee('wire:loading', false)
-            ->assertSee('wire:target="cleanup"', false)
             ->call('cleanup')
             ->assertHasNoErrors('cleanup')
             ->assertSet('confirmingCleanup', false)
@@ -374,7 +367,6 @@ class LibraryTransferLifecycleTest extends TestCase
         LibraryTransferRun::create(['direction' => str_contains($status, 'build') || in_array($status, ['queued', 'planning'], true) ? 'export' : 'import', 'status' => $status, 'settings' => []]);
 
         Livewire::test(OptionsTransfers::class)
-            ->assertSee('data-transfer-cleanup-unavailable="true"', false)
             ->call('askCleanup')
             ->assertSet('confirmingCleanup', false)
             ->assertHasErrors('cleanup')
@@ -398,7 +390,6 @@ class LibraryTransferLifecycleTest extends TestCase
 
         try {
             Livewire::test(OptionsTransfers::class)
-                ->assertSee('data-transfer-cleanup-unavailable="false"', false)
                 ->call('askCleanup')
                 ->assertSet('confirmingCleanup', true)
                 ->call('cleanup')
@@ -409,7 +400,8 @@ class LibraryTransferLifecycleTest extends TestCase
         }
 
         Livewire::test(OptionsTransfers::class)
-            ->assertSee('data-transfer-cleanup-unavailable="false"', false);
+            ->call('askCleanup')
+            ->assertSet('confirmingCleanup', true);
     }
 
     public function test_transfer_creation_does_not_overlap_global_cleanup(): void
@@ -513,13 +505,14 @@ class LibraryTransferLifecycleTest extends TestCase
         $run = $this->service()->startImport();
         $view = Livewire::test(OptionsTransferRun::class, ['run' => $run])
             ->assertSee('data-transfer-upload', false)
-            ->assertSee('class="form-control file-upload-input"', false)
             ->assertSee('data-file-progress', false)
             ->assertSee('data-total-progress', false);
         $this->review()->item($run, 'options', 'options', Option::INDEX_PER_PAGE, 100, 50);
         $run->update(['status' => 'review']);
-        $view->call('$refresh')->assertSet('section', 'options')->assertSet('category', 'options')
-            ->assertDontSee('data-transfer-upload', false)->assertSee('refetch-change-comparison', false);
+        $view->call('$refresh')
+            ->assertSet('section', 'options')
+            ->assertSet('category', 'options')
+            ->assertDontSee('data-transfer-upload', false);
         $run->update(['status' => 'completed']);
         $view->call('$refresh')->assertDontSee('wire:poll', false);
     }

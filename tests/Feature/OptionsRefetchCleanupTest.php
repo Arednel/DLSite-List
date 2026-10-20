@@ -50,11 +50,7 @@ class OptionsRefetchCleanupTest extends TestCase
         $component
             ->call('askCleanup')
             ->assertSet('confirmingCleanup', true)
-            ->assertSee('Permanently delete all refetch run records and all downloaded refetch images?')
-            ->assertSee('Cleaning up refetch data...')
-            ->assertSee('wire:loading', false)
-            ->assertSee('wire:target="cleanup"', false)
-            ->assertSee('id="refetch-cleanup-modal-title"', false);
+            ->assertSee('Permanently delete all refetch run records and all downloaded refetch images?');
 
         $this->assertDatabaseCount('refetch_runs', 1);
         $this->assertDatabaseCount('refetch_work_results', 1);

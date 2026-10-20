@@ -11,6 +11,8 @@ use App\Models\BulkImportRun;
 use App\Models\Option;
 use App\Models\Product;
 use App\Support\BulkImport\BulkImportCleanupService;
+use DOMDocument;
+use DOMXPath;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Cache;
 use Livewire\Livewire;
@@ -73,14 +75,12 @@ class OptionsBulkImportsTest extends TestCase
             'started_at' => now(),
         ]);
 
-        Livewire::test(BulkImportRunCard::class, ['runId' => $run->id])
+        $component = Livewire::test(BulkImportRunCard::class, ['runId' => $run->id])
             ->assertSee('Importing RJ000000503 - 3 / 10')
             ->assertSee('Errors (1)')
-            ->assertSee('<details class="review-errors">', false)
-            ->assertSee('GeoBlocked DLSite work')
-            ->assertSee('wire:poll.visible.2s="refreshRun"', false)
-            ->assertSee('wire:key="bulk-import-run-' . $run->id . '"', false)
-            ->assertSee('wire:key="bulk-import-issue-', false);
+            ->assertSee('GeoBlocked DLSite work');
+
+        $this->assertSame(['refreshRun'], $this->pollingHandlers($component->html()));
     }
 
     public function test_imported_works_list_uses_current_titles_and_falls_back_to_product_codes(): void
@@ -135,8 +135,6 @@ class OptionsBulkImportsTest extends TestCase
                 'Evening Tea & Rain',
                 'RJ000000801',
             ])
-            ->assertSee('<details class="review-errors imported-works">', false)
-            ->assertSee('<div>Imported<strong>2</strong></div>', false)
             ->assertDontSee('RJ000000804');
     }
 
@@ -207,7 +205,7 @@ class OptionsBulkImportsTest extends TestCase
                 'product_id' => 'RJ000000704',
                 'status' => BulkImportItemStatus::Failed,
                 'error' => 'Unexpected scraper detail',
-                'warning' => 'Legacy warning: <upstream detail>',
+                'warning' => 'Unknown warning: <upstream detail>',
             ],
         ]);
 
@@ -221,8 +219,8 @@ class OptionsBulkImportsTest extends TestCase
             ->assertSee('DLSite情報は取得できましたが、次の画像をダウンロードできませんでした: cover.jpg, sample_1.jpg')
             ->assertSee('RJ000000704 -')
             ->assertSee('Unexpected scraper detail')
-            ->assertSee('Legacy warning: <upstream detail>')
-            ->assertDontSee('Legacy warning: <upstream detail>', false);
+            ->assertSee('Unknown warning: <upstream detail>')
+            ->assertDontSee('Unknown warning: <upstream detail>', false);
 
         Option::setUiLanguage(UiLanguage::English);
         $this->get(route('options.index', ['tab' => 'bulk-imports']))
@@ -231,7 +229,7 @@ class OptionsBulkImportsTest extends TestCase
             ->assertSee('Already in library.')
             ->assertSee('GeoBlocked DLSite work')
             ->assertSee('DLSite data was fetched, but these images could not be downloaded: cover.jpg, sample_1.jpg')
-            ->assertSee('Legacy warning: <upstream detail>');
+            ->assertSee('Unknown warning: <upstream detail>');
     }
 
     public function test_unknown_bulk_import_errors_and_warnings_stay_verbatim(): void
@@ -263,9 +261,10 @@ class OptionsBulkImportsTest extends TestCase
             'completed_at' => now(),
         ]);
 
-        Livewire::test(BulkImportRunCard::class, ['runId' => BulkImportRun::query()->value('id')])
-            ->assertSee('Completed')
-            ->assertDontSee('wire:poll.visible.2s', false);
+        $component = Livewire::test(BulkImportRunCard::class, ['runId' => BulkImportRun::query()->value('id')])
+            ->assertSee('Completed');
+
+        $this->assertSame([], $this->pollingHandlers($component->html()));
     }
 
     public function test_history_is_paginated_at_ten_runs_per_page(): void
@@ -314,7 +313,7 @@ class OptionsBulkImportsTest extends TestCase
         ]);
 
         $component = Livewire::test(OptionsBulkImports::class)
-            ->assertSee('data-bulk-import-cleanup-unavailable="true"', false);
+            ->assertViewHas('cleanupUnavailable', true);
 
         $run->forceFill([
             'status' => BulkImportRunStatus::Completed,
@@ -324,7 +323,7 @@ class OptionsBulkImportsTest extends TestCase
 
         $component
             ->dispatch('bulk-import-run-finished')
-            ->assertSee('data-bulk-import-cleanup-unavailable="false"', false);
+            ->assertViewHas('cleanupUnavailable', false);
     }
 
     public function test_cleanup_removes_all_history_when_no_run_is_active(): void
@@ -354,14 +353,10 @@ class OptionsBulkImportsTest extends TestCase
         ]);
 
         Livewire::test(OptionsBulkImports::class)
-            ->assertSee('data-bulk-import-cleanup-unavailable="false"', false)
             ->assertSee('Clean up Bulk Import history')
             ->call('askCleanup')
             ->assertSet('confirmingCleanup', true)
             ->assertSee('Permanently delete all Bulk Import history?')
-            ->assertSee('Cleaning up Bulk Import history...')
-            ->assertSee('wire:loading', false)
-            ->assertSee('wire:target="cleanup"', false)
             ->call('cleanup')
             ->assertSet('confirmingCleanup', false)
             ->assertSet('cleanupNotice', 'Bulk Import history cleaned up.');
@@ -381,7 +376,6 @@ class OptionsBulkImportsTest extends TestCase
         ]);
 
         Livewire::test(OptionsBulkImports::class)
-            ->assertSee('data-bulk-import-cleanup-unavailable="true"', false)
             ->call('askCleanup')
             ->assertSet('confirmingCleanup', false)
             ->assertHasErrors(['cleanup']);
@@ -443,5 +437,29 @@ class OptionsBulkImportsTest extends TestCase
         }
 
         $this->assertDatabaseHas('bulk_import_runs', ['id' => $run->id]);
+    }
+
+    /** @return list<string> */
+    private function pollingHandlers(string $html): array
+    {
+        $handlers = [];
+
+        foreach ($this->htmlXPath($html)->query('//*') as $element) {
+            foreach ($element->attributes ?? [] as $attribute) {
+                if (str_starts_with($attribute->nodeName, 'wire:poll')) {
+                    $handlers[] = trim($attribute->nodeValue);
+                }
+            }
+        }
+
+        return $handlers;
+    }
+
+    private function htmlXPath(string $html): DOMXPath
+    {
+        $document = new DOMDocument;
+        @$document->loadHTML('<?xml encoding="UTF-8">' . $html);
+
+        return new DOMXPath($document);
     }
 }

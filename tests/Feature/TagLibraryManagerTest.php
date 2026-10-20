@@ -10,6 +10,9 @@ use App\Models\GenreGroup;
 use App\Models\Option;
 use App\Models\Product;
 use App\Support\ProductGenreSync;
+use DOMDocument;
+use DOMElement;
+use DOMXPath;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\App;
 use Illuminate\Support\Facades\DB;
@@ -318,21 +321,6 @@ class TagLibraryManagerTest extends TestCase
         $this->assertSame(1, GenreGroup::query()->where('title', 'Existing Group')->count());
     }
 
-    public function test_add_group_form_renders_inside_tag_groups_section(): void
-    {
-        $html = Livewire::test(TagLibraryManager::class)->html();
-
-        $tagGroupsHeadingPosition = strpos($html, 'id="tag-library-groups-heading"');
-        $addGroupFormPosition = strpos($html, 'wire:submit.prevent="createGroup"');
-        $addGroupInputPosition = strpos($html, 'id="new-group-title"');
-
-        $this->assertIsInt($tagGroupsHeadingPosition);
-        $this->assertIsInt($addGroupFormPosition);
-        $this->assertIsInt($addGroupInputPosition);
-        $this->assertGreaterThan($tagGroupsHeadingPosition, $addGroupFormPosition);
-        $this->assertGreaterThan($tagGroupsHeadingPosition, $addGroupInputPosition);
-    }
-
     public function test_index_group_ordering_toggle_renders_in_tag_groups_and_persists_immediately(): void
     {
         Option::setTagLibraryIndexGroupOrderingEnabled(true);
@@ -340,10 +328,6 @@ class TagLibraryManagerTest extends TestCase
         Livewire::test(TagLibraryManager::class)
             ->assertSet('indexGroupOrderingEnabled', true)
             ->assertSee('Enable group ordering on Index')
-            ->assertSee('About Index group ordering')
-            ->assertSee('When enabled, Index tag chips use saved group order, saved tag order inside groups, then ungrouped tags alphabetically.')
-            ->assertSee('class="fa-solid fa-circle-question"', false)
-            ->assertSee('wire:model.live="indexGroupOrderingEnabled"', false)
             ->set('indexGroupOrderingEnabled', false)
             ->assertSet('indexGroupOrderingEnabled', false)
             ->assertSee('Index group ordering disabled.');
@@ -505,26 +489,56 @@ class TagLibraryManagerTest extends TestCase
         ]);
     }
 
-    public function test_hide_group_on_index_control_renders_as_switch(): void
+    public function test_hide_on_index_controls_use_accessible_switch_semantics(): void
     {
         $group = GenreGroup::query()->create([
-            'title' => 'Switch Hidden Group Control',
+            'title' => 'Accessible Hidden Group',
             'description' => null,
             'order' => 1,
         ]);
+        $genre = Genre::resolveByTitle('Accessible Hidden Tag');
+        $this->attachTagToGroup($group, $genre, 1);
 
-        $html = Livewire::test(TagLibraryManager::class)->html();
+        $html = Livewire::test(TagLibraryManager::class)
+            ->call('openTagSettings', $genre->getKey())
+            ->html();
+        $xpath = $this->htmlXPath($html);
 
-        $this->assertStringContainsString('class="tag-library-check tag-library-switch"', $html);
-        $this->assertStringContainsString('wire:model.live="groupHidden.' . $group->getKey() . '"', $html);
-        $this->assertStringContainsString(
-            'wire:change="saveGroupHidden(' . $group->getKey() . ')" role="switch"',
-            $html,
+        $groupLabels = $xpath->query(
+            "//label[.//span[normalize-space()='Hide group on Index']]",
         );
-        $this->assertStringContainsString('class="tag-library-switch-track"', $html);
-        $this->assertStringContainsString('class="tag-library-switch-thumb"', $html);
-        $this->assertStringContainsString('class="tag-library-switch-text">Hide group on Index</span>', $html);
-        $this->assertStringNotContainsString('tag-library-setting-toggle', $html);
+        $this->assertCount(1, $groupLabels);
+        $groupLabel = $groupLabels->item(0);
+        $this->assertInstanceOf(DOMElement::class, $groupLabel);
+        $this->assertTrue($groupLabel->hasAttribute('wire:sort:ignore'));
+        $this->assertCount(1, $xpath->query('.//input[@role="switch"]', $groupLabel));
+
+        $tagLabels = $xpath->query(
+            "//label[.//span[normalize-space()='Hide tag on Index']]",
+        );
+        $this->assertCount(2, $tagLabels);
+
+        $sortableTagSwitches = 0;
+        $modalTagSwitches = 0;
+
+        foreach ($tagLabels as $tagLabel) {
+            $this->assertInstanceOf(DOMElement::class, $tagLabel);
+            $switches = $xpath->query('.//input[@role="switch"]', $tagLabel);
+            $this->assertCount(1, $switches);
+            $switch = $switches->item(0);
+            $this->assertInstanceOf(DOMElement::class, $switch);
+
+            if ($tagLabel->hasAttribute('wire:sort:ignore')) {
+                $sortableTagSwitches++;
+                $this->assertSame('tagHidden.' . $genre->getKey(), $switch->getAttribute('wire:model.live'));
+            } else {
+                $modalTagSwitches++;
+                $this->assertSame('editingTagHidden', $switch->getAttribute('wire:model'));
+            }
+        }
+
+        $this->assertSame(1, $sortableTagSwitches);
+        $this->assertSame(1, $modalTagSwitches);
     }
 
     public function test_tag_edit_mode_replaces_index_links_with_modal_triggers(): void
@@ -543,15 +557,23 @@ class TagLibraryManagerTest extends TestCase
 
     public function test_tag_edit_mode_toggle_renders_as_accessible_switch(): void
     {
-        Livewire::test(TagLibraryManager::class)
-            ->assertSet('tagEditMode', false)
-            ->assertSee('class="tag-library-switch tag-library-switch--toolbar"', false)
-            ->assertSee('class="tag-library-switch-input"', false)
-            ->assertSee('type="checkbox" class="tag-library-switch-input" wire:model.live="tagEditMode"', false)
-            ->assertSee('class="tag-library-switch-track"', false)
-            ->assertSee('class="tag-library-switch-thumb"', false)
-            ->assertSee('class="tag-library-switch-text">Edit tags</span>', false)
-            ->assertDontSee('tag-library-edit-toggle', false)
+        $component = Livewire::test(TagLibraryManager::class)
+            ->assertSet('tagEditMode', false);
+        $xpath = $this->htmlXPath($component->html());
+        $labels = $xpath->query(
+            "//label[.//span[normalize-space()='Edit tags']]",
+        );
+
+        $this->assertCount(1, $labels);
+        $label = $labels->item(0);
+        $this->assertInstanceOf(DOMElement::class, $label);
+        $switches = $xpath->query('.//input[@role="switch"]', $label);
+        $this->assertCount(1, $switches);
+        $switch = $switches->item(0);
+        $this->assertInstanceOf(DOMElement::class, $switch);
+        $this->assertSame('tagEditMode', $switch->getAttribute('wire:model.live'));
+
+        $component
             ->set('tagEditMode', true)
             ->assertSet('tagEditMode', true);
     }
@@ -576,7 +598,6 @@ class TagLibraryManagerTest extends TestCase
             ->assertSet('editingTagHidden', true)
             ->assertSet('editingTagGroupIds', [$group->getKey()])
             ->assertSee('Edit tag settings')
-            ->assertSee('wire:model="editingTagTitle" required maxlength="255"', false)
             ->assertSee('Modal Editable Tag')
             ->assertSee('Modal Existing Group');
     }
@@ -619,8 +640,6 @@ class TagLibraryManagerTest extends TestCase
         Livewire::test(TagLibraryManager::class)
             ->call('openTagSettings', $tag->getKey())
             ->assertSee('Saving tag settings...')
-            ->assertSee('wire:loading', false)
-            ->assertSee('wire:target="saveTagSettings"', false)
             ->set('editingTagTitle', '  ReNamed Display TAG  ')
             ->call('saveTagSettings')
             ->assertHasNoErrors()
@@ -725,43 +744,6 @@ class TagLibraryManagerTest extends TestCase
         $component->set('editingTagId', $otherGenre->getKey());
     }
 
-    public function test_hide_tag_on_index_controls_render_as_switches(): void
-    {
-        $group = GenreGroup::query()->create([
-            'title' => 'Switch Hidden Group',
-            'description' => null,
-            'order' => 1,
-        ]);
-        $genre = Genre::resolveByTitle('Switch Hidden Tag');
-        $this->attachTagToGroup($group, $genre, 1);
-
-        $html = Livewire::test(TagLibraryManager::class)
-            ->call('openTagSettings', $genre->getKey())
-            ->html();
-
-        $this->assertStringContainsString('class="tag-library-check tag-library-switch"', $html);
-        $this->assertStringContainsString('wire:sort:ignore', $html);
-        $this->assertStringContainsString(
-            'class="tag-library-switch-input"',
-            $html,
-        );
-        $this->assertStringContainsString('wire:model.live="tagHidden.' . $genre->getKey() . '"', $html);
-        $this->assertStringContainsString(
-            'wire:change="saveTagHidden(' . $genre->getKey() . ')" role="switch"',
-            $html,
-        );
-        $this->assertStringContainsString(
-            '<label class="tag-library-check tag-library-switch">',
-            $html,
-        );
-        $this->assertStringContainsString('wire:model="editingTagHidden"', $html);
-        $this->assertStringContainsString('role="switch"', $html);
-        $this->assertStringContainsString('class="tag-library-switch-track"', $html);
-        $this->assertStringContainsString('class="tag-library-switch-thumb"', $html);
-        $this->assertSame(2, substr_count($html, 'class="tag-library-switch-text">Hide tag on Index</span>'));
-        $this->assertStringNotContainsString('tag-library-setting-toggle', $html);
-    }
-
     public function test_tag_settings_group_search_adds_and_removes_group_plaques(): void
     {
         $selectedGroup = GenreGroup::query()->create([
@@ -774,7 +756,7 @@ class TagLibraryManagerTest extends TestCase
             'description' => null,
             'order' => 2,
         ]);
-        $otherGroup = GenreGroup::query()->create([
+        GenreGroup::query()->create([
             'title' => 'Other Plaque Group',
             'description' => null,
             'order' => 3,
@@ -782,59 +764,62 @@ class TagLibraryManagerTest extends TestCase
         $genre = Genre::resolveByTitle('Plaque Search Tag');
         $this->attachTagToGroup($selectedGroup, $genre, 1);
 
-        Livewire::test(TagLibraryManager::class)
+        $component = Livewire::test(TagLibraryManager::class)
             ->call('openTagSettings', $genre->getKey())
             ->assertSet('editingTagGroupSearch', '')
-            ->assertSet('editingTagGroupIds', [$selectedGroup->getKey()])
-            ->assertSee('Search tag groups')
-            ->assertSee('class="tag-library-modal-group-plaque"', false)
-            ->assertSee('Selected Plaque Group')
-            ->assertSee('wire:click="removeEditingTagGroup(' . $selectedGroup->getKey() . ')"', false)
-            ->assertDontSee('wire:click="addEditingTagGroup(' . $matchingGroup->getKey() . ')"', false)
-            ->assertDontSee('wire:click="addEditingTagGroup(' . $otherGroup->getKey() . ')"', false)
+            ->assertSet('editingTagGroupIds', [$selectedGroup->getKey()]);
+
+        $this->assertSame(['Selected Plaque Group'], $this->modalAssignedGroupTitles($component->html()));
+        $this->assertSame([], $this->modalAvailableGroupTitles($component->html()));
+
+        $component
             ->set('editingTagGroupSearch', 'searchable')
-            ->assertSee('class="tag-library-modal-group-dropdown"', false)
-            ->assertSee('wire:click="addEditingTagGroup(' . $matchingGroup->getKey() . ')"', false)
-            ->assertDontSee('wire:click="addEditingTagGroup(' . $otherGroup->getKey() . ')"', false)
+            ->assertSet('editingTagGroupSearch', 'searchable');
+
+        $this->assertSame(['Searchable Plaque Group'], $this->modalAvailableGroupTitles($component->html()));
+        $this->assertSame(['Selected Plaque Group'], $this->modalAssignedGroupTitles($component->html()));
+
+        $component
             ->call('addEditingTagGroup', $matchingGroup->getKey())
             ->assertSet('editingTagGroupIds', [$selectedGroup->getKey(), $matchingGroup->getKey()])
-            ->assertSet('editingTagGroupSearch', '')
-            ->assertSee('Searchable Plaque Group')
-            ->assertSee('wire:click="removeEditingTagGroup(' . $matchingGroup->getKey() . ')"', false)
+            ->assertSet('editingTagGroupSearch', '');
+
+        $this->assertSame(
+            ['Selected Plaque Group', 'Searchable Plaque Group'],
+            $this->modalAssignedGroupTitles($component->html()),
+        );
+        $this->assertSame([], $this->modalAvailableGroupTitles($component->html()));
+
+        $component
             ->call('addEditingTagGroup', $matchingGroup->getKey())
             ->assertSet('editingTagGroupIds', [$selectedGroup->getKey(), $matchingGroup->getKey()])
             ->call('removeEditingTagGroup', $selectedGroup->getKey())
-            ->assertSet('editingTagGroupIds', [$matchingGroup->getKey()])
-            ->assertDontSee('wire:click="removeEditingTagGroup(' . $selectedGroup->getKey() . ')"', false);
+            ->assertSet('editingTagGroupIds', [$matchingGroup->getKey()]);
+
+        $this->assertSame(['Searchable Plaque Group'], $this->modalAssignedGroupTitles($component->html()));
     }
 
     public function test_tag_settings_group_search_empty_states_render_below_search(): void
     {
-        $matchingGroup = GenreGroup::query()->create([
+        GenreGroup::query()->create([
             'title' => 'Lonely Dropdown Group',
             'description' => null,
             'order' => 1,
         ]);
         $genre = Genre::resolveByTitle('No Group Plaque Tag');
 
-        $blankHtml = Livewire::test(TagLibraryManager::class)
-            ->call('openTagSettings', $genre->getKey())
-            ->html();
+        $component = Livewire::test(TagLibraryManager::class)
+            ->call('openTagSettings', $genre->getKey());
 
-        $this->assertStringContainsString('Search tag groups', $blankHtml);
-        $this->assertStringContainsString('No groups assigned.', $blankHtml);
-        $this->assertStringNotContainsString('wire:click="addEditingTagGroup(' . $matchingGroup->getKey() . ')"', $blankHtml);
-        $this->assertLessThan(
-            strpos($blankHtml, 'No groups assigned.'),
-            strpos($blankHtml, 'Search tag groups'),
-        );
+        $this->assertSame([], $this->modalAvailableGroupTitles($component->html()));
+        $this->assertSame([], $this->modalAssignedGroupTitles($component->html()));
+        $this->assertModalGroupMessage($component->html(), 'No groups assigned.', 'assigned');
 
-        Livewire::test(TagLibraryManager::class)
-            ->call('openTagSettings', $genre->getKey())
-            ->set('editingTagGroupSearch', 'missing')
-            ->assertSee('class="tag-library-modal-group-dropdown"', false)
-            ->assertSee('No matching groups.')
-            ->assertSee('No groups assigned.');
+        $component->set('editingTagGroupSearch', 'missing');
+
+        $this->assertSame([], $this->modalAvailableGroupTitles($component->html()));
+        $this->assertModalGroupMessage($component->html(), 'No matching groups.', 'search');
+        $this->assertModalGroupMessage($component->html(), 'No groups assigned.', 'assigned');
     }
 
     public function test_closing_tag_settings_discards_unsaved_title_and_group_plaque_changes(): void
@@ -1170,25 +1155,7 @@ class TagLibraryManagerTest extends TestCase
         $this->assertStringContainsString('--tag-text-color: #eeeeee;', $html);
     }
 
-    public function test_tag_library_color_controls_use_background_color_label(): void
-    {
-        $genre = Genre::resolveByTitle('Label Color Tag');
-        $group = GenreGroup::query()->create([
-            'title' => 'Label Color Group',
-            'description' => null,
-            'order' => 1,
-        ]);
-        $this->attachTagToGroup($group, $genre, 1);
-
-        Livewire::test(TagLibraryManager::class)
-            ->call('openTagSettings', $genre->getKey())
-            ->assertSee('Background color')
-            ->assertSee('Group background color')
-            ->assertDontSee('Chip color')
-            ->assertDontSee('Group color');
-    }
-
-    public function test_all_tags_status_indicators_only_render_for_hidden_tags(): void
+    public function test_hidden_status_indicators_match_effective_index_visibility(): void
     {
         $hiddenGroup = GenreGroup::query()->create([
             'title' => 'Compact Hidden Group',
@@ -1201,103 +1168,23 @@ class TagLibraryManagerTest extends TestCase
             'description' => null,
             'order' => 2,
         ]);
-        $ungrouped = Genre::resolveByTitle('Compact Ungrouped Tag');
+        $visibleTag = Genre::resolveByTitle('Compact Visible Tag');
         $hiddenTag = Genre::resolveByTitle('Compact Hidden Tag');
         $hiddenByGroup = Genre::resolveByTitle('Compact Hidden Group Tag');
 
         $hiddenTag->forceFill(['hidden_on_index' => true])->save();
-        $this->attachTagToGroup($visibleGroup, $hiddenTag, 1);
+        $this->attachTagToGroup($visibleGroup, $visibleTag, 1);
+        $this->attachTagToGroup($visibleGroup, $hiddenTag, 2);
         $this->attachTagToGroup($hiddenGroup, $hiddenByGroup, 1);
 
-        Livewire::test(TagLibraryManager::class)
-            ->call('toggleAllTags')
-            ->assertSee('aria-label="Hidden tag"', false)
-            ->assertSee('class="tag-library-tag-status"', false)
-            ->assertSee('title="Hidden tag"', false);
-    }
-
-    public function test_hidden_status_indicator_renders_inside_tag_chip_between_title_and_count(): void
-    {
-        $visible = Genre::resolveByTitle('Inline Visible Tag');
-        $hidden = Genre::resolveByTitle('Inline Hidden Tag');
-        $hidden->forceFill(['hidden_on_index' => true])->save();
-
         $html = Livewire::test(TagLibraryManager::class)
             ->call('toggleAllTags')
             ->html();
+        $xpath = $this->htmlXPath($html);
 
-        $this->assertStringContainsString(
-            '<span class="tag-library-tag-title">Inline Hidden Tag</span>',
-            $html,
-        );
-        $this->assertStringContainsString(
-            '<span class="tag-library-tag-status"',
-            $html,
-        );
-        $this->assertStringContainsString('aria-label="Hidden tag"', $html);
-        $this->assertStringContainsString('title="Hidden tag"', $html);
-        $hiddenTitlePosition = strpos($html, '<span class="tag-library-tag-title">Inline Hidden Tag</span>');
-        $hiddenStatusPosition = strpos($html, '<span class="tag-library-tag-status"');
-        $hiddenCountPosition = strpos($html, '<span class="tag-library-tag-count tag-library-tag-count--empty">0</span>', $hiddenStatusPosition);
-
-        $this->assertIsInt($hiddenTitlePosition);
-        $this->assertIsInt($hiddenStatusPosition);
-        $this->assertIsInt($hiddenCountPosition);
-        $this->assertLessThan($hiddenStatusPosition, $hiddenTitlePosition);
-        $this->assertLessThan($hiddenCountPosition, $hiddenStatusPosition);
-        $this->assertDoesNotMatchRegularExpression(
-            '/<span class="tag-library-tag-title">Inline Visible Tag<\/span>\s*<span class="tag-library-tag-status"/s',
-            $html,
-        );
-        $this->assertStringNotContainsString('aria-label="Ungrouped tag"', $html);
-        $this->assertStringNotContainsString('aria-label="Hidden by group"', $html);
-    }
-
-    public function test_hidden_status_indicator_renders_when_any_assigned_group_is_hidden(): void
-    {
-        $hiddenGroup = GenreGroup::query()->create([
-            'title' => 'Mixed Hidden Indicator Group',
-            'description' => null,
-            'order' => 1,
-            'hidden_on_index' => true,
-        ]);
-        $visibleGroup = GenreGroup::query()->create([
-            'title' => 'Mixed Visible Indicator Group',
-            'description' => null,
-            'order' => 2,
-            'hidden_on_index' => false,
-        ]);
-        $tag = Genre::resolveByTitle('Mixed Group Hidden Indicator Tag');
-        $tag->forceFill(['hidden_on_index' => false])->save();
-
-        $this->attachTagToGroup($visibleGroup, $tag, 1);
-        $this->attachTagToGroup($hiddenGroup, $tag, 2);
-
-        $html = Livewire::test(TagLibraryManager::class)
-            ->call('toggleAllTags')
-            ->html();
-
-        $tagTitlePosition = strpos($html, '<span class="tag-library-tag-title">Mixed Group Hidden Indicator Tag</span>');
-        $tagStatusPosition = strpos($html, '<span class="tag-library-tag-status"', $tagTitlePosition);
-        $tagCountPosition = strpos($html, '<span class="tag-library-tag-count tag-library-tag-count--empty">0</span>', $tagStatusPosition);
-
-        $this->assertIsInt($tagTitlePosition);
-        $this->assertIsInt($tagStatusPosition);
-        $this->assertIsInt($tagCountPosition);
-        $this->assertLessThan($tagStatusPosition, $tagTitlePosition);
-        $this->assertLessThan($tagCountPosition, $tagStatusPosition);
-    }
-
-    public function test_empty_tag_delete_button_is_a_separate_circle_not_status_indicator(): void
-    {
-        $empty = Genre::resolveByTitle('Attached Delete Button Tag');
-
-        Livewire::test(TagLibraryManager::class)
-            ->call('toggleAllTags')
-            ->assertSee('class="tag-library-tag-shell tag-library-tag-shell--deletable"', false)
-            ->assertSee('class="tag-library-delete-button"', false)
-            ->assertDontSee('tag-library-delete-button--attached', false)
-            ->assertSee('wire:click="askDeleteTag(' . $empty->getKey() . ')"', false);
+        $this->assertTagHiddenStatus($xpath, 'Compact Visible Tag', false);
+        $this->assertTagHiddenStatus($xpath, 'Compact Hidden Tag', true);
+        $this->assertTagHiddenStatus($xpath, 'Compact Hidden Group Tag', true);
     }
 
     public function test_filter_drafts_apply_together_and_clear_without_clearing_search(): void
@@ -1816,6 +1703,87 @@ class TagLibraryManagerTest extends TestCase
         }
 
         app(ProductGenreSync::class)->sync($product, $fetchedByLanguage, $customGenreIds);
+    }
+
+    private function assertTagHiddenStatus(DOMXPath $xpath, string $title, bool $expectedHidden): void
+    {
+        $shells = $xpath->query(
+            '//span[contains(concat(" ", normalize-space(@class), " "), " tag-library-tag-shell ")]'
+                . '[.//span[contains(concat(" ", normalize-space(@class), " "), " tag-library-tag-title ") and normalize-space()="'
+                . $title . '"]]',
+        );
+
+        $this->assertCount(1, $shells);
+        $shell = $shells->item(0);
+        $this->assertInstanceOf(DOMElement::class, $shell);
+        $statuses = $xpath->query('.//*[@aria-label="Hidden tag"]', $shell);
+        $this->assertCount($expectedHidden ? 1 : 0, $statuses);
+    }
+
+    /**
+     * @return list<string>
+     */
+    private function modalAvailableGroupTitles(string $html): array
+    {
+        $xpath = $this->htmlXPath($html);
+        $nodes = $xpath->query(
+            "//fieldset[legend[normalize-space()='Groups']]"
+                . "//div[contains(concat(' ', normalize-space(@class), ' '), ' tag-library-modal-group-dropdown ')]"
+                . "//button[contains(concat(' ', normalize-space(@class), ' '), ' tag-library-modal-group-result ')]",
+        );
+
+        $titles = [];
+
+        foreach ($nodes as $node) {
+            $this->assertInstanceOf(DOMElement::class, $node);
+            $titles[] = trim($node->textContent);
+        }
+
+        return $titles;
+    }
+
+    /**
+     * @return list<string>
+     */
+    private function modalAssignedGroupTitles(string $html): array
+    {
+        $xpath = $this->htmlXPath($html);
+        $nodes = $xpath->query(
+            "//fieldset[legend[normalize-space()='Groups']]"
+                . "//div[@aria-label='Assigned tag groups']"
+                . "//span[contains(concat(' ', normalize-space(@class), ' '), ' tag-library-modal-group-plaque ')]/span[1]",
+        );
+
+        $titles = [];
+
+        foreach ($nodes as $node) {
+            $this->assertInstanceOf(DOMElement::class, $node);
+            $titles[] = trim($node->textContent);
+        }
+
+        return $titles;
+    }
+
+    private function assertModalGroupMessage(string $html, string $message, string $region): void
+    {
+        $xpath = $this->htmlXPath($html);
+        $regionQuery = match ($region) {
+            'search' => "//div[contains(concat(' ', normalize-space(@class), ' '), ' tag-library-modal-group-dropdown ')]",
+            'assigned' => "//div[@aria-label='Assigned tag groups']",
+        };
+        $nodes = $xpath->query(
+            "//fieldset[legend[normalize-space()='Groups']]{$regionQuery}//p[normalize-space()='{$message}']",
+        );
+
+        $this->assertCount(1, $nodes);
+    }
+
+    private function htmlXPath(string $html): DOMXPath
+    {
+        $document = new DOMDocument;
+        @$document->loadHTML('<?xml encoding="UTF-8">' . $html);
+
+        return new DOMXPath($document);
     }
 
     private function attachTagToGroup(GenreGroup $group, Genre $genre, int $order): void

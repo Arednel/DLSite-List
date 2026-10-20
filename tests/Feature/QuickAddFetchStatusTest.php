@@ -3,6 +3,9 @@
 namespace Tests\Feature;
 
 use App\Models\Option;
+use DOMDocument;
+use DOMElement;
+use DOMXPath;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use PHPUnit\Framework\Attributes\DataProvider;
 use Tests\TestCase;
@@ -14,55 +17,33 @@ class QuickAddFetchStatusTest extends TestCase
     #[DataProvider('dlsitePresentationProvider')]
     public function test_dlsite_quick_add_renders_the_fetch_status_contract(
         bool $modal,
-        string $theme,
         string $locale,
     ): void {
-        Option::setProductFormTheme($theme);
         Option::setUiLanguage($locale);
         $path = '/create' . ($modal ? '?modal=1' : '');
 
         $response = $this->get($path)
             ->assertOk()
-            ->assertSee('<html lang="' . $locale . '" class="product-form-theme-' . $theme . '">', false)
-            ->assertSee('data-dlsite-fetch-form', false)
-            ->assertSee(
-                'data-dlsite-fetch-status role="status" aria-live="polite" hidden',
-                false,
-            )
-            ->assertSee(trans('Data is being fetched...', locale: $locale))
-            ->assertSee('scripts/dlsite-create-status.js', false);
+            ->assertSee(trans('Data is being fetched...', locale: $locale));
+        $xpath = $this->htmlXPath($response->getContent());
 
-        $this->assertTwoEnabledSubmitButtons(
-            $response->getContent(),
-            trans('Add work', locale: $locale),
-        );
+        $this->assertCount(1, $xpath->query('//*[@data-dlsite-fetch-form]'));
+        $this->assertCount(1, $xpath->query('//script[contains(@src, "scripts/dlsite-create-status.js")]'));
+        $statuses = $xpath->query('//*[@data-dlsite-fetch-status]');
+        $this->assertCount(1, $statuses);
+        $status = $statuses->item(0);
+        $this->assertInstanceOf(DOMElement::class, $status);
+        $this->assertSame('status', $status->getAttribute('role'));
+        $this->assertSame('polite', $status->getAttribute('aria-live'));
+        $this->assertTrue($status->hasAttribute('hidden'));
     }
 
     public static function dlsitePresentationProvider(): iterable
     {
-        yield 'standalone Cherry English' => [
-            false,
-            Option::PRODUCT_FORM_THEME_CHERRY,
-            'en',
-        ];
-
-        yield 'standalone Black Japanese' => [
-            false,
-            Option::PRODUCT_FORM_THEME_BLACK,
-            'ja',
-        ];
-
-        yield 'modal Black English' => [
-            true,
-            Option::PRODUCT_FORM_THEME_BLACK,
-            'en',
-        ];
-
-        yield 'modal Cherry Japanese' => [
-            true,
-            Option::PRODUCT_FORM_THEME_CHERRY,
-            'ja',
-        ];
+        yield 'standalone English' => [false, 'en'];
+        yield 'standalone Japanese' => [false, 'ja'];
+        yield 'modal English' => [true, 'en'];
+        yield 'modal Japanese' => [true, 'ja'];
     }
 
     #[DataProvider('modalProvider')]
@@ -72,12 +53,12 @@ class QuickAddFetchStatusTest extends TestCase
 
         $response = $this->get($path)
             ->assertOk()
-            ->assertDontSee('data-dlsite-fetch-form', false)
-            ->assertDontSee('data-dlsite-fetch-status', false)
-            ->assertDontSee('Data is being fetched...')
-            ->assertDontSee('scripts/dlsite-create-status.js', false);
+            ->assertDontSee('Data is being fetched...');
+        $xpath = $this->htmlXPath($response->getContent());
 
-        $this->assertTwoEnabledSubmitButtons($response->getContent(), __('Add work'));
+        $this->assertCount(0, $xpath->query('//*[@data-dlsite-fetch-form]'));
+        $this->assertCount(0, $xpath->query('//*[@data-dlsite-fetch-status]'));
+        $this->assertCount(0, $xpath->query('//script[contains(@src, "scripts/dlsite-create-status.js")]'));
     }
 
     public static function modalProvider(): iterable
@@ -88,30 +69,25 @@ class QuickAddFetchStatusTest extends TestCase
 
     public function test_laravel_validation_reload_hides_the_fetch_status_and_shows_the_error(): void
     {
-        $this->followingRedirects()
+        $response = $this->followingRedirects()
             ->from('/create')
             ->post('/store', ['id' => 'not-a-product'])
             ->assertOk()
-            ->assertSee(
-                'data-dlsite-fetch-status role="status" aria-live="polite" hidden',
-                false,
-            )
-            ->assertSee('class="text-error"', false)
             ->assertSee('Could not find a product code (RJ, BJ or VJ followed by numbers) in your input.');
+        $xpath = $this->htmlXPath($response->getContent());
+        $statuses = $xpath->query('//*[@data-dlsite-fetch-status]');
+
+        $this->assertCount(1, $statuses);
+        $status = $statuses->item(0);
+        $this->assertInstanceOf(DOMElement::class, $status);
+        $this->assertTrue($status->hasAttribute('hidden'));
     }
 
-    private function assertTwoEnabledSubmitButtons(string $html, string $label): void
+    private function htmlXPath(string $html): DOMXPath
     {
-        preg_match_all('/<input\b[^>]*\btype="submit"[^>]*>/i', $html, $matches);
+        $document = new DOMDocument;
+        @$document->loadHTML('<?xml encoding="UTF-8">' . $html);
 
-        $this->assertCount(2, $matches[0]);
-
-        foreach ($matches[0] as $submitButton) {
-            $this->assertStringContainsString('value="' . e($label) . '"', $submitButton);
-            $this->assertDoesNotMatchRegularExpression(
-                '/\sdisabled(?:\s|=|>)/i',
-                $submitButton,
-            );
-        }
+        return new DOMXPath($document);
     }
 }

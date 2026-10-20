@@ -46,13 +46,15 @@ class ProductIndexFiltersTest extends TestCase
             'start_date_from' => '2026-02-31',
             'announce_date_to' => '2026-02-31',
             'created_at_to' => '2026/01/01',
-            'sort_first_field' => 'priority',
+            'sort_first_field' => 'not-a-sort-field',
+            'sort_first_direction' => 'asc',
+            'sort_second_field' => 'also-not-a-sort-field',
+            'sort_second_direction' => 'desc',
         ]);
 
-        $this->assertSame([
-            'sort_first_field' => 'priority',
-            'sort_first_direction' => 'desc',
-        ], $filters->toQuery());
+        $this->assertNull($filters->primarySort);
+        $this->assertNull($filters->secondarySort);
+        $this->assertSame([], $filters->toQuery());
     }
 
     public function test_it_defaults_tag_match_and_sort_direction_for_new_filter_state(): void
@@ -66,27 +68,15 @@ class ProductIndexFiltersTest extends TestCase
         $this->assertSame(ProductIndexSortDirection::Desc, $filters->primarySort?->direction);
     }
 
-    public function test_index_sort_query_accepts_only_the_current_product_code_value(): void
+    public function test_index_sort_query_accepts_product_code_value(): void
     {
-        $legacy = ProductIndexFilters::fromQuery([
-            'sort_first_field' => 'rj',
-            'sort_first_direction' => 'asc',
-        ]);
-        $this->assertNull($legacy->primarySort);
-        $this->assertSame([], $legacy->toQuery());
-
-        $current = ProductIndexFilters::fromQuery([
+        $filters = ProductIndexFilters::fromQuery([
             'sort_first_field' => 'product_code',
             'sort_first_direction' => 'asc',
         ]);
-        $this->assertSame(ProductIndexSortField::Code, $current->primarySort?->field);
-        $this->assertSame('product_code', $current->toQuery()['sort_first_field']);
 
-        $secondaryLegacy = ProductIndexFilters::fromQuery([
-            'sort_first_field' => 'score',
-            'sort_second_field' => 'rj',
-        ]);
-        $this->assertNull($secondaryLegacy->secondarySort);
+        $this->assertSame(ProductIndexSortField::Code, $filters->primarySort?->field);
+        $this->assertSame('product_code', $filters->toQuery()['sort_first_field']);
     }
 
     public function test_site_id_filter_round_trips_as_a_normalized_exact_value(): void

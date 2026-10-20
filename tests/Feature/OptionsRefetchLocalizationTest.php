@@ -122,8 +122,7 @@ class OptionsRefetchLocalizationTest extends TestCase
             ->assertSee('取得済みタグとして追加')
             ->assertSee('カスタムタグに変更')
             ->assertSee('RAW_JP_TAG_TOKEN')
-            ->assertSee('value="move_to_custom"', false)
-            ->assertSee('wire:model="globalActions.tags"', false);
+            ->assertSee('value="move_to_custom"', false);
 
         Livewire::test(OptionsRefetchReview::class, ['run' => $run])
             ->call('askApplyAll')

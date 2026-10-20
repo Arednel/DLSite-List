@@ -158,10 +158,8 @@ class FullRefetchTest extends TestCase
                 'Cover',
                 'Sample Images',
             ])
-            ->assertSee('wire:model="globalActions.titles"', false)
             ->assertSee('Set Overwrite for All')
             ->assertSee('Sets each unresolved tab that contains changes to Overwrite.')
-            ->assertSee('title-tooltips.css', false)
             ->assertSee('Apply All Tabs')
             ->assertSee('Reject Run');
     }

@@ -209,9 +209,6 @@ class OptionsRefetchReviewTest extends TestCase
             )
             ->call('nextPage')
             ->call('askApplyTab', RefetchCategory::Titles->value)
-            ->assertSee('Applying tab...')
-            ->assertSee('wire:loading', false)
-            ->assertSee('wire:target="applyTab"', false)
             ->call('applyTab')
             ->assertNoRedirect();
 

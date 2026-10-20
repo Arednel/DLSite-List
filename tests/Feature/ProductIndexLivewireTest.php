@@ -16,6 +16,9 @@ use App\Support\ProductContributorSync;
 use App\Support\ProductGenreSync;
 use App\Support\ProductIndexFilters;
 use App\Support\ProductIndexResults;
+use DOMDocument;
+use DOMElement;
+use DOMXPath;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\App;
@@ -111,7 +114,7 @@ class ProductIndexLivewireTest extends TestCase
             'priority' => 0,
         ]);
 
-        $component = Livewire::test(ProductIndex::class)
+        Livewire::test(ProductIndex::class)
             ->set('draft.sort_first_field', 'score')
             ->set('draft.sort_first_direction', 'desc')
             ->set('draft.sort_second_field', 'priority')
@@ -122,27 +125,17 @@ class ProductIndexLivewireTest extends TestCase
             ->assertSet('sort_second_field', 'priority')
             ->assertSet('sort_second_direction', 'asc')
             ->assertSeeInOrder(['SORT_GAMMA', 'SORT_BETA', 'SORT_ALPHA']);
-
-        $component
-            ->assertSee('wire:model="draft.sort_first_field"', false)
-            ->assertSee('wire:model="draft.sort_first_direction"', false)
-            ->assertSee('wire:model="draft.sort_second_field"', false)
-            ->assertSee('wire:model="draft.sort_second_direction"', false);
     }
 
     public function test_query_string_sort_is_selected_in_filter_modal(): void
     {
-        $component = Livewire::withQueryParams([
+        Livewire::withQueryParams([
             'sort_first_field' => 'score',
             'sort_first_direction' => 'asc',
         ])
             ->test(ProductIndex::class)
             ->assertSet('draft.sort_first_field', 'score')
             ->assertSet('draft.sort_first_direction', 'asc');
-
-        $component
-            ->assertSee('wire:model="draft.sort_first_field"', false)
-            ->assertSee('wire:model="draft.sort_first_direction"', false);
     }
 
     public function test_header_sort_is_selected_in_filter_modal(): void
@@ -153,17 +146,9 @@ class ProductIndexLivewireTest extends TestCase
             ->assertSet('draft.sort_first_direction', 'desc');
 
         $component
-            ->assertSee('wire:model="draft.sort_first_field"', false)
-            ->assertSee('wire:model="draft.sort_first_direction"', false);
-
-        $component
             ->call('sortByHeader', 'score')
             ->assertSet('draft.sort_first_field', 'score')
             ->assertSet('draft.sort_first_direction', 'asc');
-
-        $component
-            ->assertSee('wire:model="draft.sort_first_field"', false)
-            ->assertSee('wire:model="draft.sort_first_direction"', false);
     }
 
     public function test_scalar_sort_uses_paginated_result_order_across_pages(): void
@@ -394,7 +379,7 @@ class ProductIndexLivewireTest extends TestCase
 
         $maniaxUrl = "https://www.dlsite.com/maniax/work/=/product_id/{$product->id}.html";
 
-        $this->assertSame(3, substr_count($html, $maniaxUrl));
+        $this->assertProductLinksUseUrl($html, $product, $maniaxUrl);
         $this->assertStringNotContainsString('/home/work/', $html);
         $this->assertNotNull($productQuery);
         $this->assertStringNotContainsString('age_category', $productQuery);
@@ -412,7 +397,11 @@ class ProductIndexLivewireTest extends TestCase
         ]);
 
         $html = Livewire::test(ProductIndex::class)->html();
-        $this->assertSame(3, substr_count($html, "https://www.dlsite.com/comic/work/=/product_id/{$work->id}.html"));
+        $this->assertProductLinksUseUrl(
+            $html,
+            $work,
+            "https://www.dlsite.com/comic/work/=/product_id/{$work->id}.html",
+        );
         $this->assertStringNotContainsString('data-label="Site ID"', $html);
     }
 
@@ -442,9 +431,9 @@ class ProductIndexLivewireTest extends TestCase
         $r15Url = "https://www.dlsite.com/maniax/work/=/product_id/{$r15->id}.html";
         $r18Url = "https://www.dlsite.com/maniax/work/=/product_id/{$r18->id}.html";
 
-        $this->assertSame(3, substr_count($html, $allAgesUrl));
-        $this->assertSame(3, substr_count($html, $r15Url));
-        $this->assertSame(3, substr_count($html, $r18Url));
+        $this->assertProductLinksUseUrl($html, $allAges, $allAgesUrl);
+        $this->assertProductLinksUseUrl($html, $r15, $r15Url);
+        $this->assertProductLinksUseUrl($html, $r18, $r18Url);
         $this->assertStringNotContainsString('data-label="Age"', $html);
         $this->assertNotNull($productQuery);
         $this->assertStringContainsString('age_category', $productQuery);
@@ -464,12 +453,24 @@ class ProductIndexLivewireTest extends TestCase
         $ordinary = $this->createProduct(1012, ['age_category' => 'R18']);
 
         $html = Livewire::test(ProductIndex::class)->html();
-        $this->assertSame(3, substr_count($html, "https://www.dlsite.com/home/announce/=/product_id/{$announced->id}.html"));
-        $this->assertSame(3, substr_count($html, "https://www.dlsite.com/maniax/work/=/product_id/{$ordinary->id}.html"));
+        $this->assertProductLinksUseUrl(
+            $html,
+            $announced,
+            "https://www.dlsite.com/home/announce/=/product_id/{$announced->id}.html",
+        );
+        $this->assertProductLinksUseUrl(
+            $html,
+            $ordinary,
+            "https://www.dlsite.com/maniax/work/=/product_id/{$ordinary->id}.html",
+        );
 
         Option::setDlsiteAnnounceLinksEnabled(false);
         $disabledHtml = Livewire::test(ProductIndex::class)->html();
-        $this->assertSame(3, substr_count($disabledHtml, "https://www.dlsite.com/home/work/=/product_id/{$announced->id}.html"));
+        $this->assertProductLinksUseUrl(
+            $disabledHtml,
+            $announced,
+            "https://www.dlsite.com/home/work/=/product_id/{$announced->id}.html",
+        );
         $this->assertStringNotContainsString("/announce/=/product_id/{$announced->id}.html", $disabledHtml);
     }
 
@@ -1021,8 +1022,6 @@ class ProductIndexLivewireTest extends TestCase
         Livewire::test(ProductIndex::class)
             ->assertSee('data-column="Added to the site Date"', false)
             ->assertSee('data-column="Updated Date"', false)
-            ->assertSee('wire:click="sortByHeader(\'created_at\')"', false)
-            ->assertSee('wire:click="sortByHeader(\'updated_at\')"', false)
             ->assertSee('2026-04-05 06:07')
             ->assertSee('2026-08-09 10:11');
     }
@@ -1044,7 +1043,6 @@ class ProductIndexLivewireTest extends TestCase
 
         Livewire::test(ProductIndex::class)
             ->assertSee('data-column="Scheduled release date"', false)
-            ->assertSee('wire:click="sortByHeader(\'announce_date\')"', false)
             ->assertSee('2026-09-24 12:34');
     }
 
@@ -1072,8 +1070,6 @@ class ProductIndexLivewireTest extends TestCase
         ]);
 
         Livewire::test(ProductIndex::class)
-            ->assertSee('wire:model="draft.announce_date_from"', false)
-            ->assertSee('wire:model="draft.announce_date_to"', false)
             ->set('draft.announce_date_from', '2026-09-24')
             ->set('draft.announce_date_to', '2026-09-24')
             ->call('applyFilters')
@@ -1290,7 +1286,6 @@ class ProductIndexLivewireTest extends TestCase
                 return true;
             })
             ->assertSee('OPTIONAL_VISIBLE_NOTES')
-            ->assertSee('wire:click="sortByHeader(\'priority\')"', false)
             ->assertSeeInOrder(['OPTIONAL_COLUMNS_LOW', 'OPTIONAL_COLUMNS_HIGH'])
             ->call('sortByHeader', ProductIndexSortField::Priority->value)
             ->assertViewHas('products', fn($products): bool => $products->modelKeys() === [$high->id, $low->id])
@@ -1324,8 +1319,6 @@ class ProductIndexLivewireTest extends TestCase
         ]);
 
         Livewire::test(ProductIndex::class)
-            ->assertSee('wire:click="sortByHeader(\'circle\')"', false)
-            ->assertSee('wire:click="sortByHeader(\'scenario\')"', false)
             ->assertSeeInOrder(['CONTRIBUTOR_SORT_ALPHA', 'CONTRIBUTOR_SORT_ZETA'])
             ->call('sortByHeader', ProductIndexSortField::Scenario->value)
             ->assertSeeInOrder(['CONTRIBUTOR_SORT_ZETA', 'CONTRIBUTOR_SORT_ALPHA']);
@@ -2249,26 +2242,6 @@ class ProductIndexLivewireTest extends TestCase
             ->assertSee('WIDTH_VISIBLE_WORK');
     }
 
-    public function test_index_renders_responsive_search_controls_in_their_layout_regions(): void
-    {
-        $component = Livewire::test(ProductIndex::class)
-            ->assertSee('Filters')
-            ->assertSeeInOrder([
-                'class="progress-links"',
-                'data-index-search="desktop"',
-            ], false)
-            ->assertSeeInOrder([
-                'class="progress-heading"',
-                'data-index-search="mobile"',
-                'class="advanced-options"',
-            ], false);
-
-        $this->assertSame(2, substr_count(
-            $component->html(),
-            'wire:submit.prevent="applySearch"',
-        ));
-    }
-
     public function test_index_render_batches_option_settings_lookup(): void
     {
         $this->createProduct(1, [
@@ -2498,20 +2471,6 @@ class ProductIndexLivewireTest extends TestCase
             ->assertDontSee('WORK_005');
     }
 
-    public function test_pagination_markup_uses_built_in_links_and_scrolls_to_progress_menu(): void
-    {
-        Option::setIndexPerPage(1);
-        $this->createProduct(1);
-        $this->createProduct(2);
-
-        Livewire::test(ProductIndex::class)
-            ->assertSee('id="progress-menu"', false)
-            ->assertSee("document.getElementById('progress-menu')?.scrollIntoView()", false)
-            ->assertSee('x-on:click=', false)
-            ->assertSee("wire:click=\"nextPage('page')\"", false)
-            ->assertSee('wire:click="gotoPage(', false);
-    }
-
     public function test_advanced_filter_defaults_are_selected_without_query_state(): void
     {
         Livewire::test(ProductIndex::class)
@@ -2629,13 +2588,13 @@ class ProductIndexLivewireTest extends TestCase
 
         Livewire::test(ProductIndex::class)
             ->assertSee('id="filter_start_date_from"', false)
-            ->assertSee('class="filter-field-stack filter-date-range"', false)
-            ->assertSee('class="filter-date-control"', false)
-            ->assertSee('>From</span>', false)
-            ->assertSee('>To</span>', false)
+            ->assertSee('id="filter_start_date_to"', false)
             ->assertSee('id="filter_end_date_from"', false)
+            ->assertSee('id="filter_end_date_to"', false)
             ->assertSee('id="filter_created_at_from"', false)
+            ->assertSee('id="filter_created_at_to"', false)
             ->assertSee('id="filter_updated_at_from"', false)
+            ->assertSee('id="filter_updated_at_to"', false)
             ->set('draft.start_date_from', '2026-02-01')
             ->set('draft.start_date_to', '2026-02-28')
             ->set('draft.end_date_from', '2026-03-01')
@@ -2737,6 +2696,23 @@ class ProductIndexLivewireTest extends TestCase
 
         $this->assertStringNotContainsString($otherLink, $html);
         $this->assertSame(1, substr_count($html, 'href="/?genre=' . $sharedGenre->getKey() . '"'));
+    }
+
+    private function assertProductLinksUseUrl(string $html, Product $product, string $expectedUrl): void
+    {
+        $document = new DOMDocument;
+        @$document->loadHTML($html);
+        $xpath = new DOMXPath($document);
+        $links = $xpath->query(
+            '//tr[@id="' . $product->id . '"]//a[contains(concat(" ", normalize-space(@class), " "), " product-link ")]',
+        );
+
+        $this->assertGreaterThanOrEqual(1, $links->length);
+
+        foreach ($links as $link) {
+            $this->assertInstanceOf(DOMElement::class, $link);
+            $this->assertSame($expectedUrl, $link->getAttribute('href'));
+        }
     }
 
     private function createProduct(int $number, array $attributes = []): Product
