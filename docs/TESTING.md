@@ -5,6 +5,55 @@ This document describes how to run the project's existing tests and what each cu
 For runtime architecture and data flow, see [ARCHITECTURE.md](ARCHITECTURE.md).  
 For installation, environment variables, Options settings, recovery commands, and other configuration, see [CONFIGURATION.md](CONFIGURATION.md).
 
+## Test Environment Setup
+
+### Local
+
+1. Copy `.env.testing.example` to `.env.testing`.
+
+2. Configure the dedicated test database:
+
+```dotenv
+DB_CONNECTION=
+DB_HOST=
+DB_PORT=
+DB_DATABASE=
+DB_USERNAME=
+DB_PASSWORD=
+```
+
+3. Set:
+
+```dotenv
+APP_KEY=
+```
+
+`phpunit.xml` then overrides several effective test settings, including:
+
+```text
+CACHE_DRIVER=array
+MAIL_MAILER=array
+QUEUE_CONNECTION=sync
+SESSION_DRIVER=array
+BCRYPT_ROUNDS=4
+```
+
+This means values such as file cache/session or SMTP mail in `.env.testing.example` are not the final values used by PHPUnit when an explicit `phpunit.xml` override exists.
+
+Feature tests use Laravel `RefreshDatabase`, so use a dedicated test database.
+
+### Docker
+
+Docker tests use the standalone local source-build configuration `compose.dev.yaml` and:
+- `docker/.env.testing.docker`
+- MySQL host `database_test`
+- separate `dbdata_test` and `secrets_test` volumes
+- automatically generated test `APP_KEY` and `DB_PASSWORD` values unless supplied in the test environment file
+- synchronous queue
+- array cache/session/mail settings where configured by the supplied testing environment
+
+The test database and secrets are separate from the application. When reusing an older test database, set its current password in `docker/.env.testing.docker`. Secret generation and reuse follow the [Docker Secrets](CONFIGURATION.md#docker-secrets) setup.
+
 ## Run Tests
 
 ### Laravel Unit + Feature
@@ -70,65 +119,6 @@ docker compose --env-file docker/.env.docker -f compose.dev.yaml --profile test 
 ```
 
 The Docker `tests` service is one-off and does not start during normal application startup.
-
-## Test Environment Setup
-
-### Local
-
-1. Copy:
-
-```text
-.env.testing.example
-```
-
-to:
-
-```text
-.env.testing
-```
-
-2. Configure the dedicated test database:
-
-```dotenv
-DB_CONNECTION=
-DB_HOST=
-DB_PORT=
-DB_DATABASE=
-DB_USERNAME=
-DB_PASSWORD=
-```
-
-3. Set:
-
-```dotenv
-APP_KEY=
-```
-
-`phpunit.xml` then overrides several effective test settings, including:
-
-```text
-CACHE_DRIVER=array
-MAIL_MAILER=array
-QUEUE_CONNECTION=sync
-SESSION_DRIVER=array
-BCRYPT_ROUNDS=4
-```
-
-This means values such as file cache/session or SMTP mail in `.env.testing.example` are not the final values used by PHPUnit when an explicit `phpunit.xml` override exists.
-
-Feature tests use Laravel `RefreshDatabase`, so use a dedicated test database.
-
-### Docker
-
-Docker tests use the standalone local source-build configuration `compose.dev.yaml` and:
-- `docker/.env.testing.docker`
-- MySQL host `database_test`
-- separate `dbdata_test` and `secrets_test` volumes
-- automatically generated test `APP_KEY` and `DB_PASSWORD` values unless supplied in the test environment file
-- synchronous queue
-- array cache/session/mail settings where configured by the supplied testing environment
-
-The test database and secrets are separate from the application. When reusing an older test database, set its current password in `docker/.env.testing.docker`. Secret generation and reuse follow the [Docker Secrets](CONFIGURATION.md#docker-secrets) setup.
 
 ## Current Automated Test Inventory
 
@@ -260,7 +250,7 @@ Covers saving/resetting Index Notes/Tags overflow settings and their validation/
 #### `tests/Feature/IndexImageViewerTest.php`
 
 Covers the Image Viewer option and Index viewer rendering/data:
-- Index viewer always uses Cherry styling independently of the Add/Edit Form Theme
+- Index viewer always uses Cherry styling independently of the Form Page Theme
 - enable/disable behavior
 - image ordering/path handling
 - Index placeholder and sample-only/empty galleries for works without cover paths
@@ -399,12 +389,12 @@ Covers metadata-backfill behavior when canonical work JSON is missing or invalid
 
 Covers metadata-related UI settings:
 - field layouts, including collapsed section rendering
-- automatic Series
-- DLSite links, including the age-based fallback, default-on announcement toggle, save/reset behavior, and tooltip
-- Add/Edit form theme
-- Add/Edit modal
-- Index table width
-- overflow settings
+- Series Metadata
+- DLsite Links, including the age-based fallback, default-on announcement toggle, save/reset behavior, and tooltip
+- Form Page Theme
+- Add/Edit Modals
+- Index Table Width
+- Overflow
 - UI wording profile previews in English and Japanese, selection changes without saving, persistence after submission, and reset behavior
 - other general/field-layout reset behavior
 
@@ -638,7 +628,7 @@ Covers Python weekly logging parity with Laravel:
 The current suite intentionally uses framework fakes for external/destructive boundaries:
 
 - upload tests use `UploadedFile::fake()` and `Storage::fake('public')`
-- Full Refetch tests use `Bus::fake()`, `Process::fake()`, and fake storage
+- Refetch tests use `Bus::fake()`, `Process::fake()`, and fake storage
 - Bulk Import tests use `Bus::fake()`, `Process::fake()`, fake storage, and direct queued-job execution for item-state contracts
 - Library Import / Export tests use fake private/public storage and a fake bus where appropriate, while creating and reading real ZIP archives
 - scraper-process tests use `Process::fake()` and `Process::preventStrayProcesses()`, including the finite scraper timeout behavior and exit-code failure classification
@@ -670,7 +660,7 @@ These checks remain manual because they depend on browser behavior, JavaScript e
 
 - Enable the viewer and confirm clicking an Index thumbnail opens the saved cover first.
 - Confirm a coverless work shows `No image` and can still open a sample-only gallery.
-- Confirm the Index viewer keeps Cherry styling regardless of the Add/Edit Form Theme.
+- Confirm the Index viewer keeps Cherry styling regardless of the Form Page Theme.
 - Confirm Previous/Next wrap through the cover and ordered sample images.
 - Confirm keyboard navigation and close controls.
 - Open another work and confirm the viewer starts from that work's cover.
@@ -680,7 +670,7 @@ These checks remain manual because they depend on browser behavior, JavaScript e
 ### Cover / Sample Image Editor
 
 - In Custom Quick Add and an Edit form with image fields enabled, select a cover/sample and confirm the preview appears immediately without a request/upload step.
-- Open the shared image viewer from existing and newly selected images and confirm it follows the current cover/sample order and selected Add/Edit Form Theme.
+- Open the shared image viewer from existing and newly selected images and confirm it follows the current cover/sample order and selected Form Page Theme.
 - Add several samples, mix them with existing samples, drag them into a new order, remove individual items, and remove all samples.
 - Replace and remove the optional cover, then Save and confirm the final canonical files and saved sample order match the visible editor state.
 - Confirm a full validation redirect/reload clears newly selected local files, requiring them to be selected again as normal browser file-input behavior.
@@ -718,9 +708,9 @@ At mobile/tablet widths:
 At the desktop breakpoint:
 - confirm the desktop Options navigation replaces the mobile drawer as intended
 
-### Add/Edit Modal
+### Add/Edit Modals
 
-With Add/Edit modal mode enabled, exercise Quick Add and Edit from each supported host page.
+With Add/Edit Modals enabled, exercise Quick Add and Edit from each supported host page.
 
 Navigation/fallback:
 - primary click opens the native dialog

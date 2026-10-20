@@ -13,7 +13,7 @@ Docker is the recommended self-hosted setup.
 
 Requires [Docker Engine 26.0+](https://docs.docker.com/engine) and [Docker Compose 2.34.0+](https://docs.docker.com/compose).
 
-#### Published Docker installation
+#### Published Docker Installation
 
 Run the latest published release with:
 
@@ -31,15 +31,14 @@ This starts:
 
 The app container runs migrations during startup.
 
-After that DLSite List is available at:
+**After startup**
 
-```text
-http://localhost:8080
-```
+- DLSite List is available at `http://localhost:8080`.
+- Authentication is disabled by default. To add a username and password, open `Options -> Authentication` and turn on `Require administrator login`.
 
 Re-running the same command updates a `latest` installation to the current published Compose application and referenced images.
 
-#### Local Docker build
+#### Local Docker Build
 
 To build the Docker images from the checked-out source, run from the project root:
 
@@ -47,17 +46,17 @@ To build the Docker images from the checked-out source, run from the project roo
 docker compose --env-file docker/.env.docker -f compose.dev.yaml up --build -d
 ```
 
+**After startup**
+
+- DLSite List is available at `http://localhost:8080`.
+- Optional phpMyAdmin is disabled/commented out by default. If enabled in `compose.dev.yaml`, it is available at `http://localhost:8888`.
+- Authentication is disabled by default. To add a username and password, open `Options -> Authentication` and turn on `Require administrator login`.
+
 `compose.dev.yaml` is the standalone source-build configuration. It builds `docker/app.dockerfile` and `docker/web.dockerfile` locally and uses `docker/.env.docker` for local Docker configuration. It uses the `dlsite-list-dev` Compose project name so local development resources stay separate from the published `dlsite-list` installation.
 
 The test database/services are behind the Compose `test` profile and do not start with the normal application command.
 
 For Import / Export, the supplied Docker configuration allows individual ZIP uploads up to 256 MiB. PHP uses `upload_max_filesize = 256M` and `post_max_size = 260M`, while Nginx uses `client_max_body_size 260M`. If larger import files are needed, raise the PHP and Nginx limits together and keep the request/post limit above the file-size limit.
-
-phpMyAdmin is disabled/commented out by default. If enabled in `compose.dev.yaml`, its configured access point is:
-
-```text
-http://localhost:8888
-```
 
 #### Docker Secrets
 
@@ -67,7 +66,7 @@ For a local Docker build, leave `APP_KEY` and `DB_PASSWORD` empty in `docker/.en
 
 Changing `DB_PASSWORD` after first startup does not change an existing MySQL account's password.
 
-#### Upgrade an existing Docker installation
+#### Upgrade an Existing Docker Installation
 
 When upgrading from a version before v2.0.0, provide the password used by your existing MySQL database. The previous default was `laravel`; if you changed it, use your existing value instead.
 
@@ -113,39 +112,62 @@ docker compose --env-file docker/.env.docker -f compose.dev.yaml exec app php ar
 
 Requirements:
 - PHP 8.3
+- A web server configured to run PHP, for example Apache or Nginx
 - Composer
 - MySQL 8
 - Python 3.14.6 (currently tested version) and pip
 
+Manual installation is tested with WAMP on Windows. Docker serves the application through Nginx with PHP-FPM.
+
 From the project root:
 
 1. Copy `.env.example` to `.env`.
+
 2. Configure the database and other environment values.
-3. Install PHP dependencies:
+
+    - In `.env`, configure your MySQL database:
+        ```dotenv
+        DB_CONNECTION=mysql
+        DB_HOST=
+        DB_PORT=
+        DB_DATABASE=
+        DB_USERNAME=
+        DB_PASSWORD=
+        ```
+    - See [Environment Files](#environment-files) for other settings.
+
+3. Configure the web server:
+
+    - Set the site's document root to the project's `public/` directory and `APP_URL` in `.env` to the site's address.
+    - **Apache / WAMP:** enable `mod_rewrite` and set `AllowOverride All` for the site's directory so the bundled [`public/.htaccess`](../public/.htaccess) handles application routes.
+    - **Nginx:** configure PHP-FPM and route application requests through `public/index.php`. See [`docker/vhost.conf`](../docker/vhost.conf) for the Nginx and PHP-FPM configuration.
+    - Give the PHP process write access to `storage/` and `bootstrap/cache`.
+
+4. Install PHP dependencies:
 
 ```bash
 composer install
 ```
 
-4. Generate the application key:
+5. Generate the application key:
 
 ```bash
 php artisan key:generate
 ```
 
-5. Run migrations:
+6. Run migrations:
 
 ```bash
 php artisan migrate
 ```
 
-6. Create the scraper python virtual environment:
+7. Create the scraper python virtual environment:
 
 ```bash
 python -m venv python/venv
 ```
 
-7. Activate the virtual environment:
+8. Activate the virtual environment:
 
 Windows:
 
@@ -159,17 +181,22 @@ Linux/macOS:
 source python/venv/bin/activate
 ```
 
-8. Install scraper dependencies:
+9. Install scraper dependencies:
 
 ```bash
 pip install -r python/requirements.txt
 ```
 
-9. Keep a Laravel queue worker running when using Refetch, Bulk Import, or Import / Export:
+10. Keep a Laravel queue worker running when using Refetch, Bulk Import, or Import / Export:
 
 ```bash
 php artisan queue:work
 ```
+
+**After startup**
+
+- DLSite List is available at the site address configured in step 3.
+- Authentication is disabled by default. To add a username and password, open `Options -> Authentication` and turn on `Require administrator login`.
 
 ## Recovery and Maintenance
 
@@ -391,7 +418,7 @@ These are the project's supplied defaults. Work images and Refetch staging expli
 
 When authentication is enabled, files in `storage/app/public` also require authentication.
 
-Refetch and Bulk Import lifecycle protection use Laravel atomic cache locks. If `CACHE_DRIVER` is changed, use a configured cache store that supports Laravel atomic locks.
+Refetch, Bulk Import, and Import / Export lifecycle/concurrency protection use Laravel atomic cache locks. If `CACHE_DRIVER` is changed, use a configured cache store that supports Laravel atomic locks.
 
 ### Logs
 
@@ -457,14 +484,13 @@ When disabled, `Fetched Tags language` selects which fetched tags are shown and 
 Default: `General` (`general`)
 
 Choices:
-
-* `General` (`general`)
-* `Listening (Voice / ASMR / Voice Dramas)` (`listening`)
-* `Reading (Manga / Comics / Light Novels / Novels / Books)` (`reading`)
-* `Games (Games, PC Games)` (`games`)
-* `Video (Anime / Videos)` (`video`)
-* `Music (Music)` (`music`)
-* `Artwork (CG)` (`artwork`)
+- `General` (`general`)
+- `Listening (Voice / ASMR / Voice Dramas)` (`listening`)
+- `Reading (Manga / Comics / Light Novels / Novels / Books)` (`reading`)
+- `Games (Games, PC Games)` (`games`)
+- `Video (Anime / Videos)` (`video`)
+- `Music (Music)` (`music`)
+- `Artwork (CG)` (`artwork`)
 
 Controls which UI wording profile is used in the interface.
 
@@ -472,18 +498,15 @@ Controls which UI wording profile is used in the interface.
 
 Default: `100`
 
-Built-in choices:
-
-```text
-10
-25
-50
-100
-250
-500
-1000
-unlimited
-```
+Choices:
+- `10`
+- `25`
+- `50`
+- `100`
+- `250`
+- `500`
+- `1000`
+- `unlimited`
 
 A custom positive integer is also accepted.
 
@@ -502,18 +525,6 @@ When enabled:
 
 The explicit Japanese/English description filters are independent of this setting.
 
-#### Image Viewer
-
-Default: disabled.
-
-When enabled:
-- clicking an Index cover thumbnail or `No image` placeholder opens the saved cover and sample images in "Image Viewer"
-- coverless works can still open sample-only galleries
-- the viewer operates only while the Image Index field is visible
-- the Index viewer keeps Cherry styling independently of the Add/Edit Form Theme
-
-Hiding the Image field does not reset the saved Image Viewer option.
-
 #### Optional Statuses
 
 Defaults:
@@ -529,23 +540,46 @@ Enabling a status exposes it in:
 
 Disabling a status does not rewrite status of works that already use it.
 
-#### Autocomplete
+#### Image Viewer
 
-Controls how Tag and Series autocomplete suggestions are ordered.
+Default: disabled.
 
-Tag autocomplete order:
+When enabled:
+- clicking an Index cover thumbnail or `No image` placeholder opens the saved cover and sample images in "Image Viewer"
+- coverless works can still open sample-only galleries
+- the viewer operates only while the Image Index field is visible
+- the Index viewer keeps Cherry styling independently of the Form Page Theme
 
-* `usage` - default; most-used matching tags are shown first
-* `first_word` - prioritizes matches at the start of the tag, then at the start of later words; usage breaks ties
+Hiding the Image field does not reset the saved Image Viewer option.
 
-Series autocomplete order:
+#### Index Table Width
 
-* `usage` - default; most-used matching series are shown first
-* `first_word` - prioritizes matches at the start of the series name, then at the start of later words; usage breaks ties
+Default: `default` choice
 
-#### Automatic Series
+Choices:
+- `default` - 1024px
+- `wide` - 1400px
+- `full` - 100%
+- custom width - supports `px`, `rem`, `em`, `%`, or `vw`
 
-`Automatic Series from DLsite metadata` is enabled by default.
+#### Overflow
+
+Three independent targets:
+- Notes below Title
+- Notes column
+- Tags
+
+Defaults for each are:
+- disabled
+- `80px`
+
+When enabled, each target accepts a positive value using `px`, `rem`, `em`, `%`, `vw`, `vh`, `vmin`, `vmax`, `svh`, `lvh`, or `dvh`
+
+Disabled targets are normalized back to the default `80px`.
+
+#### Series Metadata
+
+`Set Series from DLsite metadata when no Series is entered in Quick Add` is enabled by default.
 
 When enabled, DLSite Quick Add fills Series only when the user did not enter one:
 1. `japanese.title_name`
@@ -559,6 +593,7 @@ Index DLsite links use each work's stored Site ID (`site_id`) as their section w
 
 Disabled:
 - works missing `site_id` use Maniax URL
+
 Enabled:
 - `ALL_AGES` -> DLsite Home URL
 - `R15`, `R18`, missing, or malformed values -> Maniax URL
@@ -572,7 +607,7 @@ Enabled:
 - works with a stored announcement date -> `announce/` URL
 - works without an announcement date -> regular `work/` URL
 
-#### Add/Edit Form Theme
+#### Form Page Theme
 
 Default: `black`.
 
@@ -587,7 +622,7 @@ This theme applies to:
 
 The cover/sample image editor and viewer inside Custom Quick Add/Edit follow this theme. The Index Image Viewer does not; it keeps Cherry styling.
 
-#### Add/Edit Modal
+#### Add/Edit Modals
 
 Default:
 - disabled
@@ -600,30 +635,19 @@ Completion choices:
 
 The modal applies to ordinary primary-click Quick Add/Edit navigation. Real standalone links remain available for modified/middle-click navigation.
 
-#### Index Table Width
+#### Autocomplete
 
-Default: `default` choice
+Controls how Tag and Series autocomplete suggestions are ordered.
 
-Choices:
-- `default` - 1024px
-- `wide` - 1400px
-- `full` - 100%
-- custom width - supports `px`, `rem`, `em`, `%`, or `vw`
+Tag autocomplete order:
 
-#### Index Content Overflow
+- `usage` - default; most-used matching tags are shown first
+- `first_word` - prioritizes matches at the start of the tag, then at the start of later words; usage breaks ties
 
-Three independent targets:
-- Notes below Title
-- Notes column
-- Tags
+Series autocomplete order:
 
-Defaults for each are:
-- disabled
-- `80px`
-
-Enabled accept positive values using `px`, `rem`, `em`, `%`, `vw`, `vh`, `vmin`, `vmax`, `svh`, `lvh`, or `dvh`
-
-Disabled targets are normalized back to the default `80px`.
+- `usage` - default; most-used matching series are shown first
+- `first_word` - prioritizes matches at the start of the series name, then at the start of later words; usage breaks ties
 
 #### Tag Library
 
@@ -637,29 +661,29 @@ When Index tag group ordering is enabled:
 3. ungrouped tags follow alphabetically
 
 Tag/group color defaults:
-- Index - enabled;
-- Tag Library - enabled;
-- Autocomplete suggestions - disabled;
-- Edit readonly tags - disabled;
-- Refetch review tags - disabled;
+- Index - enabled
+- Tag Library - enabled
+- Autocomplete suggestions - disabled
+- Edit readonly tags - disabled
+- Refetch review tags - disabled
 
 ### Field Layouts
 
 Seven layouts are configurable:
 
-1. Index Table Columns
-2. Index Filter Fields
-3. Index Sort Menu
-4. Edit Form Fields
-5. Quick Add Form Fields
-6. Bulk Import Form Fields
-7. Custom Quick Add Form Fields
+1. [Index Table Columns](#index-table-columns-default-order)
+2. [Index Filter Fields](#index-filter-default-order)
+3. [Index Sort Menu](#index-sort-menu-default-order)
+4. [Edit Form Fields](#edit-form-default-order)
+5. [Quick Add Form Fields](#quick-add-default-order)
+6. [Bulk Import Form Fields](#bulk-import-default-order)
+7. [Custom Quick Add Form Fields](#custom-quick-add-default-order)
 
 Each layout can be saved independently. `Save all field layouts` saves all seven.
 
 Rows can be reordered and shown/hidden where allowed. Edit rows can also expose an `Editable` setting where supported.
 
-Required fields remain visible. The `image` field is shown as `Cover Image` in Field Layout settings; the Index table column itself remains `Image`.
+Required fields remain visible.
 
 Index Title is locked visible but reorderable. Its independent `Notes below Title` switch is enabled by default.
 
@@ -675,7 +699,7 @@ Fetched Tags are readonly by default. If made editable, editing changes only the
 
 #### Index Table Columns Default Order
 
-- `image`
+- `image` - shown as `Cover Image` in Field Layout settings; the Index table column is `Image`.
 - `title` - locked visible; Notes below Title enabled
 - `score`
 - `series`
@@ -704,34 +728,6 @@ Fetched Tags are readonly by default. If made editable, editing changes only the
 - `created_at` - hidden
 - `updated_at` - hidden
 
-#### Edit Form Default Order
-
-- `progress`
-- `score`
-- `series`
-- `title` - locked visible
-- `image`
-- `sample_images`
-- `fetched_tags`
-- `tags`
-- `notes`
-- `start_date`
-- `end_date`
-- `num_re_listen_times`
-- `re_listen_value`
-- `priority`
-- `age_category` - hidden
-- `product_format` - hidden
-- `circle` - hidden
-- `publisher` - hidden
-- `brand` - hidden
-- `scenario` - hidden
-- `illustration` - hidden
-- `voice_actor` - hidden
-- `author` - hidden
-- `description_japanese` - hidden
-- `description_english` - hidden
-
 #### Index Filter Default Order
 
 - `title`
@@ -755,6 +751,62 @@ Fetched Tags are readonly by default. If made editable, editing changes only the
 - `publisher` - hidden
 - `brand` - hidden
 - `maker_names` (Circle / Publisher / Brand) - hidden
+- `scenario` - hidden
+- `illustration` - hidden
+- `voice_actor` - hidden
+- `author` - hidden
+- `description_japanese` - hidden
+- `description_english` - hidden
+
+#### Index Sort Menu Default Order
+
+- `product_code`
+- `score`
+- `series`
+- `age_category`
+- `site_id` - hidden
+- `product_format` - hidden
+- `announce_date` - hidden
+- `progress`
+- `priority`
+- `num_re_listen_times`
+- `re_listen_value`
+- `start_date`
+- `end_date`
+- `created_at`
+- `updated_at` - hidden
+- `circle` - hidden
+- `publisher` - hidden
+- `brand` - hidden
+- `maker_names` (Circle / Publisher / Brand) - hidden
+- `scenario` - hidden
+- `illustration` - hidden
+- `voice_actor` - hidden
+- `author` - hidden
+
+Hiding a value from the Index Sort Menu only removes it from that dropdown. It does not invalidate otherwise supported URL/table-header sorting.
+
+#### Edit Form Default Order
+
+- `progress`
+- `score`
+- `series`
+- `title` - locked visible
+- `image` - hidden
+- `sample_images` - hidden
+- `fetched_tags`
+- `tags`
+- `notes`
+- `start_date`
+- `end_date`
+- `num_re_listen_times`
+- `re_listen_value`
+- `priority`
+- `age_category` - hidden
+- `product_format` - hidden
+- `circle` - hidden
+- `publisher` - hidden
+- `brand` - hidden
 - `scenario` - hidden
 - `illustration` - hidden
 - `voice_actor` - hidden
@@ -846,48 +898,19 @@ Hidden DLsite Quick Add metadata fields are not accepted as user overrides, but 
 
 Custom Quick Add has no scraper fallback. Cover and sample images are optional; hiding either image field removes it from the form/submission. Hidden optional description rows store `null`.
 
-#### Index Sort Menu Default Order
-
-- `product_code`
-- `score`
-- `series`
-- `age_category`
-- `site_id` - hidden
-- `product_format` - hidden
-- `announce_date` - hidden
-- `progress`
-- `priority`
-- `num_re_listen_times`
-- `re_listen_value`
-- `start_date`
-- `end_date`
-- `created_at`
-- `updated_at` - hidden
-- `circle` - hidden
-- `publisher` - hidden
-- `brand` - hidden
-- `maker_names` (Circle / Publisher / Brand) - hidden
-- `scenario` - hidden
-- `illustration` - hidden
-- `voice_actor` - hidden
-- `author` - hidden
-
-Hiding a value from the Index Sort Menu only removes it from that dropdown. It does not invalidate otherwise supported URL/table-header sorting.
-
 ### Authentication
 
 Administrator authentication is disabled by default.
 
 `Authentication` configures:
 
-* administrator login enabled/disabled
-* authentication-page theme
-* authenticated password change
+- administrator login enabled/disabled
+- authentication-page theme
+- authenticated password change
 
 Authentication theme choices:
-
-* `Cherry` - default
-* `Black`
+- `Cherry` - default
+- `Black`
 
 Authentication settings are not affected by `Reset All Options`.
 
@@ -906,7 +929,7 @@ Username matching is case-sensitive. Passwords must be 8–256 characters long.
 - review/apply/reject controls
 - Refetch cleanup
 
-Refetch requires the Laravel queue worker and the application's database, storage, and cache configuration. No separate Refetch-specific environment variables are required.
+Refetch requires the Laravel queue worker and the application's database, storage, and cache configuration.
 
 ### Import / Export
 
@@ -916,18 +939,18 @@ For completed exports, `Download all` asks for a destination folder and saves ev
 
 #### Export Part Size
 
-* Default - `256 MiB`
-* Presets - `8`, `16`, `32`, `64`, `128`, `256`, `512`, `1024`, `2048`, `4096`, `8192 MiB`
-* Custom - supported
-* Unlimited - supported
+- Default - `256 MiB`
+- Presets - `8`, `16`, `32`, `64`, `128`, `256`, `512`, `1024`, `2048`, `4096`, `8192 MiB`
+- Custom - supported
+- Unlimited - supported
 
 The export part-size setting is reset by `Reset All Options`.
 
 #### Docker Import Limits
 
-* PHP `upload_max_filesize` - `256M`
-* PHP `post_max_size` - `260M`
-* Nginx `client_max_body_size` - `260M`
+- PHP `upload_max_filesize` - `256M`
+- PHP `post_max_size` - `260M`
+- Nginx `client_max_body_size` - `260M`
 
 The supplied Docker configuration supports individual import ZIP parts up to `256 MiB`. Increase all relevant limits when importing larger parts.
 

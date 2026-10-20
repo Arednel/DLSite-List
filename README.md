@@ -17,7 +17,7 @@ It supports DLsite works with RJ, BJ, and VJ codes - Voice / ASMR, Games, Manga,
 ### ⇄ Updates & Transfers
 
 - **Refetch:** Check DLsite for updated metadata, covers, and sample images, and review changes before applying them.
-- **Import and Export:** Export and Import your entire library or only selected Works, Images, Tag Library data, and Options using multipart ZIP files. Review imported changes before applying them.
+- **Import and Export:** Export and Import your entire library or selected works, images, Tag Library data, and Options using multipart ZIP files. Review imported changes before applying them.
 
 ### ⚙ Customization & Settings
 
@@ -47,54 +47,31 @@ It supports DLsite works with RJ, BJ, and VJ codes - Voice / ASMR, Games, Manga,
 
 ## Quick Start (requires [Docker Compose 2.34.0+](https://docs.docker.com/compose))
 
-### 1) Run this command:
+### 1) Run this command
 
 ```bash
 docker compose -f oci://ghcr.io/arednel/dlsite-list:latest up -d -y
 ```
 
 ### 2) After startup
-- DLSite List available at: `http://localhost:8080`
-- Optional phpMyAdmin can be enabled for local source builds; see [Configuration](docs/CONFIGURATION.md#local-docker-build).
+
+- DLSite List is available at: `http://localhost:8080`
 - Authentication is disabled by default. To add username and password, open `Options -> Authentication` and turn on `Require administrator login`.
 
-## Manual installation process
+## Manual Installation Process
 
 ### Requirements
+
 - PHP 8.3
+- A web server configured to run PHP, for example Apache or Nginx
 - Composer
 - MySQL 8
 - [Python 3.14.6](https://www.python.org/downloads/release/python-3146) (tested with this version) and [pip](https://pypi.org/project/pip)
 
-### 1) Create `.env` from `.env.example` then run from the project root:
+Manual installation is tested with WAMP on Windows. Follow the [manual installation guide](docs/CONFIGURATION.md#local--manual-setup) for requirements and setup instructions.
 
-```bash
-composer install
-php artisan key:generate
-php artisan migrate
-```
+## Running Tests
 
-### 2) Create and activate the venv:
-```bash
-python -m venv python/venv
-```
-
-Activate it with:
-- Windows: `python\venv\Scripts\activate`
-- Linux/macOS: `source python/venv/bin/activate`
-
-### 3) Install Python packages:
-
-```bash
-pip install -r python/requirements.txt
-```
-
-### 4) Run workers
-```bash
-php artisan queue:work
-```
-
-## Running tests
 Create `.env.testing` from `.env.testing.example`, set test DB credentials, then run:
 
 ```bash
@@ -108,11 +85,13 @@ docker compose --env-file docker/.env.docker -f compose.dev.yaml --profile test 
 ```
 
 ## Documentation
+
 - [Configuration](docs/CONFIGURATION.md)
 - [Architecture](docs/ARCHITECTURE.md)
 - [Testing](docs/TESTING.md)
 
 ## Contributing
+
 Contributions are very welcome.
 To learn more, see the [Contributor Guide](CONTRIBUTING.md).
 
@@ -121,6 +100,7 @@ To learn more, see the [Contributor Guide](CONTRIBUTING.md).
 Distributed under the terms of the [MIT License](LICENSE), _DLSite List_ is free and open-source software.
 
 ## Issues
+
 If you encounter any problems, please [file an issue](https://github.com/Arednel/DLSite-List/issues) along with a detailed description.
 
 ## Acknowledgements

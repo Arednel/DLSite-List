@@ -4,6 +4,10 @@ All notable changes to this project are documented in this file.
 
 ## Unreleased
 
+### Changed
+
+* Improved documentation consistency and readability.
+
 ## 2.0.0 - 2026-10-20
 
 *Docker Deployment & Security Improvements*
@@ -12,7 +16,7 @@ All notable changes to this project are documented in this file.
 
 For existing Docker installations:
 
-* Set the existing database password before starting the updated application. See [Upgrade an existing Docker installation](docs/CONFIGURATION.md#upgrade-an-existing-docker-installation).
+* Set the existing database password before starting the updated application. See [Upgrade an Existing Docker Installation](docs/CONFIGURATION.md#upgrade-an-existing-docker-installation).
 
 ### Added
 

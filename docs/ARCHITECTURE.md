@@ -180,7 +180,7 @@ Refetch creation, cleanup, and review application use the shared `LibraryMutatio
 
 Cancellation is cooperative: already-running work may finish while queued jobs observe the cancelled run state.
 
-Refetch batches now continue after individual job failures. Permanently failed jobs reconcile still-pending results without overwriting terminal states. Each Refetch work has a 600-second queue timeout, with a 590-second scraper-process timeout so hung fetches normally fail back into PHP first.
+Refetch batches continue after individual job failures. Permanently failed jobs reconcile still-pending results without overwriting terminal states. Each Refetch work has a 600-second queue timeout, with a 590-second scraper-process timeout so hung fetches normally fail back into PHP first.
 
 Only the newest Refetch run can be applied. Older completed runs remain available as historical/read-only review data rather than competing application states.
 
@@ -212,7 +212,7 @@ Partial work imports include only contributor roles explicitly present in either
 
 Incomplete image categories remain importable. Import applies the valid image files present in the archive and records a warning; an incomplete category with no available files is treated as unavailable data rather than an explicit empty category, so it does not clear existing images. New works follow the same rule and import any available images.
 
-#### Archive boundary
+#### Archive Boundary
 
 New exports use schema v2, while imports support both the released schema v1 and schema v2. Both use one archive-set identity across independent data and image ZIP parts. Every part contains `manifest.json`, which identifies the schema, part kind/count, scopes, and declared entries with sizes and SHA-256 checksums. Parts from different schema versions cannot be mixed.
 
@@ -311,6 +311,7 @@ Core application components include:
 Settings components include:
 
 - `UiLanguageSettings`
+- `ContentTerminologySettings`
 - `IndexPaginationSettings`
 - `IndexSearchSettings`
 - `IndexImageViewerSettings`
@@ -416,7 +417,7 @@ Autocomplete:
 - notes
 - local cover path
 - sample-image paths
-- legacy/fallback maker metadata where required
+- maker ID metadata associated with the work/circle
 
 The product code (RJ, BJ or VJ) is the product identifier.
 
@@ -426,7 +427,7 @@ Partial start/finish dates remain the editable source of truth. Derived integer 
 - `start_date_sort`
 - `end_date_sort`
 
-`code_number` stores the numeric part of RJ/BJ/VJ IDs for sorting (non-unique), using `id` as a tie-breaker.
+`code_number` stores the numeric part of RJ/BJ/VJ product codes for sorting (non-unique), using `id` as a tie-breaker.
 
 ### Tags
 
@@ -533,9 +534,9 @@ Laravel queue infrastructure uses:
 
 `bulk_import_runs` stores the shared-input snapshot, lifecycle state, aggregate counts, timestamps, and run-level errors.
 
-`bulk_import_items` stores ordered product ids with per-item state, warning/error text, and timestamps.
+`bulk_import_items` stores ordered product codes with per-item state, warning/error text, and timestamps.
 
-### Library transfers
+### Library Transfers
 
 `library_transfer_runs` stores transfer direction, lifecycle/checkpoint state, archive-set identity, settings, progress, warnings, and errors.
 
