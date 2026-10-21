@@ -140,7 +140,7 @@ class TraditionalChineseUiTest extends TestCase
             'position' => 1,
             'product_id' => 'RJ99999004',
             'status' => BulkImportItemStatus::Failed,
-            'error' => 'GeoBlocked DLSite work',
+            'error' => 'GeoBlocked DLsite work',
             'completed_at' => now(),
         ]);
 
@@ -154,9 +154,9 @@ class TraditionalChineseUiTest extends TestCase
 
         $this->get(route('options.index', ['tab' => 'bulk-imports']))
             ->assertSee('RJ99999004')
-            ->assertSee('DLSite 作品受到地區限制')
-            ->assertDontSee('GeoBlocked DLSite work');
-        $this->assertSame('GeoBlocked DLSite work', $item->fresh()->error);
+            ->assertSee('DLsite 作品受到地區限制')
+            ->assertDontSee('GeoBlocked DLsite work');
+        $this->assertSame('GeoBlocked DLsite work', $item->fresh()->error);
         $this->assertSame(BulkImportItemStatus::Failed, $item->fresh()->status);
 
         $product = Product::factory()->create(['work_name' => 'RAW_TITLE_TOKEN']);

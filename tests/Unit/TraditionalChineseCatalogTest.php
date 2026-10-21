@@ -30,7 +30,7 @@ class TraditionalChineseCatalogTest extends TestCase
     {
         app()->setLocale(UiLanguage::TraditionalChinese->value);
 
-        $this->assertNotSame('GeoBlocked DLSite work', ErrorMessage::display('GeoBlocked DLSite work'));
+        $this->assertNotSame('GeoBlocked DLsite work', ErrorMessage::display('GeoBlocked DLsite work'));
         $this->assertSame('RAW_DIAGNOSTIC_TOKEN', ErrorMessage::display('RAW_DIAGNOSTIC_TOKEN'));
 
         foreach ([0, 1, 2, 500] as $count) {
