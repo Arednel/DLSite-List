@@ -62,7 +62,7 @@ docker compose -f oci://ghcr.io/arednel/dlsite-list:latest up -d -y
 
 ### Requirements
 
-- PHP 8.3 (8.3.36 or newer, which fixes CVE-2026-109618 and CVE-2026-109619)
+- PHP 8.3
 - A web server configured to run PHP, for example Apache or Nginx
 - Composer
 - MySQL 8

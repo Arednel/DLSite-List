@@ -2,8 +2,7 @@
 FROM python:3.14-slim AS python-runtime
 
 # Main PHP application stage
-# PHP 8.3.36 fixes CVE-2026-109618 and CVE-2026-109619
-FROM php:8.3.36-fpm
+FROM php:8.3-fpm
 
 WORKDIR /var/www/dlsite_list
 

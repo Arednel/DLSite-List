@@ -18,7 +18,7 @@ All notable changes to this project are documented in this file.
 
 ### Security
 
-* Docker images now use PHP 8.3.36, which fixes CVE-2026-109618 and CVE-2026-109619. Manual installations should use PHP 8.3.36 or newer.
+* Docker images now use PHP 8.3.36, which fixes CVE-2026-109618 and CVE-2026-109619 vulnerabilities.
 
 ## 2.0.0 - 2026-10-20
 
