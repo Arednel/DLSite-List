@@ -16,6 +16,10 @@ All notable changes to this project are documented in this file.
 
 * Fixed incorrect "DLsite" site references for consistency.
 
+### Security
+
+* Docker images now use PHP 8.3.36, which fixes CVE-2026-109618 and CVE-2026-109619. Manual installations should use PHP 8.3.36 or newer.
+
 ## 2.0.0 - 2026-10-20
 
 *Docker Deployment & Security Improvements*

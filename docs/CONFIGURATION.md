@@ -111,7 +111,7 @@ docker compose --env-file docker/.env.docker -f compose.dev.yaml exec app php ar
 ### Local / Manual Setup
 
 Requirements:
-- PHP 8.3
+- PHP 8.3 (8.3.36 or newer, which fixes CVE-2026-109618 and CVE-2026-109619)
 - A web server configured to run PHP, for example Apache or Nginx
 - Composer
 - MySQL 8
