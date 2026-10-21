@@ -4,9 +4,13 @@ All notable changes to this project are documented in this file.
 
 ## Unreleased
 
+## 2.1.0 - 2026-10-22
+
+*Traditional Chinese Support & Security Update*
+
 ### Added
 
-* Added initial Traditional Chinese support for the UI, errors, and validation messages.
+* Added partial Traditional Chinese support for the UI, errors, and validation messages.
 * Added Japanese translations for Laravel validation messages.
 
 ### Changed
