@@ -57,9 +57,9 @@ class ErrorMessageTest extends TestCase
         App::setLocale(UiLanguage::Japanese->value);
 
         $this->assertSame(
-            'DLSite情報は取得できましたが、次の画像をダウンロードできませんでした: cover.jpg, sample_1.jpg',
+            'DLsite情報は取得できましたが、次の画像をダウンロードできませんでした: cover.jpg, sample_1.jpg',
             DLSiteFetchResult::displayImageFailureMessage(
-                'DLSite data was fetched, but these images could not be downloaded: cover.jpg, sample_1.jpg',
+                'DLsite data was fetched, but these images could not be downloaded: cover.jpg, sample_1.jpg',
             ),
         );
         $this->assertSame(

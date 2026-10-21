@@ -256,7 +256,7 @@ class ProductMetadataSettingsTest extends TestCase
             ->call('save')
             ->assertHasNoErrors()
             ->assertSet('saved', true)
-            ->assertSet('notice', 'DLSite link settings saved.');
+            ->assertSet('notice', 'DLsite link settings saved.');
 
         $this->assertFalse(Option::dlsiteAgeAppropriateLinksEnabled());
         $this->assertTrue(Option::dlsiteAnnounceLinksEnabled());
@@ -270,7 +270,7 @@ class ProductMetadataSettingsTest extends TestCase
             ->assertSet('enabled', false)
             ->assertSet('announceEnabled', true)
             ->assertSet('confirmingResetToDefault', false)
-            ->assertSet('notice', 'DLSite link settings reset to default.');
+            ->assertSet('notice', 'DLsite link settings reset to default.');
 
         $this->assertFalse(Option::dlsiteAgeAppropriateLinksEnabled());
         $this->assertTrue(Option::dlsiteAnnounceLinksEnabled());
@@ -287,8 +287,8 @@ class ProductMetadataSettingsTest extends TestCase
             ->assertSee('Use age-appropriate fallback when Site ID is missing')
             ->assertSee('When enabled, works without a Site ID, use Home for All Ages and Maniax for R15/R18. Otherwise, they use Maniax. Works with a Site ID always use their Site ID.')
             ->assertSee('Use announcement links when available')
-            ->assertSee('When enabled, works that have an announcement date use DLSite announcement links (announce/). Released works will automatically redirect to their regular product pages (work/). When disabled, all links use regular product pages, which may show an error for not yet released works.')
-            ->assertDontSee('DLSite announcement links (`announce/`)', false);
+            ->assertSee('When enabled, works that have an announcement date use DLsite announcement links (announce/). Released works will automatically redirect to their regular product pages (work/). When disabled, all links use regular product pages, which may show an error for not yet released works.')
+            ->assertDontSee('DLsite announcement links (`announce/`)', false);
 
         Option::resetVisibleSettingsToDefault();
 

@@ -11,7 +11,7 @@
         @enderror
 
         <x-options.switch wire:model.live="announceEnabled" :help="__(
-            'When enabled, works that have an announcement date use DLSite announcement links (announce/). Released works will automatically redirect to their regular product pages (work/). When disabled, all links use regular product pages, which may show an error for not yet released works.',
+            'When enabled, works that have an announcement date use DLsite announcement links (announce/). Released works will automatically redirect to their regular product pages (work/). When disabled, all links use regular product pages, which may show an error for not yet released works.',
         )">
             {{ __('Use announcement links when available') }}
         </x-options.switch>

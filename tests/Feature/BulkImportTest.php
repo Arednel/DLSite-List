@@ -296,7 +296,7 @@ class BulkImportTest extends TestCase
         Storage::fake('local');
         Storage::fake('public');
         Process::fake([
-            '*' => Process::result(errorOutput: 'GeoBlocked DLSite work', exitCode: 2),
+            '*' => Process::result(errorOutput: 'GeoBlocked DLsite work', exitCode: 2),
         ])->preventStrayProcesses();
         [$run, $item] = $this->createRunItem('RJ000000301');
 
@@ -306,7 +306,7 @@ class BulkImportTest extends TestCase
         $run->refresh();
 
         $this->assertSame(BulkImportItemStatus::Failed, $item->status);
-        $this->assertSame('GeoBlocked DLSite work', $item->error);
+        $this->assertSame('GeoBlocked DLsite work', $item->error);
         $this->assertSame(BulkImportRunStatus::Running, $run->status);
         $this->assertSame(1, $run->processed_count);
         $this->assertSame(1, $run->failed_count);
@@ -764,11 +764,11 @@ class BulkImportTest extends TestCase
         $item->refresh();
         $this->assertSame(BulkImportItemStatus::Imported, $item->status);
         $this->assertSame(
-            'DLSite data was fetched, but these images could not be downloaded: cover.jpg, sample_1.jpg',
+            'DLsite data was fetched, but these images could not be downloaded: cover.jpg, sample_1.jpg',
             $item->warning,
         );
         $this->assertSame(
-            'DLSite情報は取得できましたが、次の画像をダウンロードできませんでした: cover.jpg, sample_1.jpg',
+            'DLsite情報は取得できましたが、次の画像をダウンロードできませんでした: cover.jpg, sample_1.jpg',
             $item->displayWarning(),
         );
         $product = Product::findOrFail($productCode);

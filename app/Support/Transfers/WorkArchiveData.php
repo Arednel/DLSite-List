@@ -175,7 +175,7 @@ final class WorkArchiveData
         $work = DLSiteWorkData::fromArray($document, $expectedCode);
         $title = $this->localeText($document['japanese'], 'work_name') ?? $work->workName ?? $work->englishWorkName;
         if ($title === null) {
-            throw new InvalidArgumentException('DLSite work data is missing a work name.');
+            throw new InvalidArgumentException('DLsite work data is missing a work name.');
         }
 
         $record = ['product_code' => $expectedCode];

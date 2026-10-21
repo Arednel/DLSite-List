@@ -27,6 +27,7 @@ MIRRORED_PRODUCT_FORMAT_OPTIONS = {
     WorkOption.VIDEO: WorkType.VIDEO,
 }
 
+
 def parse_arguments(argv=None):
     parser = argparse.ArgumentParser()
     parser.add_argument("--work-id", required=True)
@@ -165,9 +166,9 @@ def map_known_error(error_message: str, work_id: str):
     msg = (error_message or "").strip()
 
     patterns = [
-        (f"Failed to get product info for {work_id}", "GeoBlocked DLSite work", 2),
-        (f"Not Found", "This work was deleted or could not be found on DLSite", 2),
-        (f"Bad Request", "This work could not be found on DLSite", 2),
+        (f"Failed to get product info for {work_id}", "GeoBlocked DLsite work", 2),
+        (f"Not Found", "This work was deleted or could not be found on DLsite", 2),
+        (f"Bad Request", "This work could not be found on DLsite", 2),
     ]
 
     for pattern, user_message, exit_code in patterns:

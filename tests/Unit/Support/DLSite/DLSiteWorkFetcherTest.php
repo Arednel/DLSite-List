@@ -99,7 +99,7 @@ class DLSiteWorkFetcherTest extends TestCase
             $this->fail('Expected an invalid manifest exception.');
         } catch (RuntimeException $exception) {
             $this->assertSame(
-                'DLSite work fetch returned an invalid manifest.',
+                'DLsite work fetch returned an invalid manifest.',
                 $exception->getMessage(),
             );
         }
@@ -134,11 +134,11 @@ class DLSiteWorkFetcherTest extends TestCase
         Storage::fake('local');
         $jsonPath = Storage::disk('local')->path('Works/RJ123456.json');
         Process::fake([
-            '*' => Process::result(errorOutput: 'GeoBlocked DLSite work', exitCode: 2),
+            '*' => Process::result(errorOutput: 'GeoBlocked DLsite work', exitCode: 2),
         ])->preventStrayProcesses();
 
         $this->expectException(DLSiteWorkUnavailableException::class);
-        $this->expectExceptionMessage('GeoBlocked DLSite work');
+        $this->expectExceptionMessage('GeoBlocked DLsite work');
 
         try {
             app(DLSiteWorkFetcher::class)->fetch('RJ123456', $jsonPath);
@@ -154,7 +154,7 @@ class DLSiteWorkFetcherTest extends TestCase
         Process::fake(['*' => $this->manifest([])])->preventStrayProcesses();
 
         $this->expectException(RuntimeException::class);
-        $this->expectExceptionMessage('DLSite work fetch did not create JSON.');
+        $this->expectExceptionMessage('DLsite work fetch did not create JSON.');
 
         app(DLSiteWorkFetcher::class)->fetch('RJ123456', $jsonPath);
     }

@@ -104,7 +104,7 @@ class OptionsRefetchLocalizationTest extends TestCase
         $this->get(route('options.refetch.show', $run))
             ->assertOk()
             ->assertSee('<html lang="ja">', false)
-            ->assertSee('<title>DLSite情報を再取得</title>', false)
+            ->assertSee('<title>DLsite情報を再取得</title>', false)
             ->assertSee('確認')
             ->assertSee('タイトル')
             ->assertSee('すべてを「上書き」に設定')

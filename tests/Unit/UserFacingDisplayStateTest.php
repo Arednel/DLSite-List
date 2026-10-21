@@ -99,10 +99,10 @@ class UserFacingDisplayStateTest extends TestCase
             [
                 'Refetch was cancelled before this work was fetched.' => 'この作品を取得する前に再取得がキャンセルされました。',
                 'This work was removed from your library before it could be refetched.' => 'この作品は再取得される前にライブラリから削除されました。',
-                'DLSite fetch failed.' => 'DLSite情報の取得に失敗しました。',
-                'GeoBlocked DLSite work' => '地域制限によりアクセスできないDLSite作品',
-                'This work was deleted or could not be found on DLSite' => 'この作品は削除されたか、DLSiteで見つかりませんでした。',
-                'This work could not be found on DLSite' => 'この作品はDLSiteで見つかりませんでした。',
+                'DLsite fetch failed.' => 'DLsite情報の取得に失敗しました。',
+                'GeoBlocked DLsite work' => '地域制限によりアクセスできないDLsite作品',
+                'This work was deleted or could not be found on DLsite' => 'この作品は削除されたか、DLsiteで見つかりませんでした。',
+                'This work could not be found on DLsite' => 'この作品はDLsiteで見つかりませんでした。',
             ] as $message => $localized
         ) {
             $result = new RefetchWorkResult(['error' => $message]);

@@ -38,7 +38,7 @@ class DlsiteLinkSettings extends Component
         Option::setDlsiteAnnounceLinksEnabled($this->announceEnabled);
         $this->enabled = Option::dlsiteAgeAppropriateLinksEnabled();
         $this->announceEnabled = Option::dlsiteAnnounceLinksEnabled();
-        $this->markSaved('DLSite link settings saved.');
+        $this->markSaved('DLsite link settings saved.');
     }
 
     public function resetToDefault(): void
@@ -47,7 +47,7 @@ class DlsiteLinkSettings extends Component
         Option::resetDlsiteAnnounceLinksEnabledToDefault();
         $this->enabled = Option::dlsiteAgeAppropriateLinksEnabled();
         $this->announceEnabled = Option::dlsiteAnnounceLinksEnabled();
-        $this->completeResetWithNotice('DLSite link settings reset to default.');
+        $this->completeResetWithNotice('DLsite link settings reset to default.');
     }
 
     #[On('options-defaults-reset')]
