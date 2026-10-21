@@ -23,7 +23,8 @@ class UiLanguageSettingsTest extends TestCase
             ->assertSee('Follow UI language automatically')
             ->assertSee('Fetched Tags language')
             ->assertSee('English')
-            ->assertSee('日本語');
+            ->assertSee('日本語')
+            ->assertSee('繁體中文');
     }
 
     public function test_follow_mode_mirrors_the_current_ui_language_in_the_disabled_dropdown(): void

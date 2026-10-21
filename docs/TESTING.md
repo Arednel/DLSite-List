@@ -430,6 +430,10 @@ Covers Tag Library expanded/collapsed default, Index group-ordering setting, and
 
 Covers localized Tag Library labels, controls, selected-language behavior, and duplicate-tag warnings without creating duplicate records; notices retain their canonical text and translate at display time.
 
+#### `tests/Feature/TraditionalChineseUiTest.php`
+
+Covers application-wide Traditional Chinese selection, English fetched-tag fallback with a preserved manual Japanese choice, primary pages and review surfaces, administrator form validation, and unchanged stored titles, statuses, and canonical diagnostics.
+
 #### `tests/Feature/TagLibraryManagerTest.php`
 
 Covers Tag Library behavior:
@@ -481,13 +485,16 @@ Covers server-rendered Add/Edit modal completion fallback output and conditional
 `tests/Unit/Support/Transfers/TransferMessageTest.php`
 - Covers localized Transfer progress stages, shared `ImportValue` section/field labels (including Site ID), upload failure messages rendered directly by the Blade component, bounded dynamic diagnostic templates, canonical static error lookup, verbatim fallback for unknown diagnostics, and verbatim entity values, including tag/group names ending in `for export`.
 
+`tests/Unit/TraditionalChineseCatalogTest.php`
+- Covers full Traditional Chinese UI/error key coverage, parameter preservation, plural rendering, verbatim fallback for unknown diagnostics, and framework validation-message coverage.
+
 #### Enums
 
 `tests/Unit/Enums/ProductContributorRoleTest.php`
 - Covers contributor role values and role-to-product-field mapping.
 
 `tests/Unit/Enums/ProductFormatTest.php`
-- Covers exact-code and partial-label search, editable-field round trips for every canonical Product Format in English and Japanese, ambiguous-label fallbacks, and replacing the main format without dropping manual additional/custom values.
+- Covers exact-code and partial-label search, editable-field round trips for every canonical Product Format in English, Japanese, and Traditional Chinese, ambiguous-label fallbacks, and replacing the main format without dropping manual additional/custom values.
 
 `tests/Unit/Enums/ProductIndexSortFieldTest.php`
 - Covers valid Index sort fields (including Publisher, Brand, and the virtual combined Maker sort), labels/backend metadata, and sort-dropdown behavior.

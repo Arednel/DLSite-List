@@ -1,6 +1,6 @@
 <!DOCTYPE html>
 
-<html lang="{{ app()->getLocale() }}" class="product-form-theme-cherry">
+<html lang="{{ str_replace('_', '-', app()->getLocale()) }}" class="product-form-theme-cherry">
 
 <head>
     <title>DLSite List</title>

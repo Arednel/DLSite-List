@@ -1,4 +1,13 @@
 {
+    "Unauthorized": "Unauthorized",
+    "Payment Required": "Payment Required",
+    "Forbidden": "Forbidden",
+    "Not Found": "Not Found",
+    "Page Expired": "Page Expired",
+    "Too Many Requests": "Too Many Requests",
+    "Server Error": "Server Error",
+    "Service Unavailable": "Service Unavailable",
+    "Fetched Tags currently support English and Japanese; other UI languages fall back to English.": "Fetched Tags currently support English and Japanese; other UI languages fall back to English.",
     "Review is unavailable while background processing is running.": "Review is unavailable while background processing is running.",
     "Import sections": "Import sections",
     "Tab choice": "Tab choice",

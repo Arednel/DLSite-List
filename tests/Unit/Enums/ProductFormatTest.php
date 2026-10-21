@@ -9,7 +9,7 @@ class ProductFormatTest extends TestCase
 {
     public function test_edit_input_round_trips_every_canonical_format_in_supported_locales(): void
     {
-        foreach (['en', 'ja'] as $locale) {
+        foreach (['en', 'ja', 'zh_TW'] as $locale) {
             app()->setLocale($locale);
 
             foreach (ProductFormat::cases() as $format) {

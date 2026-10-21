@@ -14,6 +14,8 @@
         {{ __('Follow UI language automatically') }}
     </x-options.switch>
 
+    <p class="option-description">{{ __('Fetched Tags currently support English and Japanese; other UI languages fall back to English.') }}</p>
+
     <fieldset class="option-fieldset">
         <legend>{{ __('Fetched Tags language') }}</legend>
 

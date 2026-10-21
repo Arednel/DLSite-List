@@ -1,6 +1,6 @@
 <!DOCTYPE html>
 
-<html lang="{{ app()->getLocale() }}" class="{{ $productFormThemeClass }}">
+<html lang="{{ str_replace('_', '-', app()->getLocale()) }}" class="{{ $productFormThemeClass }}">
 
 <head>
     <title>{{ __('Add') }}</title>

@@ -32,5 +32,6 @@ class FetchedTagLanguageTest extends TestCase
     {
         $this->assertSame(FetchedTagLanguage::English, FetchedTagLanguage::forUiLanguage(UiLanguage::English));
         $this->assertSame(FetchedTagLanguage::Japanese, FetchedTagLanguage::forUiLanguage(UiLanguage::Japanese));
+        $this->assertSame(FetchedTagLanguage::English, FetchedTagLanguage::forUiLanguage(UiLanguage::TraditionalChinese));
     }
 }

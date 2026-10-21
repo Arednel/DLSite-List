@@ -22,7 +22,7 @@ enum FetchedTagLanguage: string
     public static function forUiLanguage(UiLanguage $language): self
     {
         return match ($language) {
-            UiLanguage::English => self::English,
+            UiLanguage::English, UiLanguage::TraditionalChinese => self::English,
             UiLanguage::Japanese => self::Japanese,
         };
     }

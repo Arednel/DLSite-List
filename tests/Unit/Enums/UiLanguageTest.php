@@ -13,6 +13,7 @@ class UiLanguageTest extends TestCase
         $this->assertSame([
             UiLanguage::English->value => 'English',
             UiLanguage::Japanese->value => '日本語',
+            UiLanguage::TraditionalChinese->value => '繁體中文',
         ], UiLanguage::options());
     }
 
@@ -21,6 +22,10 @@ class UiLanguageTest extends TestCase
         App::setLocale(UiLanguage::Japanese->value);
 
         $this->assertSame(UiLanguage::Japanese, UiLanguage::current());
+
+        App::setLocale(UiLanguage::TraditionalChinese->value);
+
+        $this->assertSame(UiLanguage::TraditionalChinese, UiLanguage::current());
 
         App::setLocale('unsupported');
 

@@ -457,6 +457,7 @@ A fetched tag can belong to both language buckets for one product. Custom attach
 When following the UI language, `FetchedTagLanguage` maps:
 - UI `en` -> fetched tag language `en`
 - UI `ja` -> fetched tag language `jp`
+- UI `zh_TW` -> fetched tag language `en`
 
 `VisibleGenreAttachment` defines the normal visible set as:
 - all custom tags
@@ -606,6 +607,9 @@ Temporary-file sweeps hold the per-run upload lock throughout reference lookup a
 Application-owned UI text is stored in:
 - `lang/en.json`
 - `lang/ja.json`
+- `lang/zh_TW.json`
+
+Operational diagnostics use the corresponding `lang/{locale}/errors.php` catalog. Traditional Chinese also supplies Laravel validation messages in `lang/zh_TW/validation.php` so invalid form submissions stay localized. The `zh_TW` application locale is emitted as `zh-TW` in HTML language attributes.
 
 `SetUiLocale` applies the application-wide saved locale for web requests. Missing/invalid locale values fall back to English.
 

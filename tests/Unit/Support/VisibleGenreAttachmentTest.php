@@ -106,6 +106,7 @@ class VisibleGenreAttachmentTest extends TestCase
     {
         yield 'English' => [UiLanguage::English, 'English Fetched'];
         yield 'Japanese' => [UiLanguage::Japanese, 'Japanese Fetched'];
+        yield 'Traditional Chinese uses English fetched tags' => [UiLanguage::TraditionalChinese, 'English Fetched'];
     }
 
     /**

@@ -1,4 +1,13 @@
 {
+    "Unauthorized": "未認証",
+    "Payment Required": "お支払いが必要です",
+    "Forbidden": "アクセス禁止",
+    "Not Found": "見つかりません",
+    "Page Expired": "ページの有効期限切れ",
+    "Too Many Requests": "リクエストが多すぎます",
+    "Server Error": "サーバーエラー",
+    "Service Unavailable": "サービスを利用できません",
+    "Fetched Tags currently support English and Japanese; other UI languages fall back to English.": "取得タグは現在英語と日本語に対応しています。それ以外の表示言語では英語を使用します。",
     "Review is unavailable while background processing is running.": "バックグラウンド処理中は変更を確認できません。",
     "Import sections": "インポートのセクション",
     "Tab choice": "タブの選択",

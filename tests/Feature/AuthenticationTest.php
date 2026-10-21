@@ -340,7 +340,7 @@ class AuthenticationTest extends TestCase
 
         $this->get(route($routeName))
             ->assertOk()
-            ->assertSee('<html lang="' . $locale . '">', false)
+            ->assertSee('<html lang="' . str_replace('_', '-', $locale) . '">', false)
             ->assertSee('auth-theme-' . $theme, false)
             ->assertSee(trans($title, locale: $locale))
             ->assertSee(trans($content, locale: $locale));
@@ -381,7 +381,7 @@ class AuthenticationTest extends TestCase
 
         foreach ($pages as $page => [$routeName, $requiresAdmin, $recoveryEnabled, $title, $content]) {
             foreach (['cherry', 'black'] as $theme) {
-                foreach (['en', 'ja'] as $locale) {
+                foreach (['en', 'ja', 'zh_TW'] as $locale) {
                     yield "{$page}-{$theme}-{$locale}" => [
                         $routeName,
                         $requiresAdmin,
