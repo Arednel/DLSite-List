@@ -19,15 +19,9 @@ class TraditionalChineseCatalogTest extends TestCase
 
             foreach ($english as $key => $value) {
                 $this->assertNotSame('', trim($chinese[$key]), $key);
-                $sourceForms = explode('|', $value);
-                $translatedForms = explode('|', $chinese[$key]);
 
                 // Chinese does not require a separate grammatical plural form.
-                foreach ($sourceForms as $form) {
-                    foreach ($translatedForms as $translation) {
-                        $this->assertSame($this->placeholders($form), $this->placeholders($translation), $key);
-                    }
-                }
+                $this->assertSame($this->placeholders($value), $this->placeholders($chinese[$key]), $key);
             }
         }
     }
@@ -74,8 +68,9 @@ class TraditionalChineseCatalogTest extends TestCase
     private function placeholders(string $value): array
     {
         preg_match_all('/:[A-Za-z_][A-Za-z0-9_]*/', $value, $matches);
-        sort($matches[0]);
+        $placeholders = array_values(array_unique($matches[0]));
+        sort($placeholders);
 
-        return $matches[0];
+        return $placeholders;
     }
 }

@@ -45,6 +45,7 @@ class TraditionalChineseUiTest extends TestCase
             ->assertSee('<html lang="zh-TW">', false)
             ->assertSee('介面語言')
             ->assertSee('繁體中文')
+            ->assertSee('已儲存語言設定。')
             ->assertDontSee('Language settings saved.');
 
         $this->assertSame(FetchedTagLanguage::English, Option::effectiveFetchedTagLanguage());
@@ -65,14 +66,16 @@ class TraditionalChineseUiTest extends TestCase
             'progress' => ProductProgress::Listening->value,
         ]);
 
-        foreach ([
-            route('index'),
-            route('products.create'),
-            route('products.create.custom'),
-            route('products.create.bulk'),
-            route('products.edit', $product),
-            route('tags.index'),
-        ] as $url) {
+        foreach (
+            [
+                route('index'),
+                route('products.create'),
+                route('products.create.custom'),
+                route('products.create.bulk'),
+                route('products.edit', $product),
+                route('tags.index'),
+            ] as $url
+        ) {
             $this->get($url)
                 ->assertOk()
                 ->assertSee('<html lang="zh-TW"', false);
@@ -127,13 +130,18 @@ class TraditionalChineseUiTest extends TestCase
         Option::setUiLanguage(UiLanguage::TraditionalChinese);
         $bulk = BulkImportRun::create([
             'status' => BulkImportRunStatus::Completed,
-            'input_snapshot' => [], 'total_count' => 1, 'processed_count' => 1,
-            'failed_count' => 1, 'completed_at' => now(),
+            'input_snapshot' => [],
+            'total_count' => 1,
+            'processed_count' => 1,
+            'failed_count' => 1,
+            'completed_at' => now(),
         ]);
         $item = $bulk->items()->create([
-            'position' => 1, 'product_id' => 'RJ99999004',
+            'position' => 1,
+            'product_id' => 'RJ99999004',
             'status' => BulkImportItemStatus::Failed,
-            'error' => 'GeoBlocked DLSite work', 'completed_at' => now(),
+            'error' => 'GeoBlocked DLSite work',
+            'completed_at' => now(),
         ]);
 
         foreach (['general', 'field-layouts', 'authentication', 'refetch', 'transfers', 'bulk-imports'] as $tab) {
@@ -146,6 +154,7 @@ class TraditionalChineseUiTest extends TestCase
 
         $this->get(route('options.index', ['tab' => 'bulk-imports']))
             ->assertSee('RJ99999004')
+            ->assertSee('DLSite 作品受到地區限制')
             ->assertDontSee('GeoBlocked DLSite work');
         $this->assertSame('GeoBlocked DLSite work', $item->fresh()->error);
         $this->assertSame(BulkImportItemStatus::Failed, $item->fresh()->status);
@@ -156,15 +165,21 @@ class TraditionalChineseUiTest extends TestCase
         $refetch->results()->where('product_id', $product->id)->firstOrFail()->forceFill([
             'status' => RefetchWorkResult::STATUS_FETCHED,
             'changes' => ['titles' => ['work_name' => [
-                'label' => 'Japanese Title', 'old' => 'RAW_TITLE_TOKEN', 'new' => 'RAW_NEW_TITLE_TOKEN',
+                'label' => 'Japanese Title',
+                'old' => 'RAW_TITLE_TOKEN',
+                'new' => 'RAW_NEW_TITLE_TOKEN',
             ]]],
         ])->save();
         $refetch->results()->where('product_id', $failedProduct->id)->firstOrFail()->forceFill([
-            'status' => RefetchWorkResult::STATUS_FAILED, 'error' => 'RAW_DIAGNOSTIC_TOKEN',
+            'status' => RefetchWorkResult::STATUS_FAILED,
+            'error' => 'RAW_DIAGNOSTIC_TOKEN',
         ])->save();
         $refetch->forceFill([
-            'status' => RefetchRun::STATUS_REVIEW, 'processed_count' => 2,
-            'failed_count' => 1, 'fetched_count' => 1, 'completed_at' => now(),
+            'status' => RefetchRun::STATUS_REVIEW,
+            'processed_count' => 2,
+            'failed_count' => 1,
+            'fetched_count' => 1,
+            'completed_at' => now(),
         ])->save();
         $this->get(route('options.refetch.show', $refetch))
             ->assertOk()
@@ -174,11 +189,13 @@ class TraditionalChineseUiTest extends TestCase
 
         $transfer = LibraryTransferRun::create([
             'direction' => LibraryTransferDirection::Import,
-            'status' => LibraryTransferRunStatus::Review, 'settings' => [],
+            'status' => LibraryTransferRunStatus::Review,
+            'settings' => [],
         ]);
         $this->get(route('options.transfers.show', $transfer))
             ->assertOk()
             ->assertSee('<html lang="zh-TW">', false)
-            ->assertDontSee('Review is unavailable while background processing is running.');
+            ->assertSee('等待佇列處理程序')
+            ->assertDontSee('Waiting for queue worker');
     }
 }

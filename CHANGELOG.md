@@ -4,6 +4,10 @@ All notable changes to this project are documented in this file.
 
 ## Unreleased
 
+### Added
+
+* Added initial Traditional Chinese support for the UI, errors, and validation messages.
+
 ### Changed
 
 * Improved documentation consistency and readability.

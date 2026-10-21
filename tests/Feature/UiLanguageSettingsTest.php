@@ -33,7 +33,8 @@ class UiLanguageSettingsTest extends TestCase
             ->set('language', UiLanguage::Japanese->value)
             ->assertSet('fetchedTagLanguage', FetchedTagLanguage::English->value)
             ->assertSee('value="jp" selected', false)
-            ->assertSee('id="fetched-tag-language" class="option-control option-control-select" aria-label="Fetched Tags language" disabled', false);
+            ->assertSee('id="fetched-tag-language"', false)
+            ->assertSee('aria-label="Fetched Tags language" disabled', false);
     }
 
     public function test_it_rejects_unsupported_language_settings_without_persisting_them(): void

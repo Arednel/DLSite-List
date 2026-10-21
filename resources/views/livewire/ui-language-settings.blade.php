@@ -14,20 +14,22 @@
         {{ __('Follow UI language automatically') }}
     </x-options.switch>
 
-    <p class="option-description">{{ __('Fetched Tags currently support English and Japanese; other UI languages fall back to English.') }}</p>
+    <p class="option-description">
+        {{ __('Fetched Tags currently support English and Japanese; other UI languages fall back to English.') }}</p>
 
     <fieldset class="option-fieldset">
         <legend>{{ __('Fetched Tags language') }}</legend>
 
         @if ($followFetchedTagsLanguage)
-            <select id="fetched-tag-language" class="option-control option-control-select" aria-label="{{ __('Fetched Tags language') }}" disabled>
+            <select id="fetched-tag-language" class="option-control option-control-select"
+                aria-label="{{ __('Fetched Tags language') }}" disabled>
                 @foreach ($fetchedTagLanguageOptions as $value => $label)
                     <option value="{{ $value }}" @selected($followedFetchedTagLanguage === $value)>{{ $label }}</option>
                 @endforeach
             </select>
         @else
-            <select id="fetched-tag-language" class="option-control option-control-select" aria-label="{{ __('Fetched Tags language') }}"
-                wire:model.change.live="fetchedTagLanguage">
+            <select id="fetched-tag-language" class="option-control option-control-select"
+                aria-label="{{ __('Fetched Tags language') }}" wire:model.change.live="fetchedTagLanguage">
                 @foreach ($fetchedTagLanguageOptions as $value => $label)
                     <option value="{{ $value }}">{{ $label }}</option>
                 @endforeach

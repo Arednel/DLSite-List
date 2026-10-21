@@ -609,7 +609,9 @@ Application-owned UI text is stored in:
 - `lang/ja.json`
 - `lang/zh_TW.json`
 
-Operational diagnostics use the corresponding `lang/{locale}/errors.php` catalog. Traditional Chinese also supplies Laravel validation messages in `lang/zh_TW/validation.php` so invalid form submissions stay localized. The `zh_TW` application locale is emitted as `zh-TW` in HTML language attributes.
+Application error messages are translated in `lang/{locale}/errors.php`. Laravel’s built-in validation messages use `lang/{locale}/validation.php`.
+
+Blade uses `str_replace('_', '-', app()->getLocale())` because HTML language tags use hyphens (`zh-TW`), while the application's locale uses an underscore (`zh_TW`). This only formats the HTML `lang` attribute; it does not change which translations Laravel loads.
 
 `SetUiLocale` applies the application-wide saved locale for web requests. Missing/invalid locale values fall back to English.
 

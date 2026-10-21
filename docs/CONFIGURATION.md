@@ -475,7 +475,7 @@ The setting is application-wide, not per browser/user.
 `Follow UI language automatically` is enabled by default:
 - `en` UI -> `en` fetched tags
 - `ja` UI -> `jp` fetched tags
-- `zh_TW` UI -> `en` fetched tags (the current fetched-tag catalogs support English and Japanese)
+- `zh_TW` UI -> `en` fetched tags
 
 When disabled, `Fetched Tags language` selects which fetched tags are shown and available for editing:
 - `English` (`en`)
