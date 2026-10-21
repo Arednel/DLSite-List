@@ -87,7 +87,7 @@ class ImportBulkWorkJob implements ShouldQueue
 
             $this->finish(
                 BulkImportItemStatus::Failed,
-                error: $exception->getMessage() ?: 'DLSite import failed.',
+                error: $exception->getMessage() ?: 'DLsite import failed.',
             );
 
             return;

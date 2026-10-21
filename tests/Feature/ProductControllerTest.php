@@ -955,7 +955,7 @@ class ProductControllerTest extends TestCase
     {
         Process::fake([
             '*' => Process::result(
-                errorOutput: 'This work was deleted or could not be found on DLSite',
+                errorOutput: 'This work was deleted or could not be found on DLsite',
                 exitCode: 2,
             ),
         ])->preventStrayProcesses();
@@ -971,7 +971,7 @@ class ProductControllerTest extends TestCase
                 ],
             ])
             ->assertOk()
-            ->assertSee('This work was deleted or could not be found on DLSite')
+            ->assertSee('This work was deleted or could not be found on DLsite')
             ->assertSee(
                 'data-dlsite-fetch-status role="status" aria-live="polite" hidden',
                 false,
@@ -992,7 +992,7 @@ class ProductControllerTest extends TestCase
         Storage::fake('local');
         Storage::fake('public');
         $message = $invalidManifest
-            ? 'DLSite work fetch returned an invalid manifest.'
+            ? 'DLsite work fetch returned an invalid manifest.'
             : 'Temporary network failure';
         Process::fake([
             '*' => $invalidManifest
@@ -1040,15 +1040,15 @@ class ProductControllerTest extends TestCase
 
         foreach (
             [
-                'GeoBlocked DLSite work' => '地域制限によりアクセスできないDLSite作品',
-                'This work was deleted or could not be found on DLSite' => 'この作品は削除されたか、DLSiteで見つかりませんでした。',
-                'This work could not be found on DLSite' => 'この作品はDLSiteで見つかりませんでした。',
-                'DLSite work fetch did not create JSON.' => 'DLSite作品データの取得でJSONファイルが作成されませんでした。',
-                'DLSite work fetch returned invalid JSON.' => 'DLSite作品データの取得で無効なJSONが返されました。',
-                'DLSite work fetch returned an invalid manifest.' => 'DLSite作品データの取得で無効なマニフェストが返されました。',
-                'DLSite work data is missing a product id.' => 'DLSite作品データに作品IDがありません。',
-                'DLSite fetch failed.' => 'DLSite情報の取得に失敗しました。',
-                'DLSite import failed.' => 'DLSiteからのインポートに失敗しました。',
+                'GeoBlocked DLsite work' => '地域制限によりアクセスできないDLsite作品',
+                'This work was deleted or could not be found on DLsite' => 'この作品は削除されたか、DLsiteで見つかりませんでした。',
+                'This work could not be found on DLsite' => 'この作品はDLsiteで見つかりませんでした。',
+                'DLsite work fetch did not create JSON.' => 'DLsite作品データの取得でJSONファイルが作成されませんでした。',
+                'DLsite work fetch returned invalid JSON.' => 'DLsite作品データの取得で無効なJSONが返されました。',
+                'DLsite work fetch returned an invalid manifest.' => 'DLsite作品データの取得で無効なマニフェストが返されました。',
+                'DLsite work data is missing a product id.' => 'DLsite作品データに作品IDがありません。',
+                'DLsite fetch failed.' => 'DLsite情報の取得に失敗しました。',
+                'DLsite import failed.' => 'DLsiteからのインポートに失敗しました。',
             ] as $stderr => $localized
         ) {
             Process::fake([
@@ -2207,7 +2207,7 @@ class ProductControllerTest extends TestCase
             ->assertRedirect("/#{$workId}")
             ->assertSessionHas(
                 'dlsite_image_warning',
-                'DLSite情報は取得できましたが、次の画像をダウンロードできませんでした: cover.jpg, sample_1.jpg',
+                'DLsite情報は取得できましたが、次の画像をダウンロードできませんでした: cover.jpg, sample_1.jpg',
             );
 
         $product = Product::findOrFail($workId);

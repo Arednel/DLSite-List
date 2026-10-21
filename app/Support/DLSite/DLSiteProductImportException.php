@@ -22,7 +22,7 @@ class DLSiteProductImportException extends RuntimeException
         $message = trim($this->getMessage());
 
         if ($message === '') {
-            $message = 'DLSite import failed.';
+            $message = 'DLsite import failed.';
         }
 
         return ErrorMessage::display($message);

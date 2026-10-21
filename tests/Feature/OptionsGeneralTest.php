@@ -82,7 +82,7 @@ class OptionsGeneralTest extends TestCase
     {
         $this->get('/options?tab=refetch')
             ->assertOk()
-            ->assertSee('Refetch DLSite Data')
+            ->assertSee('Refetch DLsite Data')
             ->assertSee('No works available for refetch.')
             ->assertSee('Clean up refetch data')
             ->assertDontSee('Go to latest refetch')

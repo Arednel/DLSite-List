@@ -755,7 +755,7 @@ final class RefetchService
     {
         $message = trim($exception->getMessage());
 
-        return $message === '' ? 'DLSite fetch failed.' : mb_strimwidth($message, 0, 1000);
+        return $message === '' ? 'DLsite fetch failed.' : mb_strimwidth($message, 0, 1000);
     }
 
     /**

@@ -6,7 +6,7 @@ use App\Support\Localization\ErrorMessage;
 
 final readonly class DLSiteFetchResult
 {
-    public const IMAGE_FAILURE_MESSAGE = 'DLSite data was fetched, but these images could not be downloaded: :images';
+    public const IMAGE_FAILURE_MESSAGE = 'DLsite data was fetched, but these images could not be downloaded: :images';
 
     /**
      * @param  list<string>  $failedImages

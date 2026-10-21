@@ -36,7 +36,7 @@ Index state is kept in the query string so filtered/sorted views can be linked a
 - Image Viewer state
 - Add/Edit modal state
 - optional progress-status state
-- DLSite link behavior
+- DLsite link behavior
 
 Tag and contributor data is loaded only when the current visible fields need it.
 
@@ -157,7 +157,7 @@ Field Layouts configure seven independent layouts:
 
 `ProductField` defines which fields exist on each surface, their defaults, locks, and editability rules. `ProductFieldLayout` normalizes persisted layout rows and prepares render metadata.
 
-### Refetch DLSite Data
+### Refetch DLsite Data
 
 Refetch updates scraped DLsite-owned data without immediately overwriting the existing product.
 

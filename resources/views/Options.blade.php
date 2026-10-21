@@ -117,7 +117,7 @@
                         {{ __('Image Viewer') }}
                     </h2>
                     <p class="option-description">
-                        {{ __('Choose whether clicking a cover opens saved images here or visits DLSite.') }}
+                        {{ __('Choose whether clicking a cover opens saved images here or visits DLsite.') }}
                     </p>
 
                     <livewire:index-image-viewer-settings />
@@ -270,10 +270,10 @@
                 <section id="refetch-tab-panel" class="panel options-panel">
                     <h2>
                         <i class="fa-solid fa-arrows-rotate fa-fw options-section-icon" aria-hidden="true"></i>
-                        {{ __('Refetch DLSite Data') }}
+                        {{ __('Refetch DLsite Data') }}
                     </h2>
                     <p class="option-description">
-                        {{ __('Fetch up-to-date DLSite data for all or only selected works.') }}
+                        {{ __('Fetch up-to-date DLsite data for all or only selected works.') }}
                         <br>
                         {{ __('Review each metadata category before applying or ignoring changes.') }}
                     </p>

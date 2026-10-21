@@ -278,20 +278,20 @@ class ProductSurfaceLocalizationTest extends TestCase
             __('Set height limits for Notes and Tags on the Index. Content that exceeds the limit can be expanded with ‘Show all’.'),
         );
         $this->assertSame(
-            'DLSite作品データの取得でJSONファイルが作成されませんでした。',
-            __('errors.DLSite work fetch did not create JSON.'),
+            'DLsite作品データの取得でJSONファイルが作成されませんでした。',
+            __('errors.DLsite work fetch did not create JSON.'),
         );
         $this->assertSame(
-            'DLSite作品データの取得で無効なJSONが返されました。',
-            __('errors.DLSite work fetch returned invalid JSON.'),
+            'DLsite作品データの取得で無効なJSONが返されました。',
+            __('errors.DLsite work fetch returned invalid JSON.'),
         );
         $this->assertSame(
-            'DLSite作品データの取得で無効なマニフェストが返されました。',
-            __('errors.DLSite work fetch returned an invalid manifest.'),
+            'DLsite作品データの取得で無効なマニフェストが返されました。',
+            __('errors.DLsite work fetch returned an invalid manifest.'),
         );
         $this->assertSame(
-            'DLSite作品データに作品IDがありません。',
-            __('errors.DLSite work data is missing a product id.'),
+            'DLsite作品データに作品IDがありません。',
+            __('errors.DLsite work data is missing a product id.'),
         );
     }
 

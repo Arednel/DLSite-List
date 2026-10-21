@@ -8,6 +8,10 @@ All notable changes to this project are documented in this file.
 
 * Improved documentation consistency and readability.
 
+### Fixed
+
+* Fixed incorrect "DLsite" site references for consistency.
+
 ## 2.0.0 - 2026-10-20
 
 *Docker Deployment & Security Improvements*
@@ -231,7 +235,7 @@ For existing manual installations:
 
 ### Changed
 
-* Refined wording across Add/Edit, images, DLSite links, Refetch, authentication, and validation
+* Refined wording across Add/Edit, images, DLsite links, Refetch, authentication, and validation
 
 ## 1.8.3 - 2026-08-14
 
@@ -739,7 +743,7 @@ For existing manual installations:
 
 ### Fixed
 
-* Preserved the Create page Go Back target after DLSite scraper validation errors
+* Preserved the Create page Go Back target after DLsite scraper validation errors
 
 ## 1.3.7 - 2026-05-26
 

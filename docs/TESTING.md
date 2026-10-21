@@ -367,7 +367,7 @@ Covers the Livewire Index:
 - batched settings
 - field visibility/order, optional-column sort mappings (including optional Site ID display, exact filtering, and sorting), and hydrated values independent of UI wording
 - timestamps
-- DLSite links using Site ID with age-based fallback, including `announce/` selection independent of site
+- DLsite links using Site ID with age-based fallback, including `announce/` selection independent of site
 - Image Viewer
 - Add/Edit modal links
 - tags/colors/group ordering
@@ -473,7 +473,7 @@ Covers server-rendered Add/Edit modal completion fallback output and conditional
 - Covers localized Refetch status/error presentation and Import Review warnings, while stable status values remain unchanged and unknown scraper errors/warnings remain verbatim.
 
 `tests/Unit/Support/Localization/ErrorMessageTest.php`
-- Covers exact known error/warning lookup through the grouped `errors.php` catalogs, verbatim fallback for unknown diagnostics (including strings that match normal UI labels), parameter substitution that preserves external values, and current-locale rendering of known DLSite image warnings.
+- Covers exact known error/warning lookup through the grouped `errors.php` catalogs, verbatim fallback for unknown diagnostics (including strings that match normal UI labels), parameter substitution that preserves external values, and current-locale rendering of known DLsite image warnings.
 
 `tests/Unit/Support/ProductImageMessageTest.php`
 - Covers image-promotion errors at Transfer and Refetch display boundaries; combined recovery failures translate known causes and use Laravel's key fallback for unknown causes, while preserving canonical stored messages.
@@ -544,7 +544,7 @@ Covers server-rendered Add/Edit modal completion fallback output and conditional
 - Covers Index query normalization, invalid-value rejection, filter/date round trips, defaults, sort options, input keys, visibility groups, and query export.
 
 `tests/Unit/Support/ProductIndexRowBuilderTest.php`
-- Covers typed Index row construction from narrow product hydration, encoded Series/Circle/contributor filter URLs, preserved Edit return state/fragment, age-aware DLSite URLs, defaults for unhydrated optional attributes, and rejection of a missing required `work_name`.
+- Covers typed Index row construction from narrow product hydration, encoded Series/Circle/contributor filter URLs, preserved Edit return state/fragment, age-aware DLsite URLs, defaults for unhydrated optional attributes, and rejection of a missing required `work_name`.
 
 `tests/Unit/Support/RefetchDiffBuilderTest.php`
 - Covers all Refetch metadata/creator/tag categories (including independent Publisher/Brand changes), main-only Product Format comparison that ignores fetched additional formats, plus tag identity handling, cover hashing, and unavailable sample-image behavior.
@@ -558,7 +558,7 @@ Covers server-rendered Add/Edit modal completion fallback output and conditional
 `tests/Unit/Support/VisibleGenreAttachmentTest.php`
 - Covers custom/selected-language fetched visibility, language overrides, and one-row handling for shared JP/EN attachments.
 
-#### DLSite Support
+#### DLsite Support
 
 `tests/Unit/Support/DLSite/DLSitePythonRunnerTest.php`
 - Covers Laravel Process command construction, explicit output destinations, venv executable, unlimited timeout behavior, and log-retention environment.
@@ -681,7 +681,7 @@ These checks remain manual because they depend on browser behavior, JavaScript e
 - Confirm the fetching state does not disable the form while the request is in progress.
 - Return through browser history and confirm `pageshow`/back-forward-cache restoration does not leave a stale fetching state visible.
 - Confirm validation or scraper errors show the normal server-rendered error state instead of leaving the fetching state active.
-- Confirm Custom Quick Add never renders or activates the DLSite fetching-status behavior.
+- Confirm Custom Quick Add never renders or activates the DLsite fetching-status behavior.
 
 ### Mobile Options Navigation
 
