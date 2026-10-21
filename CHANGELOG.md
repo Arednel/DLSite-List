@@ -7,6 +7,7 @@ All notable changes to this project are documented in this file.
 ### Added
 
 * Added initial Traditional Chinese support for the UI, errors, and validation messages.
+* Added Japanese translations for Laravel validation messages.
 
 ### Changed
 

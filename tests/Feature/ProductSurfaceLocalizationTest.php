@@ -197,7 +197,7 @@ class ProductSurfaceLocalizationTest extends TestCase
         Storage::disk('public')->assertExists("Works/{$workId}/cover.png");
     }
 
-    public function test_japanese_custom_validation_is_localized_while_framework_validation_stays_english(): void
+    public function test_japanese_custom_and_framework_validation_are_localized(): void
     {
         Option::setUiLanguage(UiLanguage::Japanese);
 
@@ -206,7 +206,7 @@ class ProductSurfaceLocalizationTest extends TestCase
             ->assertRedirect(route('products.create.custom'))
             ->assertSessionHasErrors([
                 'id' => '作品コードまたは作品コードを含むリンクを入力してください。',
-                'work_name' => 'The work name field is required.',
+                'work_name' => '日本語タイトルは必須項目です。',
             ]);
 
         $this->from(route('products.create'))
