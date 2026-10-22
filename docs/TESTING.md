@@ -178,7 +178,7 @@ Covers independent persisted ordering settings for tag and series autocomplete.
 Covers the full Refetch workflow:
 - all/selected runs
 - run creation and batch/result rows
-- staged fetch data
+- staged fetch data and refusal of stored product ids that are not RJ/BJ/VJ codes
 - image-check choice
 - review categories
 - apply/ignore/reject behavior, including Product Format, announcement-date, and Site ID Overwrite/Ignore
@@ -571,10 +571,10 @@ Covers server-rendered Add/Edit modal completion fallback output and conditional
 - Covers Laravel Process command construction, explicit output destinations, venv executable, unlimited timeout behavior, and log-retention environment.
 
 `tests/Unit/Support/DLSite/DLSiteWorkDataTest.php`
-- Covers shared scraped metadata extraction for titles/descriptions/creators/maker data (Circle, Publisher, and Brand remain independent), Product Format normalization, announcement-date and site-id locale fallback, product ids, and missing-id errors.
+- Covers shared scraped metadata extraction for titles/descriptions/creators/maker data (Circle, Publisher, and Brand remain independent), Product Format normalization, announcement-date and site-id locale fallback, product ids, and missing or invalid (non-RJ/BJ/VJ) id errors.
 
 `tests/Unit/Support/DLSite/DLSiteWorkFetcherTest.php`
-- Covers the PHP-owned five-attempt retry loop, manifest/JSON validation, partial results, immediate success, and rejection of stale JSON fallback.
+- Covers the PHP-owned five-attempt retry loop, manifest/JSON validation, partial results, immediate success, rejection of stale JSON fallback, and rejection of invalid upstream product ids.
 
 #### View Components
 

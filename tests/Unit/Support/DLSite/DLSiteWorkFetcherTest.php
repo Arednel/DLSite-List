@@ -159,6 +159,31 @@ class DLSiteWorkFetcherTest extends TestCase
         app(DLSiteWorkFetcher::class)->fetch('RJ123456', $jsonPath);
     }
 
+    public function test_it_rejects_upstream_product_ids_that_are_not_work_codes(): void
+    {
+        Storage::fake('local');
+        $jsonPath = Storage::disk('local')->path('Works/RJ123456.json');
+        Storage::disk('local')->put('Works/RJ123456.json', json_encode([
+            'japanese' => ['product_id' => '../../../../public/escape'],
+            'english' => [],
+        ], JSON_THROW_ON_ERROR));
+        Process::fake([
+            '*' => $this->manifest([]),
+        ])->preventStrayProcesses();
+
+        try {
+            app(DLSiteWorkFetcher::class)->fetch('RJ123456', $jsonPath);
+            $this->fail('Expected an invalid product id exception.');
+        } catch (RuntimeException $exception) {
+            $this->assertSame(
+                'DLsite work data has an invalid product id.',
+                $exception->getMessage(),
+            );
+        }
+
+        Process::assertRanTimes(fn(): bool => true, 1);
+    }
+
     /**
      * @param  list<string>  $failedImages
      */

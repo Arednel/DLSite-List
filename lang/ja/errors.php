@@ -115,6 +115,7 @@ return [
     'DLsite work fetch returned invalid JSON.' => 'DLsite作品データの取得で無効なJSONが返されました。',
     'DLsite work fetch returned an invalid manifest.' => 'DLsite作品データの取得で無効なマニフェストが返されました。',
     'DLsite work data is missing a product id.' => 'DLsite作品データに作品IDがありません。',
+    'DLsite work data has an invalid product id.' => 'DLsite作品データの作品IDが無効です。',
     'DLsite fetch failed.' => 'DLsite情報の取得に失敗しました。',
     'DLsite import failed.' => 'DLsiteからのインポートに失敗しました。',
     'Already in library.' => 'すでにライブラリにあります。',
