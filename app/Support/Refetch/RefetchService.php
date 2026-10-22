@@ -53,6 +53,8 @@ final class RefetchService
 
     public const QUEUE_FAILURE_MESSAGE = 'Refetch could not finish this work because its background job failed.';
 
+    public const ACTIVE_RUN_MESSAGE = 'Refetch cannot start while another refetch run is still fetching works.';
+
     public function __construct(
         private readonly DLSiteWorkFetcher $fetcher,
         private readonly RefetchDiffBuilder $diffBuilder,
@@ -78,6 +80,8 @@ final class RefetchService
     public function startRun(array $productIds, bool $checkImages): RefetchRun
     {
         return $this->mutationLock->run(fn(): RefetchRun => DB::transaction(function () use ($productIds, $checkImages): RefetchRun {
+            $this->assertNoActiveRun();
+
             $run = $this->createPendingRun($productIds, $checkImages);
             $batch = Bus::batch(
                 collect($productIds)
@@ -92,6 +96,21 @@ final class RefetchService
 
             return $run;
         }));
+    }
+
+    /**
+     * One active run at a time keeps the queued fetch backlog bounded by the library size.
+     */
+    private function assertNoActiveRun(): void
+    {
+        $active = RefetchRun::query()
+            ->whereIn('status', [RefetchRun::STATUS_RUNNING, RefetchRun::STATUS_CANCELLING])
+            ->lockForUpdate()
+            ->exists();
+
+        if ($active) {
+            throw new RefetchCapacityException(self::ACTIVE_RUN_MESSAGE);
+        }
     }
 
     /**
