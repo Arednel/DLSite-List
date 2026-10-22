@@ -197,7 +197,7 @@ class DLSiteWorkDataTest extends TestCase
             'parent directory traversal' => ['../../../../public/storage'],
             'code followed by traversal' => ['RJ123456/../../escape'],
             'absolute path' => ['/tmp/RJ123456'],
-            'backslash path' => ['RJ123456\..\escape'],
+            'backslash path' => ['RJ123456\\..\\escape'],
             'unknown prefix' => ['XX123456'],
             'code without digits' => ['RJ'],
         ];

@@ -33,7 +33,7 @@ final class ReturnUrl
 
     public static function isSafe(string $url, Request $request): bool
     {
-        if ($url === '' || preg_match('/[\x00-\x20\x7F\\]/', $url) === 1) {
+        if ($url === '' || preg_match('/[\x00-\x20\x7F\\\\]/', $url) === 1) {
             return false;
         }
 
