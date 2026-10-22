@@ -7,6 +7,7 @@ import re
 import sys
 from enum import Enum
 from pathlib import Path
+from urllib.parse import urljoin, urlsplit
 
 import requests
 from dlsite_async import DlsiteAPI
@@ -26,6 +27,10 @@ MIRRORED_PRODUCT_FORMAT_OPTIONS = {
     WorkOption.MUSIC: WorkType.MUSIC,
     WorkOption.VIDEO: WorkType.VIDEO,
 }
+
+# Image downloads only follow DLsite-owned hosts.
+ALLOWED_IMAGE_HOST_SUFFIXES = ("dlsite.jp", "dlsite.com")
+MAX_IMAGE_REDIRECTS = 3
 
 
 def parse_arguments(argv=None):
@@ -110,12 +115,76 @@ async def fetch_work_data(work_id):
     return japanese, english
 
 
-def download_image(url, save_path):
-    # Fix protocol-relative URLs
+def normalize_image_url(url):
+    if not isinstance(url, str):
+        return None
+
+    url = url.strip()
+
+    # Fix protocol-relative and site-relative URLs
     if url.startswith("//"):
         url = "https:" + url
     elif url.startswith("/"):
         url = "https://www.dlsite.com" + url
+
+    return url if is_allowed_image_url(url) else None
+
+
+def is_allowed_image_url(url):
+    try:
+        parts = urlsplit(url)
+        port = parts.port
+    except ValueError:
+        return False
+
+    host = (parts.hostname or "").lower().rstrip(".")
+
+    if parts.scheme not in ("https", "http") or port is not None:
+        return False
+    if parts.username is not None or parts.password is not None:
+        return False
+
+    return any(
+        host == suffix or host.endswith("." + suffix)
+        for suffix in ALLOWED_IMAGE_HOST_SUFFIXES
+    )
+
+
+def open_image_response(url, headers):
+    current_url = url
+
+    for _ in range(MAX_IMAGE_REDIRECTS + 1):
+        if not is_allowed_image_url(current_url):
+            raise IOError(f"Image URL is not on an allowed DLsite host: {current_url}")
+
+        response = requests.get(
+            current_url,
+            stream=True,
+            timeout=15,
+            headers=headers,
+            allow_redirects=False,
+        )
+
+        if not response.is_redirect:
+            return response
+
+        location = response.headers.get("Location")
+        response.close()
+
+        if not location:
+            raise IOError("Image redirect has no location")
+
+        current_url = urljoin(current_url, location)
+
+    raise IOError("Too many image redirects")
+
+
+def download_image(url, save_path):
+    url = normalize_image_url(url)
+
+    if url is None:
+        logging.warning("Download skipped for an image URL outside DLsite hosts")
+        return False
 
     headers = {
         "User-Agent": (
@@ -129,13 +198,13 @@ def download_image(url, save_path):
 
     try:
         logging.debug(f"Downloading {url}")
-        response = requests.get(url, stream=True, timeout=15, headers=headers)
-        response.raise_for_status()
+        with open_image_response(url, headers) as response:
+            response.raise_for_status()
 
-        save_path.parent.mkdir(parents=True, exist_ok=True)
-        with open(temporary_path, "wb") as file:
-            for chunk in response.iter_content(8192):
-                file.write(chunk)
+            save_path.parent.mkdir(parents=True, exist_ok=True)
+            with open(temporary_path, "wb") as file:
+                for chunk in response.iter_content(8192):
+                    file.write(chunk)
 
         if os.path.getsize(temporary_path) == 0:
             raise IOError("Downloaded file is empty")
