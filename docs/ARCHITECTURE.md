@@ -89,6 +89,8 @@ If the item or run is no longer eligible for successful completion, product crea
 
 Bulk Import history cleanup deletes all persisted run/item history and is unavailable while a run is active.
 
+At most three Bulk Import runs can be queued or running at once, and at most 1,000 works can wait for import across those runs.
+
 ### Edit and Delete
 
 `GET /edit/{product}` renders Edit Details.
@@ -176,7 +178,7 @@ Refetch has eighteen ordered review categories defined by `RefetchCategory`.
 
 Cover and sample-image changes are independent. Refetch uses the shared `ProductImagePromotion` boundary so interrupted image replacement can be recovered safely.
 
-Refetch creation, cleanup, and review application use the shared `LibraryMutationLock`, which also serializes Import apply and work-image cleanup.
+Refetch creation, cleanup, and review application use the shared `LibraryMutationLock`, which also serializes Import apply and work-image cleanup. A new run cannot start while another run is still running or cancelling.
 
 Cancellation is cooperative: already-running work may finish while queued jobs observe the cancelled run state.
 
