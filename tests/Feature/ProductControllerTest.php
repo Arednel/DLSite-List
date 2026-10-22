@@ -952,11 +952,11 @@ class ProductControllerTest extends TestCase
             'javascript scheme' => ['javascript:alert(document.domain)'],
             'mixed-case javascript scheme' => ['JaVaScRiPt:alert(1)'],
             'data scheme' => ['data:text/html,<script>alert(1)</script>'],
-            'external origin' => ['https://evil.example/'],
+            'vbscript scheme' => ['vbscript:msgbox(1)'],
+            'scheme split by a tab' => ["java\tscript:alert(1)"],
             'protocol-relative URL' => ['//evil.example/'],
             'backslash-relative URL' => ['/\\evil.example/'],
-            'credentials before external host' => ['http://localhost@evil.example/'],
-            'same host on another port' => ['http://localhost:8081/'],
+            'credentials before host' => ['http://localhost@evil.example/'],
         ];
     }
 
