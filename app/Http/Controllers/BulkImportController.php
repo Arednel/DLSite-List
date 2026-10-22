@@ -11,10 +11,10 @@ use App\Support\DLSite\DLSiteProductImportInput;
 use App\Support\Localization\ErrorMessage;
 use App\Support\ProductFieldLayout;
 use App\Support\ReturnTarget;
+use App\Support\ReturnUrl;
 use Illuminate\Contracts\Cache\LockTimeoutException;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\URL;
 use Illuminate\Validation\ValidationException;
 use Illuminate\View\View;
 use RuntimeException;
@@ -28,14 +28,7 @@ class BulkImportController extends Controller
         }
 
         $returnTarget = ReturnTarget::fromRequest($request);
-        $returnUrl = $request->has('return_url')
-            ? $request->input('return_url')
-            : $request->old('return_url');
-        $returnUrl = is_scalar($returnUrl) ? trim((string) $returnUrl) : '';
-
-        if ($returnUrl === '') {
-            $returnUrl = URL::previous(route('index'));
-        }
+        $returnUrl = ReturnUrl::fromRequest($request);
 
         $returnParameters = ['return_url' => $returnUrl];
 
