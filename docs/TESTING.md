@@ -616,6 +616,13 @@ Covers Python scraper Product Format handling:
 - stable DLsite enum-code serialization
 - age-category serialization after the `dlsite-async` upgrade
 
+Also covers the `product.json` fallback for works whose page omits metadata (e.g. AI-generated `aix` works):
+- detection of empty circle/brand, genre, and sample image fields
+- circle (`RG`) versus brand maker mapping
+- filling only empty fields while keeping work-page values
+- no `product.json` request when the work page is complete
+- unexpected or empty `product.json` payloads leave the work unchanged
+
 #### `python/tests/test_weekly_logging.py`
 
 Covers Python weekly logging parity with Laravel:
