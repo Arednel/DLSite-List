@@ -120,6 +120,30 @@ class FullRefetchTest extends TestCase
         Bus::assertNothingBatched();
     }
 
+    public function test_start_is_rejected_while_another_refetch_run_is_fetching(): void
+    {
+        Bus::fake();
+        $product = Product::factory()->create();
+        $active = app(RefetchService::class)->createRun([$product->id], false);
+
+        $this->from(route('options.index', ['tab' => 'refetch']))
+            ->post(route('options.refetch.start'), ['scope' => 'all'])
+            ->assertRedirect(route('options.index', ['tab' => 'refetch']))
+            ->assertSessionHasErrors([
+                'product_ids' => RefetchService::ACTIVE_RUN_MESSAGE,
+            ]);
+
+        $this->assertDatabaseCount('refetch_runs', 1);
+        Bus::assertNothingBatched();
+
+        $active->forceFill(['status' => RefetchRun::STATUS_REVIEW])->save();
+
+        $this->post(route('options.refetch.start'), ['scope' => 'all'])
+            ->assertRedirect();
+
+        $this->assertDatabaseCount('refetch_runs', 2);
+    }
+
     public function test_starting_all_requires_an_existing_work(): void
     {
         Bus::fake();

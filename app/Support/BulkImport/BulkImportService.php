@@ -19,6 +19,14 @@ final class BulkImportService
 {
     public const BUSY_MESSAGE = 'Bulk Import cannot start while another Bulk Import action is in progress.';
 
+    public const CAPACITY_MESSAGE = 'Bulk Import cannot start because too many works are already waiting to import. Wait for the current Bulk Imports to finish.';
+
+    // Queued or running Bulk Import runs allowed at the same time.
+    public const MAX_ACTIVE_RUNS = 3;
+
+    // Works allowed to wait for import across all active runs, including the run being started.
+    public const MAX_QUEUED_WORKS = 1000;
+
     /**
      * @param list<string> $productIds
      */
@@ -29,6 +37,8 @@ final class BulkImportService
         try {
             return Cache::lock(BulkImportRun::LIFECYCLE_LOCK, BulkImportRun::LIFECYCLE_LOCK_SECONDS)
                 ->block(0, function () use ($productIds, $input): BulkImportRun {
+                    $this->assertCapacity(count($productIds));
+
                     $run = DB::transaction(function () use ($productIds, $input): BulkImportRun {
                         $run = BulkImportRun::create([
                             'status' => BulkImportRunStatus::Queued,
@@ -75,6 +85,26 @@ final class BulkImportService
                 });
         } catch (LockTimeoutException $exception) {
             throw new RuntimeException(self::BUSY_MESSAGE, previous: $exception);
+        }
+    }
+
+    private function assertCapacity(int $newWorks): void
+    {
+        $activeRunIds = BulkImportRun::query()
+            ->whereIn('status', [BulkImportRunStatus::Queued, BulkImportRunStatus::Running])
+            ->pluck('id');
+
+        if ($activeRunIds->count() >= self::MAX_ACTIVE_RUNS) {
+            throw new BulkImportCapacityException(self::CAPACITY_MESSAGE);
+        }
+
+        $queuedWorks = BulkImportItem::query()
+            ->whereIn('bulk_import_run_id', $activeRunIds)
+            ->whereIn('status', [BulkImportItemStatus::Pending, BulkImportItemStatus::Importing])
+            ->count();
+
+        if ($queuedWorks + $newWorks > self::MAX_QUEUED_WORKS) {
+            throw new BulkImportCapacityException(self::CAPACITY_MESSAGE);
         }
     }
 }
