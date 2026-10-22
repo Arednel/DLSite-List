@@ -18,26 +18,33 @@ class SeriesAutocompleteSearch
      */
     public function search(string $query, AutocompleteOrder $order): Collection
     {
+        $useFirstWordRank = $order === AutocompleteOrder::FirstWord;
+
         return Product::query()
-            ->select(['series'])
+            ->select('series')
+            ->selectRaw('COUNT(*) as series_count')
             ->whereNotNull('series')
             ->where('series', '<>', '')
             ->where(fn(Builder $builder) => $this->matcher->whereWordPrefixMatch($builder, 'series', $query))
+            ->groupBy('series')
+            ->when($useFirstWordRank, fn(Builder $builder) => $this->matcher->orderByMatchRank($builder, 'series', $query))
+            ->orderByDesc('series_count')
+            ->orderByRaw('LOWER(series)')
+            ->limit(self::RESULT_LIMIT)
+            ->toBase()
             ->get()
-            ->countBy('series')
-            ->map(fn(int $count, string $series): array => [
-                'value' => $series,
-                'label' => $series,
-                'count' => $count,
+            ->map(fn(object $row): array => [
+                'value' => (string) $row->series,
+                'label' => (string) $row->series,
+                'count' => (int) $row->series_count,
                 'type' => 'series',
             ])
             ->sort(fn(array $left, array $right): int => $this->matcher->compareSuggestions(
                 $left,
                 $right,
                 $query,
-                $order === AutocompleteOrder::FirstWord,
+                $useFirstWordRank,
             ))
-            ->take(self::RESULT_LIMIT)
             ->values();
     }
 }
