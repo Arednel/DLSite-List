@@ -755,6 +755,53 @@ class LibraryTransferImportTest extends TestCase
         $this->archive()->inspect($path, true);
     }
 
+    public function test_import_part_expanded_size_budget_rejects_oversized_parts_without_affecting_export(): void
+    {
+        config(['transfers.max_import_part_expanded_bytes' => 1]);
+        $export = $this->exported(['options']);
+        $data = $export->parts()->firstOrFail();
+        $this->assertNotNull($data->bytes);
+        $run = $this->service()->startImport();
+
+        try {
+            $this->service()->upload($run, new UploadedFile(Storage::disk('local')->path($data->path), $data->filename, null, null, true));
+            $this->fail('Parts above the expanded-size budget must be rejected.');
+        } catch (InvalidArchive $exception) {
+            $this->assertStringContainsString('import safety limit', $exception->getMessage());
+        }
+        $this->assertSame(0, $run->parts()->count());
+    }
+
+    public function test_import_run_expanded_size_budget_rejects_parts_beyond_the_run_total(): void
+    {
+        config(['transfers.fragment_bytes' => 600]);
+        Product::factory()->count(3)->create();
+        $export = $this->service()->export(['works'], 'all', []);
+        $export->update(['settings' => [...$export->settings, 'part_bytes' => 8500]]);
+        $this->planExport($export);
+        foreach ($export->parts()->get() as $part) {
+            $this->archive()->build($part);
+        }
+        $parts = $export->parts()->orderByDesc('id')->get();
+        $this->assertGreaterThan(1, $parts->count());
+        $run = $this->service()->startImport();
+        $first = $parts->shift();
+        $upload = $this->service()->upload($run->fresh(), new UploadedFile(Storage::disk('local')->path($first->path), $first->filename, null, null, true));
+        $this->service()->inspect($run->fresh(), $upload->id);
+        $accepted = (int) $run->entries()->sum('bytes');
+        $this->assertGreaterThan(0, $accepted);
+
+        config(['transfers.max_import_run_expanded_bytes' => $accepted]);
+        $next = $parts->shift();
+        try {
+            $this->service()->upload($run->fresh(), new UploadedFile(Storage::disk('local')->path($next->path), $next->filename, null, null, true));
+            $this->fail('Parts beyond the run expanded-size budget must be rejected.');
+        } catch (InvalidArchive $exception) {
+            $this->assertStringContainsString('expanded-size safety limit', $exception->getMessage());
+        }
+        $this->assertSame(1, $run->parts()->count());
+    }
+
     public function test_missing_data_cannot_be_bypassed_and_later_reverse_order_uploads_complete(): void
     {
         config(['transfers.fragment_bytes' => 600]);
