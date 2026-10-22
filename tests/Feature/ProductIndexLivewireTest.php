@@ -6,6 +6,7 @@ use App\Enums\FetchedTagLanguage;
 use App\Enums\ProductContributorRole;
 use App\Enums\ProductField;
 use App\Enums\ProductIndexSortField;
+use App\Enums\ProductIndexTagMatch;
 use App\Enums\UiLanguage;
 use App\Livewire\ProductIndex;
 use App\Models\Genre;
@@ -2641,6 +2642,43 @@ class ProductIndexLivewireTest extends TestCase
             ->assertSet('sort_first_direction', 'desc')
             ->assertSeeInOrder(['SORT_HIGH', 'SORT_LOW'])
             ->assertDontSee('value="' . ProductIndexSortField::Score->value . '"', false);
+    }
+
+    public function test_index_tag_filters_are_capped_to_bound_query_fan_out(): void
+    {
+        $tags = collect(range(1, Product::MAX_TAG_FILTERS + 30))
+            ->map(fn(int $index): string => "Fan Out Tag {$index}")
+            ->implode(', ');
+
+        DB::flushQueryLog();
+        DB::enableQueryLog();
+        Livewire::withQueryParams(['tags' => $tags, 'tag_match' => 'all'])
+            ->test(ProductIndex::class)
+            ->assertOk();
+        $lookedUpTags = collect(DB::getQueryLog())
+            ->filter(fn(array $entry): bool => str_contains($entry['query'], 'from `genres` where `title` like'))
+            ->map(fn(array $entry): string => (string) ($entry['bindings'][0] ?? ''))
+            ->unique()
+            ->count();
+        DB::disableQueryLog();
+
+        $this->assertSame(Product::MAX_TAG_FILTERS, $lookedUpTags);
+    }
+
+    public function test_tag_filter_scope_uses_at_most_the_configured_number_of_tags(): void
+    {
+        $tags = array_map(fn(int $index): string => "Scope Tag {$index}", range(1, Product::MAX_TAG_FILTERS + 5));
+
+        DB::flushQueryLog();
+        DB::enableQueryLog();
+        Product::query()->filterTags($tags, ProductIndexTagMatch::All)->get();
+        $genreLookups = collect(DB::getQueryLog())
+            ->pluck('query')
+            ->filter(fn(string $query): bool => str_contains($query, 'from `genres` where `title` like'))
+            ->count();
+        DB::disableQueryLog();
+
+        $this->assertSame(Product::MAX_TAG_FILTERS, $genreLookups);
     }
 
     private function assertIndexUsesFetchedLanguage(
