@@ -5,6 +5,7 @@ import logging
 import os
 import re
 import sys
+import time
 from enum import Enum
 from pathlib import Path
 
@@ -26,6 +27,13 @@ MIRRORED_PRODUCT_FORMAT_OPTIONS = {
     WorkOption.MUSIC: WorkType.MUSIC,
     WorkOption.VIDEO: WorkType.VIDEO,
 }
+
+# Image downloads stay within fixed resource budgets.
+MAX_IMAGE_BYTES = 20 * 1024 * 1024
+MAX_IMAGE_DOWNLOAD_SECONDS = 60
+MAX_IMAGE_DIMENSION = 20000
+MAX_IMAGE_PIXELS = 50_000_000
+MAX_SAMPLE_IMAGES = 50
 
 
 def parse_arguments(argv=None):
@@ -110,6 +118,25 @@ async def fetch_work_data(work_id):
     return japanese, english
 
 
+def verify_image_file(path):
+    with Image.open(path) as image:
+        width, height = image.size
+
+        if (
+            width <= 0
+            or height <= 0
+            or width > MAX_IMAGE_DIMENSION
+            or height > MAX_IMAGE_DIMENSION
+            or width * height > MAX_IMAGE_PIXELS
+        ):
+            raise IOError(f"Image dimensions exceed the safety limit: {width}x{height}")
+
+        image.verify()
+
+    with Image.open(path) as image:
+        image.load()
+
+
 def download_image(url, save_path):
     # Fix protocol-relative URLs
     if url.startswith("//"):
@@ -129,24 +156,35 @@ def download_image(url, save_path):
 
     try:
         logging.debug(f"Downloading {url}")
-        response = requests.get(url, stream=True, timeout=15, headers=headers)
-        response.raise_for_status()
+        deadline = time.monotonic() + MAX_IMAGE_DOWNLOAD_SECONDS
 
-        save_path.parent.mkdir(parents=True, exist_ok=True)
-        with open(temporary_path, "wb") as file:
-            for chunk in response.iter_content(8192):
-                file.write(chunk)
+        with requests.get(url, stream=True, timeout=15, headers=headers) as response:
+            response.raise_for_status()
+
+            declared_length = response.headers.get("Content-Length", "")
+            if declared_length.isdigit() and int(declared_length) > MAX_IMAGE_BYTES:
+                raise IOError("Image exceeds the download size limit")
+
+            save_path.parent.mkdir(parents=True, exist_ok=True)
+            written = 0
+            with open(temporary_path, "wb") as file:
+                for chunk in response.iter_content(65536):
+                    written += len(chunk)
+
+                    if written > MAX_IMAGE_BYTES:
+                        raise IOError("Image exceeds the download size limit")
+                    if time.monotonic() > deadline:
+                        raise IOError("Image download exceeded the time limit")
+
+                    file.write(chunk)
 
         if os.path.getsize(temporary_path) == 0:
             raise IOError("Downloaded file is empty")
 
         try:
-            with Image.open(temporary_path) as image:
-                image.verify()
-            with Image.open(temporary_path) as image:
-                image.load()
+            verify_image_file(temporary_path)
         except Exception as error:
-            raise IOError(f"Corrupted or incomplete image: {error}")
+            raise IOError(f"Corrupted, incomplete or oversized image: {error}")
 
         os.replace(temporary_path, save_path)
         logging.info(f"Downloaded {url} → {save_path}")
@@ -178,6 +216,18 @@ def map_known_error(error_message: str, work_id: str):
     return None
 
 
+def limit_sample_images(work):
+    sample_images = work.get("sample_images")
+
+    if isinstance(sample_images, list) and len(sample_images) > MAX_SAMPLE_IMAGES:
+        logging.warning(
+            f"Keeping the first {MAX_SAMPLE_IMAGES} of {len(sample_images)} sample images"
+        )
+        work["sample_images"] = sample_images[:MAX_SAMPLE_IMAGES]
+
+    return work
+
+
 def fetch_images(work, image_output):
     downloaded_images = []
     failed_images = []
@@ -186,7 +236,9 @@ def fetch_images(work, image_output):
         ("cover.jpg", work.get("work_image")),
         *[
             (f"sample_{index}.jpg", url)
-            for index, url in enumerate(work.get("sample_images") or [], start=1)
+            for index, url in enumerate(
+                (work.get("sample_images") or [])[:MAX_SAMPLE_IMAGES], start=1
+            )
         ],
     ]
 
@@ -201,8 +253,8 @@ def fetch_images(work, image_output):
 
 def run(arguments):
     work_japanese, work_english = asyncio.run(fetch_work_data(arguments.work_id))
-    japanese = to_serializable(work_japanese)
-    english = to_serializable(work_english)
+    japanese = limit_sample_images(to_serializable(work_japanese))
+    english = limit_sample_images(to_serializable(work_english))
     japanese["product_format"] = product_format_codes(work_japanese)
     english["product_format"] = product_format_codes(work_english)
     combined = {"japanese": japanese, "english": english}
