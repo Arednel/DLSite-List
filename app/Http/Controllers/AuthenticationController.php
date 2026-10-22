@@ -192,10 +192,28 @@ class AuthenticationController extends Controller
             'password' => ['required', 'confirmed', Password::defaults()],
         ]);
 
-        DB::transaction(function () use ($validated): void {
-            User::query()->sole()->replacePassword($validated['password']);
+        $reset = DB::transaction(function () use ($validated): bool {
+            // Lock the administrator row so concurrent submissions are serialized,
+            // then re-check the single-use marker with a locking read.
+            $user = User::query()->lockForUpdate()->sole();
+            $consumed = Option::withLockedValue(
+                Option::ADMIN_PASSWORD_RESET_CONSUMED,
+                fn(): bool => Option::adminPasswordResetConsumed(),
+            );
+
+            if ($consumed) {
+                return false;
+            }
+
+            $user->replacePassword($validated['password']);
             Option::setAdminPasswordResetConsumed(true);
+
+            return true;
         });
+
+        if (! $reset) {
+            return redirect()->route('admin.recovery');
+        }
 
         Auth::guard('web')->logout();
         $request->session()->invalidate();
