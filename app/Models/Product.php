@@ -19,6 +19,9 @@ class Product extends Model
 {
     use HasFactory;
 
+    // Upper bound for Index tag filters so one request cannot fan out into an unbounded number of queries.
+    public const MAX_TAG_FILTERS = 20;
+
     public $incrementing = false;
 
     protected $keyType = 'string';
@@ -370,6 +373,7 @@ class Product extends Model
         $normalizedTags = collect($tags)
             ->map(fn(string $tag) => mb_strtolower($tag))
             ->unique()
+            ->take(self::MAX_TAG_FILTERS)
             ->values()
             ->all();
 
