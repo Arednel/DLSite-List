@@ -4,6 +4,7 @@ namespace Tests\Unit\Support\DLSite;
 
 use App\Enums\ProductContributorRole;
 use App\Support\DLSite\DLSiteWorkData;
+use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 
 class DLSiteWorkDataTest extends TestCase
@@ -177,5 +178,35 @@ class DLSiteWorkDataTest extends TestCase
                 'work_name' => 'Missing Product Id',
             ],
         ]);
+    }
+
+    #[DataProvider('invalidProductIds')]
+    public function test_it_rejects_product_ids_that_are_not_dlsite_work_codes(string $productId): void
+    {
+        $this->expectException(\InvalidArgumentException::class);
+        $this->expectExceptionMessage('DLsite work data has an invalid product id.');
+
+        DLSiteWorkData::fromArray([
+            'japanese' => ['product_id' => $productId],
+        ], 'RJ123456');
+    }
+
+    public static function invalidProductIds(): array
+    {
+        return [
+            'parent directory traversal' => ['../../../../public/storage'],
+            'code followed by traversal' => ['RJ123456/../../escape'],
+            'absolute path' => ['/tmp/RJ123456'],
+            'backslash path' => ['RJ123456\..\escape'],
+            'unknown prefix' => ['XX123456'],
+            'code without digits' => ['RJ'],
+        ];
+    }
+
+    public function test_it_accepts_lowercase_legacy_product_ids(): void
+    {
+        $this->assertSame('rj123456', DLSiteWorkData::fromArray([
+            'japanese' => ['product_id' => 'rj123456'],
+        ])->productId);
     }
 }

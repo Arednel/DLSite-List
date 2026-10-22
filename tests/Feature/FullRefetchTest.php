@@ -391,6 +391,23 @@ class FullRefetchTest extends TestCase
         );
     }
 
+    public function test_fetch_refuses_stored_product_ids_that_are_not_work_codes(): void
+    {
+        Storage::fake('local');
+        Storage::fake('public');
+        Process::fake()->preventStrayProcesses();
+        $product = Product::factory()->create(['id' => '../../escape']);
+        $run = app(RefetchService::class)->createRun([$product->id], true);
+        $result = $run->results()->firstOrFail();
+
+        app(RefetchService::class)->fetchAndRecordResult($result);
+
+        $result->refresh();
+        $this->assertSame(RefetchWorkResult::STATUS_FAILED, $result->status);
+        $this->assertSame('DLsite work data has an invalid product id.', $result->error);
+        Process::assertNothingRan();
+    }
+
     public function test_image_failures_keep_metadata_reviewable_and_disable_only_failed_image_categories(): void
     {
         Storage::fake('local');

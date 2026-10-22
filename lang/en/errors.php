@@ -115,6 +115,7 @@ return [
     'DLsite work fetch returned invalid JSON.' => 'DLsite work fetch returned invalid JSON.',
     'DLsite work fetch returned an invalid manifest.' => 'DLsite work fetch returned an invalid manifest.',
     'DLsite work data is missing a product id.' => 'DLsite work data is missing a product id.',
+    'DLsite work data has an invalid product id.' => 'DLsite work data has an invalid product id.',
     'DLsite fetch failed.' => 'DLsite fetch failed.',
     'DLsite import failed.' => 'DLsite import failed.',
     'Already in library.' => 'Already in library.',

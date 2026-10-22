@@ -10,6 +10,7 @@ use App\Models\Genre;
 use App\Models\Product;
 use App\Models\RefetchRun;
 use App\Models\RefetchWorkResult;
+use App\Support\DLSite\DLSiteWorkData;
 use App\Support\DLSite\DLSiteWorkFetcher;
 use App\Support\LibraryMutationLock;
 use App\Support\ProductContributorSync;
@@ -131,6 +132,12 @@ final class RefetchService
 
         if (! $product) {
             $this->recordFailedResult($result, 'This work was removed from your library before it could be refetched.');
+
+            return;
+        }
+
+        if (! DLSiteWorkData::isValidProductId((string) $result->product_id)) {
+            $this->recordFailedResult($result, 'DLsite work data has an invalid product id.');
 
             return;
         }
@@ -716,6 +723,10 @@ final class RefetchService
 
     private function stagedWorkPath(RefetchRun $run, string $productId): string
     {
+        if (! DLSiteWorkData::isValidProductId($productId)) {
+            throw new RuntimeException('DLsite work data has an invalid product id.');
+        }
+
         return "Refetch/{$run->getKey()}/Works/{$productId}";
     }
 

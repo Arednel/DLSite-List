@@ -116,6 +116,7 @@ return [
     'DLsite work fetch returned invalid JSON.' => 'DLsite 作品擷取作業傳回無效的 JSON。',
     'DLsite work fetch returned an invalid manifest.' => 'DLsite 作品擷取作業傳回無效的資訊清單。',
     'DLsite work data is missing a product id.' => 'DLsite 作品資料缺少作品 ID。',
+    'DLsite work data has an invalid product id.' => 'DLsite 作品資料的作品 ID 無效。',
     'DLsite fetch failed.' => 'DLsite 資料擷取失敗。',
     'DLsite import failed.' => 'DLsite 匯入失敗。',
     'Already in library.' => '已在收藏庫中。',

@@ -39,6 +39,11 @@ final readonly class DLSiteWorkData
             throw new \InvalidArgumentException('DLsite work data is missing a product id.');
         }
 
+        // The product id becomes the primary key and is later used in storage paths.
+        if (! self::isValidProductId($productId)) {
+            throw new \InvalidArgumentException('DLsite work data has an invalid product id.');
+        }
+
         $workName = self::text($japanese['work_name'] ?? null);
         $englishWorkName = self::text($english['work_name'] ?? null);
         $description = self::text($japanese['description'] ?? null);
@@ -65,6 +70,12 @@ final readonly class DLSiteWorkData
             sampleImages: self::list($japanese['sample_images'] ?? []),
             contributorsByRole: self::contributorsByRole($japanese, $english),
         );
+    }
+
+    public static function isValidProductId(string $productId): bool
+    {
+        return strlen($productId) <= 191
+            && preg_match('/\A(?:RJ|BJ|VJ)\d+\z/i', $productId) === 1;
     }
 
     public function autoSeries(): ?string

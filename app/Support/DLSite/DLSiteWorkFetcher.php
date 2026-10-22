@@ -4,6 +4,7 @@ namespace App\Support\DLSite;
 
 use Illuminate\Contracts\Process\ProcessResult;
 use Illuminate\Support\Facades\File;
+use InvalidArgumentException;
 use RuntimeException;
 
 final class DLSiteWorkFetcher
@@ -47,8 +48,14 @@ final class DLSiteWorkFetcher
                 throw new RuntimeException('DLsite work fetch returned invalid JSON.');
             }
 
+            try {
+                $workData = DLSiteWorkData::fromArray($raw, $workId);
+            } catch (InvalidArgumentException $exception) {
+                throw new RuntimeException($exception->getMessage(), previous: $exception);
+            }
+
             $lastFetch = new DLSiteFetchResult(
-                workData: DLSiteWorkData::fromArray($raw, $workId),
+                workData: $workData,
                 failedImages: $failedImages,
             );
 
