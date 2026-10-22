@@ -19,10 +19,16 @@ class TagAutocompleteSearch
      */
     public function search(string $query, AutocompleteOrder $order, bool $includeColors = false): Collection
     {
+        $useFirstWordRank = $order === AutocompleteOrder::FirstWord;
+
         $results = Genre::query()
             ->select(['id', 'title'])
             ->withCount('products')
             ->where(fn(Builder $builder) => $this->matcher->whereWordPrefixMatch($builder, 'genres.title', $query))
+            ->when($useFirstWordRank, fn(Builder $builder) => $this->matcher->orderByMatchRank($builder, 'genres.title', $query))
+            ->orderByDesc('products_count')
+            ->orderByRaw('LOWER(genres.title)')
+            ->limit(self::RESULT_LIMIT)
             ->get()
             ->map(fn(Genre $genre): array => [
                 'id' => $genre->getKey(),
@@ -35,9 +41,8 @@ class TagAutocompleteSearch
                 $left,
                 $right,
                 $query,
-                $order === AutocompleteOrder::FirstWord,
+                $useFirstWordRank,
             ))
-            ->take(self::RESULT_LIMIT)
             ->values();
 
         if (! $includeColors) {
