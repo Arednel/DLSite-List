@@ -934,6 +934,40 @@ class ProductControllerTest extends TestCase
             ->assertDontSee('return_url%5Bbad%5D', false);
     }
 
+    #[DataProvider('unsafeReturnUrls')]
+    public function test_create_go_back_rejects_unsafe_return_url(string $returnUrl): void
+    {
+        foreach (['/create', '/create/custom', '/create/bulk'] as $path) {
+            $this->from('/tags')->get($path . '?' . http_build_query(['return_url' => $returnUrl]))
+                ->assertOk()
+                ->assertSee('name="return_url" value="http://localhost/tags"', false)
+                ->assertDontSee($returnUrl)
+                ->assertDontSee(urlencode($returnUrl), false);
+        }
+    }
+
+    public static function unsafeReturnUrls(): array
+    {
+        return [
+            'javascript scheme' => ['javascript:alert(document.domain)'],
+            'mixed-case javascript scheme' => ['JaVaScRiPt:alert(1)'],
+            'data scheme' => ['data:text/html,<script>alert(1)</script>'],
+            'vbscript scheme' => ['vbscript:msgbox(1)'],
+            'scheme split by a tab' => ["java\tscript:alert(1)"],
+            'protocol-relative URL' => ['//evil.example/'],
+            'backslash-relative URL' => ['/\\evil.example/'],
+            'credentials before host' => ['http://localhost@evil.example/'],
+        ];
+    }
+
+    public function test_create_go_back_accepts_root_relative_return_url(): void
+    {
+        $this->from('/tags')->get('/create?' . http_build_query(['return_url' => '/?progress=Listening']))
+            ->assertOk()
+            ->assertSee('name="return_url" value="/?progress=Listening"', false)
+            ->assertSee('href="/?progress=Listening"', false);
+    }
+
     public function test_create_mode_switch_preserves_original_go_back_url(): void
     {
         $query = http_build_query([
