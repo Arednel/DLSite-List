@@ -183,7 +183,7 @@ final class LibraryTransferService
             if (! $run->acceptsReplacementParts()) {
                 throw new RuntimeException('This import is no longer accepting parts.');
             }
-            $manifest = $this->archive->inspect($file->getRealPath());
+            $manifest = $this->archive->inspect($file->getRealPath(), maxExpandedBytes: config('transfers.max_import_part_expanded_bytes'));
             $common = Arr::only($manifest, ['format', 'schema_version', 'archive_set_id', 'exported_at', 'scopes', 'parts', 'work_selection', 'work_entry_format']);
             if (isset($run->settings['manifest']) && LibraryData::hash($run->settings['manifest']) !== LibraryData::hash($common)) {
                 throw new InvalidArchive('This file belongs to a different or inconsistent archive set.');
@@ -201,6 +201,7 @@ final class LibraryTransferService
             if ($otherEntryCount + count($manifest['entries']) > config('transfers.max_entries')) {
                 throw new InvalidArchive('Archive set exceeds the entry-count safety limit.');
             }
+            $this->assertExpandedBudget($run, $existing, $manifest);
             $bytes = $file->getSize();
             TransferArchive::space($bytes, Storage::disk('local')->path($run->directory()));
             $path = $this->storage->stageUpload($run, $file);
@@ -276,8 +277,9 @@ final class LibraryTransferService
             }
             $part->update(['sha256' => $hash]);
             try {
+                $this->assertExpandedBudget($run, $part, $part->manifest);
                 $stage = $this->storage->stageDirectory($run, $uploadPath);
-                $manifest = $this->archive->inspect(Storage::disk('local')->path($uploadPath), true, $stage);
+                $manifest = $this->archive->inspect(Storage::disk('local')->path($uploadPath), true, $stage, config('transfers.max_import_part_expanded_bytes'));
                 DB::transaction(function () use ($run, $part, $manifest, $stage): void {
                     $this->acceptEntries($run, $part, $manifest, $stage);
                     $part->update(['status' => LibraryTransferPartStatus::Valid, 'upload_path' => null, 'error' => null]);
@@ -303,8 +305,9 @@ final class LibraryTransferService
             }
             if ($part->status === LibraryTransferPartStatus::Invalid) {
                 try {
+                    $this->assertExpandedBudget($run, $part, $candidate['manifest']);
                     $stage = $this->storage->stageDirectory($run, $candidate['path']);
-                    $manifest = $this->archive->inspect($candidatePath, true, $stage);
+                    $manifest = $this->archive->inspect($candidatePath, true, $stage, config('transfers.max_import_part_expanded_bytes'));
                     DB::transaction(function () use ($run, $part, $manifest, $stage, $candidate, $hash): void {
                         $this->acceptEntries($run, $part, $manifest, $stage);
                         $part->update([
@@ -334,6 +337,20 @@ final class LibraryTransferService
         }
         $this->storage->sweep($run);
         $this->maybeAnalyze($run->fresh());
+    }
+
+    private function assertExpandedBudget(LibraryTransferRun $run, ?LibraryTransferPart $part, array $manifest): void
+    {
+        $limit = config('transfers.max_import_run_expanded_bytes');
+        if ($limit === null) {
+            return;
+        }
+        $otherBytes = (int) $run->entries()
+            ->when($part, fn($query) => $query->where('library_transfer_part_id', '<>', $part->id))
+            ->sum('bytes');
+        if ($otherBytes + TransferArchive::declaredBytes($manifest) > $limit) {
+            throw new InvalidArchive('Archive set exceeds the expanded-size safety limit.');
+        }
     }
 
     private function acceptEntries(LibraryTransferRun $run, LibraryTransferPart $part, array $manifest, string $stage): void

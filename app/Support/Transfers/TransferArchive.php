@@ -660,7 +660,7 @@ final class TransferArchive
         }
     }
 
-    public function inspect(string $path, bool $verify = false, ?string $stage = null): array
+    public function inspect(string $path, bool $verify = false, ?string $stage = null, ?int $maxExpandedBytes = null): array
     {
         if (! class_exists(ZipArchive::class)) {
             throw new RuntimeException('Enable the PHP zip extension before importing.');
@@ -697,6 +697,9 @@ final class TransferArchive
                     throw new InvalidArchive('Expanded archive size exceeds supported limits.');
                 }
                 $expanded += $entry['size'];
+                if ($maxExpandedBytes !== null && $expanded > $maxExpandedBytes) {
+                    throw new InvalidArchive('Expanded archive part size exceeds the import safety limit.');
+                }
             }
             if (count($seen) !== count($declared)) {
                 throw new InvalidArchive('Declared ZIP entries are missing.');
@@ -961,6 +964,19 @@ final class TransferArchive
         }
 
         return true;
+    }
+
+    /**
+     * Total uncompressed bytes declared by a validated part manifest.
+     */
+    public static function declaredBytes(array $manifest): int
+    {
+        $bytes = 0;
+        foreach ($manifest['entries'] ?? [] as $entry) {
+            $bytes += (int) ($entry['bytes'] ?? 0);
+        }
+
+        return $bytes;
     }
 
     public static function space(int $bytes, string $directory): void
