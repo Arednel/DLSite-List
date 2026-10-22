@@ -6,6 +6,7 @@ use App\Enums\BulkImportItemStatus;
 use App\Enums\BulkImportRunStatus;
 use App\Jobs\FinishBulkImportRunJob;
 use App\Jobs\ImportBulkWorkJob;
+use App\Models\BulkImportItem;
 use App\Models\BulkImportRun;
 use App\Support\DLSite\DLSiteProductImportInput;
 use Illuminate\Contracts\Cache\LockTimeoutException;
