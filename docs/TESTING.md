@@ -133,7 +133,7 @@ Covers the existing administrator console recovery commands:
 
 #### `tests/Feature/AdminRecoveryTest.php`
 
-Covers trusted-environment `ADMIN_PASSWORD_RESET` recovery, including enabled/disabled states, one-time consumption, restart/flag removal behavior, password validation, rollback, and unsupported account counts.
+Covers trusted-environment `ADMIN_PASSWORD_RESET` recovery, including enabled/disabled states, one-time consumption (re-checked inside the reset transaction), restart/flag removal behavior, password validation, rollback, and unsupported account counts.
 
 #### `tests/Feature/AuthenticationSettingsTest.php`
 

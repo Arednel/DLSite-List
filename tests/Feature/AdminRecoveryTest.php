@@ -4,7 +4,9 @@ namespace Tests\Feature;
 
 use App\Models\Option;
 use App\Models\User;
+use Illuminate\Database\Events\QueryExecuted;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Hash;
 use RuntimeException;
@@ -116,6 +118,44 @@ class AdminRecoveryTest extends TestCase
         $this->assertTrue(Hash::check('old-password', $user->password));
         $this->assertSame('old-token', $user->remember_token);
         $this->assertFalse(Option::adminPasswordResetConsumed());
+    }
+
+    public function test_environment_recovery_rechecks_the_consumed_marker_inside_the_reset_transaction(): void
+    {
+        $user = User::factory()->create([
+            'password' => 'old-password',
+            'remember_token' => 'old-token',
+        ]);
+        Option::setUserAuthenticationEnabled(true);
+        config()->set('auth.admin_password_reset', true);
+        $baseTransactionLevel = DB::transactionLevel();
+        $consumedConcurrently = false;
+
+        // Simulate a concurrent request that consumes the marker after this request's
+        // pre-transaction check but before its reset transaction reads the marker.
+        DB::listen(static function (QueryExecuted $query) use ($baseTransactionLevel, &$consumedConcurrently): void {
+            if (
+                $consumedConcurrently
+                || DB::transactionLevel() <= $baseTransactionLevel
+                || preg_match('/\bfrom\s+[`"]?users[`"]?/i', $query->sql) !== 1
+            ) {
+                return;
+            }
+
+            $consumedConcurrently = true;
+            Option::setAdminPasswordResetConsumed(true);
+        });
+
+        $this->post(route('admin.recovery.store'), [
+            'password' => 'recovered-password',
+            'password_confirmation' => 'recovered-password',
+        ])->assertRedirect(route('admin.recovery'));
+
+        $this->assertTrue($consumedConcurrently);
+        $user->refresh();
+        $this->assertTrue(Hash::check('old-password', $user->password));
+        $this->assertSame('old-token', $user->remember_token);
+        $this->assertTrue(Option::adminPasswordResetConsumed());
     }
 
     public function test_environment_recovery_refuses_an_unsupported_multiple_user_state(): void
