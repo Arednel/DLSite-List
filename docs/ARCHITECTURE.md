@@ -55,6 +55,8 @@ Tag and contributor data is loaded only when the current visible fields need it.
 
 A failed cover download is stored as no cover, and failed sample downloads are omitted from the saved sample list. The fetcher can retry a failed DLsite fetch up to five times. Python does not own a second retry loop.
 
+The scraper downloads images only from DLsite hosts (`dlsite.jp`, `dlsite.com` and their subdomains), validates every redirect hop against the same allow-list, and stops a download that exceeds its byte, time, or pixel-dimension budget. At most 50 sample images are kept per work.
+
 The Quick Add field layout controls which user-editable override rows are submitted. Hidden DLsite metadata such as age, product format, circle, publisher, brand, contributors, and descriptions can still be populated from scraped data.
 
 The main DLsite `Product Format` is stored first; only SND (Voice), MS2 (Music), and MV2 (Animation) are accepted as additional formats from Work.options. When an additional format mirrors the fetched main format, the additional value is omitted: SOU suppresses SND, MUS suppresses MS2, and MOV suppresses MV2. An additional format is kept when its matching main format is absent. This DLsite-fetch rule does not apply to manual Edit input or Library export/import, which preserve the stored values.
@@ -88,6 +90,8 @@ Product creation, genre/contributor synchronization, and successful Bulk item co
 If the item or run is no longer eligible for successful completion, product creation rolls back instead of committing without a matching `Imported` result.
 
 Bulk Import history cleanup deletes all persisted run/item history and is unavailable while a run is active.
+
+At most three Bulk Import runs can be queued or running at once, and at most 1,000 works can wait for import across those runs.
 
 ### Edit and Delete
 
@@ -176,7 +180,7 @@ Refetch has eighteen ordered review categories defined by `RefetchCategory`.
 
 Cover and sample-image changes are independent. Refetch uses the shared `ProductImagePromotion` boundary so interrupted image replacement can be recovered safely.
 
-Refetch creation, cleanup, and review application use the shared `LibraryMutationLock`, which also serializes Import apply and work-image cleanup.
+Refetch creation, cleanup, and review application use the shared `LibraryMutationLock`, which also serializes Import apply and work-image cleanup. A new run cannot start while another run is still running or cancelling.
 
 Cancellation is cooperative: already-running work may finish while queued jobs observe the cancelled run state.
 
@@ -198,7 +202,7 @@ The export flow is:
 The import flow is:
 
 1. Uploaded ZIPs are stored under immutable private paths and inspected asynchronously.
-2. Manifests, archive-set identity, paths, checksums, media types, and the complete required data-part set are validated before analysis.
+2. Manifests, archive-set identity, paths, checksums, media types, and the complete required data-part set are validated before analysis. Each part and the whole import also have uncompressed-size budgets (`transfers.max_import_part_expanded_bytes` and `transfers.max_import_run_expanded_bytes`).
 3. Analysis maps incoming values to bounded, paginated `library_import_items` without mutating the library.
 4. Review decisions are persisted as `ignore`, `overwrite`, or `merge`.
 5. Apply rechecks current state under database and library-mutation locks, then updates approved categories in bounded batches.
