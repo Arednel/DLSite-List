@@ -55,7 +55,7 @@ docker compose -f oci://ghcr.io/arednel/dlsite-list:latest up -d -y
 
 ### 2) After startup
 
-- DLSite List is available at: `http://localhost:8080`
+- DLSite List is available at: `http://localhost:8080` (Docker host only by default; see [Network Access](docs/CONFIGURATION.md#network-access) to reach it from other devices)
 - Authentication is disabled by default. To add username and password, open `Options -> Authentication` and turn on `Require administrator login`.
 
 ## Manual Installation Process

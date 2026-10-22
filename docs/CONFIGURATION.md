@@ -33,7 +33,7 @@ The app container runs migrations during startup.
 
 **After startup**
 
-- DLSite List is available at `http://localhost:8080`.
+- DLSite List is available at `http://localhost:8080`. It listens on the Docker host only by default; see [Network Access](#network-access) to reach it from other devices.
 - Authentication is disabled by default. To add a username and password, open `Options -> Authentication` and turn on `Require administrator login`.
 
 Re-running the same command updates a `latest` installation to the current published Compose application and referenced images.
@@ -48,7 +48,7 @@ docker compose --env-file docker/.env.docker -f compose.dev.yaml up --build -d
 
 **After startup**
 
-- DLSite List is available at `http://localhost:8080`.
+- DLSite List is available at `http://localhost:8080`. It listens on the Docker host only by default; see [Network Access](#network-access).
 - Optional phpMyAdmin is disabled/commented out by default. If enabled in `compose.dev.yaml`, it is available at `http://localhost:8888`.
 - Authentication is disabled by default. To add a username and password, open `Options -> Authentication` and turn on `Require administrator login`.
 
@@ -57,6 +57,22 @@ docker compose --env-file docker/.env.docker -f compose.dev.yaml up --build -d
 The test database/services are behind the Compose `test` profile and do not start with the normal application command.
 
 For Import / Export, the supplied Docker configuration allows individual ZIP uploads up to 256 MiB. PHP uses `upload_max_filesize = 256M` and `post_max_size = 260M`, while Nginx uses `client_max_body_size 260M`. If larger import files are needed, raise the PHP and Nginx limits together and keep the request/post limit above the file-size limit.
+
+#### Network Access
+
+By default, both Compose files publish the web server only on the host loopback interface (`127.0.0.1:8080`), so DLSite List is reachable from the Docker host itself but not from other devices on the network. Authentication is disabled by default and the bundled Nginx serves plain HTTP, so exposing it more widely would let anyone who can reach the port read and change the library.
+
+To reach DLSite List from other devices, set `DLSITE_LIST_HTTP_BIND` to the host address to listen on (for example `0.0.0.0` for all interfaces) before starting Compose:
+
+```bash
+DLSITE_LIST_HTTP_BIND=0.0.0.0 docker compose -f oci://ghcr.io/arednel/dlsite-list:latest up -d -y
+```
+
+For local Docker builds, the variable can also be added to `docker/.env.docker`.
+
+Before exposing the port:
+- turn on `Options -> Authentication -> Require administrator login`
+- keep exposure to a trusted network, or put DLSite List behind a reverse proxy that terminates HTTPS
 
 #### Docker Secrets
 
