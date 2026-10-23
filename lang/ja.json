@@ -333,8 +333,6 @@
     "Choose whether general Index search can match hidden description text.": "一覧の通常検索で、非表示の説明文も検索対象にするか選択します。",
     "Index Table Width": "一覧表の幅",
     "Choose how wide the Index table can be before horizontal scrolling is used.": "横スクロールが必要になるまでの一覧表の最大幅を選択します。",
-    "Adaptive column widths": "列幅の自動調整",
-    "When enabled, a table wider than 1024px (Wide, Full, or Custom) gives the extra room to the Title and Tags columns, and the page does not scroll sideways.": "有効にすると、表の幅が1024pxより広いとき（ワイド・全幅・カスタム）、増えた幅をタイトル列とタグ列に使い、ページが横にスクロールしないようにします。",
     "Overflow": "オーバーフロー",
     "Limit long Notes and Tags on the Index and allow each field to expand.": "一覧の長いメモとタグの高さを制限し、項目ごとに展開できるようにします。",
     "Accepted units: px, rem, em, %, vw, vh, vmin, vmax, svh, lvh, and dvh. Percentage and viewport units depend on the current layout and screen size.": "使用可能な単位: px、rem、em、%、vw、vh、vmin、vmax、svh、lvh、dvh。パーセントとビューポート単位の表示結果は、現在のレイアウトと画面サイズによって変わります。",

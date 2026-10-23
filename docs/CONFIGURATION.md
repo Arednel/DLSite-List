@@ -566,18 +566,6 @@ Choices:
 - `full` - 100%
 - custom width - supports `px`, `rem`, `em`, `%`, or `vw`
 
-`Adaptive column widths` is disabled by default.
-
-When disabled:
-- a wider table gives its extra room to the Title column, and Tags keeps its fixed width
-
-When enabled:
-- when the table is wider than `default` (1024px), the extra room goes to the Title and Tags columns; short columns such as Score, Age, and Progress keep their fixed widths
-- the Index does not make the page scroll sideways; a table wider than the window scrolls inside its own panel instead
-- on screens 1200px and wider, a small margin on both sides keeps wide tables clear of the floating side menu
-
-Mobile cards are not affected either way. The switch is saved and reset together with the table width, and it is included in Options export and import.
-
 #### Overflow
 
 Three independent targets:

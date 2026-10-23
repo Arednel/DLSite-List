@@ -97,6 +97,11 @@ a {
     right: 4px
 }
 
+/* Full page width tables will not create an outer horizontal scrollbar. */
+.index-width-full {
+    overflow-x: clip;
+}
+
 /**
  * List Container
  */
@@ -960,54 +965,6 @@ body.filter-modal-open {
 
 .list-table .list-table-header .header-title {
     word-break: keep-all;
-}
-
-/*
- * Adaptive column widths (Options > Index Table Width).
- * Every rule here sits under .index-adaptive-columns, which the Index only adds while
- * the option is on, so the Index looks exactly as before while it is off.
- * Mobile cards (768px and below) are never affected.
- */
-@media (min-width: 769px) {
-    /* Size against the page, not the viewport, so the vertical scrollbar never adds a sideways scroll. */
-    .index-adaptive-columns .list-container {
-        width: min(calc(var(--index-table-width, 1024px) + 34px), calc(100% - 2 * var(--index-page-gutter, 8px)));
-    }
-
-    /* Never wider than the container, so narrow windows do not scroll sideways. */
-    .index-adaptive-columns .cover-block,
-    .index-adaptive-columns .cover-block .image-container {
-        width: min(var(--index-table-width, 1024px), 100%);
-    }
-
-    .index-adaptive-columns .progress-menu-container .progress-menu {
-        width: min(var(--index-table-width, 1024px), calc(100% - 34px));
-    }
-
-    /* The table panel is a size container, so column rules follow its real width. */
-    .index-adaptive-columns .list-unit {
-        container: index-list / inline-size;
-        width: min(var(--index-table-width, 1024px), calc(100% - 34px));
-    }
-}
-
-/* On large screens, keep wide tables clear of the fixed side menu. */
-@media (min-width: 1200px) {
-    .index-adaptive-columns .list-container {
-        --index-page-gutter: 60px;
-    }
-}
-
-/*
- * When the table is wider than the default 1024px, let Tags grow with it instead
- * of staying at 120px, so the extra room goes to Title and Tags. Short columns
- * keep their fixed widths.
- */
-@container index-list (width > 1024px) {
-    .index-adaptive-columns .list-table .list-table-header .header-title.tags {
-        width: auto;
-        min-width: 120px;
-    }
 }
 
 @media (max-width: 768px) {

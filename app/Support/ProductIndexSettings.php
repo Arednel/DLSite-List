@@ -33,7 +33,6 @@ final readonly class ProductIndexSettings
         public array $indexSortFieldOptions,
         public array $tableWidth,
         public string $tableWidthCss,
-        public bool $adaptiveColumnWidthsEnabled,
         public array $contentOverflow,
         public bool $searchHiddenDescriptionsEnabled,
         public bool $indexImageViewerEnabled,

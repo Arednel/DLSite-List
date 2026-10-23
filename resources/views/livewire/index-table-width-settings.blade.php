@@ -20,17 +20,6 @@
             </div>
         @endif
 
-        <x-options.switch wire:model.live="adaptiveColumnWidths">
-            {{ __('Adaptive column widths') }}
-        </x-options.switch>
-        <p class="helper-text">
-            {{ __('When enabled, a table wider than 1024px (Wide, Full, or Custom) gives the extra room to the Title and Tags columns, and the page does not scroll sideways.') }}
-        </p>
-
-        @error('adaptiveColumnWidths')
-            <div class="text-error">{{ $message }}</div>
-        @enderror
-
         <div class="option-actions option-actions--inline">
             <button type="submit" class="tag tag--soft tag--lg is-clickable">{{ __('Save table width') }}</button>
             @if ($saved)

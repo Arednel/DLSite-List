@@ -334,8 +334,6 @@
     "Choose whether general Index search can match hidden description text.": "選擇一般收藏列表搜尋是否包含隱藏欄位中的說明文字。",
     "Index Table Width": "收藏列表表格寬度",
     "Choose how wide the Index table can be before horizontal scrolling is used.": "設定收藏列表表格的寬度上限；超出畫面的內容可水平捲動。",
-    "Adaptive column widths": "自適應欄寬",
-    "When enabled, a table wider than 1024px (Wide, Full, or Custom) gives the extra room to the Title and Tags columns, and the page does not scroll sideways.": "啟用後，表格比 1024px 寬時（寬版、滿版、自訂），多出來的寬度會給標題欄和標籤欄，頁面也不會左右捲動。",
     "Overflow": "內容顯示限制",
     "Limit long Notes and Tags on the Index and allow each field to expand.": "限制收藏列表中較長備註與標籤的顯示高度，並允許個別展開。",
     "Accepted units: px, rem, em, %, vw, vh, vmin, vmax, svh, lvh, and dvh. Percentage and viewport units depend on the current layout and screen size.": "接受的單位：px、rem、em、%、vw、vh、vmin、vmax、svh、lvh 和 dvh。百分比和視口單位取決於目前配置和螢幕尺寸。",

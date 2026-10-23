@@ -4,9 +4,9 @@ All notable changes to this project are documented in this file.
 
 ## Unreleased
 
-### Added
+### Fixed
 
-* Added an `Adaptive column widths` switch to Index Table Width, off by default. When it is on, Wide, Full, and custom table widths give the extra room to the Title and Tags columns instead of only Title, the Index no longer makes the page scroll sideways, and wide tables stay clear of the floating side menu on large screens. With the switch off, the Index looks the same as before.
+* Removed horizontal page scrollbar when the Index table width is set to `Full`.
 
 ### Security
 
