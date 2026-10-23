@@ -129,6 +129,11 @@ final class ProductFieldLayout
             return __('Custom Tags');
         }
 
+        // The Index column shows the DLsite rating above your own score.
+        if ($field === ProductField::Score && $surface === self::SURFACE_INDEX) {
+            return __('Ratings');
+        }
+
         return $field->label();
     }
 

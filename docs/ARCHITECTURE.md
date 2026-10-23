@@ -40,6 +40,8 @@ Index state is kept in the query string so filtered/sorted views can be linked a
 
 Tag and contributor data is loaded only when the current visible fields need it.
 
+The `score` column is titled `Ratings` on the Index. `ProductFieldLayout::label()` returns that title only for the Index surface, so `Score` keeps its meaning in filters, sort menus, and Add/Edit forms. Each cell shows the DLsite rating and your own score as rows of stars with their numbers, rendered by the `x-star-rating` component (`app/View/Components/StarRating.php`, `public/css/star-rating.css`). Stars are drawn in CSS and rounded to half stars: the DLsite average is out of 5 and your score out of 10, so a score of 9 is four and a half stars. Screen readers get the value as text, for example `DLsite rating 4.96 out of 5`. A row is shown only when it has a value, and a cell with neither shows `-`. The column still sorts by your own score.
+
 ### Quick Add from DLsite
 
 `GET /create` opens DLSite Quick Add and `POST /store` creates the work.
@@ -55,7 +57,7 @@ Tag and contributor data is loaded only when the current visible fields need it.
 
 #### DLsite Rating
 
-The scraper reads the average rating (`rate_average_2dp`) and rating count (`rate_count`) from DLsite's `product/info/ajax` response, because `dlsite-async` drops them, and adds both keys to the Japanese work JSON. A work with no ratings yet has `null` for both. When the lookup fails or returns no rating fields, the scraper leaves the keys out and the work is still fetched. `DLSiteRating` keeps a rating only when the average is between 0 and 5 and the count is at least 1; otherwise both values are stored as `null`. `DLSiteProductImporter` stores them in `products.dlsite_rating` and `products.dlsite_rating_count`.
+The scraper reads the average rating (`rate_average_2dp`) and rating count (`rate_count`) from DLsite's `product/info/ajax` response, because `dlsite-async` drops them, and adds both keys to the Japanese work JSON. A work with no ratings yet has `null` for both. When the lookup fails or returns no rating fields, the scraper leaves the keys out and the work is still fetched. `DLSiteRating` keeps a rating only when the average is between 0 and 5 and the count is at least 1; otherwise both values are stored as `null`. `DLSiteProductImporter` stores them in `products.dlsite_rating` and `products.dlsite_rating_count`. The Index reads both through `DLSiteRating` as well, so an average stored without a rating count is not shown.
 
 A failed cover download is stored as no cover, and failed sample downloads are omitted from the saved sample list. The fetcher can retry a failed DLsite fetch up to five times. Python does not own a second retry loop.
 
@@ -638,6 +640,8 @@ The Index uses:
 Create/Edit use class-based field components under:
 - `app/View/Components/Fields`
 - `resources/views/components/fields`
+
+The Index Ratings column uses the `StarRating` component (`resources/views/components/star-rating.blade.php`) for its star rows.
 
 Public CSS/JS assets use `filemtime()` query strings for cache busting.
 

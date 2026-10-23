@@ -671,7 +671,7 @@ class ProductFieldLayoutTest extends TestCase
             ],
             [
                 'field' => ProductField::Score->value,
-                'label' => 'Score',
+                'label' => 'Ratings',
                 'class' => 'score',
                 'sort_field' => 'score',
                 'contributor_role' => null,

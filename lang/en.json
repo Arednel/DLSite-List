@@ -912,5 +912,9 @@
     "Group order and missing groups": "Group order and missing groups",
     "DLsite rating": "DLsite rating",
     "DLsite rating count": "DLsite rating count",
-    "★:rating (:count rating)|★:rating (:count ratings)": "★:rating (:count rating)|★:rating (:count ratings)"
+    "★:rating (:count rating)|★:rating (:count ratings)": "★:rating (:count rating)|★:rating (:count ratings)",
+    "Ratings": "Ratings",
+    "DLsite": "DLsite",
+    "Mine": "Mine",
+    ":value out of :max": ":value out of :max"
 }

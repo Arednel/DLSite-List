@@ -266,6 +266,10 @@ Covers the Image Viewer option and Index viewer rendering/data:
 - safe full-image links
 - conditional script/dialog output
 
+#### `tests/Feature/IndexRatingsColumnTest.php`
+
+Covers the Index Ratings column: the DLsite rating row above the personal score row with labels, half-star fill, numbers, and screen reader text; only the row that has a value; `-` without ratings, including an average stored without a rating count; the `Ratings` title on the Index while sorting still uses `score` and other surfaces keep `Score`; hydrating the rating only when the column is visible; and Japanese and Traditional Chinese text.
+
 #### `tests/Feature/IndexPaginationSettingsTest.php`
 
 Covers fixed, custom, and unlimited Index pagination settings and reset/default behavior.
@@ -547,7 +551,7 @@ Covers server-rendered Add/Edit modal completion fallback output and conditional
 - Covers normalized contributor identity, maker id, role-specific sync, cross-role isolation, and Updated Date touching only on effective change.
 
 `tests/Unit/Support/ProductFieldLayoutTest.php`
-- Covers surface defaults/availability (including independent Publisher/Brand fields and the virtual Index-only combined field), localized fetched-tag labels, row normalization without stored help notes, required locks, editability, and prepared layout metadata.
+- Covers surface defaults/availability (including independent Publisher/Brand fields and the virtual Index-only combined field), localized fetched-tag labels, row normalization without stored help notes, required locks, editability, and prepared layout metadata (including the Index-only `Ratings` title for `score`).
 
 `tests/Unit/Support/ProductGenreSyncTest.php`
 - Covers fetched language buckets, custom/fetched preservation/precedence, recursive ancestor expansion, and Updated Date touching only on effective change.
@@ -559,7 +563,7 @@ Covers server-rendered Add/Edit modal completion fallback output and conditional
 - Covers Index query normalization, invalid-value rejection, filter/date round trips, defaults, sort options, input keys, visibility groups, and query export.
 
 `tests/Unit/Support/ProductIndexRowBuilderTest.php`
-- Covers typed Index row construction from narrow product hydration, encoded Series/Circle/contributor filter URLs, preserved Edit return state/fragment, age-aware DLsite URLs, defaults for unhydrated optional attributes, and rejection of a missing required `work_name`.
+- Covers typed Index row construction from narrow product hydration, encoded Series/Circle/contributor filter URLs, preserved Edit return state/fragment, age-aware DLsite URLs, the DLsite rating, defaults for unhydrated optional attributes, and rejection of a missing required `work_name`.
 
 `tests/Unit/Support/RefetchDiffBuilderTest.php`
 - Covers all Refetch metadata/creator/tag categories (including independent Publisher/Brand changes), main-only Product Format comparison that ignores fetched additional formats, plus tag identity handling, cover hashing, and unavailable sample-image behavior.
@@ -591,6 +595,9 @@ Covers server-rendered Add/Edit modal completion fallback output and conditional
 
 `tests/Unit/View/Components/Fields/EnumSelectFieldTest.php`
 - Covers enum-backed field component defaults and option maps.
+
+`tests/Unit/View/Components/StarRatingTest.php`
+- Covers half-star rounding for 5- and 10-point values, clamping out-of-range values, number formatting, CSS-only star markup with screen reader text, an omitted label, and translated screen reader text.
 
 ### Performance
 

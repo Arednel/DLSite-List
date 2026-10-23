@@ -3,6 +3,7 @@
 namespace App\Support;
 
 use App\Models\Product;
+use App\Support\DLSite\DLSiteRating;
 use Illuminate\Contracts\Routing\UrlGenerator;
 use Illuminate\Support\Arr;
 use Illuminate\Support\Collection;
@@ -59,6 +60,11 @@ final readonly class ProductIndexRowBuilder
                     ? null
                     : Product::versionedImagePath($workImage),
                 score: isset($attributes['score']) ? (int) $attributes['score'] : null,
+                // An average without a rating count is not a usable rating.
+                dlsiteRating: DLSiteRating::from(
+                    $attributes['dlsite_rating'] ?? null,
+                    $attributes['dlsite_rating_count'] ?? null,
+                )->average,
                 series: $series,
                 ageCategory: $attributes['age_category'] ?? null,
                 circle: $circle,

@@ -18,6 +18,7 @@ final readonly class ProductIndexRow
         public ?string $progress,
         public ?string $workImage,
         public ?int $score,
+        public ?float $dlsiteRating,
         public ?string $series,
         public ?string $ageCategory,
         public ?string $circle,

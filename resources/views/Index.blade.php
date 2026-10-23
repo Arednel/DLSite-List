@@ -11,6 +11,8 @@
         href="{{ asset('css/sort-direction.css') }}?v={{ filemtime(public_path('css/sort-direction.css')) }}">
     <link rel="stylesheet" href="{{ asset('css/index.css') }}?v={{ filemtime(public_path('css/index.css')) }}">
     <link rel="stylesheet"
+        href="{{ asset('css/star-rating.css') }}?v={{ filemtime(public_path('css/star-rating.css')) }}">
+    <link rel="stylesheet"
         href="{{ asset('css/image-viewer.css') }}?v={{ filemtime(public_path('css/image-viewer.css')) }}">
     <link rel="stylesheet"
         href="{{ asset('css/list-menu-float.css') }}?v={{ filemtime(public_path('css/list-menu-float.css')) }}">
