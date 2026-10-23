@@ -313,9 +313,10 @@ class ProductSurfaceLocalizationTest extends TestCase
         $actualEnglishOverrides = [];
         $placeholders = static function (string $value): array {
             preg_match_all('/:[A-Za-z_][A-Za-z0-9_]*/', $value, $matches);
-            sort($matches[0]);
+            $placeholders = array_values(array_unique($matches[0]));
+            sort($placeholders);
 
-            return $matches[0];
+            return $placeholders;
         };
 
         $this->assertEqualsCanonicalizing(array_keys($english), array_keys($japanese));
@@ -328,7 +329,7 @@ class ProductSurfaceLocalizationTest extends TestCase
             }
 
             $this->assertNotSame('', trim($japanese[$key]));
-            $this->assertSame($placeholders($key), $placeholders($japanese[$key]));
+            $this->assertSame($placeholders($key), $placeholders($japanese[$key]), $key);
         }
 
         $this->assertSame($englishDisplayOverrides, $actualEnglishOverrides);
@@ -338,17 +339,11 @@ class ProductSurfaceLocalizationTest extends TestCase
 
         foreach ($englishErrors as $message => $value) {
             $this->assertNotSame('', trim($japaneseErrors[$message]));
+            $this->assertSame($placeholders($value), $placeholders($japaneseErrors[$message]), $message);
 
-            if ($message === 'login_throttled') {
-                foreach (explode('|', $value) as $form) {
-                    $this->assertSame($placeholders($form), $placeholders($japaneseErrors[$message]));
-                }
-
-                continue;
+            if ($message !== 'login_throttled') {
+                $this->assertSame($message, $value);
             }
-
-            $this->assertSame($message, $value);
-            $this->assertSame($placeholders($message), $placeholders($japaneseErrors[$message]));
         }
     }
 }
