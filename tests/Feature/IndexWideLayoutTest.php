@@ -84,13 +84,18 @@ class IndexWideLayoutTest extends TestCase
             $css,
         );
 
-        // Short columns keep their fixed widths.
-        foreach (['score' => '65px', 'age-category' => '60px', 'progress' => '90px'] as $column => $width) {
+        // Short columns keep fixed pixel widths and are not touched by the wide-table rule.
+        foreach (['score', 'age-category', 'progress'] as $column) {
             $this->assertMatchesRegularExpression(
-                '/\.header-title\.' . preg_quote($column, '/') . '\s*\{\s*width:\s*' . $width . ';?\s*\}/',
+                '/\.header-title\.' . preg_quote($column, '/') . '\s*\{\s*width:\s*\d+px;?\s*\}/',
                 $css,
             );
         }
+
+        $this->assertSame(1, preg_match('/@container index-list \(width > 1024px\)\s*\{(.*?)\n\}/s', $css, $wideRule));
+        $this->assertStringNotContainsString('.header-title.score', $wideRule[1]);
+        $this->assertStringNotContainsString('.header-title.age-category', $wideRule[1]);
+        $this->assertStringNotContainsString('.header-title.progress', $wideRule[1]);
     }
 
     public function test_stylesheet_sizes_the_index_against_the_page_instead_of_the_viewport(): void
