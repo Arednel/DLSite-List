@@ -62,8 +62,12 @@ final class LibraryData
         }
         if ($category === 'tags') {
             $values = [];
-            foreach (['custom' => 'customGenres', 'jp' => 'japaneseGenres', 'en' => 'englishGenres'] as $bucket => $relation) {
+            foreach (['custom' => 'customGenres', 'jp' => 'japaneseGenres', 'en' => 'englishGenres', 'zh_TW' => 'traditionalChineseGenres'] as $bucket => $relation) {
                 $values[$bucket] = $product->$relation()->when($lock, fn($query) => $query->lockForUpdate())->orderBy('genre_product.id')->pluck('title')->all();
+            }
+            // Works without Traditional Chinese tags export the same shape as before so older files stay comparable.
+            if ($values['zh_TW'] === []) {
+                unset($values['zh_TW']);
             }
 
             return $values;

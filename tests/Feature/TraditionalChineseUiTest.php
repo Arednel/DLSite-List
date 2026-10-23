@@ -32,7 +32,7 @@ class TraditionalChineseUiTest extends TestCase
             ->set('language', UiLanguage::TraditionalChinese->value)
             ->set('followFetchedTagsLanguage', true)
             ->set('fetchedTagLanguage', FetchedTagLanguage::Japanese->value)
-            ->assertSee('value="en" selected', false)
+            ->assertSee('value="zh_TW" selected', false)
             ->call('save')
             ->assertHasNoErrors()
             ->assertRedirectToRoute('options.index', ['tab' => 'general']);
@@ -48,7 +48,7 @@ class TraditionalChineseUiTest extends TestCase
             ->assertSee('已儲存語言設定。')
             ->assertDontSee('Language settings saved.');
 
-        $this->assertSame(FetchedTagLanguage::English, Option::effectiveFetchedTagLanguage());
+        $this->assertSame(FetchedTagLanguage::TraditionalChinese, Option::effectiveFetchedTagLanguage());
 
         Livewire::test(UiLanguageSettings::class)
             ->set('followFetchedTagsLanguage', false)

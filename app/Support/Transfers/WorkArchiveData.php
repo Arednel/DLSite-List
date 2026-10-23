@@ -117,8 +117,15 @@ final class WorkArchiveData
         $custom['created_at'] = $product->created_at?->utc()->toIso8601ZuluString();
         $custom['updated_at'] = $product->updated_at?->utc()->toIso8601ZuluString();
 
+        $work = ['japanese' => $japanese, 'english' => $english];
+        // Only works with Traditional Chinese tags carry the extra locale, so other archives keep the original layout.
+        if (array_key_exists('zh_TW', $tags)) {
+            $work['traditional_chinese'] = ['product_id' => strtoupper($product->id), 'genre' => $tags['zh_TW']];
+        }
+        $work['dlsite_list'] = $custom;
+
         return [
-            'work' => ['japanese' => $japanese, 'english' => $english, 'dlsite_list' => $custom],
+            'work' => $work,
             'image_warnings' => [
                 ...($coverInspection['unavailable'] ?? []),
                 ...($sampleInspection['unavailable'] ?? []),
@@ -130,18 +137,19 @@ final class WorkArchiveData
     {
         if (
             Validator::make(['work' => $document], [
-                'work' => ['array:japanese,english,dlsite_list'],
+                'work' => ['array:japanese,english,traditional_chinese,dlsite_list'],
             ])->fails()
             || ! is_array($document['japanese'] ?? null) || ($document['japanese'] !== [] && array_is_list($document['japanese']))
             || ! is_array($document['english'] ?? null) || ($document['english'] !== [] && array_is_list($document['english']))
+            || (array_key_exists('traditional_chinese', $document) && (! is_array($document['traditional_chinese']) || ($document['traditional_chinese'] !== [] && array_is_list($document['traditional_chinese']))))
             || (array_key_exists('dlsite_list', $document) && (! is_array($document['dlsite_list']) || ($document['dlsite_list'] !== [] && array_is_list($document['dlsite_list']))))
         ) {
             throw new InvalidArchive('Unsupported or invalid archive layout: invalid work JSON.');
         }
 
         $codes = [];
-        foreach (['japanese', 'english'] as $locale) {
-            if (! array_key_exists('product_id', $document[$locale]) || $document[$locale]['product_id'] === null) {
+        foreach (['japanese', 'english', 'traditional_chinese'] as $locale) {
+            if (! array_key_exists($locale, $document) || ! array_key_exists('product_id', $document[$locale]) || $document[$locale]['product_id'] === null) {
                 continue;
             }
             if (! is_string($document[$locale]['product_id'])) {
@@ -254,6 +262,9 @@ final class WorkArchiveData
         }
         if (array_key_exists('genre', $document['english'])) {
             $tags['en'] = $work->englishGenres;
+        }
+        if (array_key_exists('genre', $document['traditional_chinese'] ?? [])) {
+            $tags['zh_TW'] = $work->traditionalChineseGenres ?? [];
         }
         if (array_key_exists('custom_tags', $custom)) {
             $tags['custom'] = $custom['custom_tags'];

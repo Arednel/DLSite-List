@@ -239,7 +239,6 @@ class OptionsRefetchReview extends Component
             'globalActionOptions' => $this->globalActionOptions(),
             'changeActionOptions' => $this->changeActionOptions(),
             'tagChangeActionOptions' => $this->tagChangeActionOptions(),
-            'tagActionFields' => $this->tagActionFields(),
             'finishAction' => $this->finishAction($run),
         ])->withErrors($this->displayErrors($run));
     }
@@ -303,11 +302,19 @@ class OptionsRefetchReview extends Component
                 RefetchService::TAG_ADDED_ADD,
                 RefetchService::TAG_ADDED_IGNORE,
             ])],
+            'tagActions.*.added_traditional_chinese' => [Rule::in([
+                RefetchService::TAG_ADDED_ADD,
+                RefetchService::TAG_ADDED_IGNORE,
+            ])],
             'tagActions.*.stale_japanese' => [Rule::in([
                 RefetchService::TAG_STALE_MOVE_TO_CUSTOM,
                 RefetchService::TAG_STALE_REMOVE,
             ])],
             'tagActions.*.stale_english' => [Rule::in([
+                RefetchService::TAG_STALE_MOVE_TO_CUSTOM,
+                RefetchService::TAG_STALE_REMOVE,
+            ])],
+            'tagActions.*.stale_traditional_chinese' => [Rule::in([
                 RefetchService::TAG_STALE_MOVE_TO_CUSTOM,
                 RefetchService::TAG_STALE_REMOVE,
             ])],
@@ -448,6 +455,9 @@ class OptionsRefetchReview extends Component
                 'tag_details' => $category === RefetchCategory::Tags
                     ? $this->tagDetails($card['change'], $colors)
                     : [],
+                'tag_action_fields' => $category === RefetchCategory::Tags
+                    ? $this->tagActionFields($this->hasTraditionalChineseTags($card['change']))
+                    : [],
             ])
             ->values();
         $paginator = new LengthAwarePaginator(
@@ -473,40 +483,36 @@ class OptionsRefetchReview extends Component
      */
     private function tagDetails(array $change, array $colors): array
     {
-        return [
-            [
-                'label' => 'New JP',
-                'tags' => $this->prepareReviewValue(data_get($change, 'details.added_japanese', []), false, $colors),
-            ],
-            [
-                'label' => 'New EN',
-                'tags' => $this->prepareReviewValue(data_get($change, 'details.added_english', []), false, $colors),
-            ],
-            [
-                'label' => 'Stale JP',
-                'tags' => $this->prepareReviewValue(data_get($change, 'details.stale_japanese', []), false, $colors),
-            ],
-            [
-                'label' => 'Stale EN',
-                'tags' => $this->prepareReviewValue(data_get($change, 'details.stale_english', []), false, $colors),
-            ],
-            [
-                'label' => 'Custom->Fetched JP',
-                'tags' => $this->prepareReviewValue(
-                    data_get($change, 'details.custom_to_fetched_japanese', []),
-                    false,
-                    $colors,
-                ),
-            ],
-            [
-                'label' => 'Custom->Fetched EN',
-                'tags' => $this->prepareReviewValue(
-                    data_get($change, 'details.custom_to_fetched_english', []),
-                    false,
-                    $colors,
-                ),
-            ],
-        ];
+        $languages = ['JP' => 'japanese', 'EN' => 'english'];
+
+        if ($this->hasTraditionalChineseTags($change)) {
+            $languages['ZH'] = 'traditional_chinese';
+        }
+
+        $details = [];
+
+        foreach (['New' => 'added', 'Stale' => 'stale', 'Custom->Fetched' => 'custom_to_fetched'] as $label => $prefix) {
+            foreach ($languages as $suffix => $language) {
+                $details[] = [
+                    'label' => "{$label} {$suffix}",
+                    'tags' => $this->prepareReviewValue(
+                        data_get($change, "details.{$prefix}_{$language}", []),
+                        false,
+                        $colors,
+                    ),
+                ];
+            }
+        }
+
+        return $details;
+    }
+
+    /**
+     * Runs built before Traditional Chinese tags were fetched have no Traditional Chinese details.
+     */
+    private function hasTraditionalChineseTags(array $change): bool
+    {
+        return array_key_exists('traditional_chinese', $change['new'] ?? []);
     }
 
     /**
@@ -587,50 +593,48 @@ class OptionsRefetchReview extends Component
      *     options: list<array{value: string, label: string}>
      * }>
      */
-    private function tagActionFields(): array
+    private function tagActionFields(bool $includeTraditionalChinese = false): array
     {
-        return [
-            [
-                'key' => 'added_japanese',
-                'label' => 'New JP',
+        $languages = ['JP' => 'japanese', 'EN' => 'english'];
+
+        if ($includeTraditionalChinese) {
+            $languages['ZH'] = 'traditional_chinese';
+        }
+
+        $fields = [];
+
+        foreach ($languages as $suffix => $language) {
+            $fields[] = [
+                'key' => "added_{$language}",
+                'label' => "New {$suffix}",
                 'options' => [
                     ['value' => RefetchService::TAG_ADDED_ADD, 'label' => 'Add as fetched'],
                     ['value' => RefetchService::TAG_ADDED_IGNORE, 'label' => 'Ignore'],
                 ],
-            ],
-            [
-                'key' => 'added_english',
-                'label' => 'New EN',
-                'options' => [
-                    ['value' => RefetchService::TAG_ADDED_ADD, 'label' => 'Add as fetched'],
-                    ['value' => RefetchService::TAG_ADDED_IGNORE, 'label' => 'Ignore'],
-                ],
-            ],
-            [
-                'key' => 'stale_japanese',
-                'label' => 'Stale JP',
+            ];
+        }
+
+        foreach ($languages as $suffix => $language) {
+            $fields[] = [
+                'key' => "stale_{$language}",
+                'label' => "Stale {$suffix}",
                 'options' => [
                     ['value' => RefetchService::TAG_STALE_MOVE_TO_CUSTOM, 'label' => 'Move to custom tags'],
                     ['value' => RefetchService::TAG_STALE_REMOVE, 'label' => 'Remove'],
                 ],
-            ],
-            [
-                'key' => 'stale_english',
-                'label' => 'Stale EN',
-                'options' => [
-                    ['value' => RefetchService::TAG_STALE_MOVE_TO_CUSTOM, 'label' => 'Move to custom tags'],
-                    ['value' => RefetchService::TAG_STALE_REMOVE, 'label' => 'Remove'],
-                ],
-            ],
-            [
-                'key' => 'custom_to_fetched',
-                'label' => 'Custom->Fetched',
-                'options' => [
-                    ['value' => RefetchService::TAG_CUSTOM_PROMOTE, 'label' => 'Promote to fetched'],
-                    ['value' => RefetchService::TAG_CUSTOM_KEEP, 'label' => 'Keep custom'],
-                ],
+            ];
+        }
+
+        $fields[] = [
+            'key' => 'custom_to_fetched',
+            'label' => 'Custom->Fetched',
+            'options' => [
+                ['value' => RefetchService::TAG_CUSTOM_PROMOTE, 'label' => 'Promote to fetched'],
+                ['value' => RefetchService::TAG_CUSTOM_KEEP, 'label' => 'Keep custom'],
             ],
         ];
+
+        return $fields;
     }
 
     /**
@@ -641,8 +645,10 @@ class OptionsRefetchReview extends Component
         return [
             'added_japanese' => RefetchService::TAG_ADDED_ADD,
             'added_english' => RefetchService::TAG_ADDED_ADD,
+            'added_traditional_chinese' => RefetchService::TAG_ADDED_ADD,
             'stale_japanese' => RefetchService::TAG_STALE_MOVE_TO_CUSTOM,
             'stale_english' => RefetchService::TAG_STALE_MOVE_TO_CUSTOM,
+            'stale_traditional_chinese' => RefetchService::TAG_STALE_MOVE_TO_CUSTOM,
             'custom_to_fetched' => RefetchService::TAG_CUSTOM_PROMOTE,
         ];
     }

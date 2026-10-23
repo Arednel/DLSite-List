@@ -567,7 +567,27 @@ final class RefetchService
         return $this->genreSync->sync($product, [
             Genre::LANGUAGE_JAPANESE => Genre::resolveIdsFromTitles($japanese),
             Genre::LANGUAGE_ENGLISH => Genre::resolveIdsFromTitles($english),
+            Genre::LANGUAGE_TRADITIONAL_CHINESE => $this->traditionalChineseGenreIds(
+                $product,
+                $change,
+                fn(array $traditionalChinese): array => $this->tagDiff($traditionalChinese, $custom),
+            ),
         ], Genre::resolveIdsFromTitles($custom));
+    }
+
+    /**
+     * Runs built from fetch results without a Traditional Chinese locale keep the stored Traditional Chinese tags.
+     *
+     * @param  Closure(list<string>): list<string>  $filter
+     * @return list<int>
+     */
+    private function traditionalChineseGenreIds(Product $product, array $change, Closure $filter): array
+    {
+        if (! array_key_exists('traditional_chinese', $change['new'] ?? [])) {
+            return $product->traditionalChineseGenres()->pluck('genres.id')->all();
+        }
+
+        return Genre::resolveIdsFromTitles($filter($change['new']['traditional_chinese']));
     }
 
     private function applyDetailedTags(
@@ -584,10 +604,15 @@ final class RefetchService
         $details = $change['details'] ?? [];
         $fetchedJapanese = $change['new']['japanese'] ?? [];
         $fetchedEnglish = $change['new']['english'] ?? [];
+        $hasTraditionalChinese = array_key_exists('traditional_chinese', $change['new'] ?? []);
+        $fetchedTraditionalChinese = $hasTraditionalChinese
+            ? $change['new']['traditional_chinese']
+            : $product->traditionalChineseGenres()->pluck('genres.title')->all();
         $custom = $change['old']['custom'] ?? [];
         $customToFetched = array_merge(
             $details['custom_to_fetched_japanese'] ?? [],
             $details['custom_to_fetched_english'] ?? [],
+            $details['custom_to_fetched_traditional_chinese'] ?? [],
         );
 
         if (($actions['added_japanese'] ?? self::TAG_ADDED_ADD) === self::TAG_ADDED_IGNORE) {
@@ -598,30 +623,39 @@ final class RefetchService
             $fetchedEnglish = $this->tagDiff($fetchedEnglish, $details['added_english'] ?? []);
         }
 
+        if (($actions['added_traditional_chinese'] ?? self::TAG_ADDED_ADD) === self::TAG_ADDED_IGNORE) {
+            $fetchedTraditionalChinese = $this->tagDiff(
+                $fetchedTraditionalChinese,
+                $details['added_traditional_chinese'] ?? [],
+            );
+        }
+
         if (($actions['custom_to_fetched'] ?? self::TAG_CUSTOM_PROMOTE) === self::TAG_CUSTOM_KEEP) {
             $fetchedJapanese = $this->tagDiff($fetchedJapanese, $customToFetched);
             $fetchedEnglish = $this->tagDiff($fetchedEnglish, $customToFetched);
+            $fetchedTraditionalChinese = $this->tagDiff($fetchedTraditionalChinese, $customToFetched);
         } else {
             $custom = $this->tagDiff($custom, $customToFetched);
         }
 
-        if (($actions['stale_japanese'] ?? self::TAG_STALE_MOVE_TO_CUSTOM) === self::TAG_STALE_MOVE_TO_CUSTOM) {
-            $custom = array_merge(
-                $custom,
-                $this->tagDiff($details['stale_japanese'] ?? [], $fetchedJapanese, $fetchedEnglish),
-            );
-        }
-
-        if (($actions['stale_english'] ?? self::TAG_STALE_MOVE_TO_CUSTOM) === self::TAG_STALE_MOVE_TO_CUSTOM) {
-            $custom = array_merge(
-                $custom,
-                $this->tagDiff($details['stale_english'] ?? [], $fetchedJapanese, $fetchedEnglish),
-            );
+        foreach (['stale_japanese', 'stale_english', 'stale_traditional_chinese'] as $staleKey) {
+            if (($actions[$staleKey] ?? self::TAG_STALE_MOVE_TO_CUSTOM) === self::TAG_STALE_MOVE_TO_CUSTOM) {
+                $custom = array_merge(
+                    $custom,
+                    $this->tagDiff(
+                        $details[$staleKey] ?? [],
+                        $fetchedJapanese,
+                        $fetchedEnglish,
+                        $fetchedTraditionalChinese,
+                    ),
+                );
+            }
         }
 
         return $this->genreSync->sync($product, [
             Genre::LANGUAGE_JAPANESE => Genre::resolveIdsFromTitles($fetchedJapanese),
             Genre::LANGUAGE_ENGLISH => Genre::resolveIdsFromTitles($fetchedEnglish),
+            Genre::LANGUAGE_TRADITIONAL_CHINESE => Genre::resolveIdsFromTitles($fetchedTraditionalChinese),
         ], Genre::resolveIdsFromTitles($custom));
     }
 

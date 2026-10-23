@@ -133,7 +133,7 @@
 
                                         @if ($activeReview['is_tags'])
                                             <div class="review-actions review-actions--compact">
-                                                @foreach ($tagActionFields as $tagAction)
+                                                @foreach ($card['tag_action_fields'] as $tagAction)
                                                     <label>
                                                         {{ __($tagAction['label']) }}
                                                         <select

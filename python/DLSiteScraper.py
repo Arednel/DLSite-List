@@ -103,11 +103,17 @@ async def english_dlsite(work_id):
         return await api.get_work(work_id)
 
 
+async def traditional_chinese_dlsite(work_id):
+    async with DlsiteAPI(locale="zh_TW") as api:
+        return await api.get_work(work_id)
+
+
 async def fetch_work_data(work_id):
     japanese = await japanese_dlsite(work_id)
     english = await english_dlsite(work_id)
+    traditional_chinese = await traditional_chinese_dlsite(work_id)
 
-    return japanese, english
+    return japanese, english, traditional_chinese
 
 
 def download_image(url, save_path):
@@ -200,12 +206,19 @@ def fetch_images(work, image_output):
 
 
 def run(arguments):
-    work_japanese, work_english = asyncio.run(fetch_work_data(arguments.work_id))
+    work_japanese, work_english, work_traditional_chinese = asyncio.run(
+        fetch_work_data(arguments.work_id)
+    )
     japanese = to_serializable(work_japanese)
     english = to_serializable(work_english)
+    traditional_chinese = to_serializable(work_traditional_chinese)
     japanese["product_format"] = product_format_codes(work_japanese)
     english["product_format"] = product_format_codes(work_english)
-    combined = {"japanese": japanese, "english": english}
+    combined = {
+        "japanese": japanese,
+        "english": english,
+        "traditional_chinese": traditional_chinese,
+    }
     json_output = Path(arguments.json_output)
     json_output.parent.mkdir(parents=True, exist_ok=True)
 

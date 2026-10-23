@@ -34,6 +34,7 @@ final class ImportValue
             'tag-library' => __('Tag Library'),
             'jp' => __('Japanese'),
             'en' => __('English'),
+            'zh_TW' => __('Traditional Chinese'),
             'scenario' => __('Scenario Author'),
             'voice_actor' => __('Voice Actor'),
             'illustration' => __('Illustration Author'),
@@ -83,7 +84,7 @@ final class ImportValue
             in_array($category, ['titles', 'descriptions'], true) => [$category],
             isset(ImportReview::WORK_SCALAR_CATEGORIES[$category]) => [implode('->', ImportReview::WORK_SCALAR_CATEGORIES[$category])],
             in_array($category, ImportReview::WORK_CONTRIBUTOR_CATEGORIES, true) => ['contributors->' . $category],
-            $category === 'tags' => ['tags->jp', 'tags->en'],
+            $category === 'tags' => ['tags->jp', 'tags->en', 'tags->zh_TW'],
             $category === 'custom_tags' => ['tags->custom'],
             in_array($category, ['cover', 'sample_images'], true) => [$category],
             default => [],
@@ -117,7 +118,7 @@ final class ImportValue
                 $values[$category] = $record['contributors'][$category];
             }
         } elseif ($category === 'tags') {
-            $tags = is_array($record['tags'] ?? null) ? Arr::only($record['tags'], ['jp', 'en']) : [];
+            $tags = is_array($record['tags'] ?? null) ? Arr::only($record['tags'], ['jp', 'en', 'zh_TW']) : [];
             if ($tags !== []) {
                 $values['tags'] = $tags;
             }

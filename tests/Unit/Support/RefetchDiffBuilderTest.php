@@ -338,6 +338,44 @@ class RefetchDiffBuilderTest extends TestCase
         $this->assertSame('Asmr', $resolved->title);
     }
 
+    public function test_traditional_chinese_tags_are_diffed_only_when_the_fetch_has_that_locale(): void
+    {
+        $product = Product::factory()->create();
+        $japanese = Genre::resolveByTitle('癒し');
+        $staleTraditionalChinese = Genre::resolveByTitle('舊標籤');
+        app(ProductGenreSync::class)->sync($product, [
+            Genre::LANGUAGE_JAPANESE => [$japanese->getKey()],
+            Genre::LANGUAGE_TRADITIONAL_CHINESE => [$staleTraditionalChinese->getKey()],
+        ], []);
+
+        $withoutLocale = app(RefetchDiffBuilder::class)->build(
+            $product,
+            $this->fetchWithJapaneseTags($product, ['癒し']),
+            null,
+        );
+        $this->assertArrayNotHasKey('tags', $withoutLocale);
+
+        $changes = app(RefetchDiffBuilder::class)->build(
+            $product,
+            new DLSiteFetchResult(
+                workData: DLSiteWorkData::fromArray([
+                    'japanese' => ['product_id' => $product->getKey(), 'genre' => ['癒し']],
+                    'traditional_chinese' => ['product_id' => $product->getKey(), 'genre' => ['療癒']],
+                ]),
+                failedImages: [],
+            ),
+            null,
+        );
+        $tagChange = $changes['tags']['tags'];
+
+        $this->assertSame(['japanese', 'english', 'traditional_chinese', 'custom'], array_keys($tagChange['new']));
+        $this->assertSame(['舊標籤'], $tagChange['old']['traditional_chinese']);
+        $this->assertSame(['療癒'], $tagChange['new']['traditional_chinese']);
+        $this->assertSame(['療癒'], $tagChange['details']['added_traditional_chinese']);
+        $this->assertSame(['舊標籤'], $tagChange['details']['stale_traditional_chinese']);
+        $this->assertSame([], $tagChange['details']['added_japanese']);
+    }
+
     /**
      * @param  list<string>  $tags
      */

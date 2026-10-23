@@ -75,7 +75,12 @@ final class RefetchDiffBuilder
             );
         }
 
-        $tagChange = $this->tagChange($product, $work->japaneseGenres, $work->englishGenres);
+        $tagChange = $this->tagChange(
+            $product,
+            $work->japaneseGenres,
+            $work->englishGenres,
+            $work->traditionalChineseGenres,
+        );
 
         if ($tagChange !== null) {
             $changes[RefetchCategory::Tags->value]['tags'] = $tagChange;
@@ -164,24 +169,31 @@ final class RefetchDiffBuilder
     /**
      * @param  list<string>  $japanese
      * @param  list<string>  $english
+     * @param  list<string>|null  $traditionalChinese
      * @return array<string, mixed>|null
      */
-    private function tagChange(Product $product, array $japanese, array $english): ?array
+    private function tagChange(Product $product, array $japanese, array $english, ?array $traditionalChinese = null): ?array
     {
         $oldJapanese = $product->japaneseGenres()->orderBy('genres.title')->pluck('genres.title')->all();
         $oldEnglish = $product->englishGenres()->orderBy('genres.title')->pluck('genres.title')->all();
         $custom = $product->customGenres()->orderBy('genres.title')->pluck('genres.title')->all();
         $japanese = $this->normalizeTags($japanese);
         $english = $this->normalizeTags($english);
+        // Fetch results without a Traditional Chinese locale leave the stored Traditional Chinese tags alone.
+        $oldTraditionalChinese = $traditionalChinese === null
+            ? null
+            : $product->traditionalChineseGenres()->orderBy('genres.title')->pluck('genres.title')->all();
+        $traditionalChinese = $traditionalChinese === null ? null : $this->normalizeTags($traditionalChinese);
 
         if (
             $this->tagKeys($oldJapanese) === $this->tagKeys($japanese)
             && $this->tagKeys($oldEnglish) === $this->tagKeys($english)
+            && ($traditionalChinese === null || $this->tagKeys($oldTraditionalChinese) === $this->tagKeys($traditionalChinese))
         ) {
             return null;
         }
 
-        return [
+        $change = [
             'label' => 'Fetched Tags',
             'old' => [
                 'japanese' => $oldJapanese,
@@ -201,6 +213,33 @@ final class RefetchDiffBuilder
                 'custom_to_fetched_japanese' => $this->tagIntersection($japanese, $custom),
                 'custom_to_fetched_english' => $this->tagIntersection($english, $custom),
             ],
+        ];
+
+        if ($traditionalChinese !== null) {
+            $change['old'] = $this->withTraditionalChinese($change['old'], $oldTraditionalChinese);
+            $change['new'] = $this->withTraditionalChinese($change['new'], $traditionalChinese);
+            $change['details'] += [
+                'added_traditional_chinese' => $this->tagDiff($traditionalChinese, $oldTraditionalChinese, $custom),
+                'stale_traditional_chinese' => $this->tagDiff($oldTraditionalChinese, $traditionalChinese),
+                'custom_to_fetched_traditional_chinese' => $this->tagIntersection($traditionalChinese, $custom),
+            ];
+        }
+
+        return $change;
+    }
+
+    /**
+     * @param  array<string, list<string>>  $tags
+     * @param  list<string>  $traditionalChinese
+     * @return array<string, list<string>>
+     */
+    private function withTraditionalChinese(array $tags, array $traditionalChinese): array
+    {
+        return [
+            'japanese' => $tags['japanese'],
+            'english' => $tags['english'],
+            'traditional_chinese' => $traditionalChinese,
+            'custom' => $tags['custom'],
         ];
     }
 

@@ -149,6 +149,7 @@ final class DLSiteProductImporter
             $this->genreSync->sync($product, [
                 Genre::LANGUAGE_JAPANESE => Genre::resolveIdsFromTitles($workData->japaneseGenres),
                 Genre::LANGUAGE_ENGLISH => Genre::resolveIdsFromTitles($workData->englishGenres),
+                Genre::LANGUAGE_TRADITIONAL_CHINESE => Genre::resolveIdsFromTitles($workData->traditionalChineseGenres ?? []),
             ], Genre::resolveIdsFromTitles($customGenres));
 
             $this->contributorSync->sync($product, $contributorsByRole, $makerId);

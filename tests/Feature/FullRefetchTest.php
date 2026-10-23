@@ -1106,6 +1106,95 @@ class FullRefetchTest extends TestCase
         $this->travelBack();
     }
 
+    public function test_detailed_traditional_chinese_tag_choices_are_applied(): void
+    {
+        Storage::fake('local');
+        $product = Product::factory()->create();
+        app(ProductGenreSync::class)->sync($product, [
+            Genre::LANGUAGE_ENGLISH => Genre::resolveIdsFromTitles(['Keep EN']),
+            Genre::LANGUAGE_TRADITIONAL_CHINESE => Genre::resolveIdsFromTitles(['失效繁中', '保留繁中']),
+        ], []);
+        [$run, $result] = $this->tagReviewRun($product, [
+            'label' => 'Fetched Tags',
+            'old' => [
+                'japanese' => [],
+                'english' => ['Keep EN'],
+                'traditional_chinese' => ['保留繁中', '失效繁中'],
+                'custom' => [],
+            ],
+            'new' => [
+                'japanese' => [],
+                'english' => ['Keep EN'],
+                'traditional_chinese' => ['保留繁中', '新增繁中'],
+                'custom' => [],
+            ],
+            'details' => [
+                'added_japanese' => [],
+                'added_english' => [],
+                'added_traditional_chinese' => ['新增繁中'],
+                'stale_japanese' => [],
+                'stale_english' => [],
+                'stale_traditional_chinese' => ['失效繁中'],
+                'custom_to_fetched_japanese' => [],
+                'custom_to_fetched_english' => [],
+                'custom_to_fetched_traditional_chinese' => [],
+            ],
+        ]);
+
+        Livewire::test(OptionsRefetchReview::class, ['run' => $run])
+            ->assertSee('新增繁中')
+            ->set('globalActions.tags', 'ignore')
+            ->set("actions.tags.{$result->id}.tags", 'detailed')
+            ->set("tagActions.{$result->id}", [
+                'added_japanese' => 'ignore',
+                'added_english' => 'ignore',
+                'added_traditional_chinese' => 'add_as_fetched',
+                'stale_japanese' => 'remove',
+                'stale_english' => 'remove',
+                'stale_traditional_chinese' => 'remove',
+                'custom_to_fetched' => 'keep_custom',
+            ])
+            ->call('askApplyTab', 'tags')
+            ->call('applyTab')
+            ->assertHasNoErrors();
+
+        $this->assertEqualsCanonicalizing(['保留繁中', '新增繁中'], $product->traditionalChineseGenres()->pluck('genres.title')->all());
+        $this->assertSame(['Keep EN'], $product->englishGenres()->pluck('genres.title')->all());
+        $this->assertSame([], $product->customGenres()->pluck('genres.title')->all());
+    }
+
+    public function test_overwriting_tags_from_a_run_without_traditional_chinese_keeps_existing_traditional_chinese_tags(): void
+    {
+        Storage::fake('local');
+        $product = Product::factory()->create();
+        app(ProductGenreSync::class)->sync($product, [
+            Genre::LANGUAGE_ENGLISH => Genre::resolveIdsFromTitles(['Old EN']),
+            Genre::LANGUAGE_TRADITIONAL_CHINESE => Genre::resolveIdsFromTitles(['保留繁中']),
+        ], []);
+        [$run] = $this->tagReviewRun($product, [
+            'label' => 'Fetched Tags',
+            'old' => ['japanese' => [], 'english' => ['Old EN'], 'custom' => []],
+            'new' => ['japanese' => [], 'english' => ['New EN'], 'custom' => []],
+            'details' => [
+                'added_japanese' => [],
+                'added_english' => ['New EN'],
+                'stale_japanese' => [],
+                'stale_english' => ['Old EN'],
+                'custom_to_fetched_japanese' => [],
+                'custom_to_fetched_english' => [],
+            ],
+        ]);
+
+        Livewire::test(OptionsRefetchReview::class, ['run' => $run])
+            ->set('globalActions.tags', RefetchService::ACTION_OVERWRITE)
+            ->call('askApplyTab', 'tags')
+            ->call('applyTab')
+            ->assertHasNoErrors();
+
+        $this->assertSame(['New EN'], $product->englishGenres()->pluck('genres.title')->all());
+        $this->assertSame(['保留繁中'], $product->traditionalChineseGenres()->pluck('genres.title')->all());
+    }
+
     public function test_invalid_tab_key_is_rejected_by_livewire_validation(): void
     {
         [$run] = $this->reviewRun();
@@ -1160,6 +1249,25 @@ class FullRefetchTest extends TestCase
     /**
      * @return array{RefetchRun, Product, RefetchWorkResult}
      */
+    private function tagReviewRun(Product $product, array $tagChange): array
+    {
+        $run = app(RefetchService::class)->createRun([$product->id], false);
+        $result = $run->results()->firstOrFail();
+        $result->forceFill([
+            'status' => RefetchWorkResult::STATUS_FETCHED,
+            'changes' => ['tags' => ['tags' => $tagChange]],
+        ])->save();
+        $run->forceFill([
+            'status' => RefetchRun::STATUS_REVIEW,
+            'processed_count' => 1,
+            'fetched_count' => 1,
+            'resolved_tabs' => array_values(array_diff(RefetchCategory::values(), ['tags'])),
+        ])->save();
+        Storage::disk('local')->put($this->stagedJsonPath($run, $product), '{"version":"new"}');
+
+        return [$run, $result];
+    }
+
     private function reviewRun(): array
     {
         $product = Product::factory()->create([

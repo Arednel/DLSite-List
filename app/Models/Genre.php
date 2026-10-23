@@ -23,6 +23,8 @@ class Genre extends Model
 
     public const LANGUAGE_JAPANESE = 'jp';
 
+    public const LANGUAGE_TRADITIONAL_CHINESE = 'zh_TW';
+
     public const PIVOT_SOURCE_FETCHED = 'fetched';
 
     public const PIVOT_SOURCE_CUSTOM = 'custom';

@@ -93,7 +93,7 @@ final class LibraryWorkValidator
             'listening.end_date.year' => ['sometimes', 'nullable', 'integer', 'min:1', 'max:9999'],
             'listening.end_date.month' => ['sometimes', 'nullable', 'integer', 'min:1', 'max:12'],
             'listening.end_date.day' => ['sometimes', 'nullable', 'integer', 'min:1', 'max:31'],
-            'tags' => ['sometimes', 'array:custom,jp,en'],
+            'tags' => ['sometimes', 'array:custom,jp,en,zh_TW'],
             'tags.*' => ['sometimes', 'array', 'max:10000'],
             'tags.*.*' => ['required', 'string', 'max:255'],
             'contributors' => ['sometimes', 'array:' . implode(',', array_column(ProductContributorRole::cases(), 'value'))],

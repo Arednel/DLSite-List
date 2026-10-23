@@ -155,6 +155,27 @@ class DLSiteWorkDataTest extends TestCase
         $this->assertSame('English Description', $data->englishDescription);
     }
 
+    public function test_traditional_chinese_genres_are_null_when_the_locale_is_absent(): void
+    {
+        $withoutLocale = DLSiteWorkData::fromArray([
+            'japanese' => ['product_id' => 'RJ999998', 'work_name' => 'Title', 'genre' => ['癒し']],
+            'english' => ['genre' => ['Healing']],
+        ]);
+        $withLocale = DLSiteWorkData::fromArray([
+            'japanese' => ['product_id' => 'RJ999998', 'work_name' => 'Title', 'genre' => ['癒し']],
+            'english' => ['genre' => ['Healing']],
+            'traditional_chinese' => ['genre' => [' 療癒 ', '療癒', '', 'ASMR']],
+        ]);
+        $emptyLocale = DLSiteWorkData::fromArray([
+            'japanese' => ['product_id' => 'RJ999998', 'work_name' => 'Title'],
+            'traditional_chinese' => [],
+        ]);
+
+        $this->assertNull($withoutLocale->traditionalChineseGenres);
+        $this->assertSame(['療癒', 'ASMR'], $withLocale->traditionalChineseGenres);
+        $this->assertSame([], $emptyLocale->traditionalChineseGenres);
+    }
+
     public function test_it_uses_fallback_product_id_when_json_does_not_include_one(): void
     {
         $data = DLSiteWorkData::fromArray([
