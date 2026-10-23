@@ -4,6 +4,10 @@ All notable changes to this project are documented in this file.
 
 ## Unreleased
 
+### Security
+
+* Restricted DLSite Create, Custom Create, and Bulk Import return navigation to same-site URLs.
+
 ## 2.1.0 - 2026-10-22
 
 *Traditional Chinese Support & Security Update*
