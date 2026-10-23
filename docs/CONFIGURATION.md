@@ -52,11 +52,13 @@ docker compose --env-file docker/.env.docker -f compose.dev.yaml up --build -d
 - Optional phpMyAdmin is disabled/commented out by default. If enabled in `compose.dev.yaml`, it is available at `http://localhost:8888`.
 - Authentication is disabled by default. To add a username and password, open `Options -> Authentication` and turn on `Require administrator login`.
 
-`compose.dev.yaml` is the standalone source-build configuration. It builds `docker/app.dockerfile` and `docker/web.dockerfile` locally and uses `docker/.env.docker` for local Docker configuration. It uses the `dlsite-list-dev` Compose project name so local development resources stay separate from the published `dlsite-list` installation.
+`compose.dev.yaml` is used for local Docker builds from the checked-out source. It builds the application and web server images from `docker/app.dockerfile` and `docker/web.dockerfile`, and reads local Docker settings from `docker/.env.docker`.
+
+Local builds use the `dlsite-list-dev` Compose project name by default, keeping their containers, volumes, and other Docker resources separate from the published `dlsite-list` installation.
 
 The test database/services are behind the Compose `test` profile and do not start with the normal application command.
 
-For Import / Export, the supplied Docker configuration allows individual ZIP uploads up to 256 MiB. PHP uses `upload_max_filesize = 256M` and `post_max_size = 260M`, while Nginx uses `client_max_body_size 260M`. If larger import files are needed, raise the PHP and Nginx limits together and keep the request/post limit above the file-size limit.
+Docker accepts individual Import / Export ZIP files up to 256 MiB by default. PHP uses `upload_max_filesize = 256M` and `post_max_size = 260M`, while Nginx uses `client_max_body_size 260M`. If larger import files are needed, raise the PHP and Nginx limits together and keep the request/post limit above the file-size limit.
 
 #### Docker Secrets
 
@@ -540,7 +542,7 @@ Enabling a status exposes it in:
 - Index progress navigation
 - Advanced Filter
 
-Disabling a status does not rewrite status of works that already use it.
+Disabling a status hides it from the available choices but does not change the status of existing works that already use it.
 
 #### Image Viewer
 
@@ -898,7 +900,7 @@ Hidden DLsite Quick Add metadata fields are not accepted as user overrides, but 
 - `description_japanese` - hidden
 - `description_english` - hidden
 
-Custom Quick Add has no scraper fallback. Cover and sample images are optional; hiding either image field removes it from the form/submission. Hidden optional description rows store `null`.
+Custom Quick Add has no scraper fallback.
 
 ### Authentication
 
