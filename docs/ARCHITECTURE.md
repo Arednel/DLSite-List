@@ -625,6 +625,8 @@ The Index uses:
 - desktop table layout on larger screens
 - stacked product cards on mobile
 
+The saved table width reaches `public/css/index.css` as the `--index-table-width` CSS variable. The table panel (`.list-unit`) is a size container named `index-list`, so column rules can react to the panel's real width: above the default 1024px, the Tags column drops its fixed width and shares the extra room with Title.
+
 Create/Edit use class-based field components under:
 - `app/View/Components/Fields`
 - `resources/views/components/fields`

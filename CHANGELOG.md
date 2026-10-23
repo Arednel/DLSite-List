@@ -4,6 +4,15 @@ All notable changes to this project are documented in this file.
 
 ## Unreleased
 
+### Changed
+
+* Wide, Full, and custom Index table widths now give the extra room to the Title and Tags columns instead of only Title. Short columns keep their widths, and the Default width is unchanged.
+
+### Fixed
+
+* Fixed the Index making the page scroll sideways on narrow windows and with the Full table width.
+* Fixed wide Index tables running under the floating side menu on large screens.
+
 ### Security
 
 * Restricted DLSite Create, Custom Create, and Bulk Import return navigation to same-site URLs.

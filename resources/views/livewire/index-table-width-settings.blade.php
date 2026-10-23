@@ -9,6 +9,10 @@
             @endforeach
         </div>
 
+        <p class="helper-text">
+            {{ __('When the table is wider than Default, the extra room goes to the Title and Tags columns.') }}
+        </p>
+
         @if ($mode === $customMode)
             <div class="option-field">
                 <label for="index_table_width_custom">{{ __('Custom width') }}</label>

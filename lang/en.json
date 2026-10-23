@@ -334,6 +334,7 @@
     "Choose whether general Index search can match hidden description text.": "Choose whether general Index search can match hidden description text.",
     "Index Table Width": "Index Table Width",
     "Choose how wide the Index table can be before horizontal scrolling is used.": "Choose how wide the Index table can be before horizontal scrolling is used.",
+    "When the table is wider than Default, the extra room goes to the Title and Tags columns.": "When the table is wider than Default, the extra room goes to the Title and Tags columns.",
     "Overflow": "Overflow",
     "Limit long Notes and Tags on the Index and allow each field to expand.": "Limit long Notes and Tags on the Index and allow each field to expand.",
     "Accepted units: px, rem, em, %, vw, vh, vmin, vmax, svh, lvh, and dvh. Percentage and viewport units depend on the current layout and screen size.": "Accepted units: px, rem, em, %, vw, vh, vmin, vmax, svh, lvh, and dvh. Percentage and viewport units depend on the current layout and screen size.",

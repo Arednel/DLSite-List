@@ -266,6 +266,13 @@ Covers fixed, custom, and unlimited Index pagination settings and reset/default 
 
 Covers the `Search hidden descriptions` option and its effect on Index general search.
 
+#### `tests/Feature/IndexWideLayoutTest.php`
+
+Covers the wide Index layout:
+- the Index Table Width hint in English, Japanese, and Traditional Chinese
+- the table width variable, table panel, and Tags header hooks rendered for the Full width
+- `public/css/index.css` keeping fixed short-column widths, letting Tags grow only above the default 1024px, and sizing the Index against the page instead of the viewport
+
 #### `tests/Feature/ListMenuFloatLocalizationTest.php`
 
 Covers localized copy in the shared floating/drawer navigation and shared menu UI.
@@ -712,6 +719,23 @@ At mobile/tablet widths:
 
 At the desktop breakpoint:
 - confirm the desktop Options navigation replaces the mobile drawer as intended
+
+### Index Table Width
+
+Check `Default`, `Wide`, and `Full` at representative widths:
+
+```text
+375px
+1000px
+1366px
+1920px
+```
+
+- confirm `Default` looks the same as before at every width
+- confirm `Wide` and `Full` give the extra room to Title and Tags while Score, Age, and Progress stay narrow
+- confirm the page never scrolls sideways; a table wider than the window scrolls inside its own panel
+- confirm the table stays clear of the floating side menu from 1200px up
+- confirm 375px still shows the usual stacked cards
 
 ### Add/Edit Modals
 

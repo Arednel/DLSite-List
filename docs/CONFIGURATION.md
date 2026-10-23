@@ -566,6 +566,10 @@ Choices:
 - `full` - 100%
 - custom width - supports `px`, `rem`, `em`, `%`, or `vw`
 
+When the table is wider than `default`, the extra room goes to the Title and Tags columns. Short columns such as Score, Age, and Progress keep their fixed widths.
+
+The Index never makes the page scroll sideways. A table wider than the window scrolls inside its own panel instead. On screens 1200px and wider, a small margin on both sides keeps wide tables clear of the floating side menu. Mobile cards are not affected.
+
 #### Overflow
 
 Three independent targets:
