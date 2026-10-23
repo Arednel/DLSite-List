@@ -904,7 +904,7 @@ class ProductControllerTest extends TestCase
             ->assertSessionHasErrors(['id', 'work_name', 'age_category']);
     }
 
-    public function test_create_go_back_uses_previous_url_with_index_fallback(): void
+    public function test_create_go_back_uses_same_site_previous_url(): void
     {
         $this->from('/tags')->get('/create')
             ->assertOk()
@@ -932,6 +932,11 @@ class ProductControllerTest extends TestCase
             ->assertSee('href="http://localhost/tags"', false)
             ->assertSee('href="/create/custom?return_url=http%3A%2F%2Flocalhost%2Ftags&amp;return_query%5Bprogress%5D=Listening"', false)
             ->assertDontSee('return_url%5Bbad%5D', false);
+
+        $this->from('/tags')->get('/create?return_url=https%3A%2F%2Fexample.com%2F')
+            ->assertOk()
+            ->assertSee('href="http://localhost/tags"', false)
+            ->assertDontSee('href="https://example.com/"', false);
     }
 
     public function test_create_mode_switch_preserves_original_go_back_url(): void
@@ -1071,12 +1076,13 @@ class ProductControllerTest extends TestCase
         }
     }
 
-    public function test_create_go_back_uses_laravel_previous_url_for_external_referrer(): void
+    public function test_create_go_back_rejects_external_previous_url(): void
     {
         $this->withHeader('referer', 'https://example.com/tags')
             ->get('/create')
             ->assertOk()
-            ->assertSee('href="https://example.com/tags"', false);
+            ->assertSee('href="http://localhost"', false)
+            ->assertDontSee('href="https://example.com/tags"', false);
     }
 
     public function test_create_renders_enum_backed_select_labels(): void
