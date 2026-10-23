@@ -31,7 +31,7 @@ Index state is kept in the query string so filtered/sorted views can be linked a
 `ProductIndexSettings` loads the Index-related `options` values in one batched lookup per render. It prepares:
 - Index field layout
 - Filter layout
-- table width
+- table width and adaptive column widths
 - content overflow
 - Image Viewer state
 - Add/Edit modal state
@@ -625,7 +625,7 @@ The Index uses:
 - desktop table layout on larger screens
 - stacked product cards on mobile
 
-The saved table width reaches `public/css/index.css` as the `--index-table-width` CSS variable. The table panel (`.list-unit`) is a size container named `index-list`, so column rules can react to the panel's real width: above the default 1024px, the Tags column drops its fixed width and shares the extra room with Title.
+The saved table width reaches `public/css/index.css` as the `--index-table-width` CSS variable. When `Adaptive column widths` is enabled, `ProductIndex` also adds the `index-adaptive-columns` class to its root element, and every adaptive rule in `public/css/index.css` is scoped under that class, so the Index renders exactly as before while the option is off. Under that class, from 769px up, the Index containers are sized against the page instead of the viewport, and the table panel (`.list-unit`) becomes a size container named `index-list`, so column rules can react to the panel's real width: above the default 1024px, the Tags column drops its fixed width and shares the extra room with Title.
 
 Create/Edit use class-based field components under:
 - `app/View/Components/Fields`

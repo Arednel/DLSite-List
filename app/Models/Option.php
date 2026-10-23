@@ -88,6 +88,8 @@ class Option extends Model
 
     public const INDEX_TABLE_WIDTH = 'index_table_width';
 
+    public const INDEX_ADAPTIVE_COLUMN_WIDTHS_ENABLED = 'index_adaptive_column_widths_enabled';
+
     public const INDEX_CONTENT_OVERFLOW = 'index_content_overflow';
 
     public const INDEX_PER_PAGE_UNLIMITED = 'unlimited';
@@ -196,6 +198,7 @@ class Option extends Model
         self::TAG_LIBRARY_INDEX_GROUP_ORDERING_ENABLED,
         self::TAG_COLOR_SURFACES,
         self::INDEX_TABLE_WIDTH,
+        self::INDEX_ADAPTIVE_COLUMN_WIDTHS_ENABLED,
         self::INDEX_CONTENT_OVERFLOW,
         self::INDEX_SORT_FIELD_LAYOUT,
     ];
@@ -229,6 +232,7 @@ class Option extends Model
         self::CUSTOM_QUICK_ADD_FIELD_LAYOUT,
         self::INDEX_SORT_FIELD_LAYOUT,
         self::INDEX_TABLE_WIDTH,
+        self::INDEX_ADAPTIVE_COLUMN_WIDTHS_ENABLED,
         self::INDEX_CONTENT_OVERFLOW,
     ];
 
@@ -293,6 +297,7 @@ class Option extends Model
             self::PRODUCT_FORM_MODAL_COMPLETION_ACTION => self::PRODUCT_FORM_MODAL_COMPLETION_REDIRECT,
             self::TAG_COLOR_SURFACES => self::DEFAULT_TAG_COLOR_SURFACES,
             self::INDEX_TABLE_WIDTH => ['mode' => self::INDEX_TABLE_WIDTH_DEFAULT, 'custom' => ''],
+            self::INDEX_ADAPTIVE_COLUMN_WIDTHS_ENABLED => false,
             self::INDEX_CONTENT_OVERFLOW => ProductIndexContentOverflow::DEFAULTS,
             self::INDEX_SORT_FIELD_LAYOUT => ProductIndexSortField::storageLayout([]),
             default => throw new InvalidArgumentException('Unknown option: ' . $key),
@@ -855,6 +860,21 @@ class Option extends Model
         self::forget(self::INDEX_TABLE_WIDTH);
     }
 
+    public static function indexAdaptiveColumnWidthsEnabled(): bool
+    {
+        return self::booleanValueFor(self::INDEX_ADAPTIVE_COLUMN_WIDTHS_ENABLED, self::defaultFor(self::INDEX_ADAPTIVE_COLUMN_WIDTHS_ENABLED));
+    }
+
+    public static function setIndexAdaptiveColumnWidthsEnabled(bool $enabled): void
+    {
+        self::setBooleanValue(self::INDEX_ADAPTIVE_COLUMN_WIDTHS_ENABLED, $enabled);
+    }
+
+    public static function resetIndexAdaptiveColumnWidthsEnabledToDefault(): void
+    {
+        self::forget(self::INDEX_ADAPTIVE_COLUMN_WIDTHS_ENABLED);
+    }
+
     /**
      * @return array{
      *     inline_notes: array{enabled: bool, height: string},
@@ -899,6 +919,7 @@ class Option extends Model
                 self::FILTER_FIELD_LAYOUT,
                 self::INDEX_SORT_FIELD_LAYOUT,
                 self::INDEX_TABLE_WIDTH,
+                self::INDEX_ADAPTIVE_COLUMN_WIDTHS_ENABLED,
                 self::INDEX_CONTENT_OVERFLOW,
                 self::TAG_LIBRARY_INDEX_GROUP_ORDERING_ENABLED,
                 self::TAG_COLOR_SURFACES,
@@ -941,6 +962,10 @@ class Option extends Model
             indexSortFieldOptions: ProductIndexSortField::optionsFromLayout($indexSortFieldLayout),
             tableWidth: $tableWidth,
             tableWidthCss: self::indexTableWidthCssFrom($tableWidth),
+            adaptiveColumnWidthsEnabled: self::normalizeBoolean(
+                $values->get(self::INDEX_ADAPTIVE_COLUMN_WIDTHS_ENABLED),
+                self::defaultFor(self::INDEX_ADAPTIVE_COLUMN_WIDTHS_ENABLED),
+            ),
             contentOverflow: ProductIndexContentOverflow::normalize(
                 self::jsonFromValue($values->get(self::INDEX_CONTENT_OVERFLOW)),
             ),

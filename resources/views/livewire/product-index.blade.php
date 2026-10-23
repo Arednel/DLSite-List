@@ -1,4 +1,4 @@
-<div style="--index-table-width: {{ $tableWidthCss }}">
+<div @if ($adaptiveColumnWidths) class="index-adaptive-columns" @endif style="--index-table-width: {{ $tableWidthCss }}">
     <div class="header"></div>
 
     <x-list-menu-float :quick-add-url="$quickAddUrl" :product-form-modal-enabled="$productFormModalEnabled" :product-form-modal-completion-action="$productFormModalCompletionAction" />

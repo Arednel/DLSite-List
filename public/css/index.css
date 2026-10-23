@@ -102,12 +102,10 @@ a {
  */
 
 .list-container {
-    --index-page-gutter: 8px;
     position: relative;
     background-color: #FFFDF8 !important;
     border: #EE9898 1px solid;
-    /* Size against the page, not the viewport, so the vertical scrollbar never adds a horizontal one. */
-    width: min(calc(var(--index-table-width, 1024px) + 34px), calc(100% - 2 * var(--index-page-gutter)));
+    width: min(calc(var(--index-table-width, 1024px) + 34px), calc(100vw - 16px));
     margin-bottom: 0;
     margin-right: auto;
     margin-left: auto;
@@ -118,8 +116,7 @@ a {
  */
 .cover-block {
     display: block;
-    /* Never wider than the container, so narrow windows do not scroll sideways. */
-    width: min(var(--index-table-width, 1024px), 100%);
+    width: var(--index-table-width, 1024px);
     margin: 0 auto;
     text-align: center;
 }
@@ -127,7 +124,7 @@ a {
 .cover-block .image-container {
     display: block;
     padding-top: 16px;
-    width: min(var(--index-table-width, 1024px), 100%);
+    width: var(--index-table-width, 1024px);
     max-height: 480px;
     overflow: hidden;
 }
@@ -240,10 +237,9 @@ a {
 }
 
 .list-unit {
-    container: index-list / inline-size;
     display: block;
     margin: 0 auto;
-    width: min(var(--index-table-width, 1024px), calc(100% - 34px));
+    width: min(var(--index-table-width, 1024px), calc(100vw - 50px));
     overflow-x: auto;
 }
 
@@ -346,18 +342,6 @@ a {
 
 .list-table .list-table-header .header-title.actions {
     width: 65px
-}
-
-/*
- * When the table is wider than the default 1024px, let Tags grow with it instead
- * of staying at 120px, so the extra room goes to Title and Tags. Short columns
- * keep their fixed widths.
- */
-@container index-list (width > 1024px) {
-    .list-table .list-table-header .header-title.tags {
-        width: auto;
-        min-width: 120px;
-    }
 }
 
 .list-table .list-table-header .header-title .sort-icon {
@@ -978,16 +962,51 @@ body.filter-modal-open {
     word-break: keep-all;
 }
 
+/*
+ * Adaptive column widths (Options > Index Table Width).
+ * Every rule here sits under .index-adaptive-columns, which the Index only adds while
+ * the option is on, so the Index looks exactly as before while it is off.
+ * Mobile cards (768px and below) are never affected.
+ */
 @media (min-width: 769px) {
-    .progress-menu-container .progress-menu {
+    /* Size against the page, not the viewport, so the vertical scrollbar never adds a sideways scroll. */
+    .index-adaptive-columns .list-container {
+        width: min(calc(var(--index-table-width, 1024px) + 34px), calc(100% - 2 * var(--index-page-gutter, 8px)));
+    }
+
+    /* Never wider than the container, so narrow windows do not scroll sideways. */
+    .index-adaptive-columns .cover-block,
+    .index-adaptive-columns .cover-block .image-container {
+        width: min(var(--index-table-width, 1024px), 100%);
+    }
+
+    .index-adaptive-columns .progress-menu-container .progress-menu {
+        width: min(var(--index-table-width, 1024px), calc(100% - 34px));
+    }
+
+    /* The table panel is a size container, so column rules follow its real width. */
+    .index-adaptive-columns .list-unit {
+        container: index-list / inline-size;
         width: min(var(--index-table-width, 1024px), calc(100% - 34px));
     }
 }
 
 /* On large screens, keep wide tables clear of the fixed side menu. */
 @media (min-width: 1200px) {
-    .list-container {
+    .index-adaptive-columns .list-container {
         --index-page-gutter: 60px;
+    }
+}
+
+/*
+ * When the table is wider than the default 1024px, let Tags grow with it instead
+ * of staying at 120px, so the extra room goes to Title and Tags. Short columns
+ * keep their fixed widths.
+ */
+@container index-list (width > 1024px) {
+    .index-adaptive-columns .list-table .list-table-header .header-title.tags {
+        width: auto;
+        min-width: 120px;
     }
 }
 

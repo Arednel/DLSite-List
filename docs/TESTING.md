@@ -268,10 +268,11 @@ Covers the `Search hidden descriptions` option and its effect on Index general s
 
 #### `tests/Feature/IndexWideLayoutTest.php`
 
-Covers the wide Index layout:
-- the Index Table Width hint in English, Japanese, and Traditional Chinese
-- the table width variable, table panel, and Tags header hooks rendered for the Full width
-- `public/css/index.css` keeping fixed short-column widths, letting Tags grow only above the default 1024px, and sizing the Index against the page instead of the viewport
+Covers the `Adaptive column widths` option under Index Table Width:
+- disabled by default, saved and reset together with the table width, refreshed after a global defaults reset, and included in Options export and import
+- the switch label and help text in English, Japanese, and Traditional Chinese
+- the Index root rendering the `index-adaptive-columns` class only while the option is enabled
+- `public/css/index.css` scoping every adaptive rule under that class, keeping the default rules unchanged, keeping fixed short-column widths, letting Tags grow only above the default 1024px, and sizing the Index against the page instead of the viewport
 
 #### `tests/Feature/ListMenuFloatLocalizationTest.php`
 
@@ -731,7 +732,11 @@ Check `Default`, `Wide`, and `Full` at representative widths:
 1920px
 ```
 
-- confirm `Default` looks the same as before at every width
+With `Adaptive column widths` disabled:
+- confirm every width choice looks the same as before at every width
+
+With `Adaptive column widths` enabled:
+- confirm `Default` looks the same as before from 1200px up
 - confirm `Wide` and `Full` give the extra room to Title and Tags while Score, Age, and Progress stay narrow
 - confirm the page never scrolls sideways; a table wider than the window scrolls inside its own panel
 - confirm the table stays clear of the floating side menu from 1200px up

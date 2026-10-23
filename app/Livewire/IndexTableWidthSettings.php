@@ -17,6 +17,8 @@ class IndexTableWidthSettings extends Component
 
     public string $custom = '';
 
+    public bool $adaptiveColumnWidths = false;
+
     public function mount(): void
     {
         $this->fillFromSetting();
@@ -39,12 +41,14 @@ class IndexTableWidthSettings extends Component
                 'nullable',
                 'regex:/^\d+(\.\d+)?(px|rem|em|%|vw)$/',
             ],
+            'adaptiveColumnWidths' => ['boolean'],
         ]);
 
         Option::setIndexTableWidth([
             'mode' => $this->mode,
             'custom' => $this->custom,
         ]);
+        Option::setIndexAdaptiveColumnWidthsEnabled($this->adaptiveColumnWidths);
         $this->fillFromSetting();
         $this->markSaved('Index table width setting saved.');
     }
@@ -52,6 +56,7 @@ class IndexTableWidthSettings extends Component
     public function resetToDefault(): void
     {
         Option::resetIndexTableWidthToDefault();
+        Option::resetIndexAdaptiveColumnWidthsEnabledToDefault();
         $this->fillFromSetting();
         $this->completeResetWithNotice('Index table width reset to default.');
     }
@@ -65,7 +70,7 @@ class IndexTableWidthSettings extends Component
 
     public function updated(string $property): void
     {
-        if (! in_array($property, ['mode', 'custom'], true)) {
+        if (! in_array($property, ['mode', 'custom', 'adaptiveColumnWidths'], true)) {
             return;
         }
 
@@ -77,5 +82,6 @@ class IndexTableWidthSettings extends Component
         $width = Option::indexTableWidth();
         $this->mode = $width['mode'];
         $this->custom = $width['custom'];
+        $this->adaptiveColumnWidths = Option::indexAdaptiveColumnWidthsEnabled();
     }
 }
