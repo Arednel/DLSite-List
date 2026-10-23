@@ -566,6 +566,8 @@ Choices:
 - `full` - 100%
 - custom width - supports `px`, `rem`, `em`, `%`, or `vw`
 
+Table side margins are optional. Leave empty for no side margin. Enter a value to apply that margin to both sides. Supports `px`, `rem`, `em`, `%`, or `vw`.
+
 #### Overflow
 
 Three independent targets:

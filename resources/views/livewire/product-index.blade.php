@@ -1,4 +1,7 @@
-<div @class(['index-width-full' => $tableWidthCss === '100%']) style="--index-table-width: {{ $tableWidthCss }}">
+<div @class([
+    'index-width-full' => $tableWidthCss === '100%',
+    'index-table-side-margin' => $tableSideMargin !== null,
+]) @style(["--index-table-width: {$tableWidthCss}", "--index-table-side-margin: {$tableSideMargin}" => $tableSideMargin !== null])>
     <div class="header"></div>
 
     <x-list-menu-float :quick-add-url="$quickAddUrl" :product-form-modal-enabled="$productFormModalEnabled" :product-form-modal-completion-action="$productFormModalCompletionAction" />
@@ -381,7 +384,8 @@
                                 ($genre->has_background_color ?? false) === true,
                             'index-tag-chip--text-colored' =>
                                 ($genre->has_font_color ?? false) === true,
-                        ]) @if (filled($genre->color_style ?? null)) style="{{ $genre->color_style }}" @endif
+                        ])
+                            @if (filled($genre->color_style ?? null)) style="{{ $genre->color_style }}" @endif
                             href="{{ $tagHrefPrefix }}genre={{ $genre->id }}">
                             {{ $genre->title }}</a>{{ !$loop->last ? ',' : '' }}
                     @else

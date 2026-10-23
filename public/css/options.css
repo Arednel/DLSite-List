@@ -285,6 +285,11 @@ body.options-page {
     padding: 0;
 }
 
+.options-page .option-subsetting legend .fa-circle-question {
+    color: var(--options-link);
+    cursor: help;
+}
+
 .options-page .option-subsetting .option-radio {
     align-items: center;
     display: flex;

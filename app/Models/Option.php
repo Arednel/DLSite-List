@@ -292,7 +292,11 @@ class Option extends Model
             self::AUTHENTICATION_PAGE_THEME => self::AUTHENTICATION_PAGE_THEME_CHERRY,
             self::PRODUCT_FORM_MODAL_COMPLETION_ACTION => self::PRODUCT_FORM_MODAL_COMPLETION_REDIRECT,
             self::TAG_COLOR_SURFACES => self::DEFAULT_TAG_COLOR_SURFACES,
-            self::INDEX_TABLE_WIDTH => ['mode' => self::INDEX_TABLE_WIDTH_DEFAULT, 'custom' => ''],
+            self::INDEX_TABLE_WIDTH => [
+                'mode' => self::INDEX_TABLE_WIDTH_DEFAULT,
+                'custom' => '',
+                'side_margin' => null,
+            ],
             self::INDEX_CONTENT_OVERFLOW => ProductIndexContentOverflow::DEFAULTS,
             self::INDEX_SORT_FIELD_LAYOUT => ProductIndexSortField::storageLayout([]),
             default => throw new InvalidArgumentException('Unknown option: ' . $key),
@@ -833,7 +837,7 @@ class Option extends Model
     }
 
     /**
-     * @return array{mode: string, custom: string}
+     * @return array{mode: string, custom: string, side_margin: ?string}
      */
     public static function indexTableWidth(): array
     {
@@ -1155,13 +1159,16 @@ class Option extends Model
     }
 
     /**
-     * @return array{mode: string, custom: string}
+     * @return array{mode: string, custom: string, side_margin: ?string}
      */
     public static function normalizeIndexTableWidth(mixed $width): array
     {
         $defaults = self::defaultFor(self::INDEX_TABLE_WIDTH);
         $mode = is_array($width) ? (string) ($width['mode'] ?? $defaults['mode']) : (string) $width;
         $custom = is_array($width) ? trim((string) ($width['custom'] ?? $defaults['custom'])) : $defaults['custom'];
+        $sideMargin = is_array($width) && is_string($width['side_margin'] ?? null)
+            ? trim($width['side_margin'])
+            : $defaults['side_margin'];
 
         if (! array_key_exists($mode, self::INDEX_TABLE_WIDTH_OPTIONS)) {
             $mode = $defaults['mode'];
@@ -1176,14 +1183,21 @@ class Option extends Model
             $custom = $defaults['custom'];
         }
 
+        if ($sideMargin === '' || ($sideMargin !== null && preg_match('/^0+(?:\.0+)?(?:px|rem|em|%|vw)?$/', $sideMargin))) {
+            $sideMargin = null;
+        } elseif ($sideMargin !== null && ! preg_match('/^\d+(\.\d+)?(px|rem|em|%|vw)$/', $sideMargin)) {
+            $sideMargin = null;
+        }
+
         return [
             'mode' => $mode,
             'custom' => $custom,
+            'side_margin' => $sideMargin,
         ];
     }
 
     /**
-     * @param  array{mode: string, custom: string}  $width
+     * @param  array{mode: string, custom: string, side_margin: ?string}  $width
      */
     private static function indexTableWidthCssFrom(array $width): string
     {

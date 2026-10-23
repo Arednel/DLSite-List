@@ -4,6 +4,10 @@ All notable changes to this project are documented in this file.
 
 ## Unreleased
 
+### Added
+
+* Added optional custom side margins to the Index Table Width setting.
+
 ### Fixed
 
 * Removed horizontal page scrollbar when the Index table width is set to `Full`.

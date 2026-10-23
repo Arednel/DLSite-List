@@ -12,7 +12,7 @@ final readonly class ProductIndexSettings
      * @param  list<array{field: string, label: string, class: string}>  $filterFields
      * @param  list<array{field: string, label: string, visible: bool}>  $indexSortFieldLayout
      * @param  array<string, string>  $indexSortFieldOptions
-     * @param  array{mode: string, custom: string}  $tableWidth
+     * @param  array{mode: string, custom: string, side_margin: ?string}  $tableWidth
      * @param  array{
      *     inline_notes: array{enabled: bool, height: string},
      *     notes_column: array{enabled: bool, height: string},

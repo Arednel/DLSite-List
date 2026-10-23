@@ -448,8 +448,47 @@ class ProductMetadataSettingsTest extends TestCase
         $this->assertSame([
             'mode' => Option::INDEX_TABLE_WIDTH_CUSTOM,
             'custom' => '72vw',
+            'side_margin' => null,
         ], Option::indexTableWidth());
         $this->assertSame('72vw', Option::productIndexSettings()->tableWidthCss);
+    }
+
+    public function test_table_width_component_saves_custom_side_margin(): void
+    {
+        Livewire::test(IndexTableWidthSettings::class)
+            ->set('sideMargin', '60px')
+            ->call('save')
+            ->assertHasNoErrors()
+            ->assertSet('sideMargin', '60px')
+            ->assertSet('saved', true);
+
+        $this->assertSame('60px', Option::indexTableWidth()['side_margin']);
+        $this->assertSame('60px', Option::productIndexSettings()->tableWidth['side_margin']);
+    }
+
+    public function test_table_width_component_treats_empty_or_zero_side_margin_as_disabled(): void
+    {
+        foreach (['', '0', '0px'] as $sideMargin) {
+            Livewire::test(IndexTableWidthSettings::class)
+                ->set('sideMargin', $sideMargin)
+                ->call('save')
+                ->assertHasNoErrors()
+                ->assertSet('sideMargin', '');
+
+            $this->assertNull(Option::indexTableWidth()['side_margin']);
+        }
+    }
+
+    #[DataProvider('invalidSideMarginProvider')]
+    public function test_table_width_component_rejects_invalid_side_margins(string $customMargin): void
+    {
+        Livewire::test(IndexTableWidthSettings::class)
+            ->set('sideMargin', $customMargin)
+            ->call('save')
+            ->assertHasErrors(['sideMargin'])
+            ->assertSet('saved', false);
+
+        $this->assertNull(Option::productIndexSettings()->tableWidth['side_margin']);
     }
 
     #[DataProvider('invalidCustomWidthProvider')]
@@ -491,6 +530,7 @@ class ProductMetadataSettingsTest extends TestCase
             ->assertSet('confirmingResetToDefault', false)
             ->assertSet('mode', Option::INDEX_TABLE_WIDTH_DEFAULT)
             ->assertSet('custom', '')
+            ->assertSet('sideMargin', '')
             ->assertSet('saved', true)
             ->assertSet('notice', 'Index table width reset to default.');
 
@@ -534,6 +574,7 @@ class ProductMetadataSettingsTest extends TestCase
             ->call('refreshFromSettings')
             ->assertSet('mode', Option::INDEX_TABLE_WIDTH_DEFAULT)
             ->assertSet('custom', '')
+            ->assertSet('sideMargin', '')
             ->assertSet('saved', false)
             ->assertSet('notice', '');
     }
@@ -1164,6 +1205,14 @@ class ProductMetadataSettingsTest extends TestCase
         yield 'default width' => [Option::INDEX_TABLE_WIDTH_DEFAULT, '1024px'];
         yield 'wide width' => [Option::INDEX_TABLE_WIDTH_WIDE, '1400px'];
         yield 'full width' => [Option::INDEX_TABLE_WIDTH_FULL, '100%'];
+    }
+
+    public static function invalidSideMarginProvider(): iterable
+    {
+        yield 'css function' => ['calc(100%)'];
+        yield 'arbitrary text' => ['wide'];
+        yield 'unsupported unit' => ['10vh'];
+        yield 'missing unit' => ['1200'];
     }
 
     public static function invalidCustomWidthProvider(): iterable

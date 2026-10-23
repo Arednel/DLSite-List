@@ -2261,6 +2261,23 @@ class ProductIndexLivewireTest extends TestCase
             ->assertDontSee('class="index-width-full"', false);
     }
 
+    public function test_index_applies_custom_table_side_margin_without_changing_default_layout(): void
+    {
+        Livewire::test(ProductIndex::class)
+            ->assertDontSee('index-table-side-margin', false)
+            ->assertDontSee('--index-table-side-margin:', false);
+
+        Option::setIndexTableWidth([
+            'mode' => Option::INDEX_TABLE_WIDTH_WIDE,
+            'custom' => '',
+            'side_margin' => '60px',
+        ]);
+
+        Livewire::test(ProductIndex::class)
+            ->assertSee('index-table-side-margin', false)
+            ->assertSee('--index-table-side-margin: 60px', false);
+    }
+
     public function test_index_render_batches_option_settings_lookup(): void
     {
         $this->createProduct(1, [

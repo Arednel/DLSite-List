@@ -531,6 +531,7 @@ class OptionMetadataSettingsTest extends TestCase
             ProductField::Tags->value,
         ], collect($defaults->filterFields)->pluck('field')->all());
         $this->assertSame('1024px', $defaults->tableWidthCss);
+        $this->assertNull($defaults->tableWidth['side_margin']);
 
         Option::setIndexPerPage(250);
         Option::setIndexFieldLayout([
@@ -550,6 +551,7 @@ class OptionMetadataSettingsTest extends TestCase
         Option::setIndexTableWidth([
             'mode' => Option::INDEX_TABLE_WIDTH_CUSTOM,
             'custom' => '75%',
+            'side_margin' => '3rem',
         ]);
         Option::setTagLibraryIndexGroupOrderingEnabled(true);
         Option::setIndexSearchHiddenDescriptionsEnabled(true);
@@ -588,6 +590,7 @@ class OptionMetadataSettingsTest extends TestCase
         $this->assertArrayHasKey(ProductIndexSortField::Series->value, $settings->indexSortFieldOptions);
         $this->assertArrayNotHasKey(ProductIndexSortField::Score->value, $settings->indexSortFieldOptions);
         $this->assertSame('75%', $settings->tableWidthCss);
+        $this->assertSame('3rem', $settings->tableWidth['side_margin']);
         $this->assertTrue($settings->indexGroupOrderingEnabled);
         $this->assertTrue($settings->searchHiddenDescriptionsEnabled);
         $this->assertTrue($settings->indexImageViewerEnabled);
@@ -760,9 +763,18 @@ class OptionMetadataSettingsTest extends TestCase
         $this->assertSame([
             'mode' => Option::INDEX_TABLE_WIDTH_DEFAULT,
             'custom' => '',
+            'side_margin' => null,
         ], Option::normalizeIndexTableWidth([
             'mode' => Option::INDEX_TABLE_WIDTH_CUSTOM,
             'custom' => 'calc(100%)',
+        ]));
+
+        $this->assertSame([
+            'mode' => Option::INDEX_TABLE_WIDTH_DEFAULT,
+            'custom' => '',
+            'side_margin' => null,
+        ], Option::normalizeIndexTableWidth([
+            'side_margin' => 'calc(10px)',
         ]));
     }
 

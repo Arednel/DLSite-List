@@ -178,9 +178,10 @@ final class PortableOptions
                 'value.*' => ['sometimes', 'boolean:strict'],
             ],
             Option::INDEX_TABLE_WIDTH => [
-                'value' => ['required', 'array:mode,custom'],
+                'value' => ['required', 'array:mode,custom,side_margin'],
                 'value.mode' => ['sometimes', 'string', Rule::in(array_keys(Option::INDEX_TABLE_WIDTH_OPTIONS))],
                 'value.custom' => ['sometimes', 'string'],
+                'value.side_margin' => ['sometimes', 'nullable', 'string', 'regex:/^(?:0|\d+(?:\.\d+)?(?:px|rem|em|%|vw))$/'],
             ],
             Option::INDEX_CONTENT_OVERFLOW => [
                 'value' => ['required', 'array:' . implode(',', array_keys(ProductIndexContentOverflow::DEFAULTS))],

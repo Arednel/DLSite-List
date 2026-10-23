@@ -232,6 +232,7 @@ class ProductIndex extends Component
             'imageViewerEnabled' => $imageViewerEnabled,
             'sortIcons' => $this->sortIcons($filters),
             'tableWidthCss' => $settings->tableWidthCss,
+            'tableSideMargin' => $settings->tableWidth['side_margin'],
         ]);
     }
 
