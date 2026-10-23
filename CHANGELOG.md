@@ -4,6 +4,10 @@ All notable changes to this project are documented in this file.
 
 ## Unreleased
 
+### Added
+
+* Added Traditional Chinese fetched tags. New and refetched works store DLsite's Traditional Chinese tags, and the Traditional Chinese UI now shows them by default. Works without Traditional Chinese tags fall back to their English tags (or Japanese tags when there are no English ones) until they are refetched.
+
 ## 2.1.0 - 2026-10-22
 
 *Traditional Chinese Support & Security Update*

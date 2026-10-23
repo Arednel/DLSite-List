@@ -33,7 +33,7 @@
         <div class="refetch-language-values">
             @foreach ($value as $language => $items)
                 <div>
-                    <strong>{{ __(ucfirst((string) $language)) }}</strong>
+                    <strong>{{ __(\Illuminate\Support\Str::headline((string) $language)) }}</strong>
                     <x-options.refetch-value :value="$items" />
                 </div>
             @endforeach

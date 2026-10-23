@@ -15,7 +15,7 @@
     </x-options.switch>
 
     <p class="option-description">
-        {{ __('Fetched Tags currently support English and Japanese; other UI languages fall back to English.') }}</p>
+        {{ __('Fetched Tags support English, Japanese, and Traditional Chinese. Works added before Traditional Chinese tags were supported show English tags until they are refetched.') }}</p>
 
     <fieldset class="option-fieldset">
         <legend>{{ __('Fetched Tags language') }}</legend>

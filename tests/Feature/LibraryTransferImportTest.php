@@ -8,12 +8,15 @@ use App\Enums\LibraryTransferPartStatus;
 use App\Enums\LibraryTransferRunStatus;
 use App\Jobs\LibraryTransferJob;
 use App\Livewire\OptionsTransferRun;
+use App\Models\Genre;
 use App\Models\LibraryImportItem;
 use App\Models\LibraryTransferRun;
 use App\Models\Option;
 use App\Models\Product;
+use App\Support\ProductGenreSync;
 use App\Support\Transfers\InvalidArchive;
 use App\Support\Transfers\PortableOptions;
+use App\Support\Transfers\WorkArchiveData;
 use Exception;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Bus;
@@ -614,6 +617,49 @@ class LibraryTransferImportTest extends TestCase
         });
         $this->apply($this->imported($export));
         $this->assertSame('maniax', Product::findOrFail('RJ123456')->site_id);
+    }
+
+    public function test_traditional_chinese_tags_round_trip_and_legacy_archives_keep_them(): void
+    {
+        $product = Product::factory()->create(['id' => 'RJ123456']);
+        $plain = Product::factory()->create(['id' => 'RJ123457']);
+        app(ProductGenreSync::class)->sync($product, [
+            Genre::LANGUAGE_ENGLISH => Genre::resolveIdsFromTitles(['Healing']),
+            Genre::LANGUAGE_TRADITIONAL_CHINESE => Genre::resolveIdsFromTitles(['療癒', 'ASMR']),
+        ], []);
+        app(ProductGenreSync::class)->sync($plain, [
+            Genre::LANGUAGE_ENGLISH => Genre::resolveIdsFromTitles(['Plain EN']),
+        ], []);
+        $this->assertSame(
+            ['japanese', 'english', 'dlsite_list'],
+            array_keys(app(WorkArchiveData::class)->exportSnapshot($plain)['work']),
+        );
+        $export = $this->exported(['works'], ['RJ123456']);
+
+        $archived = null;
+        $this->rewriteWorkData($export->parts()->firstOrFail(), function (array $work) use (&$archived): array {
+            $archived = $work;
+
+            return $work;
+        });
+        $this->assertSame(['japanese', 'english', 'traditional_chinese', 'dlsite_list'], array_keys($archived));
+        $this->assertSame(['product_id' => 'RJ123456', 'genre' => ['療癒', 'ASMR']], $archived['traditional_chinese']);
+
+        $product->delete();
+        $this->apply($this->imported($export));
+        $restored = Product::findOrFail('RJ123456');
+        $this->assertSame(['療癒', 'ASMR'], $restored->traditionalChineseGenres()->orderBy('genre_product.id')->pluck('genres.title')->all());
+        $this->assertSame(['Healing'], $restored->englishGenres()->pluck('genres.title')->all());
+
+        $this->rewriteWorkData($export->parts()->firstOrFail(), function (array $work): array {
+            unset($work['traditional_chinese']);
+            $work['english']['genre'] = ['Legacy EN'];
+
+            return $work;
+        });
+        $this->apply($this->imported($export));
+        $this->assertSame(['Legacy EN'], $restored->englishGenres()->pluck('genres.title')->all());
+        $this->assertEqualsCanonicalizing(['療癒', 'ASMR'], $restored->traditionalChineseGenres()->pluck('genres.title')->all());
     }
 
     public function test_legacy_work_archive_without_announcement_date_preserves_existing_date(): void

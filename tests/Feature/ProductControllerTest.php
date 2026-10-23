@@ -1674,6 +1674,64 @@ class ProductControllerTest extends TestCase
         ]);
     }
 
+    public function test_traditional_chinese_edit_saves_fetched_tags_to_the_language_the_work_shows(): void
+    {
+        Option::setUiLanguage(UiLanguage::TraditionalChinese);
+        $this->setTagEditLayout(visible: true, customEditable: false, fetchedEditable: true);
+        [$product, $englishGenre, $japaneseGenre] = $this->createBilingualFetchedProduct('ZH_FALLBACK');
+        $editUrl = "/edit/{$product->id}";
+
+        $this->get($editUrl)
+            ->assertOk()
+            ->assertSee('name="genre_fetched_language" value="en"', false)
+            ->assertSee($englishGenre->title)
+            ->assertDontSee($japaneseGenre->title);
+
+        $this->from($editUrl)
+            ->post("/update/{$product->id}", [
+                'work_name' => $product->work_name,
+                'genre_fetched' => 'ZH_FALLBACK_NEW_EN',
+                'genre_fetched_language' => Genre::LANGUAGE_ENGLISH,
+            ])
+            ->assertRedirect()
+            ->assertSessionHasNoErrors();
+
+        $this->assertSame(['ZH_FALLBACK_NEW_EN'], $product->englishGenres()->pluck('title')->all());
+        $this->assertSame([], $product->traditionalChineseGenres()->pluck('title')->all());
+
+        app(ProductGenreSync::class)->sync($product, [
+            Genre::LANGUAGE_ENGLISH => Genre::resolveIdsFromTitles(['ZH_FALLBACK_NEW_EN']),
+            Genre::LANGUAGE_JAPANESE => [$japaneseGenre->getKey()],
+            Genre::LANGUAGE_TRADITIONAL_CHINESE => Genre::resolveIdsFromTitles(['ZH_FALLBACK_OLD_ZH']),
+        ], []);
+
+        $this->get($editUrl)
+            ->assertOk()
+            ->assertSee('name="genre_fetched_language" value="zh_TW"', false)
+            ->assertSee('ZH_FALLBACK_OLD_ZH')
+            ->assertDontSee('ZH_FALLBACK_NEW_EN');
+
+        $this->from($editUrl)
+            ->post("/update/{$product->id}", [
+                'work_name' => $product->work_name,
+                'genre_fetched' => 'ZH_FALLBACK_STALE_EN',
+                'genre_fetched_language' => Genre::LANGUAGE_ENGLISH,
+            ])
+            ->assertSessionHasErrors(['genre_fetched_language']);
+
+        $this->from($editUrl)
+            ->post("/update/{$product->id}", [
+                'work_name' => $product->work_name,
+                'genre_fetched' => 'ZH_FALLBACK_NEW_ZH',
+                'genre_fetched_language' => Genre::LANGUAGE_TRADITIONAL_CHINESE,
+            ])
+            ->assertRedirect()
+            ->assertSessionHasNoErrors();
+
+        $this->assertSame(['ZH_FALLBACK_NEW_ZH'], $product->traditionalChineseGenres()->pluck('title')->all());
+        $this->assertSame(['ZH_FALLBACK_NEW_EN'], $product->englishGenres()->pluck('title')->all());
+    }
+
     public function test_validation_retry_reloads_persisted_fetched_tags_instead_of_unsaved_input(): void
     {
         $this->setTagEditLayout(visible: true, customEditable: false, fetchedEditable: true);

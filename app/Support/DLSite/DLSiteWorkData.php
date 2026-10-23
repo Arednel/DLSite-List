@@ -27,12 +27,15 @@ final readonly class DLSiteWorkData
         public array $englishGenres,
         public array $sampleImages,
         public array $contributorsByRole,
+        // Null when the fetch result has no Traditional Chinese locale, such as older scraper output.
+        public ?array $traditionalChineseGenres = null,
     ) {}
 
     public static function fromArray(array $workData, ?string $fallbackProductId = null): self
     {
         $japanese = is_array($workData['japanese'] ?? null) ? $workData['japanese'] : [];
         $english = is_array($workData['english'] ?? null) ? $workData['english'] : [];
+        $traditionalChinese = is_array($workData['traditional_chinese'] ?? null) ? $workData['traditional_chinese'] : null;
         $productId = self::text($japanese['product_id'] ?? $english['product_id'] ?? $fallbackProductId);
 
         if ($productId === null) {
@@ -64,6 +67,7 @@ final readonly class DLSiteWorkData
             englishGenres: self::list($english['genre'] ?? []),
             sampleImages: self::list($japanese['sample_images'] ?? []),
             contributorsByRole: self::contributorsByRole($japanese, $english),
+            traditionalChineseGenres: $traditionalChinese === null ? null : self::list($traditionalChinese['genre'] ?? []),
         );
     }
 

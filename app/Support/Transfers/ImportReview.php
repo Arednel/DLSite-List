@@ -232,7 +232,7 @@ final class ImportReview
                     $this->item($run, $section, $role, $product->id, $current['contributors'][$role] ?? [], $record['contributors'][$role], [...$metadata, 'domain' => 'contributors', 'bucket' => $role]);
                 }
             }
-            $fetchedTags = Arr::only($record['tags'] ?? [], ['jp', 'en']);
+            $fetchedTags = Arr::only($record['tags'] ?? [], ['jp', 'en', 'zh_TW']);
             if ($fetchedTags !== []) {
                 $this->item($run, $section, 'tags', $product->id, Arr::only($current['tags'], array_keys($fetchedTags)), $fetchedTags, [...$metadata, 'domain' => 'tags']);
             }
@@ -789,7 +789,7 @@ final class ImportReview
         $current = $this->data->category($product, 'tags', $this->locking);
         $values = array_replace($current, $values);
         $resolved = $this->resolveTagBuckets($values, $item);
-        $this->genres->sync($product, ['jp' => $resolved['jp'], 'en' => $resolved['en']], $resolved['custom']);
+        $this->genres->sync($product, ['jp' => $resolved['jp'], 'en' => $resolved['en'], 'zh_TW' => $resolved['zh_TW'] ?? []], $resolved['custom']);
     }
 
     /** @param array<string, list<string>> $buckets */

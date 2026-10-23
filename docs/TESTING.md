@@ -186,6 +186,7 @@ Covers the full Refetch workflow:
 - incremental application
 - lifecycle locking
 - metadata/tag/contributor preservation/overwrite rules
+- Traditional Chinese detailed tag choices, and runs without Traditional Chinese data keeping existing Traditional Chinese tags
 - canonical JSON promotion
 - cover/sample promotion and rollback
 - obsolete-image cleanup
@@ -197,7 +198,7 @@ Covers Refetch queue failure recovery, cancellation, continued processing after 
 
 #### `tests/Feature/BulkImportTest.php`
 
-Covers Bulk Import parsing/validation, shared-input snapshots, queued item processing, skips/failures, transactional persistence (including failed completion writes, worker interruption before commit, and stale item/run state), and run completion. Product Format coverage verifies fetched values when the field is hidden or blank and manual override behavior when a visible value is supplied. Also verifies announcement dates and Site IDs are saved by the shared importer, and failed cover/sample downloads are omitted from persisted image references.
+Covers Bulk Import parsing/validation, shared-input snapshots, queued item processing, skips/failures, transactional persistence (including failed completion writes, worker interruption before commit, and stale item/run state), and run completion. Product Format coverage verifies fetched values when the field is hidden or blank and manual override behavior when a visible value is supplied. Also verifies announcement dates and Site IDs are saved by the shared importer, Traditional Chinese fetched tags are stored in their own language bucket, and failed cover/sample downloads are omitted from persisted image references.
 
 Busy-start coverage checks the wrapped cache lock timeout and ensures unrelated dispatch exceptions with the same message are not misclassified as lock contention.
 
@@ -217,7 +218,7 @@ Regression coverage injects failures after successor-job insertion in every plan
 
 #### `tests/Feature/LibraryTransferImportTest.php`
 
-Covers multipart upload/validation, missing or replacement parts, archive/path/checksum safety, bounded analysis/checkpoint retries, image validation, existing/new work analysis, incomplete-image imports for existing and new works, and data-only continuation. Incomplete-image warnings remain canonical in staged metadata and are rendered from the operational error catalog in the current UI locale. Product Format coverage includes custom/empty values, invalid-value quarantine, locale fallback, and compatibility with archives created before the field existed. `announce_date` tests cover round trips, omitted fields, and invalid-date quarantine. Site ID tests cover round trips and locale metadata fallback when importing older archives without an explicit stored site. Archive compatibility tests cover v2 output, released v1 manifests and legacy `rj_code`/Index sort Options layouts.
+Covers multipart upload/validation, missing or replacement parts, archive/path/checksum safety, bounded analysis/checkpoint retries, image validation, existing/new work analysis, incomplete-image imports for existing and new works, and data-only continuation. Incomplete-image warnings remain canonical in staged metadata and are rendered from the operational error catalog in the current UI locale. Product Format coverage includes custom/empty values, invalid-value quarantine, locale fallback, and compatibility with archives created before the field existed. `announce_date` tests cover round trips, omitted fields, and invalid-date quarantine. Site ID tests cover round trips and locale metadata fallback when importing older archives without an explicit stored site. Traditional Chinese tag tests cover the optional `traditional_chinese` archive locale, round trips, and older archives without it keeping existing Traditional Chinese tags. Archive compatibility tests cover v2 output, released v1 manifests and legacy `rj_code`/Index sort Options layouts.
 
 #### `tests/Feature/LibraryTransferReviewTest.php`
 
@@ -337,6 +338,7 @@ Covers the main product HTTP workflows:
 - metadata and partial-date updates
 - automatic Series
 - selected-language fetched/custom tags
+- Traditional Chinese Edit saving fetched tags to the language the work actually shows (English fallback or Traditional Chinese)
 - Index-aware return navigation
 - modal completion responses
 - deletion and cleanup-error handling
@@ -432,7 +434,7 @@ Covers localized Tag Library labels, controls, selected-language behavior, and d
 
 #### `tests/Feature/TraditionalChineseUiTest.php`
 
-Covers application-wide Traditional Chinese selection, English fetched-tag fallback with a preserved manual Japanese choice, primary pages and review surfaces, administrator form validation, and unchanged stored titles, statuses, and canonical diagnostics.
+Covers application-wide Traditional Chinese selection, the Traditional Chinese fetched-tag default with a preserved manual Japanese choice, primary pages and review surfaces, administrator form validation, and unchanged stored titles, statuses, and canonical diagnostics.
 
 #### `tests/Feature/TagLibraryManagerTest.php`
 
@@ -500,7 +502,7 @@ Covers server-rendered Add/Edit modal completion fallback output and conditional
 - Covers valid Index sort fields (including Publisher, Brand, and the virtual combined Maker sort), labels/backend metadata, and sort-dropdown behavior.
 
 `tests/Unit/Enums/FetchedTagLanguageTest.php`
-- Covers fetched tag language values, labels, and UI language mapping.
+- Covers fetched tag language values, labels, and UI language mapping, plus the Traditional Chinese-only fallback order.
 
 `tests/Unit/Enums/UiLanguageTest.php`
 - Covers UI language values, labels, and locale fallback.
@@ -554,7 +556,7 @@ Covers server-rendered Add/Edit modal completion fallback output and conditional
 - Covers typed Index row construction from narrow product hydration, encoded Series/Circle/contributor filter URLs, preserved Edit return state/fragment, age-aware DLsite URLs, defaults for unhydrated optional attributes, and rejection of a missing required `work_name`.
 
 `tests/Unit/Support/RefetchDiffBuilderTest.php`
-- Covers all Refetch metadata/creator/tag categories (including independent Publisher/Brand changes), main-only Product Format comparison that ignores fetched additional formats, plus tag identity handling, cover hashing, and unavailable sample-image behavior.
+- Covers all Refetch metadata/creator/tag categories (including independent Publisher/Brand changes), main-only Product Format comparison that ignores fetched additional formats, plus tag identity handling, cover hashing, and unavailable sample-image behavior, and Traditional Chinese tag diffs only when the fetch includes that locale.
 
 `tests/Unit/Support/ReturnTargetTest.php`
 - Covers Index-only return-query/fragment normalization, malformed input fallback, legacy route rejection, and URL generation.
@@ -563,7 +565,7 @@ Covers server-rendered Add/Edit modal completion fallback output and conditional
 - Covers tag/group color normalization and effective group-over-tag background/text color selection.
 
 `tests/Unit/Support/VisibleGenreAttachmentTest.php`
-- Covers custom/selected-language fetched visibility, language overrides, and one-row handling for shared JP/EN attachments.
+- Covers custom/selected-language fetched visibility, language overrides, and one-row handling for shared JP/EN attachments, Traditional Chinese visibility, per-work English then Japanese fallback in a single query, and `resolvedLanguage`.
 
 #### DLsite Support
 
@@ -571,7 +573,7 @@ Covers server-rendered Add/Edit modal completion fallback output and conditional
 - Covers Laravel Process command construction, explicit output destinations, venv executable, unlimited timeout behavior, and log-retention environment.
 
 `tests/Unit/Support/DLSite/DLSiteWorkDataTest.php`
-- Covers shared scraped metadata extraction for titles/descriptions/creators/maker data (Circle, Publisher, and Brand remain independent), Product Format normalization, announcement-date and site-id locale fallback, product ids, and missing-id errors.
+- Covers shared scraped metadata extraction for titles/descriptions/creators/maker data (Circle, Publisher, and Brand remain independent), Product Format normalization, announcement-date and site-id locale fallback, product ids, and missing-id errors, and the optional Traditional Chinese genre list (null when the locale is absent).
 
 `tests/Unit/Support/DLSite/DLSiteWorkFetcherTest.php`
 - Covers the PHP-owned five-attempt retry loop, manifest/JSON validation, partial results, immediate success, and rejection of stale JSON fallback.

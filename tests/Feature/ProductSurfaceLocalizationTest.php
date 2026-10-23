@@ -305,6 +305,7 @@ class ProductSurfaceLocalizationTest extends TestCase
             'Custom->Fetched' => 'Custom -> Fetched',
             'Custom->Fetched JP' => 'Custom -> Fetched JP',
             'Custom->Fetched EN' => 'Custom -> Fetched EN',
+            'Custom->Fetched ZH' => 'Custom -> Fetched ZH',
             'This work Custom->Fetched' => 'This work Custom -> Fetched',
             'Announcement Date from' => 'Scheduled release date from',
             'Announcement Date to' => 'Scheduled release date to',

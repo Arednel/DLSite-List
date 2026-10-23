@@ -233,7 +233,7 @@ class ProductController extends Controller
      */
     public function edit(Request $request, Product $product)
     {
-        $fetchedLanguage = Option::effectiveFetchedTagLanguage()->value;
+        $fetchedLanguage = VisibleGenreAttachment::resolvedLanguage($product->getKey());
         $editGenres = $this->loadEditGenresForProduct($product->getKey(), $fetchedLanguage);
         $showReadonlyGenreColors = Option::tagColorSurfaceEnabled(Option::TAG_COLOR_SURFACE_EDIT_READONLY);
         $genreColorPairs = $showReadonlyGenreColors

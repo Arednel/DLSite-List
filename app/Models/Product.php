@@ -132,6 +132,11 @@ class Product extends Model
         return $this->fetchedGenresForLanguage(Genre::LANGUAGE_ENGLISH);
     }
 
+    public function traditionalChineseGenres(): BelongsToMany
+    {
+        return $this->fetchedGenresForLanguage(Genre::LANGUAGE_TRADITIONAL_CHINESE);
+    }
+
     public function customGenres(): BelongsToMany
     {
         return $this->genres()->wherePivot('source', Genre::PIVOT_SOURCE_CUSTOM);

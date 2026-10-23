@@ -224,6 +224,8 @@ Portable entries are domain-oriented:
 
 The portable format excludes database IDs, authentication data, internal storage paths, and deployment-specific settings. Import reads explicitly declared entries rather than extracting archives wholesale, and rejects unsupported/mixed layouts, unsafe paths, undeclared or conflicting entries, and integrity mismatches before review.
 
+Works with Traditional Chinese fetched tags also carry an optional `traditional_chinese` object with `product_id` and `genre`. Archives without it import as before and leave existing Traditional Chinese tags unchanged.
+
 For v1 archives, legacy `rj_code` fields in the three portable Add/Import Options layouts and the `rj` Index sort field are normalized to `product_code` before Import Review. Site ID is imported from `dlsite_list.site_id` when present, otherwise from the Japanese/English JSON `site_id`, without age-based inference.
 
 ### Authentication
@@ -449,21 +451,24 @@ Tags are normalized instead of stored as per-product text arrays.
 `genre_product_languages` records which fetched language bucket supplied an attachment:
 - `jp`
 - `en`
+- `zh_TW`
 
-A fetched tag can belong to both language buckets for one product. Custom attachments have no fetched-language row.
+A fetched tag can belong to several language buckets for one product. Custom attachments have no fetched-language row.
 
 `Option::effectiveFetchedTagLanguage()` resolves the selected `FetchedTagLanguage` from the saved settings.
 
 When following the UI language, `FetchedTagLanguage` maps:
 - UI `en` -> fetched tag language `en`
 - UI `ja` -> fetched tag language `jp`
-- UI `zh_TW` -> fetched tag language `en`
+- UI `zh_TW` -> fetched tag language `zh_TW`
 
 `VisibleGenreAttachment` defines the normal visible set as:
 - all custom tags
 - fetched tags for the selected language
 
-A shared JP/EN fetched attachment is rendered once.
+A fetched attachment shared by several languages is rendered once.
+
+Traditional Chinese falls back per work: a work with no `zh_TW` fetched rows shows its `en` fetched tags, or its `jp` fetched tags when it has no `en` rows either. Works imported before Traditional Chinese tags were fetched therefore keep showing English tags until they are refetched. The fallback is part of the same SQL condition (`NOT EXISTS` on the work's fetched rows), so Index and Tag Library queries stay batched. Edit uses `VisibleGenreAttachment::resolvedLanguage()` so fetched-tag edits write back to the language bucket the work actually shows.
 
 ### Tag Groups
 

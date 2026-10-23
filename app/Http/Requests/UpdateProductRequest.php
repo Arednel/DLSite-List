@@ -4,7 +4,9 @@ namespace App\Http\Requests;
 
 use App\Enums\ProductField;
 use App\Models\Option;
+use App\Models\Product;
 use App\Support\ProductFieldLayout;
+use App\Support\VisibleGenreAttachment;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\Rules\File;
 
@@ -35,7 +37,13 @@ class UpdateProductRequest extends BaseProductRequest
         ];
 
         if ($validateFetchedLanguage) {
-            $fetchedLanguageRules[] = Rule::in([Option::effectiveFetchedTagLanguage()->value]);
+            $product = $this->route('product');
+            // Edit submits the language the work actually showed, which can be a fallback for Traditional Chinese.
+            $fetchedLanguageRules[] = Rule::in([
+                $product instanceof Product
+                    ? VisibleGenreAttachment::resolvedLanguage($product->getKey())
+                    : Option::effectiveFetchedTagLanguage()->value,
+            ]);
         }
 
         return array_merge([

@@ -654,6 +654,32 @@ class BulkImportTest extends TestCase
         $this->assertSame('Bulk Brand', Product::query()->findOrFail($productCode)->brand);
     }
 
+    public function test_bulk_import_job_stores_traditional_chinese_fetched_tags(): void
+    {
+        Storage::fake('local');
+        Storage::fake('public');
+        Process::fake([
+            '*' => Process::result(output: '{"failed_images":[]}'),
+        ])->preventStrayProcesses();
+
+        $productCode = 'RJ000000407';
+        $payload = $this->scrapedWorkPayload($productCode);
+        $payload['japanese']['genre'] = ['癒し', 'ASMR'];
+        $payload['english']['genre'] = ['Healing', 'ASMR'];
+        $payload['traditional_chinese'] = ['product_id' => $productCode, 'genre' => ['療癒', 'ASMR']];
+        Storage::disk('local')->put("Works/{$productCode}.json", json_encode($payload, JSON_THROW_ON_ERROR));
+        [, $item] = $this->createRunItem($productCode);
+
+        (new ImportBulkWorkJob($item->id))->handle(app(DLSiteProductImporter::class));
+
+        $product = Product::query()->findOrFail($productCode);
+        $this->assertSame(BulkImportItemStatus::Imported, $item->fresh()->status);
+        $this->assertEqualsCanonicalizing(['療癒', 'ASMR'], $product->traditionalChineseGenres()->pluck('title')->all());
+        $this->assertEqualsCanonicalizing(['Healing', 'ASMR'], $product->englishGenres()->pluck('title')->all());
+        $this->assertEqualsCanonicalizing(['癒し', 'ASMR'], $product->japaneseGenres()->pluck('title')->all());
+        $this->assertSame(3, Genre::query()->whereIn('title', ['療癒', 'Healing', 'ASMR'])->count());
+    }
+
     public function test_successful_job_uses_scraped_product_format_when_the_field_is_hidden(): void
     {
         Storage::fake('local');
