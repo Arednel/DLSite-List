@@ -4,6 +4,10 @@ All notable changes to this project are documented in this file.
 
 ## Unreleased
 
+### Added
+
+* Added the DLsite average rating and rating count. They are saved when a work is added, kept current by Refetch, included in Import / Export, and shown read-only on the Edit page.
+
 ## 2.1.0 - 2026-10-22
 
 *Traditional Chinese Support & Security Update*

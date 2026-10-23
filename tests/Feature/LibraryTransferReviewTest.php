@@ -416,6 +416,8 @@ class LibraryTransferReviewTest extends TestCase
             'circle',
             'publisher',
             'brand',
+            'dlsite_rating',
+            'dlsite_rating_count',
             'maker',
             'scenario',
             'voice_actor',

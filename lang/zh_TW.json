@@ -909,5 +909,8 @@
     "Waiting for approval": "等待批准",
     "Applying reviewed changes": "正在套用已檢閱的變更",
     "Review results": "審核結果",
-    "Group order and missing groups": "群組順序與缺少的群組"
+    "Group order and missing groups": "群組順序與缺少的群組",
+    "DLsite rating": "DLsite 評價",
+    "DLsite rating count": "DLsite 評價人數",
+    "★:rating (:count rating)|★:rating (:count ratings)": "★:rating（:count 人）"
 }

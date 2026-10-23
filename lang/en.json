@@ -909,5 +909,8 @@
     "Waiting for approval": "Waiting for approval",
     "Applying reviewed changes": "Applying reviewed changes",
     "Review results": "Review results",
-    "Group order and missing groups": "Group order and missing groups"
+    "Group order and missing groups": "Group order and missing groups",
+    "DLsite rating": "DLsite rating",
+    "DLsite rating count": "DLsite rating count",
+    "★:rating (:count rating)|★:rating (:count ratings)": "★:rating (:count rating)|★:rating (:count ratings)"
 }

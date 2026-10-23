@@ -225,6 +225,14 @@ Covers Ignore/Overwrite/Merge decisions, work/tag/group/relationship/option appl
 
 Partial contributor document coverage verifies that omitted roles survive Overwrite and explicitly empty roles can still be cleared. Announcement-date review checks use matching date formats for unchanged imported values.
 
+#### `tests/Feature/DLSiteRatingTest.php`
+
+Covers the DLsite rating: storing it on import, storing no rating for unrated works and failed lookups, Refetch updates that keep `updated_at` and add no review change, keeping the stored rating when the lookup fails and clearing it when DLsite reports none, and the read-only Edit page row with its English, Japanese, and Traditional Chinese text.
+
+#### `tests/Feature/DLSiteRatingTransferTest.php`
+
+Covers export/import round trips of the rating (including unrated works), review and Overwrite of a changed rating for an existing work, whole-number averages matching the stored value, archives created before the fields existed, and quarantine of out-of-range values.
+
 #### `tests/Feature/LibraryTransferLifecycleTest.php`
 
 Covers supersession/cancellation, active-transfer guards, history cleanup, queued checkpoints/retries, generation and operation tokens, late callbacks, publication recovery, browser-started imports, and transfer-storage cleanup.
@@ -573,6 +581,9 @@ Covers server-rendered Add/Edit modal completion fallback output and conditional
 `tests/Unit/Support/DLSite/DLSiteWorkDataTest.php`
 - Covers shared scraped metadata extraction for titles/descriptions/creators/maker data (Circle, Publisher, and Brand remain independent), Product Format normalization, announcement-date and site-id locale fallback, product ids, and missing-id errors.
 
+`tests/Unit/Support/DLSite/DLSiteRatingTest.php`
+- Covers reading the scraper rating keys (with English fallback), missing keys meaning an unknown rating, rejecting unrated or invalid values as a pair, and normalizing values to the stored shape.
+
 `tests/Unit/Support/DLSite/DLSiteWorkFetcherTest.php`
 - Covers the PHP-owned five-attempt retry loop, manifest/JSON validation, partial results, immediate success, and rejection of stale JSON fallback.
 
@@ -615,6 +626,8 @@ Covers Python scraper Product Format handling:
 - additional-option ordering
 - stable DLsite enum-code serialization
 - age-category serialization after the `dlsite-async` upgrade
+
+It also covers the DLsite rating lookup: the average and count from `product/info/ajax`, `null` values for unrated works, and an unknown rating when the request fails or DLsite returns no work or no rating fields.
 
 #### `python/tests/test_weekly_logging.py`
 
