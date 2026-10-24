@@ -4,8 +4,18 @@ All notable changes to this project are documented in this file.
 
 ## Unreleased
 
+### Added
+
+* Added optional custom side margins to the Index Table Width setting.
+* Added an option to customize Index column widths in `Field Layouts`.
+
+### Changed
+
+* Index visual settings are now applied through generated CSS instead of inline styles.
+
 ### Fixed
 
+* Removed horizontal page scrollbar when the Index table width is set to `Full`.
 * Fixed missing circle, tags, and sample images for AI-generated (`aix`) works by falling back to DLsite's public `product.json` API when the work page omits them (#6).
 
 ### Security

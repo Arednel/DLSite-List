@@ -5,6 +5,7 @@ use App\Http\Controllers\BulkImportController;
 use App\Http\Controllers\AutocompleteController;
 use App\Http\Controllers\LibraryTransferController;
 use App\Http\Controllers\OptionsController;
+use App\Http\Controllers\OptionStylesheetController;
 use App\Http\Controllers\ProductController;
 use App\Http\Controllers\PublicStorageController;
 use App\Http\Controllers\RefetchController;
@@ -45,6 +46,9 @@ Route::controller(ProductController::class)->group(function () {
     // Tag Library
     Route::get('/tags', 'tagLibrary')->name('tags.index');
 });
+
+// Serve the generated CSS overrides for saved Options
+Route::get('/styles/options.css', OptionStylesheetController::class)->name('styles.options');
 
 // Options
 Route::controller(OptionsController::class)->group(function () {

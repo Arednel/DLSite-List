@@ -3,6 +3,7 @@
 namespace Tests;
 
 use Illuminate\Contracts\Console\Kernel;
+use Illuminate\Filesystem\Filesystem;
 use Illuminate\Foundation\Application;
 
 trait CreatesApplication
@@ -12,8 +13,24 @@ trait CreatesApplication
      */
     public function createApplication(): Application
     {
-        $app = require __DIR__.'/../bootstrap/app.php';
+        static $testingStorageInitialized = false;
 
+        $testingStoragePath = dirname(__DIR__) . '/storage/framework/testing/application';
+
+        if (! $testingStorageInitialized) {
+            $files = new Filesystem;
+            $files->deleteDirectory($testingStoragePath);
+            $files->ensureDirectoryExists($testingStoragePath . '/framework/views');
+
+            register_shutdown_function(static function () use ($testingStoragePath): void {
+                (new Filesystem)->deleteDirectory($testingStoragePath);
+            });
+
+            $testingStorageInitialized = true;
+        }
+
+        $app = require __DIR__ . '/../bootstrap/app.php';
+        $app->useStoragePath($testingStoragePath);
         $app->make(Kernel::class)->bootstrap();
 
         return $app;

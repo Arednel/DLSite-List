@@ -221,6 +221,9 @@
     "Wide": "寬版",
     "Full": "滿版",
     "Custom": "自訂",
+    "Column width": "欄寬",
+    "Custom column width": "自訂欄寬",
+    "Default uses the existing Index CSS column width. Custom uses the entered width.": "預設會使用列表頁面既有的 CSS 欄寬。自訂會使用輸入的寬度。",
     "Follow redirect": "依原設定重新導向",
     "Refresh current page": "重新整理目前頁面",
     "Close modal only": "僅關閉彈出視窗",
@@ -909,5 +912,8 @@
     "Waiting for approval": "等待批准",
     "Applying reviewed changes": "正在套用已檢閱的變更",
     "Review results": "審核結果",
-    "Group order and missing groups": "群組順序與缺少的群組"
+    "Group order and missing groups": "群組順序與缺少的群組",
+    "Table side margins": "表格左右邊距",
+    "Example: 60px": "範例：60px",
+    "Leave empty for no side margin. Enter a value to apply that margin to both sides.": "不需要左右邊距時請留空。輸入值後，該邊距會套用到左右兩側。"
 }
