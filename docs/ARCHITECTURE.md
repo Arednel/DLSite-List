@@ -158,7 +158,7 @@ Field Layouts configure seven independent layouts:
 
 #### Generated Options Stylesheet
 
-Index table width, side margins, and enabled overflow heights are compiled into `storage/app/public/generated/options.css` and served through `/styles/options.css`.
+Index table width, side margins, Index column-width overrides, and enabled overflow heights are compiled into `storage/app/public/generated/options.css` and served through `/styles/options.css`.
 
 The stylesheet is regenerated after CSS-affecting Options are saved, reset, or imported. Static CSS remains authoritative for defaults, so the generated file contains only saved overrides and is loaded after the normal Index styles.
 

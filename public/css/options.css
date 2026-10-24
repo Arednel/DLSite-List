@@ -803,6 +803,58 @@ body.options-page {
     gap: 6px;
 }
 
+.options-page .field-layout-width-control {
+    display: grid;
+    justify-items: end;
+    gap: 5px;
+    min-width: 0;
+}
+
+.options-page .field-layout-width-control-row {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 5px;
+    min-width: 0;
+}
+
+.options-page .field-layout-width-control .fa-circle-question {
+    flex: 0 0 auto;
+    color: var(--options-link);
+    cursor: help;
+}
+
+.options-page .field-layout-width-joined {
+    display: inline-flex;
+    align-items: stretch;
+    min-width: 0;
+}
+
+.options-page .field-layout-width-mode {
+    width: 8.5rem;
+}
+
+.options-page .field-layout-width-joined--custom .field-layout-width-mode {
+    border-top-right-radius: 0;
+    border-bottom-right-radius: 0;
+}
+
+.options-page .field-layout-width-value {
+    width: 7.5rem;
+    margin-left: -1px;
+    border-top-left-radius: 0;
+    border-bottom-left-radius: 0;
+}
+
+.options-page .field-layout-width-value::placeholder {
+    color: rgba(var(--options-text-rgb), 0.6);
+    opacity: 1;
+}
+
+.options-page .field-layout-width-error {
+    width: min(100%, 16rem);
+}
+
 .options-page .work-checklist {
     width: 100%;
     max-height: 28rem;
@@ -1647,8 +1699,18 @@ body.options-page {
 
     .options-page .field-layout-check--edit,
     .options-page .field-layout-index-tag-buckets,
-    .options-page .field-layout-edit-stack {
+    .options-page .field-layout-edit-stack,
+    .options-page .field-layout-width-control {
         justify-self: start;
+    }
+
+    .options-page .field-layout-width-control {
+        width: 100%;
+    }
+
+    .options-page .field-layout-width-control-row {
+        justify-content: flex-start;
+        width: 100%;
     }
 
     .options-page .options-modal-backdrop {

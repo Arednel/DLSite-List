@@ -388,7 +388,7 @@ Covers metadata-backfill behavior when canonical work JSON is missing or invalid
 #### `tests/Feature/ProductMetadataSettingsTest.php`
 
 Covers metadata-related UI settings:
-- field layouts, including collapsed section rendering and sortable-control interaction isolation
+- field layouts, including Index column-width modes, combined validation errors and correction, collapsed section rendering, and sortable-control interaction isolation
 - Series Metadata
 - DLsite Links, including the age-based fallback, default-on announcement toggle, save/reset behavior, and tooltip
 - Form Page Theme
@@ -400,7 +400,11 @@ Covers metadata-related UI settings:
 
 #### `tests/Feature/OptionStylesheetTest.php`
 
-Covers generated Index dimension CSS, save/reset regeneration, committed and rolled-back portable imports, unchanged-content writes, migration generation/rollback cleanup, write-failure preservation, optional authentication, and the static `filemtime`-versioned stylesheet link. Existing Index tests also verify overflow target hooks, layout classes, and the batched Options lookup.
+Covers generated Index dimension and column-width CSS, save/reset regeneration, committed and rolled-back portable imports, unchanged-content writes, migration generation/rollback cleanup, write-failure preservation, optional authentication, and the static `filemtime`-versioned stylesheet link. Existing Index tests also verify overflow target hooks, layout classes, and the batched Options lookup.
+
+#### `tests/Unit/Support/Transfers/PortableOptionsTest.php`
+
+Covers column-width import validation, including older layouts without width settings, supported units, missing custom widths, and invalid supplied widths or modes.
 
 #### `tests/Feature/ProductSortKeysTest.php`
 

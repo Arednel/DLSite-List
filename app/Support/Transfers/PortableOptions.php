@@ -189,6 +189,10 @@ final class PortableOptions
                 'value.*.enabled' => ['sometimes', 'boolean:strict'],
                 'value.*.height' => ['sometimes', 'string', 'regex:' . ProductIndexContentOverflow::HEIGHT_PATTERN],
             ],
+            Option::INDEX_FIELD_LAYOUT => [
+                ...$this->layoutRules($key, ['width_mode', 'width']),
+                ...$this->indexLayoutRules(),
+            ],
             default => $this->layoutRules($key),
         };
     }
@@ -196,7 +200,7 @@ final class PortableOptions
     /**
      * @return array<string, list<mixed>>
      */
-    private function layoutRules(string $key): array
+    private function layoutRules(string $key, array $extraKeys = []): array
     {
         $allowed = array_column(Option::defaultFor($key), null, 'field');
 
@@ -204,11 +208,13 @@ final class PortableOptions
             'value' => ['required', 'array'],
             'value.*' => [
                 'required',
-                Rule::forEach(static function (mixed $row) use ($allowed): array {
+                Rule::forEach(static function (mixed $row) use ($allowed, $extraKeys): array {
                     $field = is_array($row) ? $row['field'] ?? null : null;
                     $shape = is_string($field) ? ($allowed[$field] ?? null) : null;
 
-                    return $shape === null ? ['array'] : ['array:' . implode(',', array_keys($shape))];
+                    return $shape === null ? ['array'] : [
+                        'array:' . implode(',', [...array_keys($shape), ...$extraKeys]),
+                    ];
                 }),
             ],
             'value.*.field' => ['required', 'string', Rule::in(array_keys($allowed)), 'distinct:strict'],
@@ -218,6 +224,26 @@ final class PortableOptions
             'value.*.notes_visible' => ['sometimes', 'boolean:strict'],
             'value.*.custom_visible' => ['sometimes', 'boolean:strict'],
             'value.*.fetched_visible' => ['sometimes', 'boolean:strict'],
+        ];
+    }
+
+    /**
+     * @return array<string, list<mixed>>
+     */
+    private function indexLayoutRules(): array
+    {
+        return [
+            'value.*.width_mode' => [
+                'sometimes',
+                'string',
+                Rule::in(array_keys(ProductFieldLayout::INDEX_WIDTH_OPTIONS)),
+            ],
+            'value.*.width' => [
+                'prohibited_unless:value.*.width_mode,' . ProductFieldLayout::INDEX_WIDTH_MODE_CUSTOM,
+                'required_if:value.*.width_mode,' . ProductFieldLayout::INDEX_WIDTH_MODE_CUSTOM,
+                'string',
+                'regex:/^\d+(?:\.\d+)?(?:px|rem|em|%|vw)$/',
+            ],
         ];
     }
 

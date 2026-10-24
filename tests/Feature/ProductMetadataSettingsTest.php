@@ -22,6 +22,7 @@ use App\Livewire\TagLibraryDisplaySettings;
 use App\Livewire\UiLanguageSettings;
 use App\Models\Option;
 use App\Models\Product;
+use App\Support\ProductFieldLayout;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\App;
 use Illuminate\Support\Facades\DB;
@@ -581,6 +582,82 @@ class ProductMetadataSettingsTest extends TestCase
             ->assertSet('sideMargin', '')
             ->assertSet('saved', false)
             ->assertSet('notice', '');
+    }
+
+    public function test_index_field_layout_width_modes_save_and_validate_custom_widths(): void
+    {
+        Livewire::test(ProductFieldLayoutSettings::class)
+            ->assertSet('indexFields.tags.width_mode', ProductFieldLayout::INDEX_WIDTH_MODE_DEFAULT)
+            ->assertSet('indexFields.tags.width', '')
+            ->set('indexFields.tags.width', '999px')
+            ->call('saveLayout', 'index')
+            ->assertHasNoErrors()
+            ->assertSet('indexFields.tags.width_mode', ProductFieldLayout::INDEX_WIDTH_MODE_DEFAULT)
+            ->assertSet('indexFields.tags.width', '');
+
+        $tags = collect(Option::indexFieldLayout())->firstWhere('field', ProductField::Tags->value);
+        $this->assertSame(ProductFieldLayout::INDEX_WIDTH_MODE_DEFAULT, $tags['width_mode']);
+        $this->assertSame('', $tags['width']);
+
+        Livewire::test(ProductFieldLayoutSettings::class)
+            ->set('indexFields.tags.width_mode', ProductFieldLayout::INDEX_WIDTH_MODE_CUSTOM)
+            ->set('indexFields.tags.width', '180px')
+            ->call('saveLayout', 'index')
+            ->assertHasNoErrors()
+            ->assertSet('indexFields.tags.width_mode', ProductFieldLayout::INDEX_WIDTH_MODE_CUSTOM)
+            ->assertSet('indexFields.tags.width', '180px');
+
+        $tags = collect(Option::indexFieldLayout())->firstWhere('field', ProductField::Tags->value);
+        $this->assertSame(ProductFieldLayout::INDEX_WIDTH_MODE_CUSTOM, $tags['width_mode']);
+        $this->assertSame('180px', $tags['width']);
+
+        Option::resetFieldLayoutsToDefault();
+
+        Livewire::test(ProductFieldLayoutSettings::class)
+            ->set('indexFields.tags.width_mode', ProductFieldLayout::INDEX_WIDTH_MODE_CUSTOM)
+            ->set('indexFields.tags.width', 'calc(100%)')
+            ->call('saveLayout', 'index')
+            ->assertHasErrors(['indexFields.tags.width']);
+
+        $tags = collect(Option::indexFieldLayout())->firstWhere('field', ProductField::Tags->value);
+        $this->assertSame(ProductFieldLayout::INDEX_WIDTH_MODE_DEFAULT, $tags['width_mode']);
+    }
+
+    public function test_index_field_layout_width_errors_are_reported_together_and_cleared_after_correction(): void
+    {
+        Livewire::test(ProductFieldLayoutSettings::class)
+            ->set('indexFields.tags.width_mode', ProductFieldLayout::INDEX_WIDTH_MODE_CUSTOM)
+            ->set('indexFields.tags.width', '')
+            ->set('indexFields.score.width_mode', ProductFieldLayout::INDEX_WIDTH_MODE_CUSTOM)
+            ->set('indexFields.score.width', 'invalid')
+            ->call('saveLayout', 'index')
+            ->assertHasErrors([
+                'indexFields.tags.width' => 'required',
+                'indexFields.score.width' => 'regex',
+            ])
+            ->set('indexFields.tags.width', '12.5rem')
+            ->set('indexFields.score.width_mode', ProductFieldLayout::INDEX_WIDTH_MODE_DEFAULT)
+            ->call('saveLayout', 'index')
+            ->assertHasNoErrors()
+            ->assertSet('indexFields.tags.width', '12.5rem')
+            ->assertSet('indexFields.score.width', '');
+    }
+
+    public function test_index_field_layout_width_control_shows_value_only_for_custom_mode(): void
+    {
+        $component = Livewire::test(ProductFieldLayoutSettings::class);
+        $html = $component->html();
+
+        $this->assertStringContainsString('Default', $html);
+        $this->assertStringContainsString('Custom', $html);
+        $this->assertStringNotContainsString('wire:model="indexFields.tags.width"', $html);
+
+        $html = $component
+            ->set('indexFields.tags.width_mode', ProductFieldLayout::INDEX_WIDTH_MODE_CUSTOM)
+            ->html();
+
+        $this->assertStringContainsString('wire:model="indexFields.tags.width"', $html);
+        $this->assertStringContainsString('fa-solid fa-circle-question', $html);
     }
 
     public function test_field_layout_component_hydrates_expected_locked_rows(): void

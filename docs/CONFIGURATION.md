@@ -734,6 +734,10 @@ Fetched Tags are readonly by default. If made editable, editing changes only the
 - `created_at` - hidden
 - `updated_at` - hidden
 
+Index columns also have a width mode:
+- `Default` - use the existing Index CSS
+- `Custom` - uses the entered width. Supports `px`, `rem`, `em`, `%`, or `vw`
+
 #### Index Filter Default Order
 
 - `title`

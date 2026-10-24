@@ -721,7 +721,7 @@ class Option extends Model
     }
 
     /**
-     * @return list<array{field: string, label: string, visible: bool}>
+     * @return list<array{field: string, label: string, visible: bool, visibility_locked?: bool, notes_visible?: bool, custom_visible?: bool, fetched_visible?: bool, width_mode?: string, width?: string}>
      */
     public static function indexFieldLayout(): array
     {
@@ -1123,7 +1123,7 @@ class Option extends Model
 
     private static function regenerateStylesheetAfterCommit(array $keys): void
     {
-        if (array_intersect($keys, [self::INDEX_TABLE_WIDTH, self::INDEX_CONTENT_OVERFLOW]) !== []) {
+        if (array_intersect($keys, [self::INDEX_TABLE_WIDTH, self::INDEX_CONTENT_OVERFLOW, self::INDEX_FIELD_LAYOUT]) !== []) {
             DB::afterCommit(fn() => app(OptionStylesheet::class)->regenerate());
         }
     }

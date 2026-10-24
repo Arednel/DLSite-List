@@ -8,6 +8,7 @@ use App\Enums\ProductField;
 use App\Enums\ProductIndexSortField;
 use App\Enums\UiLanguage;
 use App\Models\Option;
+use App\Support\ProductFieldLayout;
 use App\Support\ProductIndexContentOverflow;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\App;
@@ -327,6 +328,41 @@ class OptionMetadataSettingsTest extends TestCase
         $storedLayout = json_decode(DB::table('options')->where('key', Option::INDEX_FIELD_LAYOUT)->value('value'), true);
 
         $this->assertArrayNotHasKey('note', collect($storedLayout)->firstWhere('field', ProductField::Notes->value));
+    }
+
+    public function test_index_field_layout_column_widths_are_normalized_for_storage(): void
+    {
+        Option::setIndexFieldLayout([
+            [
+                'field' => ProductField::Title->value,
+                'visible' => true,
+                'width_mode' => ProductFieldLayout::INDEX_WIDTH_MODE_DEFAULT,
+                'width' => '999px',
+            ],
+            [
+                'field' => ProductField::Tags->value,
+                'visible' => true,
+                'width_mode' => ProductFieldLayout::INDEX_WIDTH_MODE_CUSTOM,
+                'width' => '180px',
+            ],
+        ]);
+
+        $layout = collect(Option::indexFieldLayout())->keyBy('field');
+
+        $this->assertSame(ProductFieldLayout::INDEX_WIDTH_MODE_DEFAULT, $layout[ProductField::Title->value]['width_mode']);
+        $this->assertSame('', $layout[ProductField::Title->value]['width']);
+        $this->assertSame(ProductFieldLayout::INDEX_WIDTH_MODE_CUSTOM, $layout[ProductField::Tags->value]['width_mode']);
+        $this->assertSame('180px', $layout[ProductField::Tags->value]['width']);
+
+        $stored = collect(json_decode(
+            DB::table('options')->where('key', Option::INDEX_FIELD_LAYOUT)->value('value'),
+            true,
+        ))->keyBy('field');
+
+        $this->assertArrayNotHasKey('width_mode', $stored[ProductField::Title->value]);
+        $this->assertArrayNotHasKey('width', $stored[ProductField::Title->value]);
+        $this->assertSame(ProductFieldLayout::INDEX_WIDTH_MODE_CUSTOM, $stored[ProductField::Tags->value]['width_mode']);
+        $this->assertSame('180px', $stored[ProductField::Tags->value]['width']);
     }
 
     public function test_product_code_field_migration_preserves_existing_custom_layouts(): void

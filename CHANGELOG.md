@@ -7,6 +7,7 @@ All notable changes to this project are documented in this file.
 ### Added
 
 * Added optional custom side margins to the Index Table Width setting.
+* Added an option to customize Index column widths in `Field Layouts`.
 
 ### Changed
 

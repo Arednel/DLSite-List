@@ -18,7 +18,11 @@ final class OptionStylesheet
 
     public function regenerate(): void
     {
-        $css = $this->render(Option::indexTableWidth(), Option::indexContentOverflow());
+        $css = $this->render(
+            Option::indexTableWidth(),
+            Option::indexContentOverflow(),
+            Option::indexFieldLayout(),
+        );
 
         if ($this->files->exists($this->path()) && $this->files->get($this->path()) === $css) {
             return;
@@ -34,7 +38,7 @@ final class OptionStylesheet
         clearstatcache(true, $this->path());
     }
 
-    private function render(array $tableWidth, array $contentOverflow): string
+    private function render(array $tableWidth, array $contentOverflow, array $indexFieldLayout): string
     {
         $rules = [];
         $dimensions = [];
@@ -85,6 +89,19 @@ final class OptionStylesheet
     }
 }
 CSS;
+        }
+
+        foreach ($indexFieldLayout as $row) {
+            if ($row['width_mode'] !== ProductFieldLayout::INDEX_WIDTH_MODE_CUSTOM) {
+                continue;
+            }
+
+            $rules[] = sprintf(
+                ".product-index-layout .list-table .list-table-header .header-title.%s {\n    width: %s;\n    min-width: %s;\n}",
+                str_replace('_', '-', $row['field']),
+                $row['width'],
+                $row['width'],
+            );
         }
 
         foreach ($contentOverflow as $target => $setting) {

@@ -4,7 +4,9 @@ namespace Tests\Feature;
 
 use App\Models\Option;
 use App\Models\User;
+use App\Enums\ProductField;
 use App\Support\OptionStylesheet;
+use App\Support\ProductFieldLayout;
 use App\Support\Transfers\PortableOptions;
 use Illuminate\Filesystem\Filesystem;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -63,6 +65,37 @@ class OptionStylesheetTest extends TestCase
         ];
     }
 
+    public function test_index_column_width_modes_generate_css_overrides_and_reset_cleanly(): void
+    {
+        Option::setIndexFieldLayout([
+            [
+                'field' => ProductField::Tags->value,
+                'visible' => true,
+                'width_mode' => ProductFieldLayout::INDEX_WIDTH_MODE_DEFAULT,
+            ],
+            [
+                'field' => ProductField::Score->value,
+                'visible' => true,
+                'width_mode' => ProductFieldLayout::INDEX_WIDTH_MODE_CUSTOM,
+                'width' => '80px',
+            ],
+        ]);
+
+        $stylesheet = app(OptionStylesheet::class);
+        $css = file_get_contents($stylesheet->path());
+
+        $this->assertStringNotContainsString('.header-title.tags', $css);
+        $this->assertStringContainsString('.header-title.score', $css);
+        $this->assertStringContainsString('width: 80px;', $css);
+        $this->assertStringContainsString('min-width: 80px;', $css);
+
+        Option::resetFieldLayoutsToDefault();
+        $css = file_get_contents($stylesheet->path());
+
+        $this->assertStringNotContainsString('.header-title.tags', $css);
+        $this->assertStringNotContainsString('.header-title.score', $css);
+    }
+
     public function test_overflow_targets_and_resets_regenerate_the_stylesheet(): void
     {
         Option::setIndexTableWidth(['mode' => 'wide', 'side_margin' => '60px']);
@@ -103,12 +136,21 @@ class OptionStylesheetTest extends TestCase
         DB::transaction(function () use ($options, $stylesheet, $original): void {
             $options->apply(Option::INDEX_TABLE_WIDTH, ['mode' => 'wide']);
             $options->apply(Option::INDEX_CONTENT_OVERFLOW, ['tags' => ['enabled' => true, 'height' => '20vh']]);
+            $options->apply(Option::INDEX_FIELD_LAYOUT, [[
+                'field' => ProductField::Tags->value,
+                'visible' => true,
+                'custom_visible' => true,
+                'fetched_visible' => true,
+                'width_mode' => ProductFieldLayout::INDEX_WIDTH_MODE_CUSTOM,
+                'width' => '320px',
+            ]]);
             $this->assertSame($original, file_get_contents($stylesheet->path()));
         });
 
         $committed = file_get_contents($stylesheet->path());
         $this->assertStringContainsString('1400px', $committed);
         $this->assertStringContainsString('20vh', $committed);
+        $this->assertStringContainsString('.header-title.tags', $committed);
 
         DB::beginTransaction();
         $options->apply(Option::INDEX_TABLE_WIDTH, ['mode' => 'full']);
