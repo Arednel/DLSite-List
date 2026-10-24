@@ -20,6 +20,22 @@
             </div>
         @endif
 
+        <fieldset class="option-subsetting">
+            <legend>
+                {{ __('Table side margins') }}
+                <i class="fa-solid fa-circle-question"
+                    title="{{ __('Leave empty for no side margin. Enter a value to apply that margin to both sides.') }}"></i>
+            </legend>
+
+            <div class="option-field">
+                <input id="index_table_side_margin" type="text" wire:model.live="sideMargin"
+                    aria-label="{{ __('Table side margins') }}" placeholder="{{ __('Example: 60px') }}">
+                @error('sideMargin')
+                    <div class="text-error">{{ $message }}</div>
+                @enderror
+            </div>
+        </fieldset>
+
         <div class="option-actions option-actions--inline">
             <button type="submit" class="tag tag--soft tag--lg is-clickable">{{ __('Save table width') }}</button>
             @if ($saved)

@@ -7,11 +7,13 @@ use App\Enums\ContentFocus;
 use App\Enums\FetchedTagLanguage;
 use App\Enums\ProductIndexSortField;
 use App\Enums\UiLanguage;
+use App\Support\OptionStylesheet;
 use App\Support\ProductFieldLayout;
 use App\Support\ProductIndexContentOverflow;
 use App\Support\ProductIndexSettings;
 use Closure;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Support\Facades\DB;
 use InvalidArgumentException;
 
 class Option extends Model
@@ -292,7 +294,11 @@ class Option extends Model
             self::AUTHENTICATION_PAGE_THEME => self::AUTHENTICATION_PAGE_THEME_CHERRY,
             self::PRODUCT_FORM_MODAL_COMPLETION_ACTION => self::PRODUCT_FORM_MODAL_COMPLETION_REDIRECT,
             self::TAG_COLOR_SURFACES => self::DEFAULT_TAG_COLOR_SURFACES,
-            self::INDEX_TABLE_WIDTH => ['mode' => self::INDEX_TABLE_WIDTH_DEFAULT, 'custom' => ''],
+            self::INDEX_TABLE_WIDTH => [
+                'mode' => self::INDEX_TABLE_WIDTH_DEFAULT,
+                'custom' => '',
+                'side_margin' => null,
+            ],
             self::INDEX_CONTENT_OVERFLOW => ProductIndexContentOverflow::DEFAULTS,
             self::INDEX_SORT_FIELD_LAYOUT => ProductIndexSortField::storageLayout([]),
             default => throw new InvalidArgumentException('Unknown option: ' . $key),
@@ -715,7 +721,7 @@ class Option extends Model
     }
 
     /**
-     * @return list<array{field: string, label: string, visible: bool}>
+     * @return list<array{field: string, label: string, visible: bool, visibility_locked?: bool, notes_visible?: bool, custom_visible?: bool, fetched_visible?: bool, width_mode?: string, width?: string}>
      */
     public static function indexFieldLayout(): array
     {
@@ -833,7 +839,7 @@ class Option extends Model
     }
 
     /**
-     * @return array{mode: string, custom: string}
+     * @return array{mode: string, custom: string, side_margin: ?string}
      */
     public static function indexTableWidth(): array
     {
@@ -898,7 +904,6 @@ class Option extends Model
                 self::INDEX_FIELD_LAYOUT,
                 self::FILTER_FIELD_LAYOUT,
                 self::INDEX_SORT_FIELD_LAYOUT,
-                self::INDEX_TABLE_WIDTH,
                 self::INDEX_CONTENT_OVERFLOW,
                 self::TAG_LIBRARY_INDEX_GROUP_ORDERING_ENABLED,
                 self::TAG_COLOR_SURFACES,
@@ -923,7 +928,6 @@ class Option extends Model
         $indexSortFieldLayout = self::indexSortFieldLayoutFromValue(
             $values->get(self::INDEX_SORT_FIELD_LAYOUT),
         );
-        $tableWidth = self::normalizeIndexTableWidth(self::jsonFromValue($values->get(self::INDEX_TABLE_WIDTH)));
         $fetchedTagLanguage = self::effectiveFetchedTagLanguageFromValues(
             $values->get(self::FETCHED_TAG_LANGUAGE_FOLLOWS_UI),
             $values->get(self::FETCHED_TAG_LANGUAGE),
@@ -939,8 +943,6 @@ class Option extends Model
             filterFields: ProductFieldLayout::filterFields($filterFieldLayout),
             indexSortFieldLayout: $indexSortFieldLayout,
             indexSortFieldOptions: ProductIndexSortField::optionsFromLayout($indexSortFieldLayout),
-            tableWidth: $tableWidth,
-            tableWidthCss: self::indexTableWidthCssFrom($tableWidth),
             contentOverflow: ProductIndexContentOverflow::normalize(
                 self::jsonFromValue($values->get(self::INDEX_CONTENT_OVERFLOW)),
             ),
@@ -1110,11 +1112,20 @@ class Option extends Model
             ['key' => $key],
             ['value' => $value],
         );
+        self::regenerateStylesheetAfterCommit([$key]);
     }
 
     private static function forget(string ...$keys): void
     {
         self::query()->whereIn('key', $keys)->delete();
+        self::regenerateStylesheetAfterCommit($keys);
+    }
+
+    private static function regenerateStylesheetAfterCommit(array $keys): void
+    {
+        if (array_intersect($keys, [self::INDEX_TABLE_WIDTH, self::INDEX_CONTENT_OVERFLOW, self::INDEX_FIELD_LAYOUT]) !== []) {
+            DB::afterCommit(fn() => app(OptionStylesheet::class)->regenerate());
+        }
     }
 
     private static function jsonFromValue(?string $value): mixed
@@ -1155,13 +1166,16 @@ class Option extends Model
     }
 
     /**
-     * @return array{mode: string, custom: string}
+     * @return array{mode: string, custom: string, side_margin: ?string}
      */
     public static function normalizeIndexTableWidth(mixed $width): array
     {
         $defaults = self::defaultFor(self::INDEX_TABLE_WIDTH);
         $mode = is_array($width) ? (string) ($width['mode'] ?? $defaults['mode']) : (string) $width;
         $custom = is_array($width) ? trim((string) ($width['custom'] ?? $defaults['custom'])) : $defaults['custom'];
+        $sideMargin = is_array($width) && is_string($width['side_margin'] ?? null)
+            ? trim($width['side_margin'])
+            : $defaults['side_margin'];
 
         if (! array_key_exists($mode, self::INDEX_TABLE_WIDTH_OPTIONS)) {
             $mode = $defaults['mode'];
@@ -1176,16 +1190,23 @@ class Option extends Model
             $custom = $defaults['custom'];
         }
 
+        if ($sideMargin === '' || ($sideMargin !== null && preg_match('/^0+(?:\.0+)?(?:px|rem|em|%|vw)?$/', $sideMargin))) {
+            $sideMargin = null;
+        } elseif ($sideMargin !== null && ! preg_match('/^\d+(\.\d+)?(px|rem|em|%|vw)$/', $sideMargin)) {
+            $sideMargin = null;
+        }
+
         return [
             'mode' => $mode,
             'custom' => $custom,
+            'side_margin' => $sideMargin,
         ];
     }
 
     /**
-     * @param  array{mode: string, custom: string}  $width
+     * @param  array{mode: string, custom: string, side_margin: ?string}  $width
      */
-    private static function indexTableWidthCssFrom(array $width): string
+    public static function indexTableWidthCssFrom(array $width): string
     {
         return match ($width['mode']) {
             self::INDEX_TABLE_WIDTH_WIDE => '1400px',

@@ -17,6 +17,8 @@ class IndexTableWidthSettings extends Component
 
     public string $custom = '';
 
+    public string $sideMargin = '';
+
     public function mount(): void
     {
         $this->fillFromSetting();
@@ -39,11 +41,16 @@ class IndexTableWidthSettings extends Component
                 'nullable',
                 'regex:/^\d+(\.\d+)?(px|rem|em|%|vw)$/',
             ],
+            'sideMargin' => [
+                'nullable',
+                'regex:/^(?:0|\d+(?:\.\d+)?(?:px|rem|em|%|vw))$/',
+            ],
         ]);
 
         Option::setIndexTableWidth([
             'mode' => $this->mode,
             'custom' => $this->custom,
+            'side_margin' => $this->sideMargin,
         ]);
         $this->fillFromSetting();
         $this->markSaved('Index table width setting saved.');
@@ -65,7 +72,7 @@ class IndexTableWidthSettings extends Component
 
     public function updated(string $property): void
     {
-        if (! in_array($property, ['mode', 'custom'], true)) {
+        if (! in_array($property, ['mode', 'custom', 'sideMargin'], true)) {
             return;
         }
 
@@ -77,5 +84,6 @@ class IndexTableWidthSettings extends Component
         $width = Option::indexTableWidth();
         $this->mode = $width['mode'];
         $this->custom = $width['custom'];
+        $this->sideMargin = $width['side_margin'] ?? '';
     }
 }

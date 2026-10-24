@@ -231,7 +231,6 @@ class ProductIndex extends Component
             'productFormModalCompletionAction' => $settings->productFormModalCompletionAction,
             'imageViewerEnabled' => $imageViewerEnabled,
             'sortIcons' => $this->sortIcons($filters),
-            'tableWidthCss' => $settings->tableWidthCss,
         ]);
     }
 
