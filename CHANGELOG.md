@@ -4,6 +4,19 @@ All notable changes to this project are documented in this file.
 
 ## Unreleased
 
+### Added
+
+* Added optional custom side margins to the Index Table Width setting.
+* Added an option to customize Index column widths in `Field Layouts`.
+
+### Changed
+
+* Index visual settings are now applied through generated CSS instead of inline styles.
+
+### Fixed
+
+* Removed horizontal page scrollbar when the Index table width is set to `Full`.
+
 ### Security
 
 * Restricted DLSite Create, Custom Create, and Bulk Import return navigation to same-site URLs.

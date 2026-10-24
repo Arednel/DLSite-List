@@ -397,7 +397,7 @@ a {
 }
 
 .index-content-overflow__content--collapsed {
-    max-height: var(--index-content-overflow-height);
+    max-height: var(--index-content-overflow-height, 80px);
     overflow: hidden;
 }
 

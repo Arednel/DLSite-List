@@ -1,4 +1,4 @@
-<div style="--index-table-width: {{ $tableWidthCss }}">
+<div class="product-index-layout">
     <div class="header"></div>
 
     <x-list-menu-float :quick-add-url="$quickAddUrl" :product-form-modal-enabled="$productFormModalEnabled" :product-form-modal-completion-action="$productFormModalCompletionAction" />
@@ -180,7 +180,7 @@
                                                     <div class="notes">
                                                         @if ($contentOverflow['inline_notes']['enabled'])
                                                             <div class="index-content-overflow" x-data="{ expanded: false }"
-                                                                style="--index-content-overflow-height: {{ $contentOverflow['inline_notes']['height'] }}">
+                                                                data-overflow-target="inline_notes">
                                                                 <div id="index-inline-notes-{{ $product->id }}"
                                                                     x-bind:class="{
                                                                         'index-content-overflow__content--collapsed': !
@@ -238,7 +238,7 @@
                 <div class="notes">
                     @if ($contentOverflow['notes_column']['enabled'])
                         <div class="index-content-overflow" x-data="{ expanded: false }"
-                            style="--index-content-overflow-height: {{ $contentOverflow['notes_column']['height'] }}">
+                            data-overflow-target="notes_column">
                             <div id="index-notes-column-{{ $product->id }}"
                                 x-bind:class="{ 'index-content-overflow__content--collapsed': !expanded }">
                     @endif
@@ -369,7 +369,7 @@
             <div class="tags">
                 @if ($contentOverflow['tags']['enabled'])
                     <div class="index-content-overflow" x-data="{ expanded: false }"
-                        style="--index-content-overflow-height: {{ $contentOverflow['tags']['height'] }}">
+                        data-overflow-target="tags">
                         <div id="index-tags-{{ $product->id }}"
                             x-bind:class="{ 'index-content-overflow__content--collapsed': !expanded }">
                 @endif
@@ -381,7 +381,8 @@
                                 ($genre->has_background_color ?? false) === true,
                             'index-tag-chip--text-colored' =>
                                 ($genre->has_font_color ?? false) === true,
-                        ]) @if (filled($genre->color_style ?? null)) style="{{ $genre->color_style }}" @endif
+                        ])
+                            @if (filled($genre->color_style ?? null)) style="{{ $genre->color_style }}" @endif
                             href="{{ $tagHrefPrefix }}genre={{ $genre->id }}">
                             {{ $genre->title }}</a>{{ !$loop->last ? ',' : '' }}
                     @else

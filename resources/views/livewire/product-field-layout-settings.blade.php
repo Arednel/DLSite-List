@@ -99,6 +99,41 @@
                                     </x-options.switch>
                                 @endif
 
+                                @if (!$layoutConfig['sort'] && $layoutProperty === 'index')
+                                    <div class="field-layout-width-control" wire:sort:ignore>
+                                        <div class="field-layout-width-control-row">
+                                            <i class="fa-solid fa-circle-question"
+                                                title="{{ __('Default uses the existing Index CSS column width. Custom uses the entered width.') }}"></i>
+                                            <div @class([
+                                                'field-layout-width-joined',
+                                                'field-layout-width-joined--custom' => $row['width_mode'] === 'custom',
+                                            ])>
+                                                <select class="option-control field-layout-width-mode"
+                                                    aria-label="{{ __('Column width') }}"
+                                                    wire:model.live="{{ $layoutConfig['fields'] }}.{{ $row['field'] }}.width_mode">
+                                                    @foreach ($indexWidthOptions as $widthMode => $widthModeLabel)
+                                                        <option value="{{ $widthMode }}">{{ __($widthModeLabel) }}
+                                                        </option>
+                                                    @endforeach
+                                                </select>
+
+                                                @if ($row['width_mode'] === 'custom')
+                                                    <input class="option-control-input field-layout-width-value"
+                                                        type="text" aria-label="{{ __('Custom column width') }}"
+                                                        placeholder="120px"
+                                                        wire:model="{{ $layoutConfig['fields'] }}.{{ $row['field'] }}.width">
+                                                @endif
+                                            </div>
+                                        </div>
+
+                                        @if ($errors->has('indexFields.' . $row['field'] . '.width'))
+                                            <div class="text-error field-layout-width-error">
+                                                {{ $errors->first('indexFields.' . $row['field'] . '.width') }}
+                                            </div>
+                                        @endif
+                                    </div>
+                                @endif
+
                                 @if (!$layoutConfig['sort'] && $layoutProperty === 'edit')
                                     <x-options.switch
                                         wire:model.live="{{ $layoutConfig['fields'] }}.{{ $row['field'] }}.editable"

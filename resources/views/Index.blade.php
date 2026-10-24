@@ -18,6 +18,9 @@
         href="{{ asset('css/autocomplete.css') }}?v={{ filemtime(public_path('css/autocomplete.css')) }}">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/7.0.1/css/all.min.css">
 
+    <link rel="stylesheet"
+        href="{{ url('/styles/options.css') }}?v={{ filemtime(storage_path('app/public/generated/options.css')) }}">
+
     @livewireStyles
 </head>
 

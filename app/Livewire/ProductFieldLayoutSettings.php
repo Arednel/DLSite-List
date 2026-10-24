@@ -6,6 +6,8 @@ use App\Enums\ProductField;
 use App\Enums\ProductIndexSortField;
 use App\Livewire\Concerns\ConfirmsOptionReset;
 use App\Models\Option;
+use App\Support\ProductFieldLayout;
+use Illuminate\Validation\Rule;
 use Illuminate\View\View;
 use Livewire\Attributes\On;
 use Livewire\Component;
@@ -81,7 +83,9 @@ class ProductFieldLayoutSettings extends Component
 
     public function render(): View
     {
-        return view('livewire.product-field-layout-settings');
+        return view('livewire.product-field-layout-settings', [
+            'indexWidthOptions' => ProductFieldLayout::INDEX_WIDTH_OPTIONS,
+        ]);
     }
 
     public function save(): void
@@ -213,6 +217,7 @@ class ProductFieldLayoutSettings extends Component
     {
         switch ($layout) {
             case 'index':
+                $this->validate();
                 Option::setIndexFieldLayout($this->layoutFromState($this->indexOrder, $this->indexFields));
                 break;
             case 'filter':
@@ -244,6 +249,21 @@ class ProductFieldLayoutSettings extends Component
         }
 
         return true;
+    }
+
+    protected function rules(): array
+    {
+        return [
+            'indexFields.*.width_mode' => [
+                'required',
+                Rule::in(array_keys(ProductFieldLayout::INDEX_WIDTH_OPTIONS)),
+            ],
+            'indexFields.*.width' => [
+                'exclude_unless:indexFields.*.width_mode,' . ProductFieldLayout::INDEX_WIDTH_MODE_CUSTOM,
+                'required',
+                'regex:/^\d+(?:\.\d+)?(?:px|rem|em|%|vw)$/',
+            ],
+        ];
     }
 
     private function fillLayoutFromSettings(string $layout): void

@@ -566,6 +566,8 @@ Choices:
 - `full` - 100%
 - custom width - supports `px`, `rem`, `em`, `%`, or `vw`
 
+Table side margins are optional. Leave empty for no side margin. Enter a value to apply that margin to both sides. Supports `px`, `rem`, `em`, `%`, or `vw`.
+
 #### Overflow
 
 Three independent targets:
@@ -731,6 +733,10 @@ Fetched Tags are readonly by default. If made editable, editing changes only the
 - `priority` - hidden
 - `created_at` - hidden
 - `updated_at` - hidden
+
+Index columns also have a width mode:
+- `Default` - use the existing Index CSS
+- `Custom` - uses the entered width. Supports `px`, `rem`, `em`, `%`, or `vw`
 
 #### Index Filter Default Order
 
