@@ -130,10 +130,6 @@ final class PortableOptions
             throw new InvalidArgumentException('Unknown or non-portable option: ' . $key);
         }
         Validator::make(['value' => $value], $this->rules($key, $value))->validate();
-
-        if ($key === Option::INDEX_TABLE_WIDTH && Option::normalizeIndexTableWidth(array_replace($defaults[$key], $value)) !== array_replace($defaults[$key], $value)) {
-            throw new InvalidArgumentException('Invalid table width.');
-        }
     }
 
     /**
@@ -180,7 +176,22 @@ final class PortableOptions
             Option::INDEX_TABLE_WIDTH => [
                 'value' => ['required', 'array:mode,custom,side_margin'],
                 'value.mode' => ['sometimes', 'string', Rule::in(array_keys(Option::INDEX_TABLE_WIDTH_OPTIONS))],
-                'value.custom' => ['sometimes', 'string'],
+                'value.custom' => [
+                    Rule::when(
+                        is_array($value)
+                            && ($value['mode'] ?? Option::INDEX_TABLE_WIDTH_DEFAULT) === Option::INDEX_TABLE_WIDTH_CUSTOM,
+                        [
+                            'required',
+                            'string',
+                            'regex:/^\d+(?:\.\d+)?(?:px|rem|em|%|vw)$/',
+                        ],
+                        [
+                            'sometimes',
+                            'string',
+                            Rule::in(['']),
+                        ],
+                    ),
+                ],
                 'value.side_margin' => ['sometimes', 'nullable', 'string', 'regex:/^(?:0|\d+(?:\.\d+)?(?:px|rem|em|%|vw))$/'],
             ],
             Option::INDEX_CONTENT_OVERFLOW => [

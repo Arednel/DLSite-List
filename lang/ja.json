@@ -914,7 +914,6 @@
     "Review results": "レビュー結果",
     "Group order and missing groups": "グループ順序と不足しているグループ",
     "Table side margins": "表の左右余白",
-    "Margin on each side": "左右それぞれの余白",
     "Example: 60px": "例: 60px",
     "Leave empty for no side margin. Enter a value to apply that margin to both sides.": "左右の余白を設定しない場合は空欄にします。値を入力すると、その余白が左右両側に適用されます。"
 }

@@ -27,6 +27,62 @@ class PortableOptionsTest extends TestCase
         }
     }
 
+    #[DataProvider('tableWidths')]
+    public function test_index_table_width_import_validation(array $width, bool $valid): void
+    {
+        $options = app(PortableOptions::class);
+
+        if (! $valid) {
+            $this->expectException(ValidationException::class);
+        }
+
+        $options->validate(Option::INDEX_TABLE_WIDTH, $width);
+
+        if ($valid) {
+            $this->addToAssertionCount(1);
+        }
+    }
+
+    public static function tableWidths(): array
+    {
+        return [
+            'default' => [[
+                'mode' => Option::INDEX_TABLE_WIDTH_DEFAULT,
+                'custom' => '',
+                'side_margin' => null,
+            ], true],
+            'zero side margin without unit' => [[
+                'mode' => Option::INDEX_TABLE_WIDTH_DEFAULT,
+                'custom' => '',
+                'side_margin' => '0',
+            ], true],
+            'zero side margin with unit' => [[
+                'mode' => Option::INDEX_TABLE_WIDTH_DEFAULT,
+                'custom' => '',
+                'side_margin' => '0px',
+            ], true],
+            'custom width' => [[
+                'mode' => Option::INDEX_TABLE_WIDTH_CUSTOM,
+                'custom' => '72vw',
+                'side_margin' => '3rem',
+            ], true],
+            'missing custom width' => [[
+                'mode' => Option::INDEX_TABLE_WIDTH_CUSTOM,
+                'side_margin' => null,
+            ], false],
+            'invalid custom width' => [[
+                'mode' => Option::INDEX_TABLE_WIDTH_CUSTOM,
+                'custom' => 'calc(100%)',
+                'side_margin' => null,
+            ], false],
+            'non-custom mode with custom width' => [[
+                'mode' => Option::INDEX_TABLE_WIDTH_WIDE,
+                'custom' => '72vw',
+                'side_margin' => null,
+            ], false],
+        ];
+    }
+
     public static function columnWidths(): array
     {
         return [

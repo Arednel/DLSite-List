@@ -28,9 +28,8 @@
             </legend>
 
             <div class="option-field">
-                <label for="index_table_side_margin">{{ __('Margin on each side') }}</label>
                 <input id="index_table_side_margin" type="text" wire:model.live="sideMargin"
-                    placeholder="{{ __('Example: 60px') }}">
+                    aria-label="{{ __('Table side margins') }}" placeholder="{{ __('Example: 60px') }}">
                 @error('sideMargin')
                     <div class="text-error">{{ $message }}</div>
                 @enderror

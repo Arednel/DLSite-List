@@ -914,7 +914,6 @@
     "Review results": "審核結果",
     "Group order and missing groups": "群組順序與缺少的群組",
     "Table side margins": "表格左右邊距",
-    "Margin on each side": "每側邊距",
     "Example: 60px": "範例：60px",
     "Leave empty for no side margin. Enter a value to apply that margin to both sides.": "不需要左右邊距時請留空。輸入值後，該邊距會套用到左右兩側。"
 }
