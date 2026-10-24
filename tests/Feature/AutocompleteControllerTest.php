@@ -96,6 +96,73 @@ class AutocompleteControllerTest extends TestCase
             ->assertJsonCount(20);
     }
 
+    public function test_tag_suggestions_apply_ranking_and_limit_in_the_database(): void
+    {
+        Option::setTagAutocompleteOrder(AutocompleteOrder::FirstWord);
+
+        foreach (range(1, 25) as $index) {
+            $this->createGenre("Other Limit Tag {$index}", Genre::TYPE_CUSTOM);
+        }
+        $popular = $this->createGenre('Other Popular Limit', Genre::TYPE_CUSTOM);
+        $firstWord = $this->createGenre('Limit First', Genre::TYPE_CUSTOM);
+        $this->attachGenreToProducts($popular, Genre::TYPE_CUSTOM, 2);
+
+        DB::flushQueryLog();
+        DB::enableQueryLog();
+        $response = $this->getJson('/autocomplete/tags?q=limit');
+        $queries = collect(DB::getQueryLog())->pluck('query');
+        DB::disableQueryLog();
+
+        $response->assertOk()
+            ->assertJsonCount(20)
+            ->assertJsonPath('0.value', $firstWord->title)
+            ->assertJsonPath('1.value', $popular->title)
+            ->assertJsonPath('1.count', 2)
+            ->assertJsonPath('2.value', 'Other Limit Tag 1')
+            ->assertJsonPath('3.value', 'Other Limit Tag 10');
+        $this->assertTrue(
+            $queries->contains(fn(string $query): bool => str_contains($query, '`genres`') && str_contains(strtolower($query), 'limit 20')),
+            'The tag autocomplete query must be limited by the database.',
+        );
+    }
+
+    public function test_series_suggestions_apply_ranking_and_limit_in_the_database(): void
+    {
+        foreach (range(1, 25) as $index) {
+            Product::factory()->create(['series' => "Bound Series {$index}"]);
+        }
+        Product::factory()->count(3)->create(['series' => 'Bound Popular Series']);
+
+        DB::flushQueryLog();
+        DB::enableQueryLog();
+        $response = $this->getJson('/autocomplete/series?q=bound');
+        $queries = collect(DB::getQueryLog())->pluck('query');
+        DB::disableQueryLog();
+
+        $response->assertOk()
+            ->assertJsonCount(20)
+            ->assertJsonPath('0.value', 'Bound Popular Series')
+            ->assertJsonPath('0.count', 3)
+            ->assertJsonPath('1.value', 'Bound Series 1');
+        $this->assertTrue(
+            $queries->contains(fn(string $query): bool => str_contains($query, '`products`') && str_contains(strtolower($query), 'limit 20')),
+            'The series autocomplete query must be limited by the database.',
+        );
+    }
+
+    public function test_autocomplete_queries_are_length_bounded_and_ignore_array_input(): void
+    {
+        $this->createGenre(str_repeat('a', 100) . ' tag', Genre::TYPE_CUSTOM);
+
+        $this->getJson('/autocomplete/tags?q=' . str_repeat('a', 500))
+            ->assertOk()
+            ->assertJsonPath('0.value', str_repeat('a', 100) . ' tag');
+
+        $this->getJson('/autocomplete/tags?q[]=a')
+            ->assertOk()
+            ->assertExactJson([]);
+    }
+
     public function test_tag_suggestions_include_colors_only_when_autocomplete_surface_is_enabled(): void
     {
         $genre = $this->createGenre('Colored Suggestion', Genre::TYPE_CUSTOM);
