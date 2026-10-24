@@ -40,6 +40,8 @@ BCRYPT_ROUNDS=4
 
 This means values such as file cache/session or SMTP mail in `.env.testing.example` are not the final values used by PHPUnit when an explicit `phpunit.xml` override exists.
 
+The test suite uses `storage/framework/testing/application` as Laravel's storage root, so generated Option CSS and other test storage never touch development storage. `RefreshDatabase` tests rebuild the derived Options stylesheet from the rolled-back database state during setup, preventing CSS state from leaking between tests. The complete testing storage root is removed when the test process exits.
+
 Feature tests use Laravel `RefreshDatabase`, so use a dedicated test database.
 
 ### Docker
@@ -395,6 +397,10 @@ Covers metadata-related UI settings:
 - Overflow
 - UI wording profile previews in English and Japanese, selection changes without saving, persistence after submission, and reset behavior
 - other general/field-layout reset behavior
+
+#### `tests/Feature/OptionStylesheetTest.php`
+
+Covers generated Index dimension CSS, save/reset regeneration, committed and rolled-back portable imports, unchanged-content writes, migration generation/rollback cleanup, write-failure preservation, optional authentication, and the static `filemtime`-versioned stylesheet link. Existing Index tests also verify overflow target hooks, layout classes, and the batched Options lookup.
 
 #### `tests/Feature/ProductSortKeysTest.php`
 

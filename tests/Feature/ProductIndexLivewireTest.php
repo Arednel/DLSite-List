@@ -1144,7 +1144,7 @@ class ProductIndexLivewireTest extends TestCase
         $this->assertSame(1, substr_count($html, 'INDEPENDENT_TITLE_NOTES_SETTING'));
     }
 
-    public function test_enabled_index_content_overflow_targets_render_their_controls_and_heights(): void
+    public function test_enabled_index_content_overflow_targets_render_their_controls_and_stylesheet_hooks(): void
     {
         Option::setIndexFieldLayout([
             ['field' => ProductField::Notes->value, 'visible' => true],
@@ -1168,14 +1168,15 @@ class ProductIndexLivewireTest extends TestCase
 
         foreach (
             [
-                'index-inline-notes-' . $product->id => '41px',
-                'index-notes-column-' . $product->id => '5rem',
-                'index-tags-' . $product->id => '20vh',
-            ] as $id => $height
+                'index-inline-notes-' . $product->id => 'inline_notes',
+                'index-notes-column-' . $product->id => 'notes_column',
+                'index-tags-' . $product->id => 'tags',
+            ] as $id => $target
         ) {
             $content = $xpath->query('//*[@id="' . $id . '"]')->item(0);
             $this->assertNotNull($content);
-            $this->assertSame('--index-content-overflow-height: ' . $height, $content->parentNode->getAttribute('style'));
+            $this->assertSame($target, $content->parentNode->getAttribute('data-overflow-target'));
+            $this->assertFalse($content->parentNode->hasAttribute('style'));
             $this->assertSame(1, $xpath->query('//button[@aria-controls="' . $id . '"]')->length);
         }
 
@@ -2238,11 +2239,11 @@ class ProductIndexLivewireTest extends TestCase
         ]);
 
         Livewire::test(ProductIndex::class)
-            ->assertSee('--index-table-width: 1400px', false)
-            ->assertSee('WIDTH_VISIBLE_WORK');
+            ->assertSee('WIDTH_VISIBLE_WORK')
+            ->assertDontSee('--index-table-width:', false);
     }
 
-    public function test_index_only_clips_page_overflow_when_table_width_fills_the_page(): void
+    public function test_index_container_does_not_depend_on_table_width(): void
     {
         Option::setIndexTableWidth([
             'mode' => Option::INDEX_TABLE_WIDTH_FULL,
@@ -2250,7 +2251,8 @@ class ProductIndexLivewireTest extends TestCase
         ]);
 
         Livewire::test(ProductIndex::class)
-            ->assertSee('class="index-width-full"', false);
+            ->assertSee('class="product-index-layout"', false)
+            ->assertDontSee('index-width-full', false);
 
         Option::setIndexTableWidth([
             'mode' => Option::INDEX_TABLE_WIDTH_CUSTOM,
@@ -2258,7 +2260,8 @@ class ProductIndexLivewireTest extends TestCase
         ]);
 
         Livewire::test(ProductIndex::class)
-            ->assertDontSee('class="index-width-full"', false);
+            ->assertSee('class="product-index-layout"', false)
+            ->assertDontSee('index-width-full', false);
     }
 
     public function test_index_applies_custom_table_side_margin_without_changing_default_layout(): void
@@ -2274,8 +2277,9 @@ class ProductIndexLivewireTest extends TestCase
         ]);
 
         Livewire::test(ProductIndex::class)
-            ->assertSee('index-table-side-margin', false)
-            ->assertSee('--index-table-side-margin: 60px', false);
+            ->assertSee('class="product-index-layout"', false)
+            ->assertDontSee('index-table-side-margin', false)
+            ->assertDontSee('--index-table-side-margin:', false);
     }
 
     public function test_index_render_batches_option_settings_lookup(): void
@@ -2313,7 +2317,6 @@ class ProductIndexLivewireTest extends TestCase
         Livewire::test(ProductIndex::class)
             ->assertSee('BATCHED_OPTION_DESCRIPTION')
             ->assertSee('id="filter_priority"', false)
-            ->assertSee('--index-table-width: 1400px', false)
             ->assertSee('index-image-viewer-trigger', false)
             ->assertSee('href="/?progress=On%20Hold"', false)
             ->assertSee('https://www.dlsite.com/home/work/', false);

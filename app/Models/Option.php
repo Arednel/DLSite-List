@@ -7,11 +7,13 @@ use App\Enums\ContentFocus;
 use App\Enums\FetchedTagLanguage;
 use App\Enums\ProductIndexSortField;
 use App\Enums\UiLanguage;
+use App\Support\OptionStylesheet;
 use App\Support\ProductFieldLayout;
 use App\Support\ProductIndexContentOverflow;
 use App\Support\ProductIndexSettings;
 use Closure;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Support\Facades\DB;
 use InvalidArgumentException;
 
 class Option extends Model
@@ -902,7 +904,6 @@ class Option extends Model
                 self::INDEX_FIELD_LAYOUT,
                 self::FILTER_FIELD_LAYOUT,
                 self::INDEX_SORT_FIELD_LAYOUT,
-                self::INDEX_TABLE_WIDTH,
                 self::INDEX_CONTENT_OVERFLOW,
                 self::TAG_LIBRARY_INDEX_GROUP_ORDERING_ENABLED,
                 self::TAG_COLOR_SURFACES,
@@ -927,7 +928,6 @@ class Option extends Model
         $indexSortFieldLayout = self::indexSortFieldLayoutFromValue(
             $values->get(self::INDEX_SORT_FIELD_LAYOUT),
         );
-        $tableWidth = self::normalizeIndexTableWidth(self::jsonFromValue($values->get(self::INDEX_TABLE_WIDTH)));
         $fetchedTagLanguage = self::effectiveFetchedTagLanguageFromValues(
             $values->get(self::FETCHED_TAG_LANGUAGE_FOLLOWS_UI),
             $values->get(self::FETCHED_TAG_LANGUAGE),
@@ -943,8 +943,6 @@ class Option extends Model
             filterFields: ProductFieldLayout::filterFields($filterFieldLayout),
             indexSortFieldLayout: $indexSortFieldLayout,
             indexSortFieldOptions: ProductIndexSortField::optionsFromLayout($indexSortFieldLayout),
-            tableWidth: $tableWidth,
-            tableWidthCss: self::indexTableWidthCssFrom($tableWidth),
             contentOverflow: ProductIndexContentOverflow::normalize(
                 self::jsonFromValue($values->get(self::INDEX_CONTENT_OVERFLOW)),
             ),
@@ -1114,11 +1112,20 @@ class Option extends Model
             ['key' => $key],
             ['value' => $value],
         );
+        self::regenerateStylesheetAfterCommit([$key]);
     }
 
     private static function forget(string ...$keys): void
     {
         self::query()->whereIn('key', $keys)->delete();
+        self::regenerateStylesheetAfterCommit($keys);
+    }
+
+    private static function regenerateStylesheetAfterCommit(array $keys): void
+    {
+        if (array_intersect($keys, [self::INDEX_TABLE_WIDTH, self::INDEX_CONTENT_OVERFLOW]) !== []) {
+            DB::afterCommit(fn() => app(OptionStylesheet::class)->regenerate());
+        }
     }
 
     private static function jsonFromValue(?string $value): mixed
@@ -1199,7 +1206,7 @@ class Option extends Model
     /**
      * @param  array{mode: string, custom: string, side_margin: ?string}  $width
      */
-    private static function indexTableWidthCssFrom(array $width): string
+    public static function indexTableWidthCssFrom(array $width): string
     {
         return match ($width['mode']) {
             self::INDEX_TABLE_WIDTH_WIDE => '1400px',

@@ -97,28 +97,6 @@ a {
     right: 4px
 }
 
-/* Full page width tables will not create an outer horizontal scrollbar. */
-.index-width-full {
-    overflow-x: clip;
-}
-
-.index-table-side-margin .list-container {
-    width: min(
-        calc(var(--index-table-width, 1024px) + 34px),
-        calc(100% - var(--index-table-side-margin) - var(--index-table-side-margin))
-    );
-}
-
-.index-table-side-margin .cover-block,
-.index-table-side-margin .cover-block .image-container {
-    width: min(var(--index-table-width, 1024px), 100%);
-}
-
-.index-table-side-margin .progress-menu-container .progress-menu,
-.index-table-side-margin .list-unit {
-    width: min(var(--index-table-width, 1024px), calc(100% - 34px));
-}
-
 /**
  * List Container
  */
@@ -419,7 +397,7 @@ a {
 }
 
 .index-content-overflow__content--collapsed {
-    max-height: var(--index-content-overflow-height);
+    max-height: var(--index-content-overflow-height, 80px);
     overflow: hidden;
 }
 
@@ -995,11 +973,6 @@ body.filter-modal-open {
     .cover-block,
     .cover-block .image-container,
     .list-unit,
-    .index-table-side-margin .list-container,
-    .index-table-side-margin .cover-block,
-    .index-table-side-margin .cover-block .image-container,
-    .index-table-side-margin .progress-menu-container .progress-menu,
-    .index-table-side-margin .list-unit,
     .list-unit .list-status-title,
     .list-unit .list-status-title .progress-heading {
         width: 100%;

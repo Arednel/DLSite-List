@@ -530,9 +530,6 @@ class OptionMetadataSettingsTest extends TestCase
             ProductField::ReListenValue->value,
             ProductField::Tags->value,
         ], collect($defaults->filterFields)->pluck('field')->all());
-        $this->assertSame('1024px', $defaults->tableWidthCss);
-        $this->assertNull($defaults->tableWidth['side_margin']);
-
         Option::setIndexPerPage(250);
         Option::setIndexFieldLayout([
             ['field' => ProductField::Title->value, 'visible' => true, 'notes_visible' => false],
@@ -547,11 +544,6 @@ class OptionMetadataSettingsTest extends TestCase
         Option::setIndexSortFieldLayout([
             ['field' => ProductIndexSortField::Series->value, 'visible' => true],
             ['field' => ProductIndexSortField::Score->value, 'visible' => false],
-        ]);
-        Option::setIndexTableWidth([
-            'mode' => Option::INDEX_TABLE_WIDTH_CUSTOM,
-            'custom' => '75%',
-            'side_margin' => '3rem',
         ]);
         Option::setTagLibraryIndexGroupOrderingEnabled(true);
         Option::setIndexSearchHiddenDescriptionsEnabled(true);
@@ -589,8 +581,6 @@ class OptionMetadataSettingsTest extends TestCase
         $this->assertSame(ProductIndexSortField::Series->value, $settings->indexSortFieldLayout[0]['field']);
         $this->assertArrayHasKey(ProductIndexSortField::Series->value, $settings->indexSortFieldOptions);
         $this->assertArrayNotHasKey(ProductIndexSortField::Score->value, $settings->indexSortFieldOptions);
-        $this->assertSame('75%', $settings->tableWidthCss);
-        $this->assertSame('3rem', $settings->tableWidth['side_margin']);
         $this->assertTrue($settings->indexGroupOrderingEnabled);
         $this->assertTrue($settings->searchHiddenDescriptionsEnabled);
         $this->assertTrue($settings->indexImageViewerEnabled);
@@ -744,21 +734,33 @@ class OptionMetadataSettingsTest extends TestCase
 
     public function test_index_table_width_normalizes_invalid_custom_values(): void
     {
-        $this->assertSame('1024px', Option::productIndexSettings()->tableWidthCss);
+        $this->assertSame([
+            'mode' => Option::INDEX_TABLE_WIDTH_DEFAULT,
+            'custom' => '',
+            'side_margin' => null,
+        ], Option::indexTableWidth());
 
         Option::setIndexTableWidth([
             'mode' => Option::INDEX_TABLE_WIDTH_WIDE,
             'custom' => '',
         ]);
 
-        $this->assertSame('1400px', Option::productIndexSettings()->tableWidthCss);
+        $this->assertSame([
+            'mode' => Option::INDEX_TABLE_WIDTH_WIDE,
+            'custom' => '',
+            'side_margin' => null,
+        ], Option::indexTableWidth());
 
         Option::setIndexTableWidth([
             'mode' => Option::INDEX_TABLE_WIDTH_CUSTOM,
             'custom' => '75%',
         ]);
 
-        $this->assertSame('75%', Option::productIndexSettings()->tableWidthCss);
+        $this->assertSame([
+            'mode' => Option::INDEX_TABLE_WIDTH_CUSTOM,
+            'custom' => '75%',
+            'side_margin' => null,
+        ], Option::indexTableWidth());
 
         $this->assertSame([
             'mode' => Option::INDEX_TABLE_WIDTH_DEFAULT,
