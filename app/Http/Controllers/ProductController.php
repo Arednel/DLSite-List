@@ -27,6 +27,7 @@ use App\Support\ProductFieldLayout;
 use App\Support\ProductGenreSync;
 use App\Support\ProductImageSubmission;
 use App\Support\ReturnTarget;
+use App\Support\ReturnUrl;
 use App\Support\TagColor;
 use App\Support\TagInput;
 use App\Support\VisibleGenreAttachment;
@@ -37,7 +38,6 @@ use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
-use Illuminate\Support\Facades\URL;
 use Illuminate\Validation\ValidationException;
 use Illuminate\View\View;
 
@@ -491,15 +491,8 @@ class ProductController extends Controller
         }
 
         $returnTarget = ReturnTarget::fromRequest($request);
-        $returnUrl = $request->has('return_url')
-            ? $request->input('return_url')
-            : $request->old('return_url');
-        $returnUrl = is_scalar($returnUrl) ? trim((string) $returnUrl) : '';
-
         // Keep the original back target when switching between DLSite and Custom create.
-        if ($returnUrl === '') {
-            $returnUrl = URL::previous(route('index'));
-        }
+        $returnUrl = ReturnUrl::fromRequest($request);
 
         $returnParameters = ['return_url' => $returnUrl];
 

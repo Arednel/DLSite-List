@@ -147,9 +147,10 @@ class BulkImportTest extends TestCase
 
     public function test_bulk_import_page_reuses_quick_add_form_with_product_code_list_input(): void
     {
-        $this->get(route('products.create.bulk'))
+        $this->from('/tags')->get(route('products.create.bulk'))
             ->assertOk()
             ->assertSee('Bulk Import')
+            ->assertSee('href="http://localhost/tags"', false)
             ->assertSee('name="product_code_list"', false)
             ->assertSee('fa-circle-question', false)
             ->assertSee('Product Codes or Links')

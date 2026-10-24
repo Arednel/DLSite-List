@@ -8,6 +8,10 @@ All notable changes to this project are documented in this file.
 
 * Fixed missing circle, tags, and sample images for AI-generated (`aix`) works by falling back to DLsite's public `product.json` API when the work page omits them (#6).
 
+### Security
+
+* Restricted DLSite Create, Custom Create, and Bulk Import return navigation to same-site URLs.
+
 ## 2.1.0 - 2026-10-22
 
 *Traditional Chinese Support & Security Update*
