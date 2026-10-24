@@ -13,6 +13,10 @@ All notable changes to this project are documented in this file.
 
 * The Index `Score` column is now titled `Ratings` because it shows both ratings. It still sorts by your own score. On narrow screens, Ratings and Series each use a full row of the work card.
 
+### Security
+
+* Restricted DLSite Create, Custom Create, and Bulk Import return navigation to same-site URLs.
+
 ## 2.1.0 - 2026-10-22
 
 *Traditional Chinese Support & Security Update*

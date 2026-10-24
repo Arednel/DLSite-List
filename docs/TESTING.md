@@ -339,7 +339,7 @@ Covers selected-work Refetch search, product-code-desc ordering, and preservatio
 Covers the main product HTTP workflows:
 - Index filtering/sorting/display
 - all-tags pattern matching, overlapping matches, missing tags, and per-attachment language/custom-source visibility
-- Create/Edit field order using submitted input names, product binding, and return-navigation data
+- Create/Edit field order using submitted input names, product binding, and return-navigation data, including rejection of unsafe (non-http(s)) `return_url` values
 - hidden/read-only field preservation
 - DLsite Quick Add fetch/store/error behavior and shared importer regression coverage
 - Product Format Edit/Custom Quick Add input, fetched Quick Add fallback, visible override, blank fallback, and localized validation
