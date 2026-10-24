@@ -8,6 +8,7 @@ All notable changes to this project are documented in this file.
 
 For existing manual installations:
 
+* Run `composer install`.
 * Run `php artisan migrate`.
 
 ### Added
@@ -26,6 +27,7 @@ For existing manual installations:
 ### Security
 
 * Restricted DLSite Create, Custom Create, and Bulk Import return navigation to same-site URLs.
+* Updated `symfony/http-foundation` to 7.4.21 to address CVE-2026-108082.
 
 ## 2.1.0 - 2026-10-22
 
