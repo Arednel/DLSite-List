@@ -203,7 +203,7 @@ The export flow is:
 The import flow is:
 
 1. Uploaded ZIPs are stored under immutable private paths and inspected asynchronously.
-2. Manifests, archive-set identity, paths, checksums, media types, and the complete required data-part set are validated before analysis.
+2. Manifests, archive-set identity, paths, checksums, media types, and the complete required data-part set are validated before analysis. Each part and the whole import also have uncompressed-size budgets (`transfers.max_import_part_expanded_bytes` and `transfers.max_import_run_expanded_bytes`).
 3. Analysis maps incoming values to bounded, paginated `library_import_items` without mutating the library.
 4. Review decisions are persisted as `ignore`, `overwrite`, or `merge`.
 5. Apply rechecks current state under database and library-mutation locks, then updates approved categories in bounded batches.

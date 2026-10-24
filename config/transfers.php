@@ -31,6 +31,12 @@ return [
     // Maximum ZIP parts per transfer.
     'max_parts' => 10000,
 
+    // Maximum uncompressed bytes accepted from one imported ZIP part (null disables the limit).
+    'max_import_part_expanded_bytes' => 17179869184, // 16 * 1024 * 1024 * 1024
+
+    // Maximum uncompressed bytes accepted across all parts of one import (null disables the limit).
+    'max_import_run_expanded_bytes' => 274877906944, // 256 * 1024 * 1024 * 1024
+
     // Maximum allowed ZIP compression ratio.
     'max_compression_ratio' => 1000,
 
