@@ -54,6 +54,8 @@ Tag and contributor data is loaded only when the current visible fields need it.
 
 A failed cover download is stored as no cover, and failed sample downloads are omitted from the saved sample list. The fetcher can retry a failed DLsite fetch up to five times. Python does not own a second retry loop.
 
+The scraper reads metadata through `dlsite-async`, which parses the public work page. Some work pages, such as AI-generated `aix` works, are shown to guests as "DLsite user only" content without the circle/brand, genre, and sample image sections. When any of these fields is empty after the work page is parsed, the scraper requests the public `product.json` API once per locale and fills only the empty fields; values from the work page are never overwritten. No DLsite login or cookie is required.
+
 The Quick Add field layout controls which user-editable override rows are submitted. Hidden DLsite metadata such as age, product format, circle, publisher, brand, contributors, and descriptions can still be populated from scraped data.
 
 The main DLsite `Product Format` is stored first; only SND (Voice), MS2 (Music), and MV2 (Animation) are accepted as additional formats from Work.options. When an additional format mirrors the fetched main format, the additional value is omitted: SOU suppresses SND, MUS suppresses MS2, and MOV suppresses MV2. An additional format is kept when its matching main format is absent. This DLsite-fetch rule does not apply to manual Edit input or Library export/import, which preserve the stored values.

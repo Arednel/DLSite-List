@@ -5,6 +5,7 @@ import logging
 import os
 import re
 import sys
+from dataclasses import replace
 from enum import Enum
 from pathlib import Path
 
@@ -93,14 +94,93 @@ def product_format_codes(work):
     return formats
 
 
+PRODUCT_API_URL = "https://www.dlsite.com/maniax/api/=/product.json"
+
+
+def missing_product_api_fields(work):
+    missing = []
+
+    if not work.circle and not work.brand:
+        missing.append("maker")
+    if not work.genre:
+        missing.append("genre")
+    if not work.sample_images:
+        missing.append("sample_images")
+
+    return missing
+
+
+def product_api_details(product, missing):
+    """
+    Maps product.json fields to the work fields that the work page did not
+    provide. Some pages (e.g. AI-generated `aix` works) are shown to guests as
+    "DLsite user only" content without the outline table and sample slider,
+    while product.json still returns this metadata.
+    """
+    details = {}
+
+    if "maker" in missing and product.get("maker_name"):
+        maker_field = (
+            "circle" if (product.get("maker_id") or "").startswith("RG") else "brand"
+        )
+        details[maker_field] = product["maker_name"]
+
+    if "genre" in missing:
+        genres = [
+            genre["name"]
+            for genre in product.get("genres") or []
+            if isinstance(genre, dict) and genre.get("name")
+        ]
+        if genres:
+            details["genre"] = genres
+
+    if "sample_images" in missing:
+        sample_images = [
+            image["url"]
+            for image in product.get("image_samples") or []
+            if isinstance(image, dict) and image.get("url")
+        ]
+        if sample_images:
+            details["sample_images"] = sample_images
+
+    return details
+
+
+async def fill_from_product_api(api, work):
+    missing = missing_product_api_fields(work)
+    if not missing:
+        return work
+
+    try:
+        async with api.get(
+            PRODUCT_API_URL, params={"workno": work.product_id}
+        ) as response:
+            products = await response.json(content_type=None)
+    except Exception as error:
+        logging.warning(f"product.json fallback failed for {work.product_id}: {error}")
+        return work
+
+    if not isinstance(products, list) or not products:
+        return work
+
+    details = product_api_details(products[0], missing)
+    if details:
+        logging.info(
+            f"{work.product_id} filled from product.json: {', '.join(details)}"
+        )
+        return replace(work, **details)
+
+    return work
+
+
 async def japanese_dlsite(work_id):
     async with DlsiteAPI() as api:
-        return await api.get_work(work_id)
+        return await fill_from_product_api(api, await api.get_work(work_id))
 
 
 async def english_dlsite(work_id):
     async with DlsiteAPI(locale="en_US") as api:
-        return await api.get_work(work_id)
+        return await fill_from_product_api(api, await api.get_work(work_id))
 
 
 async def fetch_work_data(work_id):

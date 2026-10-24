@@ -16,6 +16,7 @@ All notable changes to this project are documented in this file.
 ### Fixed
 
 * Removed horizontal page scrollbar when the Index table width is set to `Full`.
+* Fixed missing circle, tags, and sample images for AI-generated (`aix`) works by falling back to DLsite's public `product.json` API when the work page omits them (#6).
 
 ### Security
 
