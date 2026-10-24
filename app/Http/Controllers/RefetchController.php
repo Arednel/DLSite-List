@@ -5,6 +5,8 @@ namespace App\Http\Controllers;
 use App\Http\Requests\StartRefetchRequest;
 use App\Models\Option;
 use App\Models\RefetchRun;
+use App\Support\Localization\ErrorMessage;
+use App\Support\Refetch\RefetchCapacityException;
 use App\Support\Refetch\RefetchService;
 use Illuminate\Contracts\Cache\LockTimeoutException;
 use Illuminate\Http\RedirectResponse;
@@ -33,6 +35,13 @@ class RefetchController extends Controller
                 ->withInput()
                 ->withErrors([
                     'product_ids' => __('errors.Refetch cannot start while another refetch action is in progress.'),
+                ]);
+        } catch (RefetchCapacityException $exception) {
+            return redirect()
+                ->route('options.index', ['tab' => 'refetch'])
+                ->withInput()
+                ->withErrors([
+                    'product_ids' => ErrorMessage::display($exception->getMessage()),
                 ]);
         }
 

@@ -13,6 +13,7 @@ use App\Models\BulkImportRun;
 use App\Models\Genre;
 use App\Models\Option;
 use App\Models\Product;
+use App\Support\BulkImport\BulkImportCapacityException;
 use App\Support\BulkImport\BulkImportService;
 use App\Support\DLSite\DLSiteProductImporter;
 use App\Support\DLSite\DLSiteProductImportInput;
@@ -83,6 +84,69 @@ class BulkImportTest extends TestCase
 
         $this->assertDatabaseCount('bulk_import_runs', 0);
         Bus::assertNothingDispatched();
+    }
+
+    public function test_start_is_rejected_when_the_active_run_budget_is_full(): void
+    {
+        Bus::fake();
+
+        foreach (range(1, BulkImportService::MAX_ACTIVE_RUNS) as $number) {
+            $this->createRunItem(sprintf('RJ%09d', $number));
+        }
+
+        try {
+            app(BulkImportService::class)->start(['RJ000000999'], $this->minimalImportInput());
+            $this->fail('Expected the active-run budget to reject another Bulk Import.');
+        } catch (BulkImportCapacityException $exception) {
+            $this->assertSame(BulkImportService::CAPACITY_MESSAGE, $exception->getMessage());
+        }
+
+        $this->assertDatabaseCount('bulk_import_runs', BulkImportService::MAX_ACTIVE_RUNS);
+        Bus::assertNothingDispatched();
+    }
+
+    public function test_start_is_rejected_when_queued_works_would_exceed_the_backlog_budget(): void
+    {
+        Bus::fake();
+        Option::setUiLanguage(UiLanguage::Japanese);
+        [$run] = $this->createRunItem('RJ000000001');
+        $run->items()->createMany(
+            collect(range(2, BulkImportService::MAX_QUEUED_WORKS - 1))
+                ->map(fn(int $number): array => [
+                    'position' => $number,
+                    'product_id' => sprintf('RJ%09d', $number),
+                    'status' => BulkImportItemStatus::Pending,
+                ])
+                ->all(),
+        );
+
+        $this->from(route('products.create.bulk'))
+            ->post(route('products.store.bulk'), [
+                'product_code_list' => "RJ100000001\nRJ100000002",
+            ])
+            ->assertRedirect(route('products.create.bulk'))
+            ->assertSessionHasErrors([
+                'product_code_list' => '取り込み待ちの作品が多すぎるため、一括インポートを開始できません。現在の一括インポートが終わるまでお待ちください。',
+            ]);
+
+        $this->assertDatabaseCount('bulk_import_runs', 1);
+        Bus::assertNothingDispatched();
+
+        $this->post(route('products.store.bulk'), [
+            'product_code_list' => 'RJ100000001',
+        ])->assertRedirect();
+
+        $this->assertDatabaseCount('bulk_import_runs', 2);
+    }
+
+    private function minimalImportInput(): DLSiteProductImportInput
+    {
+        return new DLSiteProductImportInput(
+            values: [],
+            visibleFields: [ProductField::ProductCode->value],
+            submitted: [],
+            autoSeriesFromTitleName: true,
+        );
     }
 
     public function test_busy_start_error_is_localized_at_the_controller_boundary(): void

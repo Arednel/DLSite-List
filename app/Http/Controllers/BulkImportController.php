@@ -6,6 +6,7 @@ use App\Enums\ProductAgeCategory;
 use App\Enums\ProductProgress;
 use App\Http\Requests\StartBulkImportRequest;
 use App\Models\Option;
+use App\Support\BulkImport\BulkImportCapacityException;
 use App\Support\BulkImport\BulkImportService;
 use App\Support\DLSite\DLSiteProductImportInput;
 use App\Support\Localization\ErrorMessage;
@@ -68,7 +69,7 @@ class BulkImportController extends Controller
         try {
             $run = $service->start($request->productCodes(), $input);
         } catch (RuntimeException $exception) {
-            if (! $exception->getPrevious() instanceof LockTimeoutException) {
+            if (! $exception instanceof BulkImportCapacityException && ! $exception->getPrevious() instanceof LockTimeoutException) {
                 throw $exception;
             }
 
