@@ -915,5 +915,12 @@
     "Group order and missing groups": "グループ順序と不足しているグループ",
     "Table side margins": "表の左右余白",
     "Example: 60px": "例: 60px",
-    "Leave empty for no side margin. Enter a value to apply that margin to both sides.": "左右の余白を設定しない場合は空欄にします。値を入力すると、その余白が左右両側に適用されます。"
+    "Leave empty for no side margin. Enter a value to apply that margin to both sides.": "左右の余白を設定しない場合は空欄にします。値を入力すると、その余白が左右両側に適用されます。",
+    "DLsite rating": "DLsite評価",
+    "DLsite rating count": "DLsite評価数",
+    "★:rating (:count rating)|★:rating (:count ratings)": "★:rating（:count件）",
+    "Ratings": "評価",
+    "DLsite": "DLsite",
+    "Mine": "自分",
+    ":value out of :max": ":max点中:value点"
 }

@@ -915,5 +915,12 @@
     "Group order and missing groups": "群組順序與缺少的群組",
     "Table side margins": "表格左右邊距",
     "Example: 60px": "範例：60px",
-    "Leave empty for no side margin. Enter a value to apply that margin to both sides.": "不需要左右邊距時請留空。輸入值後，該邊距會套用到左右兩側。"
+    "Leave empty for no side margin. Enter a value to apply that margin to both sides.": "不需要左右邊距時請留空。輸入值後，該邊距會套用到左右兩側。",
+    "DLsite rating": "DLsite 評價",
+    "DLsite rating count": "DLsite 評價人數",
+    "★:rating (:count rating)|★:rating (:count ratings)": "★:rating（:count 人）",
+    "Ratings": "評分",
+    "DLsite": "DLsite",
+    "Mine": "個人",
+    ":value out of :max": ":value 分（滿分 :max 分）"
 }

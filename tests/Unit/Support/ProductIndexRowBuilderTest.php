@@ -23,6 +23,8 @@ class ProductIndexRowBuilderTest extends TestCase
             'progress' => 'Listening',
             'work_image' => '/images/typed-row.jpg',
             'score' => 8,
+            'dlsite_rating' => '4.96',
+            'dlsite_rating_count' => 57,
             'series' => 'Series & One',
             'age_category' => 'ALL_AGES',
             'circle' => 'Circle / One',
@@ -57,6 +59,7 @@ class ProductIndexRowBuilderTest extends TestCase
         $this->assertSame('TYPED ROW', $row->workName);
         $this->assertSame('Typed Row English', $row->workNameEnglish);
         $this->assertSame(8, $row->score);
+        $this->assertSame(4.96, $row->dlsiteRating);
         $this->assertSame('/?series=Series%20%26%20One', $row->seriesUrl);
         $this->assertSame('/?circle=Circle%20%2F%20One', $row->circleUrl);
         $this->assertSame(
@@ -105,6 +108,7 @@ class ProductIndexRowBuilderTest extends TestCase
         $this->assertNull($row->progress);
         $this->assertNull($row->workImage);
         $this->assertNull($row->score);
+        $this->assertNull($row->dlsiteRating);
         $this->assertNull($row->series);
         $this->assertNull($row->ageCategory);
         $this->assertNull($row->circle);

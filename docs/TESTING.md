@@ -227,6 +227,14 @@ Covers Ignore/Overwrite/Merge decisions, work/tag/group/relationship/option appl
 
 Partial contributor document coverage verifies that omitted roles survive Overwrite and explicitly empty roles can still be cleared. Announcement-date review checks use matching date formats for unchanged imported values.
 
+#### `tests/Feature/DLSiteRatingTest.php`
+
+Covers the DLsite rating: storing it on import, storing no rating for unrated works and failed lookups, Refetch updates that keep `updated_at` and add no review change, keeping the stored rating when the lookup fails and clearing it when DLsite reports none, and the read-only Edit page row with its English, Japanese, and Traditional Chinese text.
+
+#### `tests/Feature/DLSiteRatingTransferTest.php`
+
+Covers export/import round trips of the rating (including unrated works), review and Overwrite of a changed rating for an existing work, whole-number averages matching the stored value, archives created before the fields existed, and quarantine of out-of-range values.
+
 #### `tests/Feature/LibraryTransferLifecycleTest.php`
 
 Covers supersession/cancellation, active-transfer guards, history cleanup, queued checkpoints/retries, generation and operation tokens, late callbacks, publication recovery, browser-started imports, and transfer-storage cleanup.
@@ -259,6 +267,10 @@ Covers the Image Viewer option and Index viewer rendering/data:
 - accessible controls
 - safe full-image links
 - conditional script/dialog output
+
+#### `tests/Feature/IndexRatingsColumnTest.php`
+
+Covers the Index Ratings column: the DLsite rating row above the personal score row with labels, half-star fill, numbers, and screen reader text; only the row that has a value; `-` without ratings, including an average stored without a rating count; the `Ratings` title on the Index while sorting still uses `score` and other surfaces keep `Score`; hydrating the rating only when the column is visible; and Japanese and Traditional Chinese text.
 
 #### `tests/Feature/IndexPaginationSettingsTest.php`
 
@@ -549,7 +561,7 @@ Covers server-rendered Add/Edit modal completion fallback output and conditional
 - Covers normalized contributor identity, maker id, role-specific sync, cross-role isolation, and Updated Date touching only on effective change.
 
 `tests/Unit/Support/ProductFieldLayoutTest.php`
-- Covers surface defaults/availability (including independent Publisher/Brand fields and the virtual Index-only combined field), localized fetched-tag labels, row normalization without stored help notes, required locks, editability, and prepared layout metadata.
+- Covers surface defaults/availability (including independent Publisher/Brand fields and the virtual Index-only combined field), localized fetched-tag labels, row normalization without stored help notes, required locks, editability, and prepared layout metadata (including the Index-only `Ratings` title for `score`).
 
 `tests/Unit/Support/ProductGenreSyncTest.php`
 - Covers fetched language buckets, custom/fetched preservation/precedence, recursive ancestor expansion, and Updated Date touching only on effective change.
@@ -561,7 +573,7 @@ Covers server-rendered Add/Edit modal completion fallback output and conditional
 - Covers Index query normalization, invalid-value rejection, filter/date round trips, defaults, sort options, input keys, visibility groups, and query export.
 
 `tests/Unit/Support/ProductIndexRowBuilderTest.php`
-- Covers typed Index row construction from narrow product hydration, encoded Series/Circle/contributor filter URLs, preserved Edit return state/fragment, age-aware DLsite URLs, defaults for unhydrated optional attributes, and rejection of a missing required `work_name`.
+- Covers typed Index row construction from narrow product hydration, encoded Series/Circle/contributor filter URLs, preserved Edit return state/fragment, age-aware DLsite URLs, the DLsite rating, defaults for unhydrated optional attributes, and rejection of a missing required `work_name`.
 
 `tests/Unit/Support/RefetchDiffBuilderTest.php`
 - Covers all Refetch metadata/creator/tag categories (including independent Publisher/Brand changes), main-only Product Format comparison that ignores fetched additional formats, plus tag identity handling, cover hashing, and unavailable sample-image behavior.
@@ -583,6 +595,9 @@ Covers server-rendered Add/Edit modal completion fallback output and conditional
 `tests/Unit/Support/DLSite/DLSiteWorkDataTest.php`
 - Covers shared scraped metadata extraction for titles/descriptions/creators/maker data (Circle, Publisher, and Brand remain independent), Product Format normalization, announcement-date and site-id locale fallback, product ids, and missing-id errors.
 
+`tests/Unit/Support/DLSite/DLSiteRatingTest.php`
+- Covers reading the scraper rating keys (with English fallback), missing keys meaning an unknown rating, rejecting unrated or invalid values as a pair, and normalizing values to the stored shape.
+
 `tests/Unit/Support/DLSite/DLSiteWorkFetcherTest.php`
 - Covers the PHP-owned five-attempt retry loop, manifest/JSON validation, partial results, immediate success, and rejection of stale JSON fallback.
 
@@ -590,6 +605,9 @@ Covers server-rendered Add/Edit modal completion fallback output and conditional
 
 `tests/Unit/View/Components/Fields/EnumSelectFieldTest.php`
 - Covers enum-backed field component defaults and option maps.
+
+`tests/Unit/View/Components/StarRatingTest.php`
+- Covers half-star rounding for 5- and 10-point values, clamping out-of-range values, number formatting, CSS-only star markup with screen reader text, an omitted label, and translated screen reader text.
 
 ### Performance
 
@@ -625,6 +643,8 @@ Covers Python scraper Product Format handling:
 - additional-option ordering
 - stable DLsite enum-code serialization
 - age-category serialization after the `dlsite-async` upgrade
+
+It also covers the DLsite rating lookup: the average and count from `product/info/ajax`, `null` values for unrated works, and an unknown rating when the request fails or DLsite returns no work or no rating fields.
 
 #### `python/tests/test_weekly_logging.py`
 

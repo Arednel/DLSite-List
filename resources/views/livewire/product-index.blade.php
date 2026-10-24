@@ -204,7 +204,20 @@
             @break
 
             @case('score')
-                <span class="cell-value">{{ $product->score ?? '-' }}</span>
+                @if ($product->dlsiteRating === null && $product->score === null)
+                    <span class="cell-value">-</span>
+                @else
+                    <span class="index-ratings">
+                        @if ($product->dlsiteRating !== null)
+                            <x-star-rating class="index-ratings__dlsite" :value="$product->dlsiteRating" :max="5"
+                                :decimals="2" :label="__('DLsite')" :description="__('DLsite rating')" />
+                        @endif
+                        @if ($product->score !== null)
+                            <x-star-rating class="index-ratings__score" :value="$product->score" :max="10"
+                                :label="__('Mine')" :description="__('Your Score')" />
+                        @endif
+                    </span>
+                @endif
             @break
 
             @case('series')

@@ -10,6 +10,7 @@ use App\Models\Genre;
 use App\Models\Product;
 use App\Models\RefetchRun;
 use App\Models\RefetchWorkResult;
+use App\Support\DLSite\DLSiteRating;
 use App\Support\DLSite\DLSiteWorkFetcher;
 use App\Support\LibraryMutationLock;
 use App\Support\ProductContributorSync;
@@ -171,6 +172,8 @@ final class RefetchService
                 ];
             }
 
+            $this->storeDlsiteRating($product, $fetch->workData->rating);
+
             $result->forceFill([
                 'status' => RefetchWorkResult::STATUS_FETCHED,
                 'changes' => $this->diffBuilder->build($product, $fetch, $imageDirectory),
@@ -184,6 +187,28 @@ final class RefetchService
         }
 
         $this->refreshRunProgress($run);
+    }
+
+    /**
+     * The rating is a DLsite statistic the user cannot edit, so a refetch keeps it
+     * current without a review tab and without changing the work's update time.
+     * An unreadable rating (null) keeps the stored values.
+     */
+    private function storeDlsiteRating(Product $product, ?DLSiteRating $rating): void
+    {
+        if ($rating === null) {
+            return;
+        }
+
+        $product->forceFill($rating->attributes());
+
+        if (! $product->isDirty(['dlsite_rating', 'dlsite_rating_count'])) {
+            return;
+        }
+
+        $product->timestamps = false;
+        $product->save();
+        $product->timestamps = true;
     }
 
     public function recordFailedResult(RefetchWorkResult $result, string $error): void

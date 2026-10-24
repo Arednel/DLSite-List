@@ -27,6 +27,8 @@ final readonly class DLSiteWorkData
         public array $englishGenres,
         public array $sampleImages,
         public array $contributorsByRole,
+        /** Null when the rating could not be read, so stored values are kept. */
+        public ?DLSiteRating $rating = null,
     ) {}
 
     public static function fromArray(array $workData, ?string $fallbackProductId = null): self
@@ -64,6 +66,7 @@ final readonly class DLSiteWorkData
             englishGenres: self::list($english['genre'] ?? []),
             sampleImages: self::list($japanese['sample_images'] ?? []),
             contributorsByRole: self::contributorsByRole($japanese, $english),
+            rating: DLSiteRating::fromLocales($japanese, $english),
         );
     }
 
