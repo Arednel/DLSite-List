@@ -4,6 +4,12 @@ All notable changes to this project are documented in this file.
 
 ## Unreleased
 
+### Upgrade notes
+
+For existing manual installations:
+
+* Run `php artisan migrate`.
+
 ### Added
 
 * Added optional custom side margins to the Index Table Width setting.
