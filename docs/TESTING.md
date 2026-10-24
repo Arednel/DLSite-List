@@ -40,6 +40,8 @@ BCRYPT_ROUNDS=4
 
 This means values such as file cache/session or SMTP mail in `.env.testing.example` are not the final values used by PHPUnit when an explicit `phpunit.xml` override exists.
 
+The test suite uses `storage/framework/testing/application` as Laravel's storage root, so generated Option CSS and other test storage never touch development storage. `RefreshDatabase` tests rebuild the derived Options stylesheet from the rolled-back database state during setup, preventing CSS state from leaking between tests. The complete testing storage root is removed when the test process exits.
+
 Feature tests use Laravel `RefreshDatabase`, so use a dedicated test database.
 
 ### Docker
@@ -398,7 +400,7 @@ Covers metadata-backfill behavior when canonical work JSON is missing or invalid
 #### `tests/Feature/ProductMetadataSettingsTest.php`
 
 Covers metadata-related UI settings:
-- field layouts, including collapsed section rendering and sortable-control interaction isolation
+- field layouts, including Index column-width modes, combined validation errors and correction, collapsed section rendering, and sortable-control interaction isolation
 - Series Metadata
 - DLsite Links, including the age-based fallback, default-on announcement toggle, save/reset behavior, and tooltip
 - Form Page Theme
@@ -407,6 +409,14 @@ Covers metadata-related UI settings:
 - Overflow
 - UI wording profile previews in English and Japanese, selection changes without saving, persistence after submission, and reset behavior
 - other general/field-layout reset behavior
+
+#### `tests/Feature/OptionStylesheetTest.php`
+
+Covers generated Index dimension and column-width CSS, save/reset regeneration, committed and rolled-back portable imports, unchanged-content writes, migration generation/rollback cleanup, write-failure preservation, optional authentication, and the static `filemtime`-versioned stylesheet link. Existing Index tests also verify overflow target hooks, layout classes, and the batched Options lookup.
+
+#### `tests/Unit/Support/Transfers/PortableOptionsTest.php`
+
+Covers column-width import validation, including older layouts without width settings, supported units, missing custom widths, and invalid supplied widths or modes.
 
 #### `tests/Feature/ProductSortKeysTest.php`
 

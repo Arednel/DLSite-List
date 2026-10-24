@@ -22,6 +22,7 @@ use App\Livewire\TagLibraryDisplaySettings;
 use App\Livewire\UiLanguageSettings;
 use App\Models\Option;
 use App\Models\Product;
+use App\Support\ProductFieldLayout;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\App;
 use Illuminate\Support\Facades\DB;
@@ -416,7 +417,7 @@ class ProductMetadataSettingsTest extends TestCase
     }
 
     #[DataProvider('fixedTableWidthProvider')]
-    public function test_table_width_component_saves_fixed_width_modes(string $mode, string $expectedCss): void
+    public function test_table_width_component_saves_fixed_width_modes(string $mode): void
     {
         Livewire::test(IndexTableWidthSettings::class)
             ->set('mode', $mode)
@@ -430,7 +431,6 @@ class ProductMetadataSettingsTest extends TestCase
 
         $this->assertSame($mode, Option::indexTableWidth()['mode']);
         $this->assertSame('', Option::indexTableWidth()['custom']);
-        $this->assertSame($expectedCss, Option::productIndexSettings()->tableWidthCss);
     }
 
     public function test_table_width_component_saves_custom_width(): void
@@ -448,8 +448,45 @@ class ProductMetadataSettingsTest extends TestCase
         $this->assertSame([
             'mode' => Option::INDEX_TABLE_WIDTH_CUSTOM,
             'custom' => '72vw',
+            'side_margin' => null,
         ], Option::indexTableWidth());
-        $this->assertSame('72vw', Option::productIndexSettings()->tableWidthCss);
+    }
+
+    public function test_table_width_component_saves_custom_side_margin(): void
+    {
+        Livewire::test(IndexTableWidthSettings::class)
+            ->set('sideMargin', '60px')
+            ->call('save')
+            ->assertHasNoErrors()
+            ->assertSet('sideMargin', '60px')
+            ->assertSet('saved', true);
+
+        $this->assertSame('60px', Option::indexTableWidth()['side_margin']);
+    }
+
+    public function test_table_width_component_treats_empty_or_zero_side_margin_as_disabled(): void
+    {
+        foreach (['', '0', '0px'] as $sideMargin) {
+            Livewire::test(IndexTableWidthSettings::class)
+                ->set('sideMargin', $sideMargin)
+                ->call('save')
+                ->assertHasNoErrors()
+                ->assertSet('sideMargin', '');
+
+            $this->assertNull(Option::indexTableWidth()['side_margin']);
+        }
+    }
+
+    #[DataProvider('invalidSideMarginProvider')]
+    public function test_table_width_component_rejects_invalid_side_margins(string $customMargin): void
+    {
+        Livewire::test(IndexTableWidthSettings::class)
+            ->set('sideMargin', $customMargin)
+            ->call('save')
+            ->assertHasErrors(['sideMargin'])
+            ->assertSet('saved', false);
+
+        $this->assertNull(Option::indexTableWidth()['side_margin']);
     }
 
     #[DataProvider('invalidCustomWidthProvider')]
@@ -469,7 +506,6 @@ class ProductMetadataSettingsTest extends TestCase
             ->assertSet('notice', '');
 
         $this->assertSame(Option::INDEX_TABLE_WIDTH_DEFAULT, Option::indexTableWidth()['mode']);
-        $this->assertSame('1024px', Option::productIndexSettings()->tableWidthCss);
     }
 
     public function test_table_width_component_clears_validation_and_resets_to_default(): void
@@ -491,10 +527,15 @@ class ProductMetadataSettingsTest extends TestCase
             ->assertSet('confirmingResetToDefault', false)
             ->assertSet('mode', Option::INDEX_TABLE_WIDTH_DEFAULT)
             ->assertSet('custom', '')
+            ->assertSet('sideMargin', '')
             ->assertSet('saved', true)
             ->assertSet('notice', 'Index table width reset to default.');
 
-        $this->assertSame('1024px', Option::productIndexSettings()->tableWidthCss);
+        $this->assertSame([
+            'mode' => Option::INDEX_TABLE_WIDTH_DEFAULT,
+            'custom' => '',
+            'side_margin' => null,
+        ], Option::indexTableWidth());
     }
 
     public function test_table_width_component_can_cancel_reset_without_changing_saved_value(): void
@@ -512,7 +553,11 @@ class ProductMetadataSettingsTest extends TestCase
             ->assertSet('mode', Option::INDEX_TABLE_WIDTH_CUSTOM)
             ->assertSet('custom', '72vw');
 
-        $this->assertSame('72vw', Option::productIndexSettings()->tableWidthCss);
+        $this->assertSame([
+            'mode' => Option::INDEX_TABLE_WIDTH_CUSTOM,
+            'custom' => '72vw',
+            'side_margin' => null,
+        ], Option::indexTableWidth());
     }
 
     public function test_table_width_component_refreshes_after_global_defaults_reset(): void
@@ -534,8 +579,85 @@ class ProductMetadataSettingsTest extends TestCase
             ->call('refreshFromSettings')
             ->assertSet('mode', Option::INDEX_TABLE_WIDTH_DEFAULT)
             ->assertSet('custom', '')
+            ->assertSet('sideMargin', '')
             ->assertSet('saved', false)
             ->assertSet('notice', '');
+    }
+
+    public function test_index_field_layout_width_modes_save_and_validate_custom_widths(): void
+    {
+        Livewire::test(ProductFieldLayoutSettings::class)
+            ->assertSet('indexFields.tags.width_mode', ProductFieldLayout::INDEX_WIDTH_MODE_DEFAULT)
+            ->assertSet('indexFields.tags.width', '')
+            ->set('indexFields.tags.width', '999px')
+            ->call('saveLayout', 'index')
+            ->assertHasNoErrors()
+            ->assertSet('indexFields.tags.width_mode', ProductFieldLayout::INDEX_WIDTH_MODE_DEFAULT)
+            ->assertSet('indexFields.tags.width', '');
+
+        $tags = collect(Option::indexFieldLayout())->firstWhere('field', ProductField::Tags->value);
+        $this->assertSame(ProductFieldLayout::INDEX_WIDTH_MODE_DEFAULT, $tags['width_mode']);
+        $this->assertSame('', $tags['width']);
+
+        Livewire::test(ProductFieldLayoutSettings::class)
+            ->set('indexFields.tags.width_mode', ProductFieldLayout::INDEX_WIDTH_MODE_CUSTOM)
+            ->set('indexFields.tags.width', '180px')
+            ->call('saveLayout', 'index')
+            ->assertHasNoErrors()
+            ->assertSet('indexFields.tags.width_mode', ProductFieldLayout::INDEX_WIDTH_MODE_CUSTOM)
+            ->assertSet('indexFields.tags.width', '180px');
+
+        $tags = collect(Option::indexFieldLayout())->firstWhere('field', ProductField::Tags->value);
+        $this->assertSame(ProductFieldLayout::INDEX_WIDTH_MODE_CUSTOM, $tags['width_mode']);
+        $this->assertSame('180px', $tags['width']);
+
+        Option::resetFieldLayoutsToDefault();
+
+        Livewire::test(ProductFieldLayoutSettings::class)
+            ->set('indexFields.tags.width_mode', ProductFieldLayout::INDEX_WIDTH_MODE_CUSTOM)
+            ->set('indexFields.tags.width', 'calc(100%)')
+            ->call('saveLayout', 'index')
+            ->assertHasErrors(['indexFields.tags.width']);
+
+        $tags = collect(Option::indexFieldLayout())->firstWhere('field', ProductField::Tags->value);
+        $this->assertSame(ProductFieldLayout::INDEX_WIDTH_MODE_DEFAULT, $tags['width_mode']);
+    }
+
+    public function test_index_field_layout_width_errors_are_reported_together_and_cleared_after_correction(): void
+    {
+        Livewire::test(ProductFieldLayoutSettings::class)
+            ->set('indexFields.tags.width_mode', ProductFieldLayout::INDEX_WIDTH_MODE_CUSTOM)
+            ->set('indexFields.tags.width', '')
+            ->set('indexFields.score.width_mode', ProductFieldLayout::INDEX_WIDTH_MODE_CUSTOM)
+            ->set('indexFields.score.width', 'invalid')
+            ->call('saveLayout', 'index')
+            ->assertHasErrors([
+                'indexFields.tags.width' => 'required',
+                'indexFields.score.width' => 'regex',
+            ])
+            ->set('indexFields.tags.width', '12.5rem')
+            ->set('indexFields.score.width_mode', ProductFieldLayout::INDEX_WIDTH_MODE_DEFAULT)
+            ->call('saveLayout', 'index')
+            ->assertHasNoErrors()
+            ->assertSet('indexFields.tags.width', '12.5rem')
+            ->assertSet('indexFields.score.width', '');
+    }
+
+    public function test_index_field_layout_width_control_shows_value_only_for_custom_mode(): void
+    {
+        $component = Livewire::test(ProductFieldLayoutSettings::class);
+        $html = $component->html();
+
+        $this->assertStringContainsString('Default', $html);
+        $this->assertStringContainsString('Custom', $html);
+        $this->assertStringNotContainsString('wire:model="indexFields.tags.width"', $html);
+
+        $html = $component
+            ->set('indexFields.tags.width_mode', ProductFieldLayout::INDEX_WIDTH_MODE_CUSTOM)
+            ->html();
+
+        $this->assertStringContainsString('wire:model="indexFields.tags.width"', $html);
+        $this->assertStringContainsString('fa-solid fa-circle-question', $html);
     }
 
     public function test_field_layout_component_hydrates_expected_locked_rows(): void
@@ -963,7 +1085,11 @@ class ProductMetadataSettingsTest extends TestCase
             ->assertSet('confirmingResetToDefault', false);
 
         $this->assertSame(250, Option::indexPerPage());
-        $this->assertSame('72vw', Option::productIndexSettings()->tableWidthCss);
+        $this->assertSame([
+            'mode' => Option::INDEX_TABLE_WIDTH_CUSTOM,
+            'custom' => '72vw',
+            'side_margin' => null,
+        ], Option::indexTableWidth());
 
         Livewire::test(OptionsResetDefaults::class, ['activeTab' => 'general'])
             ->call('askResetToDefault')
@@ -977,7 +1103,11 @@ class ProductMetadataSettingsTest extends TestCase
             ->assertSee('All Options settings reset to defaults.');
 
         $this->assertSame(Option::DEFAULT_INDEX_PER_PAGE, Option::indexPerPage());
-        $this->assertSame('1024px', Option::productIndexSettings()->tableWidthCss);
+        $this->assertSame([
+            'mode' => Option::INDEX_TABLE_WIDTH_DEFAULT,
+            'custom' => '',
+            'side_margin' => null,
+        ], Option::indexTableWidth());
         $this->assertTrue(Option::autoSeriesFromTitleName());
         $this->assertFalse(Option::dlsiteAgeAppropriateLinksEnabled());
         $this->assertTrue(Option::dlsiteAnnounceLinksEnabled());
@@ -1161,9 +1291,17 @@ class ProductMetadataSettingsTest extends TestCase
 
     public static function fixedTableWidthProvider(): iterable
     {
-        yield 'default width' => [Option::INDEX_TABLE_WIDTH_DEFAULT, '1024px'];
-        yield 'wide width' => [Option::INDEX_TABLE_WIDTH_WIDE, '1400px'];
-        yield 'full width' => [Option::INDEX_TABLE_WIDTH_FULL, '100%'];
+        yield 'default width' => [Option::INDEX_TABLE_WIDTH_DEFAULT];
+        yield 'wide width' => [Option::INDEX_TABLE_WIDTH_WIDE];
+        yield 'full width' => [Option::INDEX_TABLE_WIDTH_FULL];
+    }
+
+    public static function invalidSideMarginProvider(): iterable
+    {
+        yield 'css function' => ['calc(100%)'];
+        yield 'arbitrary text' => ['wide'];
+        yield 'unsupported unit' => ['10vh'];
+        yield 'missing unit' => ['1200'];
     }
 
     public static function invalidCustomWidthProvider(): iterable

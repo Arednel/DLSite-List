@@ -19,6 +19,15 @@ final class ProductFieldLayout
 
     public const SURFACE_CUSTOM_QUICK_ADD = 'custom_quick_add';
 
+    public const INDEX_WIDTH_MODE_DEFAULT = 'default';
+
+    public const INDEX_WIDTH_MODE_CUSTOM = 'custom';
+
+    public const INDEX_WIDTH_OPTIONS = [
+        self::INDEX_WIDTH_MODE_DEFAULT => 'Default',
+        self::INDEX_WIDTH_MODE_CUSTOM => 'Custom',
+    ];
+
     public const SURFACES = [
         self::SURFACE_INDEX,
         self::SURFACE_EDIT,
@@ -29,7 +38,7 @@ final class ProductFieldLayout
     ];
 
     /**
-     * @return list<array{field: string, label: string, visible: bool, editable?: bool, notes_visible?: bool, custom_visible?: bool, fetched_visible?: bool}>
+     * @return list<array{field: string, label: string, visible: bool, editable?: bool, notes_visible?: bool, custom_visible?: bool, fetched_visible?: bool, width_mode?: string, width?: string}>
      */
     public static function normalize(mixed $layout, string $surface): array
     {
@@ -59,6 +68,7 @@ final class ProductFieldLayout
             $normalized += self::lockMetadata($field, $surface);
             $normalized += self::titleMetadata($field, $surface, $row);
             $normalized += self::tagBucketMetadata($field, $surface, $row);
+            $normalized += self::indexWidthMetadata($surface, $row);
 
             if ($surface === self::SURFACE_EDIT) {
                 $normalized['editable'] = $visible
@@ -95,7 +105,15 @@ final class ProductFieldLayout
     public static function storageLayout(mixed $layout, string $surface): array
     {
         return collect(self::normalize($layout, $surface))
-            ->map(fn(array $row): array => Arr::except($row, ['label']))
+            ->map(function (array $row) use ($surface): array {
+                $stored = Arr::except($row, ['label']);
+
+                if ($surface === self::SURFACE_INDEX && $stored['width_mode'] === self::INDEX_WIDTH_MODE_DEFAULT) {
+                    unset($stored['width_mode'], $stored['width']);
+                }
+
+                return $stored;
+            })
             ->values()
             ->all();
     }
@@ -112,6 +130,7 @@ final class ProductFieldLayout
         $row += self::lockMetadata($field, $surface);
         $row += self::defaultTitleMetadata($field, $surface);
         $row += self::defaultTagBucketMetadata($field, $surface);
+        $row += self::indexWidthMetadata($surface, []);
 
         if ($surface === self::SURFACE_EDIT) {
             $row['editable'] = $visible && $field->isEditableByDefault($surface);
@@ -155,6 +174,20 @@ final class ProductFieldLayout
 
         return $field->isVisibilityLocked($surface)
             || filter_var($row['visible'] ?? false, FILTER_VALIDATE_BOOL);
+    }
+
+    private static function indexWidthMetadata(string $surface, array $row): array
+    {
+        if ($surface !== self::SURFACE_INDEX) {
+            return [];
+        }
+
+        $custom = ($row['width_mode'] ?? null) === self::INDEX_WIDTH_MODE_CUSTOM;
+
+        return [
+            'width_mode' => $custom ? self::INDEX_WIDTH_MODE_CUSTOM : self::INDEX_WIDTH_MODE_DEFAULT,
+            'width' => $custom && is_string($row['width'] ?? null) ? trim($row['width']) : '',
+        ];
     }
 
     private static function defaultTagBucketMetadata(ProductField $field, string $surface): array

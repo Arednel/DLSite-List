@@ -15,6 +15,7 @@ use App\Models\LibraryTransferRun;
 use App\Models\Option;
 use App\Models\Product;
 use App\Support\LibraryMutationLock;
+use App\Support\OptionStylesheet;
 use App\Support\ProductContributorSync;
 use App\Support\ProductImagePromotion;
 use App\Support\Transfers\ImportReview;
@@ -194,16 +195,37 @@ class LibraryTransferReviewTest extends TestCase
         $this->rewriteData($export->parts()->first(), fn($records) => [['key' => Option::OPTIONAL_PRODUCT_STATUSES, 'value' => ['on_hold' => true]]]);
         Option::setOptionalProductStatuses(['on_hold' => false, 'dropped' => true]);
         Option::setIndexImageViewerEnabled(true);
+        Option::setIndexTableWidth(['mode' => 'wide']);
         Option::setExportPartMib(8192);
         $run = $this->imported($export);
         $this->apply($run, 'merge');
         $this->assertSame(['on_hold' => true, 'dropped' => true], Option::optionalProductStatuses());
         $this->assertTrue(Option::indexImageViewerEnabled());
+        $this->assertStringContainsString('1400px', file_get_contents(app(OptionStylesheet::class)->path()));
         $run = $this->imported($export);
         $this->apply($run, 'overwrite');
         $this->assertFalse(Option::indexImageViewerEnabled());
+        $this->assertStringNotContainsString('1400px', file_get_contents(app(OptionStylesheet::class)->path()));
         $this->assertSame(8192, Option::exportPartMib());
         $this->assertSame(['on_hold' => true, 'dropped' => Option::DEFAULT_OPTIONAL_PRODUCT_STATUSES['dropped']], Option::optionalProductStatuses());
+    }
+
+    public function test_applying_imported_dimensions_regenerates_the_options_stylesheet(): void
+    {
+        Option::setIndexTableWidth(['mode' => 'custom', 'custom' => '72vw', 'side_margin' => '3rem']);
+        Option::setIndexContentOverflow(['tags' => ['enabled' => true, 'height' => '20vh']]);
+        $export = $this->exported(['options']);
+        Option::resetIndexTableWidthToDefault();
+        Option::resetIndexContentOverflowToDefault();
+
+        $run = $this->imported($export);
+        $this->apply($run);
+
+        $css = file_get_contents(app(OptionStylesheet::class)->path());
+        $this->assertStringContainsString('--index-table-width: 72vw;', $css);
+        $this->assertStringContainsString('--index-table-side-margin: 3rem;', $css);
+        $this->assertStringContainsString('--index-content-overflow-height: 20vh;', $css);
+        $this->assertSame(0, $run->items()->whereIn('status', ['conflict', 'failed'])->count());
     }
 
     public function test_work_merge_keeps_zero_and_existing_scalars_and_fills_null(): void

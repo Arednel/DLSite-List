@@ -31,7 +31,6 @@ Index state is kept in the query string so filtered/sorted views can be linked a
 `ProductIndexSettings` loads the Index-related `options` values in one batched lookup per render. It prepares:
 - Index field layout
 - Filter layout
-- table width
 - content overflow
 - Image Viewer state
 - Add/Edit modal state
@@ -162,6 +161,12 @@ Field Layouts configure seven independent layouts:
 - Custom Quick Add Form Fields
 
 `ProductField` defines which fields exist on each surface, their defaults, locks, and editability rules. `ProductFieldLayout` normalizes persisted layout rows and prepares render metadata.
+
+#### Generated Options Stylesheet
+
+Index table width, side margins, Index column-width overrides, and enabled overflow heights are compiled into `storage/app/public/generated/options.css` and served through `/styles/options.css`.
+
+The stylesheet is regenerated after CSS-affecting Options are saved, reset, or imported. Static CSS remains authoritative for defaults, so the generated file contains only saved overrides and is loaded after the normal Index styles.
 
 ### Refetch DLsite Data
 

@@ -6,12 +6,19 @@ All notable changes to this project are documented in this file.
 
 ### Added
 
+* Added optional custom side margins to the Index Table Width setting.
+* Added an option to customize Index column widths in `Field Layouts`.
 * Added the DLsite average rating and rating count. They are saved when a work is added, kept current by Refetch, included in Import / Export, and shown read-only on the Edit page.
 * The Index shows the DLsite rating and your own score as two rows of stars with their numbers, for example `DLsite ★★★★★ 4.96` and `Mine ★★★★½ 9`. A row is shown only when there is a value.
 
 ### Changed
 
+* Index visual settings are now applied through generated CSS instead of inline styles.
 * The Index `Score` column is now titled `Ratings` because it shows both ratings. It still sorts by your own score. On narrow screens, Ratings and Series each use a full row of the work card.
+
+### Fixed
+
+* Removed horizontal page scrollbar when the Index table width is set to `Full`.
 
 ### Security
 
