@@ -28,9 +28,20 @@ For existing manual installations:
 
 * Restricted DLSite Create, Custom Create, and Bulk Import return navigation to same-site URLs.
 * Updated `symfony/http-foundation` to 7.4.21 to address CVE-2026-108082.
-* Updated `laravel/framework` to 12.70.1 to address CVE-2026-114509, CVE-2026-114508, and CVE-2026-102279.
-* Updated Livewire to 4.4.8 to address an authorization bypass in the `#[Authorize]` attribute.
-* Updated `guzzlehttp/guzzle` to 7.15.2, `league/commonmark` to 2.10.4, `league/flysystem` to 3.36.0, `psy/psysh` to 0.12.24, `phpunit/phpunit` to 11.5.57, and `symfony/yaml` to 7.4.21 to address their published security advisories.
+
+### Dependency updates
+
+* Updated `laravel/framework` to 12.70.1
+* Updated `livewire/livewire` to 4.4.8
+* Updated `guzzlehttp/guzzle` to 7.15.2
+* Updated `league/commonmark` to 2.10.4
+* Updated `league/flysystem` to 3.36.0
+* Updated `psy/psysh` to 0.12.24
+* Updated `phpunit/phpunit` to 11.5.57
+* Updated `symfony/yaml` to 7.4.21
+* Updated `sebastian/comparator` to 6.3.3
+* Updated `phpunit/php-file-iterator` to 5.1.1
+* Updated `myclabs/deep-copy` to 1.14.0
 
 ## 2.1.0 - 2026-10-22
 
