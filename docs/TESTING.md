@@ -468,11 +468,6 @@ Covers server-rendered Add/Edit modal completion fallback output and conditional
 `tests/Unit/Docker/DockerRuntimeEnvironmentTest.php`
 - Covers the generated Laravel environment, passwords with special characters, and missing environment files.
 
-#### HTTP
-
-`tests/Unit/Http/CacheControlHeaderParsingTest.php`
-- Covers Cache-Control request header parsing with long whitespace before a separator (CVE-2026-108082 regression): directives are kept instead of being dropped by the backtracking limit.
-
 #### Top Level
 
 `tests/Unit/LocalizedDisplayProvidersTest.php`
