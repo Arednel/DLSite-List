@@ -15,6 +15,14 @@ from PIL import Image
 
 from weekly_logging import WeeklyFileHandler
 
+# dlsite-async only matches the ja/en genre row labels. zh_TW work pages label
+# that row "分類", so accept it as a genre header too.
+from dlsite_async import _scraper as _dlsite_scraper
+
+for _parser in _dlsite_scraper._parsers:
+    if _parser.field == "genre":
+        _parser.headers.add("分類")
+
 ADDITIONAL_PRODUCT_FORMAT_OPTIONS = {
     WorkOption.VOICE,
     WorkOption.MUSIC,

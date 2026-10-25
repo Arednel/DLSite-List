@@ -5,6 +5,7 @@ from types import SimpleNamespace
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
+from dlsite_async._scraper import parse_work_html
 from dlsite_async.work import AgeCategory, BookType, WorkOption, WorkType
 from DLSiteScraper import product_format_codes, to_serializable
 
@@ -103,6 +104,26 @@ class DLSiteScraperProductFormatTest(unittest.TestCase):
 
         self.assertNotIn("__objclass__", str(serialized))
         self.assertNotIn("_sort_order_", str(serialized))
+
+
+class DLSiteScraperGenreLabelTest(unittest.TestCase):
+    def test_zh_tw_genre_row_labelled_bunrui_is_parsed_as_genre(self):
+        # zh_TW work pages label the genre row "分類", not "ジャンル" or "Genre".
+        content = """
+        <table id="work_outline">
+          <tr>
+            <th>分類</th>
+            <td>
+              <div class="main_genre">
+                <a href="/maniax/fsr/=/genre/496">環繞音</a>
+                <a href="/maniax/fsr/=/genre/207">酪梨</a>
+              </div>
+            </td>
+          </tr>
+        </table>
+        """
+
+        self.assertEqual(["環繞音", "酪梨"], parse_work_html(content)["genre"])
 
 
 if __name__ == "__main__":
