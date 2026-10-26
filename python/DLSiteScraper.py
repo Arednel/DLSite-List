@@ -28,10 +28,6 @@ MIRRORED_PRODUCT_FORMAT_OPTIONS = {
     WorkOption.VIDEO: WorkType.VIDEO,
 }
 
-# Image downloads only follow DLsite-owned hosts.
-ALLOWED_IMAGE_HOST_SUFFIXES = ("dlsite.jp", "dlsite.com")
-MAX_IMAGE_REDIRECTS = 3
-
 
 def parse_arguments(argv=None):
     parser = argparse.ArgumentParser()
@@ -115,9 +111,25 @@ async def fetch_work_data(work_id):
     return japanese, english
 
 
+def require_https_image_url(url):
+    if not isinstance(url, str):
+        raise ValueError("Image URL must be a valid HTTPS URL")
+
+    try:
+        parts = urlsplit(url)
+    except ValueError as error:
+        raise ValueError(f"Invalid image URL: {error}") from error
+
+    if parts.scheme.lower() != "https":
+        raise ValueError(f"Image URL must use HTTPS: {url}")
+
+    if not parts.hostname:
+        raise ValueError(f"Image URL must include a hostname: {url}")
+
+
 def normalize_image_url(url):
     if not isinstance(url, str):
-        return None
+        raise ValueError("Image URL must be a valid HTTPS URL")
 
     url = url.strip()
 
@@ -127,65 +139,27 @@ def normalize_image_url(url):
     elif url.startswith("/"):
         url = "https://www.dlsite.com" + url
 
-    return url if is_allowed_image_url(url) else None
+    require_https_image_url(url)
+
+    return url
 
 
-def is_allowed_image_url(url):
-    try:
-        parts = urlsplit(url)
-        port = parts.port
-    except ValueError:
-        return False
+def validate_image_redirect(response, *args, **kwargs):
+    if not response.is_redirect:
+        return response
 
-    host = (parts.hostname or "").lower().rstrip(".")
+    location = response.headers.get("Location")
+    if location:
+        try:
+            require_https_image_url(urljoin(response.url, location))
+        except ValueError:
+            response.close()
+            raise
 
-    if parts.scheme not in ("https", "http") or port is not None:
-        return False
-    if parts.username is not None or parts.password is not None:
-        return False
-
-    return any(
-        host == suffix or host.endswith("." + suffix)
-        for suffix in ALLOWED_IMAGE_HOST_SUFFIXES
-    )
-
-
-def open_image_response(url, headers):
-    current_url = url
-
-    for _ in range(MAX_IMAGE_REDIRECTS + 1):
-        if not is_allowed_image_url(current_url):
-            raise IOError(f"Image URL is not on an allowed DLsite host: {current_url}")
-
-        response = requests.get(
-            current_url,
-            stream=True,
-            timeout=15,
-            headers=headers,
-            allow_redirects=False,
-        )
-
-        if not response.is_redirect:
-            return response
-
-        location = response.headers.get("Location")
-        response.close()
-
-        if not location:
-            raise IOError("Image redirect has no location")
-
-        current_url = urljoin(current_url, location)
-
-    raise IOError("Too many image redirects")
+    return response
 
 
 def download_image(url, save_path):
-    url = normalize_image_url(url)
-
-    if url is None:
-        logging.warning("Download skipped for an image URL outside DLsite hosts")
-        return False
-
     headers = {
         "User-Agent": (
             "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
@@ -197,8 +171,15 @@ def download_image(url, save_path):
     temporary_path = save_path.with_name(f"{save_path.name}.part")
 
     try:
+        url = normalize_image_url(url)
         logging.debug(f"Downloading {url}")
-        with open_image_response(url, headers) as response:
+        with requests.get(
+            url,
+            stream=True,
+            timeout=15,
+            headers=headers,
+            hooks={"response": validate_image_redirect},
+        ) as response:
             response.raise_for_status()
 
             save_path.parent.mkdir(parents=True, exist_ok=True)
