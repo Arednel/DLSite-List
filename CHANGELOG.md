@@ -63,6 +63,7 @@ For existing manual installations:
 ### Security
 
 * Docker images now use PHP 8.3.36, which fixes CVE-2026-109618 and CVE-2026-109619 vulnerabilities.
+* Require HTTPS for DLsite image downloads and redirect destinations, preventing plaintext image requests and HTTPS-to-HTTP downgrade redirects.
 
 ## 2.0.0 - 2026-10-20
 
