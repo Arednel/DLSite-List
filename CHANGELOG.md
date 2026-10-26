@@ -28,6 +28,7 @@ For existing manual installations:
 
 * Restricted DLSite Create, Custom Create, and Bulk Import return navigation to same-site URLs.
 * Updated `symfony/http-foundation` to 7.4.21 to address CVE-2026-108082.
+* DLsite image downloads now require HTTPS and valid redirect destinations, preventing plaintext image requests and HTTPS-to-HTTP downgrade redirects.
 
 ### Dependency updates
 
@@ -63,7 +64,6 @@ For existing manual installations:
 ### Security
 
 * Docker images now use PHP 8.3.36, which fixes CVE-2026-109618 and CVE-2026-109619 vulnerabilities.
-* Require HTTPS for DLsite image downloads and redirect destinations, preventing plaintext image requests and HTTPS-to-HTTP downgrade redirects.
 
 ## 2.0.0 - 2026-10-20
 
