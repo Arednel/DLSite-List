@@ -40,6 +40,7 @@ use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\ValidationException;
 use Illuminate\View\View;
+use League\Flysystem\UnableToListContents;
 
 class ProductController extends Controller
 {
@@ -350,14 +351,40 @@ class ProductController extends Controller
         $returnTarget = ReturnTarget::fromRequest($request);
         $id = (string) $product->getKey();
 
-        $jsonPath = "Works/{$id}.json";
         $imageDirectory = "Works/{$id}";
-
-        if (! Storage::disk('local')->delete($jsonPath)) {
-            Log::warning('Unable to delete product scraper JSON.', [
+        $localDisk = Storage::disk('local');
+        $jsonPath = "Works/{$id}.json";
+        if (! $localDisk->delete($jsonPath)) {
+            Log::warning('Unable to delete product JSON.', [
                 'product_id' => $id,
                 'path' => $jsonPath,
             ]);
+        }
+
+        // Listing original-work files is optional cleanup and must not block product deletion.
+        try {
+            $paths = $localDisk->files('Works');
+        } catch (UnableToListContents $exception) {
+            Log::warning('Unable to list original-work JSON files for deletion.', [
+                'product_id' => $id,
+                'path' => 'Works',
+                'reason' => $exception->getMessage(),
+            ]);
+            $paths = [];
+        }
+        $jsonPattern = '/^Works\/' . preg_quote($id, '/') . ' - (?:RJ|BJ|VJ)[0-9]+\.json$/D';
+
+        foreach ($paths as $path) {
+            if (preg_match($jsonPattern, $path) !== 1) {
+                continue;
+            }
+
+            if (! $localDisk->delete($path)) {
+                Log::warning('Unable to delete product JSON.', [
+                    'product_id' => $id,
+                    'path' => $path,
+                ]);
+            }
         }
 
         if (! Storage::disk('public')->deleteDirectory($imageDirectory)) {

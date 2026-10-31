@@ -167,15 +167,18 @@ final class WorkArchiveData
             throw new InvalidArgumentException('Unknown dlsite_list work fields.');
         }
 
+        // Validate raw values before normalization; accept plain dates and the scraper's Japan offset.
         Validator::make($document, [
             ...LibraryWorkValidator::productFormatRules('japanese.product_format'),
             ...LibraryWorkValidator::productFormatRules('english.product_format'),
-            'japanese.announce_date' => ['sometimes', 'nullable', 'date_format:Y-m-d H:i:s'],
-            'english.announce_date' => ['sometimes', 'nullable', 'date_format:Y-m-d H:i:s'],
+            'japanese.announce_date' => ['sometimes', 'nullable', 'string', 'date_format:Y-m-d H:i:s,Y-m-d H:i:s\+09:00'],
+            'english.announce_date' => ['sometimes', 'nullable', 'string', 'date_format:Y-m-d H:i:s,Y-m-d H:i:s\+09:00'],
             ...LibraryWorkValidator::dlsiteRatingRules('japanese.' . DLSiteRating::AVERAGE_KEY, 'japanese.' . DLSiteRating::COUNT_KEY),
             ...LibraryWorkValidator::dlsiteRatingRules('english.' . DLSiteRating::AVERAGE_KEY, 'english.' . DLSiteRating::COUNT_KEY),
             'dlsite_list.site_id' => ['sometimes', 'nullable', 'string', 'max:255', 'regex:/\A[a-z][a-z0-9_-]*\z/'],
         ])->validate();
+
+        $document = DLSiteWorkData::normalizePayload($document);
 
         $work = DLSiteWorkData::fromArray($document, $expectedCode);
         $title = $this->localeText($document['japanese'], 'work_name') ?? $work->workName ?? $work->englishWorkName;

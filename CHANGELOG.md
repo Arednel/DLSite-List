@@ -4,6 +4,31 @@ All notable changes to this project are documented in this file.
 
 ## Unreleased
 
+### Upgrade notes
+
+For existing manual installations:
+
+* Activate the Python virtual environment and run `pip install -r python/requirements.txt`.
+
+### Changed
+
+* Updated `dlsite-async` Python package to 1.0.0b4 version and adapted metadata fetching, storage, and archive imports to its updated data format.
+
+### Fixed
+
+* Fixed missing Circle, Tags, and Sample Images when fetching AI-generated works (#6).
+
+## 2.2.0 - 2026-10-27
+
+*Index Layout Customization & Security Improvements*
+
+### Upgrade notes
+
+For existing manual installations:
+
+* Run `composer install`.
+* Run `php artisan migrate`.
+
 ### Added
 
 * Added optional custom side margins to the Index Table Width setting.
@@ -23,6 +48,22 @@ All notable changes to this project are documented in this file.
 ### Security
 
 * Restricted DLSite Create, Custom Create, and Bulk Import return navigation to same-site URLs.
+* Updated `symfony/http-foundation` to 7.4.21 to address CVE-2026-108082.
+* DLsite image downloads now require HTTPS and valid redirect destinations, preventing plaintext image requests and HTTPS-to-HTTP downgrade redirects.
+
+### Dependency updates
+
+* Updated `laravel/framework` to 12.70.1
+* Updated `livewire/livewire` to 4.4.8
+* Updated `guzzlehttp/guzzle` to 7.15.2
+* Updated `league/commonmark` to 2.10.4
+* Updated `league/flysystem` to 3.36.0
+* Updated `psy/psysh` to 0.12.24
+* Updated `phpunit/phpunit` to 11.5.57
+* Updated `symfony/yaml` to 7.4.21
+* Updated `sebastian/comparator` to 6.3.3
+* Updated `phpunit/php-file-iterator` to 5.1.1
+* Updated `myclabs/deep-copy` to 1.14.0
 
 ## 2.1.0 - 2026-10-22
 

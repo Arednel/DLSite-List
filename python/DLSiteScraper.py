@@ -7,6 +7,7 @@ import re
 import sys
 from enum import Enum
 from pathlib import Path
+from urllib.parse import urljoin, urlsplit
 
 import requests
 from dlsite_async import DlsiteAPI
@@ -139,13 +140,55 @@ async def fetch_work_data(work_id):
     return japanese, english, rating
 
 
-def download_image(url, save_path):
-    # Fix protocol-relative URLs
+def require_https_image_url(url):
+    if not isinstance(url, str):
+        raise ValueError("Image URL must be a valid HTTPS URL")
+
+    try:
+        parts = urlsplit(url)
+    except ValueError as error:
+        raise ValueError(f"Invalid image URL: {error}") from error
+
+    if parts.scheme.lower() != "https":
+        raise ValueError(f"Image URL must use HTTPS: {url}")
+
+    if not parts.hostname:
+        raise ValueError(f"Image URL must include a hostname: {url}")
+
+
+def normalize_image_url(url):
+    if not isinstance(url, str):
+        raise ValueError("Image URL must be a valid HTTPS URL")
+
+    url = url.strip()
+
+    # Fix protocol-relative and site-relative URLs
     if url.startswith("//"):
         url = "https:" + url
     elif url.startswith("/"):
         url = "https://www.dlsite.com" + url
 
+    require_https_image_url(url)
+
+    return url
+
+
+def validate_image_redirect(response, *args, **kwargs):
+    if not response.is_redirect:
+        return response
+
+    location = response.headers.get("Location")
+    if location:
+        try:
+            require_https_image_url(urljoin(response.url, location))
+        except ValueError:
+            response.close()
+            raise
+
+    return response
+
+
+def download_image(url, save_path):
     headers = {
         "User-Agent": (
             "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
@@ -157,14 +200,21 @@ def download_image(url, save_path):
     temporary_path = save_path.with_name(f"{save_path.name}.part")
 
     try:
+        url = normalize_image_url(url)
         logging.debug(f"Downloading {url}")
-        response = requests.get(url, stream=True, timeout=15, headers=headers)
-        response.raise_for_status()
+        with requests.get(
+            url,
+            stream=True,
+            timeout=15,
+            headers=headers,
+            hooks={"response": validate_image_redirect},
+        ) as response:
+            response.raise_for_status()
 
-        save_path.parent.mkdir(parents=True, exist_ok=True)
-        with open(temporary_path, "wb") as file:
-            for chunk in response.iter_content(8192):
-                file.write(chunk)
+            save_path.parent.mkdir(parents=True, exist_ok=True)
+            with open(temporary_path, "wb") as file:
+                for chunk in response.iter_content(8192):
+                    file.write(chunk)
 
         if os.path.getsize(temporary_path) == 0:
             raise IOError("Downloaded file is empty")

@@ -20,8 +20,11 @@ use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Bus;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Event;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Process;
 use Illuminate\Support\Facades\Storage;
+use League\Flysystem\UnableToCheckFileExistence;
+use League\Flysystem\UnableToCopyFile;
 use Livewire\Livewire;
 use Mockery;
 use PHPUnit\Framework\Attributes\DataProvider;
@@ -435,7 +438,8 @@ class FullRefetchTest extends TestCase
         Storage::fake('local');
         [$run, $product, $result] = $this->reviewRun();
         Storage::disk('local')->put("Works/{$product->id}.json", '{"version":"old"}');
-        Storage::disk('local')->put($this->stagedJsonPath($run, $product), '{"version":"new"}');
+        Storage::disk('local')->put($this->stagedJsonPath($run, $product), '{"version":"new","japanese":{"language_editions":[{"workno":"RJ01647180","display_order":1}]}}');
+        Storage::disk('local')->put("Refetch/{$run->id}/Works/{$product->id} - RJ01647180.json", '{"original":"fetched"}');
 
         Livewire::test(OptionsRefetchReview::class, ['run' => $run])
             ->set(
@@ -450,6 +454,7 @@ class FullRefetchTest extends TestCase
         $this->assertSame('Old Description', $product->description);
         $this->assertSame('{"version":"old"}', Storage::disk('local')->get("Works/{$product->id}.json"));
         $this->assertSame(RefetchRun::STATUS_REVIEW, $run->refresh()->status);
+        Storage::disk('local')->assertMissing("Works/{$product->id} - RJ01647180.json");
 
         Livewire::test(OptionsRefetchReview::class, ['run' => $run])
             ->call('askRejectOrFinish')
@@ -458,7 +463,8 @@ class FullRefetchTest extends TestCase
 
         $this->assertSame('Old Description', $product->refresh()->description);
         $this->assertSame(RefetchRun::STATUS_APPLIED, $run->refresh()->status);
-        $this->assertSame('{"version":"new"}', Storage::disk('local')->get("Works/{$product->id}.json"));
+        $this->assertSame('{"version":"new","japanese":{"language_editions":[{"workno":"RJ01647180","display_order":1}]}}', Storage::disk('local')->get("Works/{$product->id}.json"));
+        $this->assertSame('{"original":"fetched"}', Storage::disk('local')->get("Works/{$product->id} - RJ01647180.json"));
     }
 
     public function test_apply_does_not_overlap_refetch_cleanup(): void
@@ -520,6 +526,77 @@ class FullRefetchTest extends TestCase
         $run->refresh();
         $this->assertSame(RefetchRun::STATUS_REVIEW, $run->status);
         $this->assertFalse($run->tabResolved(RefetchCategory::Titles));
+    }
+
+    public static function originalPromotionFailures(): array
+    {
+        return [
+            'copy fails' => ['copy'],
+            'existence check fails' => ['exists'],
+            'original missing' => ['missing'],
+        ];
+    }
+
+    #[DataProvider('originalPromotionFailures')]
+    public function test_original_json_promotion_does_not_block_applied_metadata_or_other_works(string $failure): void
+    {
+        $disk = Storage::fake('local');
+        [$run, $product, $result] = $this->reviewRun();
+        $second = Product::factory()->create(['work_name' => 'Old Title', 'description' => 'Old Description']);
+        $run->results()->create([
+            'product_id' => $second->id,
+            'status' => RefetchWorkResult::STATUS_FETCHED,
+            'changes' => $result->changes,
+            'decisions' => [],
+            'warnings' => [],
+        ]);
+        $run->forceFill(['processed_count' => 2, 'fetched_count' => 2])->save();
+
+        $jsonPath = $this->stagedJsonPath($run, $product);
+        $mainJson = json_encode(['japanese' => ['translation_info' => ['original_workno' => 'RJ01647180']]]);
+        $disk->put($jsonPath, $mainJson);
+        $disk->put($this->stagedJsonPath($run, $second), '{}');
+        $originalPath = "Refetch/{$run->id}/Works/{$product->id} - RJ01647180.json";
+        $destination = "Works/{$product->id} - RJ01647180.json";
+        if ($failure !== 'missing') {
+            $disk->put($originalPath, '{"original":"fetched"}');
+        }
+
+        $mock = Mockery::mock($disk);
+        $mock->shouldReceive('exists')->andReturnUsing(fn(string $path): bool => $disk->exists($path))->byDefault();
+        $mock->shouldReceive('copy')->andReturnUsing(fn(string $source, string $target): bool => $disk->copy($source, $target))->byDefault();
+        if ($failure === 'exists') {
+            $mock->shouldReceive('exists')->once()->with($originalPath)
+                ->andThrow(UnableToCheckFileExistence::forLocation($originalPath));
+        } elseif ($failure === 'copy') {
+            $mock->shouldReceive('copy')->once()->with($originalPath, $destination)
+                ->andThrow(UnableToCopyFile::fromLocationTo($originalPath, $destination));
+        }
+        Storage::shouldReceive('disk')->with('local')->andReturn($mock);
+        Log::spy();
+
+        app(RefetchService::class)->applyAll($run, ['titles' => RefetchService::ACTION_OVERWRITE]);
+
+        $this->assertSame(RefetchRun::STATUS_APPLIED, $run->fresh()->status);
+        $this->assertNotNull($run->fresh()->applied_at);
+        $this->assertSame('New Title', $product->fresh()->work_name);
+        $this->assertSame('New Title', $second->fresh()->work_name);
+        $this->assertSame($mainJson, $disk->get("Works/{$product->id}.json"));
+        $this->assertSame('{}', $disk->get("Works/{$second->id}.json"));
+        $this->assertFalse($disk->exists($destination));
+        if ($failure === 'missing') {
+            Log::shouldNotHaveReceived('warning');
+        } else {
+            $this->assertSame('{"original":"fetched"}', $disk->get($originalPath));
+            Log::shouldHaveReceived('warning')->once()->with(
+                'Unable to promote original-work JSON after Refetch.',
+                Mockery::on(fn(array $context): bool => $context['run_id'] === $run->id
+                    && $context['product_id'] === $product->id
+                    && $context['source'] === $originalPath
+                    && $context['destination'] === $destination
+                    && is_string($context['reason']) && $context['reason'] !== ''),
+            );
+        }
     }
 
     public function test_each_change_can_override_its_tab_global_choice(): void
@@ -632,6 +709,7 @@ class FullRefetchTest extends TestCase
         [$run, $product] = $this->reviewRun();
         Storage::disk('local')->put("Works/{$product->id}.json", '{"version":"old"}');
         Storage::disk('local')->put($this->stagedJsonPath($run, $product), '{"version":"new"}');
+        Storage::disk('local')->put("Refetch/{$run->id}/Works/{$product->id} - RJ01647180.json", '{"original":"fetched"}');
 
         Livewire::test(OptionsRefetchReview::class, ['run' => $run])
             ->call('askApplyAll')
@@ -640,6 +718,7 @@ class FullRefetchTest extends TestCase
 
         $this->assertSame(RefetchRun::STATUS_APPLIED, $run->refresh()->status);
         $this->assertFalse($run->results()->firstOrFail()->hasAppliedChanges());
+        Storage::disk('local')->assertMissing("Works/{$product->id} - RJ01647180.json");
         $this->assertSame(
             '{"version":"old"}',
             Storage::disk('local')->get("Works/{$product->id}.json"),

@@ -19,6 +19,45 @@ class RefetchDiffBuilderTest extends TestCase
 {
     use RefreshDatabase;
 
+    public function test_api_aliases_do_not_propose_removals_but_shortened_credits_remain_reviewable(): void
+    {
+        $product = Product::factory()->create([
+            'id' => 'RJ123456',
+            'site_id' => 'maniax',
+            'maker_id' => 'RG123',
+            'work_name' => 'Title',
+            'work_name_english' => null,
+            'description' => 'Description',
+            'description_english' => null,
+            'publisher' => null,
+            'brand' => null,
+            'series' => null,
+            'age_category' => 'R18',
+            'product_format' => ['SOU'],
+            'announce_date' => '2026-05-27 00:00:00',
+        ]);
+        app(ProductContributorSync::class)->sync($product, ['circle' => ['Maker'], 'author' => ['Author'], 'scenario' => ['Name(note)']]);
+        $data = ['japanese' => [
+            'product_id' => $product->id,
+            'site_id' => 'maniax',
+            'maker_id' => 'RG123',
+            'work_name' => 'Title',
+            'maker_name' => 'Maker',
+            'intro_s' => 'Description',
+            'age_category' => ['_name_' => 'R18'],
+            'product_format' => ['SOU'],
+            'author' => null,
+            'creater' => ['Author'],
+            'scenario' => ['Name(note)'],
+            'announce_date' => '2026-05-27 00:00:00+09:00',
+        ]];
+        $builder = app(RefetchDiffBuilder::class);
+        $this->assertSame([], $builder->build($product->fresh(), new DLSiteFetchResult(DLSiteWorkData::fromArray($data), []), null));
+        $data['japanese']['scenario'] = ['Name'];
+        $changes = $builder->build($product->fresh(), new DLSiteFetchResult(DLSiteWorkData::fromArray($data), []), null);
+        $this->assertSame([RefetchCategory::Scenario->value], array_keys($changes));
+    }
+
     public function test_it_builds_full_metadata_diffs_and_keeps_failed_sample_images_unavailable(): void
     {
         Storage::fake('public');

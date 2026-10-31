@@ -27,6 +27,7 @@ use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Process;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Testing\TestResponse;
+use League\Flysystem\UnableToListContents;
 use Livewire\Livewire;
 use Mockery;
 use PHPUnit\Framework\Attributes\DataProvider;
@@ -4029,6 +4030,26 @@ class ProductControllerTest extends TestCase
         $this->assertDatabaseMissing('products', ['id' => $product->id]);
     }
 
+    public function test_destroy_deletes_original_work_json_sidecars(): void
+    {
+        Storage::fake('local');
+        Storage::fake('public');
+        $product = Product::factory()->create(['id' => 'RJ01689827']);
+        Storage::disk('local')->put("Works/{$product->id}.json", '{}');
+        Storage::disk('local')->put("Works/{$product->id} - RJ01647180.json", '{}');
+        Storage::disk('local')->put("Works/{$product->id} - RJ09999999.json", '{}');
+        Storage::disk('local')->put("Works/{$product->id} - backup.json", '{}');
+        Storage::disk('local')->put('Works/RJ00000001 - RJ01647180.json', '{}');
+
+        $this->post("/destroy/{$product->id}")->assertRedirect('/');
+
+        Storage::disk('local')->assertMissing("Works/{$product->id}.json");
+        Storage::disk('local')->assertMissing("Works/{$product->id} - RJ01647180.json");
+        Storage::disk('local')->assertMissing("Works/{$product->id} - RJ09999999.json");
+        Storage::disk('local')->assertExists("Works/{$product->id} - backup.json");
+        Storage::disk('local')->assertExists('Works/RJ00000001 - RJ01647180.json');
+    }
+
     public function test_modal_destroy_returns_completion_response_and_deletes_product(): void
     {
         Storage::fake('local');
@@ -4150,6 +4171,11 @@ class ProductControllerTest extends TestCase
         $publicDisk = Mockery::mock(Filesystem::class);
 
         $localDisk
+            ->shouldReceive('files')
+            ->once()
+            ->with('Works')
+            ->andReturn(["Works/{$product->id}.json"]);
+        $localDisk
             ->shouldReceive('delete')
             ->once()
             ->with("Works/{$product->id}.json")
@@ -4173,7 +4199,7 @@ class ProductControllerTest extends TestCase
 
         Log::shouldReceive('warning')
             ->once()
-            ->with('Unable to delete product scraper JSON.', [
+            ->with('Unable to delete product JSON.', [
                 'product_id' => $product->id,
                 'path' => "Works/{$product->id}.json",
             ]);
@@ -4181,6 +4207,31 @@ class ProductControllerTest extends TestCase
         $this->post("/destroy/{$product->id}")
             ->assertRedirect('/');
 
+        $this->assertDatabaseMissing('products', ['id' => $product->id]);
+    }
+
+    public function test_destroy_continues_when_original_work_json_listing_fails(): void
+    {
+        $product = Product::factory()->create();
+        $exception = UnableToListContents::atLocation('Works', false, new \RuntimeException('Permission denied.'));
+        $localDisk = Mockery::mock(Filesystem::class);
+        $publicDisk = Mockery::mock(Filesystem::class);
+
+        $localDisk->shouldReceive('delete')->once()->ordered()
+            ->with("Works/{$product->id}.json")->andReturnTrue();
+        $localDisk->shouldReceive('files')->once()->ordered()
+            ->with('Works')->andThrow($exception);
+        $publicDisk->shouldReceive('deleteDirectory')->once()
+            ->with("Works/{$product->id}")->andReturnTrue();
+        Storage::shouldReceive('disk')->once()->with('local')->andReturn($localDisk);
+        Storage::shouldReceive('disk')->once()->with('public')->andReturn($publicDisk);
+        Log::shouldReceive('warning')->once()->with('Unable to list original-work JSON files for deletion.', [
+            'product_id' => $product->id,
+            'path' => 'Works',
+            'reason' => $exception->getMessage(),
+        ]);
+
+        $this->post("/destroy/{$product->id}")->assertRedirect('/');
         $this->assertDatabaseMissing('products', ['id' => $product->id]);
     }
 
@@ -4192,6 +4243,11 @@ class ProductControllerTest extends TestCase
         $localDisk = Mockery::mock(Filesystem::class);
         $publicDisk = Mockery::mock(Filesystem::class);
 
+        $localDisk
+            ->shouldReceive('files')
+            ->once()
+            ->with('Works')
+            ->andReturn(["Works/{$product->id}.json"]);
         $localDisk
             ->shouldReceive('delete')
             ->once()
