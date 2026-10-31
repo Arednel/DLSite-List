@@ -4,7 +4,7 @@ namespace Tests\Unit\Support\DLSite;
 
 use App\Enums\ProductContributorRole;
 use App\Support\DLSite\DLSiteWorkData;
-use PHPUnit\Framework\TestCase;
+use Tests\TestCase;
 
 class DLSiteWorkDataTest extends TestCase
 {
@@ -177,5 +177,176 @@ class DLSiteWorkDataTest extends TestCase
                 'work_name' => 'Missing Product Id',
             ],
         ]);
+    }
+
+    public function test_new_api_maps_maker_roles_and_accepts_translation_provider_identity(): void
+    {
+        foreach (['RG60289' => 'circle', 'BG01675' => 'publisher', 'VG03026' => 'brand'] as $makerId => $role) {
+            $work = DLSiteWorkData::fromArray(['japanese' => [
+                'product_id' => 'RJ01689827',
+                'maker_id' => $makerId,
+                'maker_name' => 'みんなで翻訳',
+            ]]);
+
+            foreach (['circle', 'publisher', 'brand'] as $field) {
+                $this->assertSame($field === $role ? 'みんなで翻訳' : null, $work->{$field});
+            }
+            $this->assertSame($role === 'circle' ? ['みんなで翻訳'] : [], $work->contributorsByRole['circle']);
+        }
+    }
+
+    public function test_new_api_maps_description_and_creater_to_existing_fields(): void
+    {
+        $work = DLSiteWorkData::fromArray([
+            'japanese' => [
+                'product_id' => 'RJ01724792',
+                'intro_masked' => null,
+                'intro_s' => '【狂気的な愛】×4を体験してみない?',
+                'intro' => 'Unused description',
+                'author' => null,
+                'creater' => ['タツタアゲ学長'],
+            ],
+        ]);
+
+        $this->assertSame('【狂気的な愛】×4を体験してみない?', $work->description);
+        $this->assertSame(['タツタアゲ学長'], $work->contributorsByRole['author']);
+    }
+
+    public function test_author_fallback_preserves_missing_null_empty_and_populated_values(): void
+    {
+        foreach (
+            [
+                [['creater' => ['Creator']], ['Creator']],
+                [['author' => null, 'creater' => ['Creator']], ['Creator']],
+                [['author' => [], 'creater' => ['Creator']], []],
+                [['author' => ['Author'], 'creater' => ['Creator']], ['Author']],
+            ] as [$locale, $expected]
+        ) {
+            $work = DLSiteWorkData::fromArray(['japanese' => ['product_id' => 'RJ123456', ...$locale]]);
+            $this->assertSame($expected, $work->contributorsByRole['author']);
+        }
+    }
+
+    public function test_explicit_legacy_fields_win_over_new_aliases(): void
+    {
+        $document = ['japanese' => [
+            'product_id' => 'RJ123456',
+            'maker_id' => 'RG123',
+            'maker_name' => 'New maker',
+            'circle' => null,
+            'description' => null,
+            'intro_s' => 'New description',
+            'author' => [],
+            'creater' => ['New creator'],
+        ]];
+
+        $normalized = DLSiteWorkData::normalizePayload($document);
+        $this->assertSame($normalized, DLSiteWorkData::normalizePayload($normalized));
+
+        $work = DLSiteWorkData::fromArray($normalized);
+        $this->assertNull($work->circle);
+        $this->assertNull($work->description);
+        $this->assertSame([], $work->contributorsByRole['author']);
+    }
+
+    public function test_original_work_id_uses_japanese_language_editions_then_translation_info(): void
+    {
+        $this->assertSame('RJ01463781', DLSiteWorkData::originalWorkId(['japanese' => [
+            'language_editions' => [
+                ['workno' => 'RJ01463786', 'display_order' => 3],
+                ['workno' => 'RJ01463781', 'display_order' => 1],
+            ],
+            'translation_info' => ['original_workno' => 'RJ999999'],
+        ]]));
+
+        $this->assertSame('RJ01647180', DLSiteWorkData::originalWorkId(['japanese' => [
+            'translation_info' => ['original_workno' => 'RJ01647180'],
+        ]]));
+
+        $this->assertSame('RJ01647180', DLSiteWorkData::originalWorkId(['japanese' => [
+            'language_editions' => [
+                ['workno' => '../bad', 'display_order' => 1],
+            ],
+            'translation_info' => ['original_workno' => 'RJ01647180'],
+        ]]));
+
+        $this->assertNull(DLSiteWorkData::originalWorkId(['japanese' => []]));
+    }
+
+    public function test_original_maker_overrides_circle_and_id_without_changing_translated_metadata(): void
+    {
+        $translated = ['japanese' => [
+            'product_id' => 'RJ01689827',
+            'maker_id' => 'RG60289',
+            'maker_name' => 'Translation provider',
+            'circle' => 'Explicit translation circle',
+            'work_name' => 'Translated title',
+            'description' => 'Translated description',
+            'publisher' => 'Publisher',
+            'brand' => 'Brand',
+            'scenario' => ['Translated credit'],
+        ]];
+        $original = ['japanese' => ['maker_id' => 'RG49556', 'maker_name' => 'RaRo', 'work_name' => 'Original title']];
+
+        $work = DLSiteWorkData::fromArray($translated, originalWorkData: $original);
+        $this->assertSame('RaRo', $work->circle);
+        $this->assertSame('RG49556', $work->makerId);
+        $this->assertSame(['RaRo'], $work->contributorsByRole['circle']);
+        $this->assertSame('Explicit translation circle', $translated['japanese']['circle']);
+        $this->assertSame('RJ01689827', $work->productId);
+        $this->assertSame('Translated title', $work->workName);
+        $this->assertSame('Translated description', $work->description);
+        $this->assertSame('Publisher', $work->publisher);
+        $this->assertSame('Brand', $work->brand);
+        $this->assertSame(['Translated credit'], $work->contributorsByRole['scenario']);
+    }
+
+    public function test_original_maker_uses_a_complete_pair_from_one_locale(): void
+    {
+        $original = [
+            'japanese' => ['maker_id' => 'RG111', 'maker_name' => ''],
+            'english' => ['maker_id' => 'RG222', 'maker_name' => 'English circle'],
+        ];
+        $this->assertSame(['maker_id' => 'RG222', 'maker_name' => 'English circle'], DLSiteWorkData::originalMaker($original));
+        $original['japanese']['maker_name'] = 'Japanese circle';
+        $this->assertSame(['maker_id' => 'RG111', 'maker_name' => 'Japanese circle'], DLSiteWorkData::originalMaker($original));
+
+        foreach ([[], ['maker_id' => 'BG111', 'maker_name' => 'Publisher'], ['maker_id' => 'RG111'], ['maker_name' => 'Circle']] as $locale) {
+            $work = DLSiteWorkData::fromArray(['japanese' => [
+                'product_id' => 'RJ01689827',
+                'maker_id' => 'RG60289',
+                'circle' => 'Provider',
+            ]], originalWorkData: ['japanese' => $locale]);
+            $this->assertSame('Provider', $work->circle);
+            $this->assertSame('RG60289', $work->makerId);
+        }
+    }
+
+    public function test_new_api_announcement_date_only_strips_japan_offset(): void
+    {
+        $this->assertSame('2026-05-27 00:00:00', DLSiteWorkData::fromArray(['japanese' => [
+            'product_id' => 'RJ01637254',
+            'announce_date' => '2026-05-27 00:00:00+09:00',
+        ]])->announceDate);
+
+        $this->assertSame('2026-05-27 00:00:00', DLSiteWorkData::fromArray(['japanese' => [
+            'product_id' => 'RJ01637254',
+            'announce_date' => '2026-05-27 00:00:00',
+        ]])->announceDate);
+
+        $this->assertSame('2026-05-26 15:00:00+00:00', DLSiteWorkData::fromArray(['japanese' => [
+            'product_id' => 'RJ01637254',
+            'announce_date' => '2026-05-26 15:00:00+00:00',
+        ]])->announceDate);
+
+        $this->assertSame('2026-02-30 00:00:00', DLSiteWorkData::fromArray(['japanese' => [
+            'product_id' => 'RJ01637254',
+            'announce_date' => '2026-02-30 00:00:00+09:00',
+        ]])->announceDate);
+
+        $this->assertNull(DLSiteWorkData::fromArray(['japanese' => [
+            'product_id' => 'RJ01722318',
+            'regist_date' => '2026-10-14 00:00:00+09:00',
+        ]])->announceDate);
     }
 }

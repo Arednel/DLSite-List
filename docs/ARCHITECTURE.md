@@ -58,6 +58,23 @@ The Quick Add field layout controls which user-editable override rows are submit
 
 The main DLsite `Product Format` is stored first; only SND (Voice), MS2 (Music), and MV2 (Animation) are accepted as additional formats from Work.options. When an additional format mirrors the fetched main format, the additional value is omitted: SOU suppresses SND, MUS suppresses MS2, and MOV suppresses MV2. An additional format is kept when its matching main format is absent. This DLsite-fetch rule does not apply to manual Edit input or Library export/import, which preserve the stored values.
 
+#### DLsite Work Data Mapping
+
+`python/DLSiteScraper.py` fetches work data through `dlsite-async`, serializes the returned `Work` fields, adds the calculated `product_format`, and writes the result as JSON. PHP reads this JSON without rewriting it.
+
+`DLSiteWorkData::normalizePayload()` maps the fields used by DLSite List when constructing product metadata:
+
+- `maker_name` is used as Circle, Publisher, or Brand when `maker_id` starts with `RG`, `BG`, or `VG` respectively
+- Description uses the first nonempty value from `intro_masked`, `intro_s`, then `intro` when `description` is absent
+- `creater` is used as Author when `author` is absent or `null`; an explicitly empty Author list remains empty
+- a trailing `+09:00` is removed from `announce_date` without otherwise changing the supplied date or time
+
+Explicit `circle`, `publisher`, `brand`, and `description` fields remain authoritative when present, including explicit empty values. Creator-role metadata that is not exposed by `dlsite-async` is not reconstructed by DLSite List.
+
+For translated works, `DLSiteWorkFetcher` identifies the original work from the Japanese `language_editions` entry with `display_order: 1`. If no usable entry is available, it uses the Japanese `translation_info.original_workno` value instead. When the resolved ID differs from the fetched work, the original work is fetched and its `RG` maker metadata is used when available. If no original reference is available, the fetched work is used normally. A missing reference is logged only when Japanese `translation_info.is_original` is explicitly `false`. The original response is validated before use, with Japanese maker metadata preferred over English.
+
+The original response is stored beside the translated JSON as `<translation-id> - <original-id>.json`. `DLSiteWorkData` uses the original Maker ID, Circle, and Circle contributor while retaining the remaining metadata from the translated work. If the original work cannot be resolved, the translated work's own metadata is used.
+
 ### Custom Quick Add
 
 `GET /create/custom` opens manual creation and `POST /store/custom` stores it.
@@ -99,7 +116,7 @@ Bulk Import history cleanup deletes all persisted run/item history and is unavai
 - synchronizes tags and contributors through shared support classes
 - updates derived sort keys when relevant values change
 
-`POST /destroy/{product}` first attempts to remove the canonical JSON and public image directory, logs cleanup failures, then deletes the product row.
+`POST /destroy/{product}` first attempts to remove the canonical JSON, any `<translation-id> - <original-id>.json` original-work JSON files associated with that work, and the public image directory. Cleanup failures are logged and do not prevent deletion of the product row.
 
 `ReturnTarget` and product-aware return logic preserve normalized Index filters, sorting, and pagination across mutations. Create/Edit return to the affected product and its appropriate page; Delete removes the product anchor and clamps the saved page when deletion makes the previous page invalid.
 
@@ -175,7 +192,10 @@ Refetch updates scraped DLsite-owned data without immediately overwriting the ex
 7. `OptionsRefetchReview` lets the user choose whether to overwrite each changed category.
 8. Applying changes promotes only accepted data and images.
 9. Canonical JSON is promoted only when the accepted changes actually change the work.
-10. Obsolete images are cleaned only for works whose image state changed.
+10. For translated works, the matching staged original-work JSON is copied beside the canonical JSON when available.
+11. Obsolete images are cleaned only for works whose image state changed.
+
+Refetch requires the translated work JSON as its metadata artifact. The associated original-work JSON is promoted when available; if it is missing, it is skipped, while copy or existence-check failures are logged without undoing applied metadata or preventing other works from finalizing. If no accepted change modifies a work, neither its staged translated JSON nor its associated original-work JSON is promoted.
 
 Refetch has eighteen ordered review categories defined by `RefetchCategory`.
 
@@ -214,6 +234,8 @@ Transfer jobs use persisted checkpoints and operation/validation tokens so retri
 Each bounded export planning phase locks and rechecks the run, then commits inventory/part changes, its checkpoint, and the successor job in one database transaction. Cancellation waits for the current batch. Staged JSON paths are deterministic and can be overwritten on retry after a rollback.
 
 Partial work imports include only contributor roles explicitly present in either language document. Omitted roles are preserved; explicitly empty roles can be cleared with Overwrite.
+
+`WorkArchiveData` validates raw announcement dates before normalization. It accepts the stored `Y-m-d H:i:s` form and the same value ending in `+09:00`, then applies the same DLsite field aliases used for fetched work data before import field-presence checks. Omitted fields remain omitted, while explicit `null` or empty values keep their normal clear semantics. Exports serialize the values already stored in the library and do not perform original-work lookups.
 
 Incomplete image categories remain importable. Import applies the valid image files present in the archive and records a warning; an incomplete category with no available files is treated as unavailable data rather than an explicit empty category, so it does not clear existing images. New works follow the same rule and import any available images.
 
@@ -560,6 +582,7 @@ Canonical work metadata:
 
 ```text
 storage/app/Works/{product_code}.json
+storage/app/Works/{translation_code} - {original_code}.json
 ```
 
 Canonical work images:
@@ -574,6 +597,7 @@ Staged Refetch metadata:
 
 ```text
 storage/app/Refetch/{run}/Works/{product_code}.json
+storage/app/Refetch/{run}/Works/{translation_code} - {original_code}.json
 ```
 
 Staged Refetch images:

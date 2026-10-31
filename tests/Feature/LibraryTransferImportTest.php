@@ -12,6 +12,7 @@ use App\Models\LibraryImportItem;
 use App\Models\LibraryTransferRun;
 use App\Models\Option;
 use App\Models\Product;
+use App\Support\ProductContributorSync;
 use App\Support\Transfers\InvalidArchive;
 use App\Support\Transfers\PortableOptions;
 use Exception;
@@ -616,6 +617,94 @@ class LibraryTransferImportTest extends TestCase
         $this->assertSame('maniax', Product::findOrFail('RJ123456')->site_id);
     }
 
+    #[DataProvider('prereleaseMakerRoles')]
+    public function test_prerelease_work_aliases_and_offset_dates_import_through_review(string $code, string $makerId, string $role): void
+    {
+        $product = Product::factory()->create([
+            'id' => $code,
+            'work_name' => 'Before',
+            'description' => null,
+            'publisher' => null,
+            'brand' => null,
+            'notes' => 'Keep personal notes',
+        ]);
+        $export = $this->exported();
+        $this->rewriteWorkData($export->parts()->firstOrFail(), function (array $work) use ($code, $makerId): array {
+            $locale = [
+                'product_id' => $code,
+                'work_name' => 'Imported',
+                'maker_id' => $makerId,
+                'maker_name' => 'Imported maker',
+                'intro_s' => "Imported description\nSecond line",
+                'author' => null,
+                'creater' => ['Imported author'],
+                'announce_date' => '2026-05-27 00:00:00+09:00',
+                'title_name' => 'Normal series',
+                'title_name_masked' => 'Masked series',
+            ];
+
+            return ['japanese' => $locale, 'english' => $locale, 'dlsite_list' => $work['dlsite_list']];
+        });
+        $run = $this->imported($export);
+        $this->assertSame(0, $run->items()->where('status', 'unavailable')->count());
+        $this->apply($run);
+        $product = $product->fresh();
+        $roles = app(ProductContributorSync::class)->namesByRole($product);
+        $this->assertSame('Imported', $product->work_name);
+        $this->assertSame("Imported description\nSecond line", $product->description);
+        $this->assertNull($product->description_english);
+        $this->assertSame('2026-05-27 00:00:00', $product->announce_date?->format('Y-m-d H:i:s'));
+        $this->assertSame('Masked series', $product->series);
+        $this->assertSame('Keep personal notes', $product->notes);
+        $this->assertSame(['Imported author'], $roles['author']);
+        if ($role === 'circle') {
+            $this->assertSame(['Imported maker'], $roles['circle']);
+        } else {
+            $this->assertSame('Imported maker', $product->{$role});
+        }
+    }
+
+    public static function prereleaseMakerRoles(): array
+    {
+        return [
+            'circle' => ['RJ123456', 'RG123', 'circle'],
+            'publisher' => ['BJ123456', 'BG123', 'publisher'],
+            'brand' => ['VJ123456', 'VG123', 'brand'],
+        ];
+    }
+
+    public function test_partial_prerelease_archive_preserves_missing_fields_and_applies_explicit_clears(): void
+    {
+        $product = Product::factory()->create([
+            'id' => 'RJ123456',
+            'brand' => 'Keep brand',
+            'publisher' => 'Clear publisher',
+            'description' => 'Clear description',
+            'announce_date' => '2026-09-24 00:00:00',
+        ]);
+        app(ProductContributorSync::class)->sync($product, ['author' => ['Clear author'], 'scenario' => ['Keep scenario']]);
+        $export = $this->exported();
+        $this->rewriteWorkData($export->parts()->firstOrFail(), fn(array $work): array => [
+            'japanese' => [
+                'product_id' => 'RJ123456',
+                'work_name' => 'Partial',
+                'publisher' => null,
+                'intro_s' => null,
+                'author' => [],
+            ],
+            'english' => ['product_id' => 'RJ123456'],
+        ]);
+        $this->apply($this->imported($export));
+        $product = $product->fresh();
+        $roles = app(ProductContributorSync::class)->namesByRole($product);
+        $this->assertSame('Keep brand', $product->brand);
+        $this->assertNull($product->publisher);
+        $this->assertNull($product->description);
+        $this->assertSame([], $roles['author'] ?? []);
+        $this->assertSame(['Keep scenario'], $roles['scenario']);
+        $this->assertSame('2026-09-24 00:00:00', $product->announce_date?->format('Y-m-d H:i:s'));
+    }
+
     public function test_legacy_work_archive_without_announcement_date_preserves_existing_date(): void
     {
         $product = Product::factory()->create([
@@ -637,8 +726,26 @@ class LibraryTransferImportTest extends TestCase
         $this->assertSame('2026-09-24 00:00:00', $product->fresh()->announce_date?->format('Y-m-d H:i:s'));
     }
 
-    #[DataProvider('announcementDateLocales')]
-    public function test_malformed_announcement_date_is_quarantined_and_does_not_clear_existing_value(string $locale): void
+    public function test_explicit_null_announcement_date_clears_existing_value(): void
+    {
+        $product = Product::factory()->create([
+            'id' => 'RJ123456',
+            'announce_date' => '2026-09-24 00:00:00',
+        ]);
+        $export = $this->exported();
+        $this->rewriteWorkData($export->parts()->firstOrFail(), function (array $work): array {
+            $work['japanese']['announce_date'] = null;
+            $work['english']['announce_date'] = null;
+
+            return $work;
+        });
+
+        $this->apply($this->imported($export));
+        $this->assertNull($product->fresh()->announce_date);
+    }
+
+    #[DataProvider('invalidAnnouncementDates')]
+    public function test_malformed_announcement_date_is_quarantined_and_does_not_clear_existing_value(string $locale, mixed $value): void
     {
         $original = Product::factory()->create([
             'id' => 'RJ123456',
@@ -646,8 +753,8 @@ class LibraryTransferImportTest extends TestCase
         ]);
         Product::factory()->create(['id' => 'RJ123457']);
         $export = $this->exported();
-        $this->rewriteWorkData($export->parts()->firstOrFail(), function (array $work) use ($locale): array {
-            $work[$locale]['announce_date'] = 'not-a-date';
+        $this->rewriteWorkData($export->parts()->firstOrFail(), function (array $work) use ($locale, $value): array {
+            $work[$locale]['announce_date'] = $value;
             $work['japanese']['work_name'] = 'Corrupted archive title';
 
             return $work;
@@ -657,16 +764,19 @@ class LibraryTransferImportTest extends TestCase
         $this->assertSame(1, $run->items()->where('status', 'unavailable')->count());
         $error = (string) $run->items()->where('status', 'unavailable')->firstOrFail()->error;
         $this->assertStringContainsString($locale, $error);
-        $this->assertStringContainsString('Y-m-d H:i:s', $error);
+        $this->assertStringContainsString(is_string($value) ? 'Y-m-d H:i:s' : 'string', $error);
         $this->apply($run);
 
         $this->assertSame('2026-09-24 00:00:00', $original->fresh()->announce_date?->format('Y-m-d H:i:s'));
         $this->assertNotSame('Corrupted archive title', $original->fresh()->work_name);
     }
 
-    public static function announcementDateLocales(): array
+    public static function invalidAnnouncementDates(): array
     {
-        return ['Japanese' => ['japanese'], 'English' => ['english']];
+        return [
+            'Japanese malformed string' => ['japanese', 'not-a-date'],
+            'English non-string value' => ['english', []],
+        ];
     }
 
     public function test_work_archive_without_product_format_preserves_existing_formats(): void

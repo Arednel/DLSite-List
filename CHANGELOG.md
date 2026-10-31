@@ -4,6 +4,20 @@ All notable changes to this project are documented in this file.
 
 ## Unreleased
 
+### Upgrade notes
+
+For existing manual installations:
+
+* Activate the Python virtual environment and run `pip install -r python/requirements.txt`.
+
+### Changed
+
+* Updated `dlsite-async` Python package to 1.0.0b4 version and adapted metadata fetching, storage, and archive imports to its updated data format.
+
+### Fixed
+
+* Fixed missing Circle, Tags, and Sample Images when fetching AI-generated works (#6).
+
 ## 2.2.0 - 2026-10-27
 
 *Index Layout Customization & Security Improvements*

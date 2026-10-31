@@ -2,11 +2,19 @@ import sys
 import unittest
 from pathlib import Path
 from types import SimpleNamespace
+from unittest.mock import AsyncMock, mock_open, patch
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
-from dlsite_async.work import AgeCategory, BookType, WorkOption, WorkType
-from DLSiteScraper import product_format_codes, to_serializable
+from dlsite_async.work import (
+    AgeCategory,
+    BookType,
+    LanguageEdition,
+    TranslationInfo,
+    WorkOption,
+    WorkType,
+)
+from DLSiteScraper import product_format_codes, run, to_serializable
 
 
 class DLSiteScraperProductFormatTest(unittest.TestCase):
@@ -103,6 +111,68 @@ class DLSiteScraperProductFormatTest(unittest.TestCase):
 
         self.assertNotIn("__objclass__", str(serialized))
         self.assertNotIn("_sort_order_", str(serialized))
+
+
+class DLSiteScraperOutputTest(unittest.TestCase):
+    def test_language_editions_keep_original_work_reference(self):
+        work = SimpleNamespace(
+            language_editions=[
+                LanguageEdition(
+                    workno="RJ01463781",
+                    edition_id=43711,
+                    lang="JPN",
+                    edition_type="language",
+                    label="日本語",
+                    display_order=1,
+                )
+            ]
+        )
+        serialized = to_serializable(work)
+        self.assertEqual(
+            "RJ01463781", serialized["language_editions"][0]["workno"]
+        )
+        self.assertEqual(1, serialized["language_editions"][0]["display_order"])
+        self.assertEqual("JPN", serialized["language_editions"][0]["lang"])
+
+    def test_translation_info_keeps_original_work_reference(self):
+        work = SimpleNamespace(
+            translation_info=TranslationInfo(
+                original_workno="RJ01647180", is_original=False
+            )
+        )
+        serialized = to_serializable(work)
+        self.assertEqual(
+            "RJ01647180", serialized["translation_info"]["original_workno"]
+        )
+        self.assertFalse(serialized["translation_info"]["is_original"])
+
+    def test_output_preserves_serialized_fields_without_fetch_metadata(self):
+        work = SimpleNamespace(
+            product_id="VJ015443", scenario=["天宮りつ"], work_type=WorkType.VOICE_ASMR
+        )
+        expected = to_serializable(work) | {
+            "product_format": product_format_codes(work)
+        }
+        arguments = SimpleNamespace(
+            work_id="VJ015443", json_output="unused/work.json", image_output=None
+        )
+        with (
+            patch(
+                "DLSiteScraper.fetch_work_data", AsyncMock(return_value=(work, work))
+            ),
+            patch("DLSiteScraper.Path.mkdir"),
+            patch("builtins.open", mock_open()),
+            patch("DLSiteScraper.json.dump") as dump,
+        ):
+            manifest = run(arguments)
+        document = dump.call_args.args[0]
+        self.assertEqual({"japanese", "english"}, set(document))
+        for locale in ("japanese", "english"):
+            self.assertEqual(expected, document[locale])
+        self.assertEqual(
+            {"product_id", "json_path", "downloaded_images", "failed_images"},
+            set(manifest),
+        )
 
 
 if __name__ == "__main__":

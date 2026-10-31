@@ -10,18 +10,22 @@ use App\Models\Genre;
 use App\Models\Product;
 use App\Models\RefetchRun;
 use App\Models\RefetchWorkResult;
+use App\Support\DLSite\DLSiteWorkData;
 use App\Support\DLSite\DLSiteWorkFetcher;
 use App\Support\LibraryMutationLock;
 use App\Support\ProductContributorSync;
 use App\Support\ProductGenreSync;
 use App\Support\ProductImagePromotion;
 use Closure;
+use Exception;
 use Illuminate\Contracts\Cache\LockTimeoutException;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Collection as EloquentCollection;
 use Illuminate\Support\Facades\Bus;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Facades\Validator;
 use RuntimeException;
 use Throwable;
 
@@ -677,6 +681,35 @@ final class RefetchService
                     $jsonPath,
                     "Works/{$result->product_id}.json",
                 );
+
+                // Promote the original response alongside the translated work when changes are applied.
+                $raw = Storage::disk('local')->json($jsonPath);
+                $originalId = is_array($raw) ? DLSiteWorkData::originalWorkId($raw) : null;
+                $hasValidOriginalId = $originalId !== $result->product_id && Validator::make(
+                    ['original_id' => $originalId],
+                    ['original_id' => ['required', 'string', 'max:191', 'regex:/\A(?:RJ|BJ|VJ)\d+\z/']],
+                )->passes();
+
+                if ($hasValidOriginalId) {
+                    $filename = "{$result->product_id} - {$originalId}.json";
+                    $originalPath = dirname($jsonPath) . '/' . $filename;
+                    $destination = "Works/{$filename}";
+
+                    // This supplementary response must not block metadata that has already been applied.
+                    try {
+                        if (Storage::disk('local')->exists($originalPath)) {
+                            $this->copyFile('local', $originalPath, $destination);
+                        }
+                    } catch (Exception $exception) {
+                        Log::warning('Unable to promote original-work JSON after Refetch.', [
+                            'run_id' => $run->getKey(),
+                            'product_id' => $result->product_id,
+                            'source' => $originalPath,
+                            'destination' => $destination,
+                            'reason' => $exception->getMessage(),
+                        ]);
+                    }
+                }
             });
 
         $run->forceFill([

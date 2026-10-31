@@ -189,6 +189,7 @@ Covers the full Refetch workflow:
 - lifecycle locking
 - metadata/tag/contributor preservation/overwrite rules
 - canonical JSON promotion
+- nonfatal original-work JSON copy/check failures, missing originals, and continued promotion of other works
 - cover/sample promotion and rollback
 - obsolete-image cleanup
 - Updated Date behavior
@@ -220,6 +221,12 @@ Regression coverage injects failures after successor-job insertion in every plan
 #### `tests/Feature/LibraryTransferImportTest.php`
 
 Covers multipart upload/validation, missing or replacement parts, archive/path/checksum safety, bounded analysis/checkpoint retries, image validation, existing/new work analysis, incomplete-image imports for existing and new works, and data-only continuation. Incomplete-image warnings remain canonical in staged metadata and are rendered from the operational error catalog in the current UI locale. Product Format coverage includes custom/empty values, invalid-value quarantine, locale fallback, and compatibility with archives created before the field existed. `announce_date` tests cover round trips, omitted fields, and invalid-date quarantine. Site ID tests cover round trips and locale metadata fallback when importing older archives without an explicit stored site. Archive compatibility tests cover v2 output, released v1 manifests and legacy `rj_code`/Index sort Options layouts.
+
+DLsite work-data compatibility coverage includes Circle, Publisher, Brand, Description, and Author aliases, plus announcement dates ending in `+09:00`. Tests check that archive Series values take precedence, personal notes are preserved, omitted fields are handled separately from explicitly cleared values, explicit `null` dates clear stored values, and malformed string or non-string dates are quarantined before normalization.
+
+#### `tests/Feature/TranslatedWorkCircleTest.php`
+
+Covers original-Circle resolution from Japanese `language_editions` through Quick Add and Bulk Import, user overrides, and Refetch comparisons. `FullRefetchTest.php` also checks that associated original-work JSON is promoted only when Refetch changes are applied.
 
 #### `tests/Feature/LibraryTransferReviewTest.php`
 
@@ -341,7 +348,7 @@ Covers the main product HTTP workflows:
 - selected-language fetched/custom tags
 - Index-aware return navigation
 - modal completion responses
-- deletion and cleanup-error handling
+- deletion and cleanup-error handling, including associated original-work JSON files and directory listing failures that must not block product deletion
 
 #### `tests/Feature/ProductGenreMigrationTest.php`
 
@@ -565,6 +572,7 @@ Covers server-rendered Add/Edit modal completion fallback output and conditional
 
 `tests/Unit/Support/RefetchDiffBuilderTest.php`
 - Covers all Refetch metadata/creator/tag categories (including independent Publisher/Brand changes), main-only Product Format comparison that ignores fetched additional formats, plus tag identity handling, cover hashing, and unavailable sample-image behavior.
+- Checks that normalized scraper fields and dates ending in `+09:00` do not cause false removal suggestions, while changed creator-name lists are shown in the Refetch review.
 
 `tests/Unit/Support/ReturnTargetTest.php`
 - Covers Index-only return-query/fragment normalization, malformed input fallback, legacy route rejection, and URL generation.
@@ -581,10 +589,14 @@ Covers server-rendered Add/Edit modal completion fallback output and conditional
 - Covers Laravel Process command construction, explicit output destinations, venv executable, unlimited timeout behavior, and log-retention environment.
 
 `tests/Unit/Support/DLSite/DLSiteWorkDataTest.php`
+- Covers original-work ID resolution from Japanese `language_editions`, with `translation_info.original_workno` as fallback.
+- Covers original Circle and Maker ID precedence, matching ID/name pairs from one locale, and preservation of the translated work's other fields.
+- Covers Circle/Publisher/Brand mapping, description selection, Author fallback, explicit fields taking precedence, translation-provider Circles, and removal of the trailing `+09:00` from announcement dates.
 - Covers shared scraped metadata extraction for titles/descriptions/creators/maker data (Circle, Publisher, and Brand remain independent), Product Format normalization, announcement-date and site-id locale fallback, product ids, and missing-id errors.
 
 `tests/Unit/Support/DLSite/DLSiteWorkFetcherTest.php`
 - Covers the PHP-owned five-attempt retry loop, manifest/JSON validation, partial results, immediate success, and rejection of stale JSON fallback.
+- Covers the single original-work lookup through Japanese `language_editions`, the `translation_info.original_workno` fallback, original/self and missing-reference behavior, invalid references, failure fallback, validation before associated original-work JSON publication, temporary-file cleanup, preservation of existing saved responses, narrowed exception handling, and exclusion of original-work images and recursive lookups.
 
 #### View Components
 
@@ -618,13 +630,15 @@ Threshold behavior:
 
 #### `python/tests/test_dlsite_scraper.py`
 
-Covers Python scraper Product Format handling:
+Covers Python scraper Product Format handling and serialized work metadata:
 - every main `WorkType`
 - `SND`/`MS2`/`MV2` extraction from `Work.options`
 - mirrored additional-format suppression while preserving unmatched additional formats
 - additional-option ordering
 - stable DLsite enum-code serialization
-- age-category serialization after the `dlsite-async` upgrade
+- age-category serialization with the current `dlsite-async` model
+- serialization of `language_editions`, including the order-1 original work ID
+- serialization of `translation_info`, including the fallback original work ID
 
 #### `python/tests/test_weekly_logging.py`
 
