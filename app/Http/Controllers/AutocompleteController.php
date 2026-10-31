@@ -10,6 +10,8 @@ use Illuminate\Http\Request;
 
 class AutocompleteController extends Controller
 {
+    private const MAX_QUERY_LENGTH = 100;
+
     public function __construct(
         private readonly TagAutocompleteSearch $tagSearch,
         private readonly SeriesAutocompleteSearch $seriesSearch,
@@ -47,6 +49,8 @@ class AutocompleteController extends Controller
 
     private function normalizedQuery(Request $request): string
     {
-        return trim((string) $request->query('q', ''));
+        $query = $request->query('q', '');
+
+        return is_string($query) ? mb_substr(trim($query), 0, self::MAX_QUERY_LENGTH) : '';
     }
 }
