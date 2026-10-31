@@ -110,6 +110,8 @@ final class DLSiteProductImporter
                     'circle' => $circle,
                     'publisher' => $publisher,
                     'brand' => $brand,
+                    // An unreadable rating is stored as "no rating" for a new work.
+                    ...($workData->rating ?? new DLSiteRating(null, null))->attributes(),
                     'work_image' => $workImage,
                     'description' => $description,
                     'description_english' => $englishDescription,

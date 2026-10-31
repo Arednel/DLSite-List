@@ -1,0 +1,58 @@
+/**
+ * Star rating (x-star-rating): five text stars with a filled layer clipped
+ * to --star-rating-fill, so half stars need no images.
+ */
+
+.star-rating {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    line-height: 1.3;
+    white-space: nowrap;
+}
+
+.star-rating__label {
+    color: #7D6A6A;
+    font-size: 10px;
+    font-weight: bold;
+}
+
+.star-rating__stars {
+    position: relative;
+    display: inline-block;
+    color: #E6D8D3;
+    font-size: 12px;
+    letter-spacing: 0;
+}
+
+.star-rating__stars::before,
+.star-rating__stars::after {
+    content: "\2605\2605\2605\2605\2605";
+}
+
+.star-rating__stars::after {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: var(--star-rating-fill, 0%);
+    overflow: hidden;
+    color: #F0A830;
+}
+
+.star-rating__number {
+    font-weight: bold;
+    font-variant-numeric: tabular-nums;
+}
+
+.star-rating__description {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    border: 0;
+}

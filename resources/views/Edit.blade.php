@@ -62,6 +62,10 @@
                                                 <tbody>
                                                     <x-fields.product-code-display :id="$product->id"
                                                         :work-name="$product->work_name" />
+                                                    @if ($product->dlsite_rating !== null && $product->dlsite_rating_count)
+                                                        <x-fields.dlsite-rating :rating="$product->dlsite_rating"
+                                                            :count="$product->dlsite_rating_count" />
+                                                    @endif
                                                     @foreach ($editFields as $field)
                                                         <x-fields.edit-configurable-row :field="$field"
                                                             :product="$product" :age-category-options="$ageCategoryOptions" :contributor-inputs="$contributorInputs"

@@ -317,7 +317,7 @@ a {
 }
 
 .list-table .list-table-header .header-title.score {
-    width: 65px
+    width: 130px
 }
 
 .list-table .list-table-header .header-title.age-category {
@@ -428,6 +428,29 @@ a {
 .list-table .list-table-data .data.score .product-link {
     font-size: 1.1em;
     font-weight: bold
+}
+
+/*
+ * DLsite rating and personal score on two rows, with labels, stars and numbers in aligned columns.
+ * Left-aligned so the stars line up between works that have one or both ratings.
+ */
+.index-ratings {
+    display: grid;
+    grid-template-columns: repeat(3, auto);
+    justify-content: start;
+    gap: 2px 4px;
+    text-align: left;
+}
+
+.index-ratings .star-rating {
+    display: grid;
+    grid-column: 1 / -1;
+    grid-template-columns: subgrid;
+}
+
+/* Fits "DLsite", so a work with only a personal score keeps its stars in the same place. */
+.index-ratings .star-rating__label {
+    min-width: 3.6em;
 }
 
 .list-table .list-table-data .data.tags {
@@ -1246,6 +1269,12 @@ body.filter-modal-open {
         grid-area: auto;
     }
 
+    /*
+     * Ratings are wider than the image column, so they take a full row. Series
+     * follows them by default, so it gets a full row too instead of the narrow column.
+     */
+    .list-table .list-table-data .data.score,
+    .list-table .list-table-data .data.series,
     .list-table .list-table-data .data.description,
     .list-table .list-table-data .data.notes,
     .list-table .list-table-data .data.start-date,

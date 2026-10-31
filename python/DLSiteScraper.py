@@ -94,9 +94,38 @@ def product_format_codes(work):
     return formats
 
 
+RATING_INFO_URL = "https://www.dlsite.com/maniax/product/info/ajax"
+RATING_KEYS = ("rate_average_2dp", "rate_count")
+
+
+async def rating_fields(api, product_id):
+    """
+    Returns DLsite's average rating and rating count, or None when they could not be read.
+    dlsite-async does not expose these fields, so they are requested separately.
+    A work without ratings yet returns None for both values.
+    """
+    try:
+        params = {"product_id": product_id}
+        async with api.get(RATING_INFO_URL, params=params) as response:
+            response.raise_for_status()
+            payload = await response.json(content_type=None)
+    except Exception as error:
+        logging.warning(f"Rating lookup failed for {product_id}: {error}")
+        return None
+
+    info = payload.get(product_id) if isinstance(payload, dict) else None
+
+    if not isinstance(info, dict) or not any(key in info for key in RATING_KEYS):
+        logging.warning(f"Rating lookup returned no rating fields for {product_id}")
+        return None
+
+    return {key: info.get(key) for key in RATING_KEYS}
+
+
 async def japanese_dlsite(work_id):
     async with DlsiteAPI() as api:
-        return await api.get_work(work_id)
+        work = await api.get_work(work_id)
+        return work, await rating_fields(api, work.product_id)
 
 
 async def english_dlsite(work_id):
@@ -105,10 +134,10 @@ async def english_dlsite(work_id):
 
 
 async def fetch_work_data(work_id):
-    japanese = await japanese_dlsite(work_id)
+    japanese, rating = await japanese_dlsite(work_id)
     english = await english_dlsite(work_id)
 
-    return japanese, english
+    return japanese, english, rating
 
 
 def require_https_image_url(url):
@@ -250,11 +279,17 @@ def fetch_images(work, image_output):
 
 
 def run(arguments):
-    work_japanese, work_english = asyncio.run(fetch_work_data(arguments.work_id))
+    work_japanese, work_english, rating = asyncio.run(
+        fetch_work_data(arguments.work_id)
+    )
     japanese = to_serializable(work_japanese)
     english = to_serializable(work_english)
     japanese["product_format"] = product_format_codes(work_japanese)
     english["product_format"] = product_format_codes(work_english)
+
+    # Leaving the keys out means "unknown", so Laravel keeps the stored rating.
+    if rating is not None:
+        japanese.update(rating)
     combined = {"japanese": japanese, "english": english}
     json_output = Path(arguments.json_output)
     json_output.parent.mkdir(parents=True, exist_ok=True)

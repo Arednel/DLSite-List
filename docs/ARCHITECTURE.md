@@ -39,6 +39,8 @@ Index state is kept in the query string so filtered/sorted views can be linked a
 
 Tag and contributor data is loaded only when the current visible fields need it.
 
+The `score` column is titled `Ratings` on the Index. `ProductFieldLayout::label()` returns that title only for the Index surface, so `Score` keeps its meaning in filters, sort menus, and Add/Edit forms. Each cell shows the DLsite rating and your own score as rows of stars with their numbers, rendered by the `x-star-rating` component (`app/View/Components/StarRating.php`, `public/css/star-rating.css`). Stars are drawn in CSS and rounded to half stars: the DLsite average is out of 5 and your score out of 10, so a score of 9 is four and a half stars. Screen readers get the value as text, for example `DLsite rating 4.96 out of 5`. A row is shown only when it has a value, and a cell with neither shows `-`. The column still sorts by your own score.
+
 ### Quick Add from DLsite
 
 `GET /create` opens DLSite Quick Add and `POST /store` creates the work.
@@ -51,6 +53,10 @@ Tag and contributor data is loaded only when the current visible fields need it.
 6. Scraped metadata is converted by `DLSiteWorkData`; explicit visible Quick Add values override the fetched values where supported.
 7. `DLSiteProductImporter` creates the Product, persists only successfully downloaded cover/sample image paths, and synchronizes tags/contributors.
 8. The created work returns to the appropriate Index destination.
+
+#### DLsite Rating
+
+The scraper reads the average rating (`rate_average_2dp`) and rating count (`rate_count`) from DLsite's `product/info/ajax` response, because `dlsite-async` drops them, and adds both keys to the Japanese work JSON. A work with no ratings yet has `null` for both. When the lookup fails or returns no rating fields, the scraper leaves the keys out and the work is still fetched. `DLSiteRating` keeps a rating only when the average is between 0 and 5 and the count is at least 1; otherwise both values are stored as `null`. `DLSiteProductImporter` stores them in `products.dlsite_rating` and `products.dlsite_rating_count`. The Index reads both through `DLSiteRating` as well, so an average stored without a rating count is not shown.
 
 A failed cover download is stored as no cover, and failed sample downloads are omitted from the saved sample list. The fetcher can retry a failed DLsite fetch up to five times. Python does not own a second retry loop.
 
@@ -112,7 +118,7 @@ Bulk Import history cleanup deletes all persisted run/item history and is unavai
 `POST /update/{product}`:
 - validates through `UpdateProductRequest`
 - applies only fields that the saved Edit layout allows to be edited
-- preserves hidden/read-only values
+- preserves hidden/read-only values (the DLsite rating row is always read-only and is shown only when a rating is stored)
 - synchronizes tags and contributors through shared support classes
 - updates derived sort keys when relevant values change
 
@@ -199,6 +205,8 @@ Refetch requires the translated work JSON as its metadata artifact. The associat
 
 Refetch has eighteen ordered review categories defined by `RefetchCategory`.
 
+The DLsite rating is a DLsite statistic that users do not edit, so Refetch stores it as soon as a work is fetched, without changing `updated_at` or adding a review category. A failed rating lookup keeps the stored rating; a work that DLsite reports as unrated has its rating cleared.
+
 Cover and sample-image changes are independent. Refetch uses the shared `ProductImagePromotion` boundary so interrupted image replacement can be recovered safely.
 
 Refetch creation, cleanup, and review application use the shared `LibraryMutationLock`, which also serializes Import apply and work-image cleanup.
@@ -232,6 +240,8 @@ The import flow is:
 Transfer jobs use persisted checkpoints and operation/validation tokens so retries can resume work and stale queued jobs cannot publish or apply obsolete state. Same-direction unfinished runs are superseded, while completed runs remain historical.
 
 Each bounded export planning phase locks and rechecks the run, then commits inventory/part changes, its checkpoint, and the successor job in one database transaction. Cancellation waits for the current batch. Staged JSON paths are deterministic and can be overwritten on retry after a rollback.
+
+Work archives store the DLsite rating as `rate_average_2dp` and `rate_count` in both locale documents, and Import Review shows them as the `dlsite_rating` and `dlsite_rating_count` categories. Archives created before the fields existed leave the stored rating unchanged; values outside the valid range quarantine the work.
 
 Partial work imports include only contributor roles explicitly present in either language document. Omitted roles are preserved; explicitly empty roles can be cleared with Overwrite.
 
@@ -385,6 +395,7 @@ DLsite:
 - `DLSitePythonRunner`
 - `DLSiteWorkFetcher`
 - `DLSiteWorkData`
+- `DLSiteRating`
 - `DLSiteProductImportInput`
 - `DLSiteProductImporter`
 
@@ -435,6 +446,7 @@ Autocomplete:
 - brand
 - product format
 - scheduled release date
+- DLsite average rating (`dlsite_rating`, 0-5 with two decimals) and rating count (`dlsite_rating_count`), both `null` when unrated or never fetched
 - Japanese and English descriptions
 - progress
 - score
@@ -657,6 +669,8 @@ The Index uses:
 Create/Edit use class-based field components under:
 - `app/View/Components/Fields`
 - `resources/views/components/fields`
+
+The Index Ratings column uses the `StarRating` component (`resources/views/components/star-rating.blade.php`) for its star rows.
 
 Public CSS/JS assets use `filemtime()` query strings for cache busting.
 

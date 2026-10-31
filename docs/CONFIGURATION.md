@@ -707,7 +707,7 @@ Fetched Tags are readonly by default. If made editable, editing changes only the
 
 - `image` - shown as `Cover Image` in Field Layout settings; the Index table column is `Image`.
 - `title` - locked visible; Notes below Title enabled
-- `score`
+- `score` - shown as `Ratings` on the Index and in its Field Layout settings; shows the DLsite rating and your own score, and sorts by your score
 - `series`
 - `age_category`
 - `site_id` - hidden

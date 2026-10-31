@@ -32,7 +32,7 @@ final class ProductIndexResults
 
     private const VISIBLE_FIELD_COLUMNS = [
         'image' => ['work_image'],
-        'score' => ['score'],
+        'score' => ['score', 'dlsite_rating', 'dlsite_rating_count'],
         'series' => ['series'],
         'age_category' => ['age_category'],
         'site_id' => ['site_id'],
