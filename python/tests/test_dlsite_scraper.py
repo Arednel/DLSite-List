@@ -243,7 +243,8 @@ class DLSiteScraperOutputTest(unittest.TestCase):
         )
         with (
             patch(
-                "DLSiteScraper.fetch_work_data", AsyncMock(return_value=(work, work))
+                "DLSiteScraper.fetch_work_data",
+                AsyncMock(return_value=(work, work, None)),
             ),
             patch("DLSiteScraper.Path.mkdir"),
             patch("builtins.open", mock_open()),
@@ -254,6 +255,8 @@ class DLSiteScraperOutputTest(unittest.TestCase):
         self.assertEqual({"japanese", "english"}, set(document))
         for locale in ("japanese", "english"):
             self.assertEqual(expected, document[locale])
+        self.assertNotIn("rate_average_2dp", document["japanese"])
+        self.assertNotIn("rate_count", document["japanese"])
         self.assertEqual(
             {"product_id", "json_path", "downloaded_images", "failed_images"},
             set(manifest),
