@@ -11,7 +11,7 @@ final readonly class ContentTerminology
     /**
      * General is the baseline. Focused profiles only override wording that differs.
      *
-     * @var array<string, array<string, string>>
+     * @var array<string|int, array<string, string>>
      */
     private const TERMS = [
         'all_works' => [
@@ -76,38 +76,38 @@ final readonly class ContentTerminology
             'music' => 'Select re-listen value',
             'artwork' => 'Select revisit value',
         ],
-        'score_10' => [
+        10 => [
             'general' => '(10) Masterpiece',
         ],
-        'score_9' => [
+        9 => [
             'general' => '(9) Great',
         ],
-        'score_8' => [
+        8 => [
             'general' => '(8) Very Good',
         ],
-        'score_7' => [
+        7 => [
             'general' => '(7) Good',
         ],
-        'score_6' => [
+        6 => [
             'general' => '(6) Fine',
             'listening' => '(6) Nice',
         ],
-        'score_5' => [
+        5 => [
             'general' => '(5) Average',
         ],
-        'score_4' => [
+        4 => [
             'general' => '(4) Bad',
             'listening' => '(4) Below Average',
         ],
-        'score_3' => [
+        3 => [
             'general' => '(3) Very Bad',
             'listening' => '(3) Unremarkable',
         ],
-        'score_2' => [
+        2 => [
             'general' => '(2) Horrible',
             'listening' => '(2) Subtle',
         ],
-        'score_1' => [
+        1 => [
             'general' => '(1) Appalling',
             'listening' => '(1) Faint',
         ],
@@ -155,7 +155,7 @@ final readonly class ContentTerminology
 
     public function score(ProductScore $score): string
     {
-        return $this->term('score_' . $score->value);
+        return $this->term($score->value);
     }
 
     /**
@@ -166,14 +166,14 @@ final readonly class ContentTerminology
         $general = new self(ContentFocus::General);
 
         return collect(array_keys(self::TERMS))
-            ->map(fn(string $term): array => [
+            ->map(fn(string|int $term): array => [
                 'general' => $general->term($term),
                 'selected' => $this->term($term),
             ])
             ->all();
     }
 
-    private function term(string $term): string
+    private function term(string|int $term): string
     {
         $translationKey = self::TERMS[$term][$this->focus->value]
             ?? self::TERMS[$term][ContentFocus::General->value];

@@ -156,7 +156,7 @@ Most application settings are stored in the `options` table and edited by focuse
 
 UI wording is a presentation-only setting. `ContentFocus` defines the selected UI wording profile (`general`, `listening`, `reading`, `games`, `video`, `music`, or `artwork`), and the request-scoped `ContentTerminology` service resolves focus-sensitive labels through Laravel translations.
 
-Focus profiles only define UI wording that differs from `General`; any missing profile-specific term automatically falls back to the `General` wording.
+Focus profiles only define UI wording that differs from `General`; any missing profile-specific term automatically falls back to the `General` wording. Score wording uses numeric keys in the same term map and shares the same lookup.
 
 The setting does not change stored or internal values. Status values such as `Listening` and `Plan to Listen`, score values, repeat-field keys, URL query parameters, and transfer/database formats remain unchanged.
 

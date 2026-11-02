@@ -488,7 +488,7 @@ Covers server-rendered Add/Edit modal completion fallback output and conditional
 #### Top Level
 
 `tests/Unit/LocalizedDisplayProvidersTest.php`
-- Covers localized enum/Option display values, locale-independent stored field-layout data, and localized partial-date formatting while keeping stable underlying values.
+- Covers localized enum/Option display values, ContentTerminology score fallback/preview ordering, locale-independent stored field-layout data, and localized partial-date formatting while keeping stable underlying values.
 
 `tests/Unit/UserFacingDisplayStateTest.php`
 - Covers localized Refetch status/error presentation and Import Review warnings, while stable status values remain unchanged and unknown scraper errors/warnings remain verbatim.

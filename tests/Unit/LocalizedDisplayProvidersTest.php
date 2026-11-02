@@ -104,6 +104,11 @@ class LocalizedDisplayProvidersTest extends TestCase
             $this->assertSame($planned, $terminology->progress(ProductProgress::PlanToListen));
             $this->assertSame($repeatCount, $terminology->repeatCount());
             $this->assertSame($repeatValue, $terminology->repeatValue());
+            $rows = $terminology->previewRows();
+            $this->assertSame([
+                'general' => '(6) Fine',
+                'selected' => $focus === ContentFocus::Listening ? '(6) Nice' : '(6) Fine',
+            ], $rows[11]);
         }
 
         $this->assertSame('Listening', ProductProgress::Listening->value);
