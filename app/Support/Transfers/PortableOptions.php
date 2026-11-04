@@ -6,6 +6,8 @@ use App\Enums\AutocompleteOrder;
 use App\Enums\ContentFocus;
 use App\Enums\FetchedTagLanguage;
 use App\Enums\ProductIndexSortField;
+use App\Enums\RatingScale;
+use App\Enums\RatingVisualStyle;
 use App\Enums\UiLanguage;
 use App\Models\Option;
 use App\Support\ProductFieldLayout;
@@ -27,6 +29,8 @@ final class PortableOptions
         Option::INDEX_PER_PAGE,
         Option::INDEX_SEARCH_HIDDEN_DESCRIPTIONS_ENABLED,
         Option::INDEX_IMAGE_VIEWER_ENABLED,
+        Option::RATING_SCALE,
+        Option::RATING_VISUAL_STYLE,
         Option::OPTIONAL_PRODUCT_STATUSES,
         Option::TAG_AUTOCOMPLETE_ORDER,
         Option::SERIES_AUTOCOMPLETE_ORDER,
@@ -141,6 +145,8 @@ final class PortableOptions
             Option::UI_LANGUAGE => ['value' => ['required', Rule::enum(UiLanguage::class)]],
             Option::FETCHED_TAG_LANGUAGE => ['value' => ['required', Rule::enum(FetchedTagLanguage::class)]],
             Option::CONTENT_FOCUS => ['value' => ['required', Rule::enum(ContentFocus::class)]],
+            Option::RATING_SCALE => ['value' => ['required', Rule::enum(RatingScale::class)]],
+            Option::RATING_VISUAL_STYLE => ['value' => ['required', Rule::enum(RatingVisualStyle::class)]],
             Option::INDEX_PER_PAGE => [
                 'value' => [
                     'required',

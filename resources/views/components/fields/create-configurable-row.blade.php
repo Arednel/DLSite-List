@@ -6,6 +6,7 @@
     'days' => [],
     'years' => [],
     'progressOptions' => null,
+    'ratingScale',
 ])
 
 @switch($field['field'])
@@ -19,6 +20,10 @@
 
     @case('score')
         <x-fields.score-select />
+    @break
+
+    @case('dlsite_rating')
+        <x-fields.dlsite-rating :rating-scale="$ratingScale" />
     @break
 
     @case('series')

@@ -62,6 +62,7 @@ final class DLSiteProductImporter
             ? (array) $input->value('genre_custom', [])
             : [];
         $productFormat = $this->productFormatValue($input, $workData);
+        $rating = $this->ratingValue($input, $workData);
         $failedImages = array_flip($fetchResult->failedImages);
         $workImage = $workData->workImage !== null && ! isset($failedImages['cover.jpg'])
             ? "storage/Works/{$productId}/cover.jpg"
@@ -87,6 +88,7 @@ final class DLSiteProductImporter
             $contributorsByRole,
             $customGenres,
             $productFormat,
+            $rating,
             $workImage,
             $sampleImages,
             $onCreated,
@@ -121,6 +123,7 @@ final class DLSiteProductImporter
                     'score' => $input->fieldSubmitted(ProductField::Score, 'score')
                         ? $input->value('score')
                         : null,
+                    ...$rating->attributes(),
                     'progress' => $input->fieldSubmitted(ProductField::Progress, 'progress')
                         ? $input->value('progress')
                         : null,
@@ -224,6 +227,30 @@ final class DLSiteProductImporter
         }
 
         return $input->autoSeriesFromTitleName ? $workData->autoSeries() : null;
+    }
+
+    private function ratingValue(DLSiteProductImportInput $input, DLSiteWorkData $workData): DLSiteRating
+    {
+        if (! $input->fieldVisible(ProductField::DLSiteRating)) {
+            return $workData->rating;
+        }
+
+        $ratingInput = $input->value('dlsite_rating');
+        $countInput = $input->value('dlsite_rating_count');
+        $ratingProvided = $ratingInput !== null && $ratingInput !== '';
+        $countProvided = $countInput !== null && $countInput !== '';
+
+        if (! $ratingProvided && ! $countProvided) {
+            return $workData->rating;
+        }
+
+        $manual = DLSiteRating::fromManual($ratingInput, $countInput, $input->ratingScale);
+
+        return new DLSiteRating(
+            $ratingProvided ? $manual->rating5 : $workData->rating->rating5,
+            $ratingProvided ? $manual->rating10 : $workData->rating->rating10,
+            $countProvided ? $manual->count : $workData->rating->count,
+        );
     }
 
     /** @return array{0: ?string, 1: ?string} */

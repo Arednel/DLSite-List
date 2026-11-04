@@ -175,6 +175,43 @@ class ProductIndexFiltersTest extends TestCase
         ], $filters->toQuery());
     }
 
+
+    public function test_dlsite_rating_filter_uses_one_query_value_plus_vote_count(): void
+    {
+        $filters = ProductIndexFilters::fromQuery([
+            'dlsite_rating' => '7.36',
+            'dlsite_rating_count' => '1330',
+        ]);
+
+        $this->assertSame('7.36', $filters->dlsiteRating);
+        $this->assertSame(1330, $filters->dlsiteRatingCount);
+        $this->assertSame([
+            'dlsite_rating' => '7.36',
+            'dlsite_rating_count' => '1330',
+        ], $filters->toQuery());
+    }
+
+    public function test_dlsite_rating_filters_drop_invalid_decimal_and_vote_count_values(): void
+    {
+        $filters = ProductIndexFilters::fromQuery([
+            'dlsite_rating' => '10.01',
+            'dlsite_rating_count' => '-1',
+        ]);
+
+        $this->assertSame('', $filters->dlsiteRating);
+        $this->assertNull($filters->dlsiteRatingCount);
+        $this->assertSame([], $filters->toQuery());
+    }
+
+    public function test_dlsite_rating_count_filter_uses_the_shared_unsigned_integer_boundary(): void
+    {
+        $maximum = ProductIndexFilters::fromQuery(['dlsite_rating_count' => '4294967295']);
+        $overflow = ProductIndexFilters::fromQuery(['dlsite_rating_count' => '4294967296']);
+
+        $this->assertSame(4294967295, $maximum->dlsiteRatingCount);
+        $this->assertNull($overflow->dlsiteRatingCount);
+    }
+
     public function test_it_exposes_the_index_input_keys_in_query_order(): void
     {
         $this->assertSame(
@@ -207,6 +244,7 @@ class ProductIndexFiltersTest extends TestCase
             ['site_id'],
             ['progress'],
             ['score'],
+            ['dlsite_rating', 'dlsite_rating_count'],
             ['priority'],
             ['num_re_listen_times'],
             ['re_listen_value'],
@@ -295,5 +333,6 @@ class ProductIndexFiltersTest extends TestCase
             ProductIndexSortField::Code->value => 'Product Code',
         ], $options['sort_fields']);
         $this->assertArrayHasKey('sort_directions', $options);
+        $this->assertSame('(9) Great', $options['scores'][9]);
     }
 }

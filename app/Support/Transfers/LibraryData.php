@@ -6,6 +6,7 @@ use App\Enums\ProductContributorRole;
 use App\Models\Genre;
 use App\Models\GenreGroup;
 use App\Models\Product;
+use App\Support\DLSite\DLSiteRating;
 use finfo;
 use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\Storage;
@@ -17,7 +18,7 @@ final class LibraryData
     public const FIELDS = [
         'titles' => ['work_name', 'work_name_english'],
         'descriptions' => ['description', 'description_english'],
-        'details' => ['maker_id', 'site_id', 'publisher', 'brand', 'series', 'age_category', 'product_format', 'announce_date', 'notes'],
+        'details' => ['maker_id', 'site_id', 'publisher', 'brand', 'series', 'age_category', 'product_format', 'announce_date', 'notes', ...DLSiteRating::ATTRIBUTE_KEYS],
         'listening' => ['progress', 'score', 'priority', 'num_re_listen_times', 're_listen_value', 'start_date', 'end_date'],
     ];
 

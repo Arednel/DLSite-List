@@ -9,4 +9,8 @@
             @endforeach
         </select>
     </td>
+    <td class="form-table-cell form-table-cell--help-icon">
+        <i class="fa-solid fa-circle-question"
+            title="{{ __('Personal scores are always entered from 1 to 10. The General rating scale changes only how the score is displayed; for example, 9 is shown as 4.5 on the 5-point scale.') }}"></i>
+    </td>
 </tr>

@@ -62,6 +62,70 @@ class LibraryTransferReviewTest extends TestCase
         $this->assertSame('Parent Tags', ImportValue::label('relationships'));
     }
 
+    public function test_dlsite_rating_review_formats_vote_count_before_rendering(): void
+    {
+        $product = Product::factory()->create(['id' => 'RJ123456']);
+        $run = LibraryTransferRun::create(['direction' => 'import', 'status' => 'review', 'settings' => []]);
+        $this->review()->item(
+            $run,
+            'works',
+            'dlsite_rating',
+            $product->id,
+            [
+                'dlsite_rating_5' => '4.50',
+                'dlsite_rating_10' => '9.00',
+                'dlsite_rating_count' => 100,
+            ],
+            [
+                'dlsite_rating_5' => '4.97',
+                'dlsite_rating_10' => '9.93',
+                'dlsite_rating_count' => 1330,
+            ],
+            ['title' => $product->work_name, 'domain' => 'details'],
+        );
+
+        Livewire::test(OptionsTransferRun::class, ['run' => $run])
+            ->call('tab', 'works', 'dlsite_rating')
+            ->assertSee('Vote count')
+            ->assertSee('(100 votes)')
+            ->assertSee('(1,330 votes)');
+    }
+
+    public function test_new_work_dlsite_rating_counts_distinguish_absent_null_and_zero_fields(): void
+    {
+        $run = LibraryTransferRun::create(['direction' => 'import', 'status' => 'review', 'settings' => []]);
+        Livewire::test(OptionsTransferRun::class, ['run' => $run])
+            ->assertViewHas('newWorkCounts', fn(array $counts): bool => $counts === array_fill_keys(
+                array_slice(ImportReview::CATEGORIES['works'], 1),
+                0,
+            ));
+
+        foreach (
+            [
+                ['product_code' => 'RJ123456', 'titles' => ['work_name' => 'Absent rating']],
+                [
+                    'product_code' => 'RJ123457',
+                    'titles' => ['work_name' => 'Explicit null rating'],
+                    'details' => ['dlsite_rating_5' => null, 'dlsite_rating_10' => null, 'dlsite_rating_count' => null],
+                ],
+                [
+                    'product_code' => 'RJ123458',
+                    'titles' => ['work_name' => 'Zero vote count'],
+                    'details' => ['dlsite_rating_count' => 0],
+                ],
+            ] as $record
+        ) {
+            $this->review()->stage($run, 'works', $record, []);
+        }
+
+        Livewire::test(OptionsTransferRun::class, ['run' => $run])
+            ->assertViewHas('newWorkCounts', fn(array $counts): bool => $counts['titles'] === 3
+                && $counts['dlsite_rating'] === 2
+                && $counts['score'] === 0)
+            ->call('newWorkTab', 'dlsite_rating')
+            ->assertViewHas('items', fn($items): bool => $items->pluck('entity_key')->all() === ['RJ123457', 'RJ123458']);
+    }
+
     public function test_import_review_compares_announcement_dates_using_the_archive_format(): void
     {
         $date = '2026-09-24 00:00:00';
@@ -448,6 +512,7 @@ class LibraryTransferReviewTest extends TestCase
             'sample_images',
             'notes',
             'score',
+            'dlsite_rating',
             'progress',
             'start_date',
             'end_date',

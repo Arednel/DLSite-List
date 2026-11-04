@@ -38,7 +38,9 @@ class ProductFieldLayoutTest extends TestCase
             ProductFieldLayout::SURFACE_INDEX => [
                 ProductField::Image,
                 ProductField::Title,
+                ProductField::Rating,
                 ProductField::Score,
+                ProductField::DLSiteRating,
                 ProductField::Series,
                 ProductField::AgeCategory,
                 ProductField::SiteId,
@@ -69,6 +71,7 @@ class ProductFieldLayoutTest extends TestCase
             ProductFieldLayout::SURFACE_EDIT => [
                 ProductField::Progress,
                 ProductField::Score,
+                ProductField::DLSiteRating,
                 ProductField::Series,
                 ProductField::Title,
                 ProductField::Image,
@@ -97,6 +100,7 @@ class ProductFieldLayoutTest extends TestCase
             ProductFieldLayout::SURFACE_FILTER => [
                 ProductField::Title,
                 ProductField::Score,
+                ProductField::DLSiteRating,
                 ProductField::Series,
                 ProductField::AgeCategory,
                 ProductField::SiteId,
@@ -128,6 +132,7 @@ class ProductFieldLayoutTest extends TestCase
                 ProductField::ProductCode,
                 ProductField::Progress,
                 ProductField::Score,
+                ProductField::DLSiteRating,
                 ProductField::Series,
                 ProductField::Title,
                 ProductField::Tags,
@@ -154,6 +159,7 @@ class ProductFieldLayoutTest extends TestCase
                 ProductField::ProductCode,
                 ProductField::Progress,
                 ProductField::Score,
+                ProductField::DLSiteRating,
                 ProductField::Series,
                 ProductField::Title,
                 ProductField::Tags,
@@ -197,6 +203,24 @@ class ProductFieldLayoutTest extends TestCase
         $this->assertFalse(ProductField::SiteId->isAvailableOn(ProductFieldLayout::SURFACE_EDIT));
         $this->assertTrue(ProductField::SiteId->isHiddenByDefault(ProductFieldLayout::SURFACE_INDEX));
         $this->assertTrue(ProductField::SiteId->isHiddenByDefault(ProductFieldLayout::SURFACE_FILTER));
+        $this->assertTrue(ProductField::Rating->isAvailableOn(ProductFieldLayout::SURFACE_INDEX));
+        $this->assertFalse(ProductField::Rating->isAvailableOn(ProductFieldLayout::SURFACE_EDIT));
+        $this->assertTrue(ProductField::Rating->isHiddenByDefault(ProductFieldLayout::SURFACE_INDEX));
+        foreach (
+            [
+                ProductFieldLayout::SURFACE_INDEX,
+                ProductFieldLayout::SURFACE_EDIT,
+                ProductFieldLayout::SURFACE_FILTER,
+                ProductFieldLayout::SURFACE_QUICK_ADD,
+                ProductFieldLayout::SURFACE_BULK_IMPORT,
+                ProductFieldLayout::SURFACE_CUSTOM_QUICK_ADD,
+            ] as $surface
+        ) {
+            $this->assertTrue(ProductField::DLSiteRating->isAvailableOn($surface));
+            $this->assertTrue(ProductField::DLSiteRating->isHiddenByDefault($surface));
+        }
+        $this->assertFalse(ProductField::DLSiteRating->isEditableByDefault(ProductFieldLayout::SURFACE_EDIT));
+        $this->assertSame('dlsite_rating', ProductField::DLSiteRating->sortField()?->value);
         $this->assertSame('site_id', ProductField::SiteId->sortField()?->value);
         $this->assertTrue(ProductField::ProductFormat->isAvailableOn(ProductFieldLayout::SURFACE_INDEX));
         $this->assertTrue(ProductField::ProductFormat->isAvailableOn(ProductFieldLayout::SURFACE_EDIT));
@@ -257,7 +281,9 @@ class ProductFieldLayoutTest extends TestCase
         $this->assertSame([
             ProductField::Image->value,
             ProductField::Title->value,
+            ProductField::Rating->value,
             ProductField::Score->value,
+            ProductField::DLSiteRating->value,
             ProductField::Series->value,
             ProductField::AgeCategory->value,
             ProductField::SiteId->value,
@@ -337,6 +363,7 @@ class ProductFieldLayoutTest extends TestCase
         $this->assertSame([
             ProductField::Progress->value,
             ProductField::Score->value,
+            ProductField::DLSiteRating->value,
             ProductField::Series->value,
             ProductField::Title->value,
             ProductField::Image->value,
@@ -396,6 +423,7 @@ class ProductFieldLayoutTest extends TestCase
         $this->assertSame([
             ProductField::Title->value,
             ProductField::Score->value,
+            ProductField::DLSiteRating->value,
             ProductField::Series->value,
             ProductField::AgeCategory->value,
             ProductField::SiteId->value,
@@ -459,6 +487,7 @@ class ProductFieldLayoutTest extends TestCase
             ProductField::ProductCode->value,
             ProductField::Progress->value,
             ProductField::Score->value,
+            ProductField::DLSiteRating->value,
             ProductField::Series->value,
             ProductField::Title->value,
             ProductField::Tags->value,
@@ -511,6 +540,7 @@ class ProductFieldLayoutTest extends TestCase
             ProductField::ProductCode->value,
             ProductField::Progress->value,
             ProductField::Score->value,
+            ProductField::DLSiteRating->value,
             ProductField::Series->value,
             ProductField::Title->value,
             ProductField::Tags->value,

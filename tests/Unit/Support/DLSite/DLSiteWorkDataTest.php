@@ -349,4 +349,23 @@ class DLSiteWorkDataTest extends TestCase
             'regist_date' => '2026-10-14 00:00:00+09:00',
         ]])->announceDate);
     }
+    public function test_it_derives_cached_dlsite_rating_values_from_rate_count_detail(): void
+    {
+        $work = DLSiteWorkData::fromArray([
+            'japanese' => [
+                'product_id' => 'RJ123456',
+                'rate_count_detail' => [
+                    '5' => 966,
+                    '4' => 34,
+                    '3' => 0,
+                    '2' => 0,
+                    '1' => 0,
+                ],
+            ],
+        ]);
+
+        $this->assertSame('4.97', $work->rating->rating5);
+        $this->assertSame('9.93', $work->rating->rating10);
+        $this->assertSame(1000, $work->rating->count);
+    }
 }

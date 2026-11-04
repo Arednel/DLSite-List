@@ -83,7 +83,8 @@
                                                         @else
                                                             <x-fields.create-configurable-row :field="$field"
                                                                 :is-custom-create="$isCustomCreate" :age-category-options="$ageCategoryOptions" :month-labels="$monthLabels"
-                                                                :days="$days" :years="$years" :progress-options="$progressOptions" />
+                                                                :days="$days" :years="$years" :progress-options="$progressOptions"
+                                                                :rating-scale="$ratingScale" />
                                                         @endif
                                                     @endforeach
                                                 </tbody>

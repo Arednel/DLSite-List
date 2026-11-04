@@ -1,4 +1,4 @@
-@props(['field', 'filterOptions' => []])
+@props(['field', 'filterOptions' => [], 'ratingScale'])
 
 @switch($field['field'])
     @case('title')
@@ -20,6 +20,20 @@
     @case('score')
         <x-index.filter-select id="filter_score" name="score" label="Score" :options="$filterOptions['scores']" placeholder="Any score"
             wire:model="draft.score" />
+    @break
+
+    @case('dlsite_rating')
+        <div class="filter-widget dlsite-rating-filter">
+            <span class="widget-header">{{ $field['label'] }}</span>
+            <div class="filter-field-stack">
+                <label for="filter_dlsite_rating">{{ __('Rating') }}</label>
+                <input id="filter_dlsite_rating" type="number" min="0" max="{{ $ratingScale->value }}" step="0.01"
+                    name="dlsite_rating" wire:model="draft.dlsite_rating" placeholder="{{ __('Exact value') }}">
+                <label for="filter_dlsite_rating_count">{{ __('Vote count') }}</label>
+                <input id="filter_dlsite_rating_count" type="number" min="0" step="1" name="dlsite_rating_count"
+                    wire:model="draft.dlsite_rating_count" placeholder="{{ __('Exact value') }}">
+            </div>
+        </div>
     @break
 
     @case('series')

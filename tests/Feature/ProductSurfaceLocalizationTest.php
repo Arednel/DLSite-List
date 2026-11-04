@@ -109,6 +109,28 @@ class ProductSurfaceLocalizationTest extends TestCase
             ->assertSee('現在の絞り込み条件に一致する作品はありません。');
     }
 
+    public function test_combined_rating_source_labels_follow_the_saved_ui_language(): void
+    {
+        Option::setIndexFieldLayout([
+            ['field' => ProductField::Rating->value, 'visible' => true],
+            ['field' => ProductField::Score->value, 'visible' => false],
+            ['field' => ProductField::DLSiteRating->value, 'visible' => false],
+        ]);
+        Product::factory()->create(['score' => 9]);
+
+        foreach ([UiLanguage::Japanese, UiLanguage::TraditionalChinese] as $language) {
+            Option::setUiLanguage($language);
+
+            $response = $this->get(route('index'))->assertOk();
+
+            $this->assertNotSame('Your', __('Your'));
+            $response->assertSeeInOrder([
+                '<span class="rating-display__source">' . e(__('DLsite')) . '</span>',
+                '<span class="rating-display__source">' . e(__('Your')) . '</span>',
+            ], false);
+        }
+    }
+
     public function test_saved_japanese_localizes_create_edit_fields_tooltips_and_delete_confirmation(): void
     {
         Option::setUiLanguage(UiLanguage::Japanese);

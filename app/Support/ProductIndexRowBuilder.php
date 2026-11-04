@@ -2,7 +2,11 @@
 
 namespace App\Support;
 
+use App\Enums\ProductField;
+use App\Enums\RatingScale;
+use App\Enums\RatingVisualStyle;
 use App\Models\Product;
+use App\Support\DLSite\DLSiteRating;
 use Illuminate\Contracts\Routing\UrlGenerator;
 use Illuminate\Support\Arr;
 use Illuminate\Support\Collection;
@@ -14,17 +18,30 @@ final readonly class ProductIndexRowBuilder
     /**
      * @param  Collection<int, Product>  $products
      * @param  Collection<string, Collection<string, Collection<int, object>>>  $contributorsByProductId
+     * @param  list<string>  $visibleFields
      * @param  array<string, string>  $returnQuery
      * @return Collection<int, ProductIndexRow>
      */
     public function build(
         Collection $products,
         Collection $contributorsByProductId,
+        array $visibleFields,
         bool $ageAppropriateLinksEnabled,
         array $returnQuery,
+        RatingScale $ratingScale,
+        RatingVisualStyle $ratingVisualStyle,
         bool $announceLinksEnabled = true,
     ): Collection {
         $indexUrl = $this->url->route('index', absolute: false);
+        $scoreVisible = in_array(ProductField::Score->value, $visibleFields, true)
+            || in_array(ProductField::Rating->value, $visibleFields, true);
+        $dlsiteRatingVisible = in_array(ProductField::DLSiteRating->value, $visibleFields, true)
+            || in_array(ProductField::Rating->value, $visibleFields, true);
+        $showStars = $ratingVisualStyle->showsStars();
+        $showScoreStars = $scoreVisible && $showStars;
+        $showDLSiteStars = $dlsiteRatingVisible && $showStars;
+        $showVoteCount = $dlsiteRatingVisible && $ratingVisualStyle->showsVoteCount();
+        $ratingColumn = $dlsiteRatingVisible ? $ratingScale->dlsiteColumn() : null;
 
         return $products->map(function (Product $product) use (
             $ageAppropriateLinksEnabled,
@@ -32,6 +49,12 @@ final readonly class ProductIndexRowBuilder
             $contributorsByProductId,
             $indexUrl,
             $returnQuery,
+            $ratingScale,
+            $scoreVisible,
+            $showScoreStars,
+            $showDLSiteStars,
+            $showVoteCount,
+            $ratingColumn,
         ): ProductIndexRow {
             $attributes = $product->attributesToArray();
             $id = Arr::string($attributes, 'id');
@@ -48,6 +71,12 @@ final readonly class ProductIndexRowBuilder
                 ->values()
                 ->all();
             $workImage = $attributes['work_image'] ?? null;
+            $score = $scoreVisible && isset($attributes['score'])
+                ? (int) $attributes['score']
+                : null;
+            $dlsiteRating = $ratingColumn !== null
+                ? ($attributes[$ratingColumn] ?? null)
+                : null;
 
             return new ProductIndexRow(
                 id: $id,
@@ -58,7 +87,15 @@ final readonly class ProductIndexRowBuilder
                 workImage: blank($workImage)
                     ? null
                     : Product::versionedImagePath($workImage),
-                score: isset($attributes['score']) ? (int) $attributes['score'] : null,
+                score: $ratingScale->displayScore($score),
+                dlsiteRating: DLSiteRating::displayValue($dlsiteRating),
+                scoreStarFill: $showScoreStars ? ($score ?? 0) * 10 : null,
+                dlsiteStarFill: $showDLSiteStars
+                    ? $this->dlsiteStarFill($attributes['dlsite_rating_5'] ?? null)
+                    : null,
+                dlsiteVotes: $showVoteCount && isset($attributes['dlsite_rating_count'])
+                    ? number_format((int) $attributes['dlsite_rating_count'])
+                    : null,
                 series: $series,
                 ageCategory: $attributes['age_category'] ?? null,
                 circle: $circle,
@@ -92,6 +129,17 @@ final readonly class ProductIndexRowBuilder
                     : $this->indexFilterUrl($indexUrl, 'brand', $brand),
             );
         });
+    }
+
+    private function dlsiteStarFill(string|int|float|null $ratingFive): int
+    {
+        if ($ratingFive === null) {
+            return 0;
+        }
+
+        $halfUnits = max(0, min(10, (int) round(((float) $ratingFive) * 2, 0, PHP_ROUND_HALF_UP)));
+
+        return $halfUnits * 10;
     }
 
     /**

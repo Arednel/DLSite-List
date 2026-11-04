@@ -35,6 +35,7 @@ Index state is kept in the query string so filtered/sorted views can be linked a
 - Image Viewer state
 - Add/Edit modal state
 - optional progress-status state
+- rating scale and visual style
 - DLsite link behavior
 
 Tag and contributor data is loaded only when the current visible fields need it.
@@ -54,7 +55,7 @@ Tag and contributor data is loaded only when the current visible fields need it.
 
 A failed cover download is stored as no cover, and failed sample downloads are omitted from the saved sample list. The fetcher can retry a failed DLsite fetch up to five times. Python does not own a second retry loop.
 
-The Quick Add field layout controls which user-editable override rows are submitted. Hidden DLsite metadata such as age, product format, circle, publisher, brand, contributors, and descriptions can still be populated from scraped data.
+The Quick Add field layout controls which user-editable override rows are submitted. Hidden DLsite metadata such as age, product format, DLsite rating, circle, publisher, brand, contributors, and descriptions can still be populated from scraped data.
 
 The main DLsite `Product Format` is stored first; only SND (Voice), MS2 (Music), and MV2 (Animation) are accepted as additional formats from Work.options. When an additional format mirrors the fetched main format, the additional value is omitted: SOU suppresses SND, MUS suppresses MS2, and MOV suppresses MV2. An additional format is kept when its matching main format is absent. This DLsite-fetch rule does not apply to manual Edit input or Library export/import, which preserve the stored values.
 
@@ -68,6 +69,7 @@ The main DLsite `Product Format` is stored first; only SND (Voice), MS2 (Music),
 - Description uses the first nonempty value from `intro_masked`, `intro_s`, then `intro` when `description` is absent
 - `creater` is used as Author when `author` is absent or `null`; an explicitly empty Author list remains empty
 - a trailing `+09:00` is removed from `announce_date` without otherwise changing the supplied date or time
+- `rate_count_detail` is normalized by `DLSiteRating`; its weighted vote distribution is used once to persist independent two-decimal 5-point and 10-point ratings plus the vote count
 
 Explicit `circle`, `publisher`, `brand`, and `description` fields remain authoritative when present, including explicit empty values. Creator-role metadata that is not exposed by `dlsite-async` is not reconstructed by DLSite List.
 
@@ -197,7 +199,7 @@ Refetch updates scraped DLsite-owned data without immediately overwriting the ex
 
 Refetch requires the translated work JSON as its metadata artifact. The associated original-work JSON is promoted when available; if it is missing, it is skipped, while copy or existence-check failures are logged without undoing applied metadata or preventing other works from finalizing. If no accepted change modifies a work, neither its staged translated JSON nor its associated original-work JSON is promoted.
 
-Refetch has eighteen ordered review categories defined by `RefetchCategory`.
+Refetch has nineteen ordered review categories defined by `RefetchCategory`.
 
 Cover and sample-image changes are independent. Refetch uses the shared `ProductImagePromotion` boundary so interrupted image replacement can be recovered safely.
 
@@ -385,6 +387,7 @@ DLsite:
 - `DLSitePythonRunner`
 - `DLSiteWorkFetcher`
 - `DLSiteWorkData`
+- `DLSiteRating`
 - `DLSiteProductImportInput`
 - `DLSiteProductImporter`
 
@@ -438,6 +441,7 @@ Autocomplete:
 - Japanese and English descriptions
 - progress
 - score
+- DLsite 5-point rating, 10-point rating, and vote count
 - listening dates
 - re-listen fields
 - priority
@@ -448,7 +452,7 @@ Autocomplete:
 
 The product code (RJ, BJ or VJ) is the product identifier.
 
-`sample_images` and `product_format` are stored as JSON and cast to PHP arrays by `Product`.
+`sample_images` and `product_format` are stored as JSON and cast to PHP arrays by `Product`. DLsite ratings are stored as exact two-decimal values in `dlsite_rating_5` and `dlsite_rating_10`, with `dlsite_rating_count` stored separately so Index filtering, sorting, and display do not recalculate the weighted average.
 
 Partial start/finish dates remain the editable source of truth. Derived integer sort columns are maintained for SQL sorting:
 - `start_date_sort`

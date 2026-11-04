@@ -2,6 +2,9 @@
 
 namespace App\Support;
 
+use App\Enums\RatingScale;
+use App\Enums\RatingVisualStyle;
+
 final readonly class ProductIndexSettings
 {
     /**
@@ -31,6 +34,8 @@ final readonly class ProductIndexSettings
         public array $indexSortFieldLayout,
         public array $indexSortFieldOptions,
         public array $contentOverflow,
+        public RatingScale $ratingScale,
+        public RatingVisualStyle $ratingVisualStyle,
         public bool $searchHiddenDescriptionsEnabled,
         public bool $indexImageViewerEnabled,
         public array $optionalProductStatuses,

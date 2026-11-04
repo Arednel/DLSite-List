@@ -2,6 +2,7 @@
 
 namespace App\Support;
 
+use App\Enums\RatingVisualStyle;
 use App\Models\Option;
 use Illuminate\Filesystem\Filesystem;
 
@@ -22,6 +23,7 @@ final class OptionStylesheet
             Option::indexTableWidth(),
             Option::indexContentOverflow(),
             Option::indexFieldLayout(),
+            Option::ratingVisualStyle(),
         );
 
         if ($this->files->exists($this->path()) && $this->files->get($this->path()) === $css) {
@@ -38,8 +40,12 @@ final class OptionStylesheet
         clearstatcache(true, $this->path());
     }
 
-    private function render(array $tableWidth, array $contentOverflow, array $indexFieldLayout): string
-    {
+    private function render(
+        array $tableWidth,
+        array $contentOverflow,
+        array $indexFieldLayout,
+        RatingVisualStyle $ratingVisualStyle,
+    ): string {
         $rules = [];
         $dimensions = [];
         $width = Option::indexTableWidthCssFrom($tableWidth);
@@ -102,6 +108,44 @@ CSS;
                 $row['width'],
                 $row['width'],
             );
+        }
+
+        if ($ratingVisualStyle === RatingVisualStyle::DLSite) {
+            $rules[] = <<<'CSS'
+.product-index-layout .list-table .list-table-header .header-title.score {
+    min-width: 115px;
+}
+
+.product-index-layout .list-table .list-table-header .header-title.dlsite-rating {
+    min-width: 115px;
+}
+
+.product-index-layout .list-table .list-table-header .header-title.rating {
+    min-width: 160px;
+}
+CSS;
+        }
+
+        if ($ratingVisualStyle === RatingVisualStyle::ExtendedDLSite) {
+            $rules[] = <<<'CSS'
+.product-index-layout .list-table .list-table-header .header-title.score {
+    min-width: 115px;
+}
+
+.product-index-layout .list-table .list-table-header .header-title.dlsite-rating {
+    min-width: 180px;
+}
+
+.product-index-layout .list-table .list-table-header .header-title.rating {
+    min-width: 225px;
+}
+
+@media (max-width: 768px) {
+    .product-index-layout .list-table .list-table-data .data.rating {
+        grid-column: 1 / -1;
+    }
+}
+CSS;
         }
 
         foreach ($contentOverflow as $target => $setting) {

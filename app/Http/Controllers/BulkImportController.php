@@ -3,7 +3,9 @@
 namespace App\Http\Controllers;
 
 use App\Enums\ProductAgeCategory;
+use App\Enums\ProductField;
 use App\Enums\ProductProgress;
+use App\Enums\RatingScale;
 use App\Http\Requests\StartBulkImportRequest;
 use App\Models\Option;
 use App\Support\BulkImport\BulkImportService;
@@ -15,6 +17,7 @@ use App\Support\ReturnUrl;
 use Illuminate\Contracts\Cache\LockTimeoutException;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Arr;
 use Illuminate\Validation\ValidationException;
 use Illuminate\View\View;
 use RuntimeException;
@@ -40,17 +43,26 @@ class BulkImportController extends Controller
             $returnParameters['return_query'] = $returnTarget->query;
         }
 
+        $quickAddFields = ProductFieldLayout::bulkImportFields(Option::bulkImportFieldLayout());
+        $ratingScale = Arr::some(
+            $quickAddFields,
+            fn(array $field): bool => $field['field'] === ProductField::DLSiteRating->value,
+        )
+            ? Option::ratingScale()
+            : RatingScale::Ten;
+
         return view('Create', [
             'isCustomCreate' => false,
             'isBulkImport' => true,
             'isModal' => $request->boolean('modal'),
             'productFormThemeClass' => 'product-form-theme-' . Option::productFormTheme(),
-            'quickAddFields' => ProductFieldLayout::bulkImportFields(Option::bulkImportFieldLayout()),
+            'quickAddFields' => $quickAddFields,
             'returnQuery' => $returnTarget->query,
             'returnUrl' => $returnUrl,
             'returnParameters' => $returnParameters,
             'ageCategoryOptions' => ProductAgeCategory::options(),
             'progressOptions' => ProductProgress::visibleOptions(Option::optionalProductStatuses()),
+            'ratingScale' => $ratingScale,
             ...ProductController::buildDateFieldOptions(),
         ]);
     }

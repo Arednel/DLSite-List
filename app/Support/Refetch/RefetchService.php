@@ -492,6 +492,7 @@ final class RefetchService
                 RefetchCategory::Brand,
                 RefetchCategory::ProductFormat,
                 RefetchCategory::AnnouncementDate,
+                RefetchCategory::Rating,
             ], true)) {
                 $value = $change['new'];
 
@@ -503,9 +504,13 @@ final class RefetchService
                     $value = $value === [] ? null : $value;
                 }
 
-                $product->forceFill([$field => $value]);
+                $attributes = $category === RefetchCategory::Rating
+                    ? $value
+                    : [$field => $value];
 
-                if (! $product->isDirty($field)) {
+                $product->forceFill($attributes);
+
+                if (! $product->isDirty(array_keys($attributes))) {
                     return false;
                 }
 

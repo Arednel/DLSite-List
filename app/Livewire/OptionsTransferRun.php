@@ -11,6 +11,7 @@ use App\Enums\LibraryTransferRunStatus;
 use App\Models\LibraryImportItem;
 use App\Models\LibraryTransferRun;
 use App\Models\Option;
+use App\Support\DLSite\DLSiteRating;
 use App\Support\Transfers\ImportReview;
 use App\Support\Transfers\ImportValue;
 use App\Support\Transfers\LibraryTransferService;
@@ -397,17 +398,31 @@ class OptionsTransferRun extends Component
             ->mapWithKeys(fn(string $key): array => [$key => ImportValue::label($key)])
             ->all();
         $newWorkChanges = $reviewItems
-            ->mapWithKeys(fn(LibraryImportItem $item): array => [
-                $item->id => ImportValue::newWorkChanges($item, $this->newWorkCategory),
-            ])
+            ->mapWithKeys(function (LibraryImportItem $item): array {
+                $changes = array_map(
+                    fn(array $change): array => [
+                        ...$change,
+                        'preview' => $this->prepareReviewPreview($change['preview'], $change['key']),
+                    ],
+                    ImportValue::newWorkChanges($item, $this->newWorkCategory),
+                );
+
+                return [$item->id => $changes];
+            })
             ->all();
         $previews = $reviewItems
-            ->mapWithKeys(fn(LibraryImportItem $item): array => [
-                $item->id => [
-                    'Current' => $item->baseline_preview,
-                    'Imported' => $item->incoming_preview,
-                ],
-            ])
+            ->mapWithKeys(function (LibraryImportItem $item): array {
+                $field = $item->category === 'dlsite_rating'
+                    ? 'dlsite_rating'
+                    : ($item->metadata['field'] ?? $item->entity_key);
+
+                return [
+                    $item->id => [
+                        'Current' => $this->prepareReviewPreview($item->baseline_preview, $field),
+                        'Imported' => $this->prepareReviewPreview($item->incoming_preview, $field),
+                    ],
+                ];
+            })
             ->all();
 
         $newWorkCounts = $this->category === 'new_works'
@@ -439,6 +454,34 @@ class OptionsTransferRun extends Component
                 : $decisionOptions,
             'availableMainTabs' => $availableMainTabs,
         ];
+    }
+
+    /**
+     * @param  array{value: mixed, image: bool, truncated: bool}  $preview
+     * @return array{value: mixed, image: bool, truncated: bool}
+     */
+    private function prepareReviewPreview(array $preview, string $field): array
+    {
+        $value = $preview['value'] ?? null;
+
+        if ($field === 'dlsite_rating_count' && is_numeric($value)) {
+            $preview['value'] = DLSiteRating::displayVoteCount((int) $value);
+
+            return $preview;
+        }
+
+        if ($field !== 'dlsite_rating' || ! is_array($value) || ! array_key_exists('dlsite_rating_count', $value)) {
+            return $preview;
+        }
+
+        $count = $value['dlsite_rating_count'];
+        unset($value['dlsite_rating_count']);
+        $value['Vote count'] = is_numeric($count)
+            ? DLSiteRating::displayVoteCount((int) $count)
+            : $count;
+        $preview['value'] = $value;
+
+        return $preview;
     }
 
     private function reviewItemLabel(LibraryImportItem $item): string

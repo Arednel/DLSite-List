@@ -3,6 +3,7 @@
     'filterActive' => false,
     'hasCurrentTagFilter' => false,
     'filterFields' => [],
+    'ratingScale',
 ])
 
 <div class="advanced-options" x-data="indexAdvancedFilters()">
@@ -30,7 +31,7 @@
                 </h2>
 
                 @foreach ($filterFields as $field)
-                    <x-index.advanced-filter-field :field="$field" :filter-options="$filterOptions" />
+                    <x-index.advanced-filter-field :field="$field" :filter-options="$filterOptions" :rating-scale="$ratingScale" />
                 @endforeach
 
                 @if ($hasCurrentTagFilter)

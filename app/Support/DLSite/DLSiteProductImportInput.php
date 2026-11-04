@@ -4,6 +4,7 @@ namespace App\Support\DLSite;
 
 use App\Enums\ProductContributorRole;
 use App\Enums\ProductField;
+use App\Enums\RatingScale;
 use App\Http\Requests\BaseProductRequest;
 use App\Models\Option;
 use App\Support\ProductFieldLayout;
@@ -21,6 +22,7 @@ final readonly class DLSiteProductImportInput
         public array $visibleFields,
         public array $submitted,
         public bool $autoSeriesFromTitleName,
+        public RatingScale $ratingScale = RatingScale::Ten,
     ) {}
 
     public static function fromRequest(
@@ -42,6 +44,8 @@ final readonly class DLSiteProductImportInput
             'notes',
             'series',
             'score',
+            'dlsite_rating',
+            'dlsite_rating_count',
             'progress',
             'genre_custom',
             'add.start_date',
@@ -65,6 +69,7 @@ final readonly class DLSiteProductImportInput
             visibleFields: ProductFieldLayout::visibleFields($layout),
             submitted: $submitted,
             autoSeriesFromTitleName: Option::autoSeriesFromTitleName(),
+            ratingScale: $request->enum('dlsite_rating_scale', RatingScale::class, RatingScale::Ten),
         );
     }
 
@@ -73,7 +78,8 @@ final readonly class DLSiteProductImportInput
      *     values: array<string, mixed>,
      *     visible_fields: list<string>,
      *     submitted: array<string, bool>,
-     *     auto_series_from_title_name: bool
+     *     auto_series_from_title_name: bool,
+     *     rating_scale: string
      * }
      */
     public function toSnapshot(): array
@@ -83,6 +89,7 @@ final readonly class DLSiteProductImportInput
             'visible_fields' => $this->visibleFields,
             'submitted' => $this->submitted,
             'auto_series_from_title_name' => $this->autoSeriesFromTitleName,
+            'rating_scale' => $this->ratingScale->value,
         ];
     }
 
@@ -96,6 +103,7 @@ final readonly class DLSiteProductImportInput
             )),
             submitted: is_array($snapshot['submitted'] ?? null) ? $snapshot['submitted'] : [],
             autoSeriesFromTitleName: (bool) ($snapshot['auto_series_from_title_name'] ?? false),
+            ratingScale: RatingScale::tryFrom((string) ($snapshot['rating_scale'] ?? '')) ?? RatingScale::Ten,
         );
     }
 

@@ -9,6 +9,7 @@ use App\Enums\ProductFormat;
 use App\Enums\ProductPriority;
 use App\Enums\ProductProgress;
 use App\Enums\ProductReListenValue;
+use App\Enums\RatingScale;
 use App\Http\Requests\BaseProductRequest;
 use App\Http\Requests\StoreCustomProductRequest;
 use App\Http\Requests\StoreProductRequest;
@@ -21,6 +22,7 @@ use App\Support\DLSite\DLSiteProductAlreadyExistsException;
 use App\Support\DLSite\DLSiteProductImportException;
 use App\Support\DLSite\DLSiteProductImporter;
 use App\Support\DLSite\DLSiteProductImportInput;
+use App\Support\DLSite\DLSiteRating;
 use App\Support\PartialDateFormatter;
 use App\Support\ProductContributorSync;
 use App\Support\ProductFieldLayout;
@@ -33,6 +35,7 @@ use App\Support\TagInput;
 use App\Support\VisibleGenreAttachment;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Arr;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
@@ -65,6 +68,7 @@ class ProductController extends Controller
         'maker_id',
         'progress',
         'score',
+        ...DLSiteRating::ATTRIBUTE_KEYS,
         'priority',
         'num_re_listen_times',
         're_listen_value',
@@ -143,6 +147,19 @@ class ProductController extends Controller
         );
         [$circle, $makerId] = $this->customCreateCircleValues($request, $validated, $visibleCreateFields);
 
+        $dlsiteRating = $this->createFieldSubmitted(
+            $request,
+            $visibleCreateFields,
+            ProductField::DLSiteRating,
+            ['dlsite_rating', 'dlsite_rating_count'],
+        )
+            ? DLSiteRating::fromManual(
+                $validated['dlsite_rating'] ?? null,
+                $validated['dlsite_rating_count'] ?? null,
+                $request->enum('dlsite_rating_scale', RatingScale::class, RatingScale::Ten),
+            )
+            : new DLSiteRating(null, null, null);
+
         $product = $this->imageSubmission->create(
             $request,
             $workID,
@@ -157,6 +174,7 @@ class ProductController extends Controller
                 $descriptionEnglish,
                 $circle,
                 $makerId,
+                $dlsiteRating,
             ): Product {
                 $product = Product::create([
                     'id' => $workID,
@@ -185,6 +203,7 @@ class ProductController extends Controller
                     'score' => $this->createFieldSubmitted($request, $visibleCreateFields, ProductField::Score, 'score')
                         ? ($validated['score'] ?? null)
                         : null,
+                    ...$dlsiteRating->attributes(),
                     'progress' => $this->createFieldSubmitted($request, $visibleCreateFields, ProductField::Progress, 'progress')
                         ? ($validated['progress'] ?? null)
                         : null,
@@ -250,6 +269,25 @@ class ProductController extends Controller
         );
         $persistedFetchedInput = TagInput::format($fetchedGenres->pluck('title'));
         $returnTarget = ReturnTarget::fromRequest($request, $product->getKey());
+        $editFields = ProductFieldLayout::editFields(Option::editFieldLayout());
+        $needsRatingScale = false;
+        $dlsiteRatingVisible = false;
+        $readonlyDLSiteRatingVisible = false;
+
+        foreach ($editFields as $field) {
+            if ($field['field'] === ProductField::DLSiteRating->value) {
+                $needsRatingScale = true;
+                $dlsiteRatingVisible = true;
+                $readonlyDLSiteRatingVisible = ! $field['editable'];
+            } elseif ($field['field'] === ProductField::Score->value && ! $field['editable']) {
+                $needsRatingScale = true;
+            }
+        }
+
+        $ratingScale = $needsRatingScale ? Option::ratingScale() : RatingScale::Ten;
+        $dlsiteRatingValue = $dlsiteRatingVisible
+            ? $product->getAttribute($ratingScale->dlsiteColumn())
+            : null;
 
         return view('Edit', [
             'product' => $product,
@@ -261,9 +299,16 @@ class ProductController extends Controller
             'genreFetchedLanguage' => $fetchedLanguage,
             'genreCustomInput' => TagInput::format($customGenres->pluck('title')),
             'showReadonlyGenreColors' => $showReadonlyGenreColors,
-            'editFields' => ProductFieldLayout::editFields(Option::editFieldLayout()),
+            'editFields' => $editFields,
+            'ratingScale' => $ratingScale,
+            'dlsiteRatingValue' => $dlsiteRatingValue,
             'contributorInputs' => $this->formatContributorInputs($product),
-            'readonlyFieldValues' => $this->readonlyFieldValues($product),
+            'readonlyFieldValues' => $this->readonlyFieldValues(
+                $product,
+                $ratingScale,
+                $dlsiteRatingValue,
+                $readonlyDLSiteRatingVisible,
+            ),
             'progressOptions' => ProductProgress::visibleOptions(
                 Option::optionalProductStatuses(),
                 $product->progress,
@@ -414,9 +459,23 @@ class ProductController extends Controller
             ->all();
     }
 
-    private function readonlyFieldValues(Product $product): array
-    {
+    private function readonlyFieldValues(
+        Product $product,
+        RatingScale $ratingScale,
+        ?string $dlsiteRatingValue,
+        bool $readonlyDLSiteRatingVisible,
+    ): array {
+        $dlsiteRatingDisplay = null;
+
+        if ($readonlyDLSiteRatingVisible) {
+            $dlsiteRating = DLSiteRating::displayValue($dlsiteRatingValue);
+            $dlsiteVotes = DLSiteRating::displayVoteCount($product->dlsite_rating_count);
+            $dlsiteRatingDisplay = implode(' ', array_filter([$dlsiteRating, $dlsiteVotes])) ?: null;
+        }
+
         return [
+            ProductField::Score->value => $ratingScale->displayScore($product->score),
+            ProductField::DLSiteRating->value => $dlsiteRatingDisplay,
             ProductField::ProductFormat->value => ($product->product_format ?? []) === []
                 ? null
                 : implode(', ', ProductFormat::labelsFor($product->product_format)),
@@ -531,19 +590,28 @@ class ProductController extends Controller
             $returnParameters['return_query'] = $returnTarget->query;
         }
 
+        $quickAddFields = $isCustomCreate
+            ? ProductFieldLayout::customQuickAddFields(Option::customQuickAddFieldLayout())
+            : ProductFieldLayout::quickAddFields(Option::quickAddFieldLayout());
+        $ratingScale = Arr::some(
+            $quickAddFields,
+            fn(array $field): bool => $field['field'] === ProductField::DLSiteRating->value,
+        )
+            ? Option::ratingScale()
+            : RatingScale::Ten;
+
         return view('Create', [
             'isCustomCreate' => $isCustomCreate,
             'isBulkImport' => false,
             'isModal' => $request->boolean('modal'),
             'productFormThemeClass' => $this->productFormThemeClass(),
-            'quickAddFields' => $isCustomCreate
-                ? ProductFieldLayout::customQuickAddFields(Option::customQuickAddFieldLayout())
-                : ProductFieldLayout::quickAddFields(Option::quickAddFieldLayout()),
+            'quickAddFields' => $quickAddFields,
             'returnQuery' => $returnTarget->query,
             'returnUrl' => $returnUrl,
             'returnParameters' => $returnParameters,
             'ageCategoryOptions' => ProductAgeCategory::options(),
             'progressOptions' => ProductProgress::visibleOptions(Option::optionalProductStatuses()),
+            'ratingScale' => $ratingScale,
             ...self::buildDateFieldOptions(),
         ]);
     }
@@ -600,6 +668,36 @@ class ProductController extends Controller
                 'work_name' => $data['work_name'],
                 'work_name_english' => $data['work_name_english'] ?? null,
             ];
+        }
+
+        if (in_array(ProductField::DLSiteRating->value, $editableFields, true)) {
+            if ($request->has('dlsite_rating_count')) {
+                $payload['dlsite_rating_count'] = $data['dlsite_rating_count'] ?? null;
+            }
+
+            if ($request->has('dlsite_rating')) {
+                $submittedRating = $data['dlsite_rating'] ?? null;
+
+                if ($submittedRating === null) {
+                    $payload['dlsite_rating_5'] = null;
+                    $payload['dlsite_rating_10'] = null;
+                } else {
+                    $ratingScale = $request->enum('dlsite_rating_scale', RatingScale::class, RatingScale::Ten);
+                    $rating = DLSiteRating::fromManual(
+                        $submittedRating,
+                        null,
+                        $ratingScale,
+                    );
+                    $submittedValue = $ratingScale === RatingScale::Five
+                        ? $rating->rating5
+                        : $rating->rating10;
+
+                    if ($submittedValue !== $product->getAttribute($ratingScale->dlsiteColumn())) {
+                        $payload['dlsite_rating_5'] = $rating->rating5;
+                        $payload['dlsite_rating_10'] = $rating->rating10;
+                    }
+                }
+            }
         }
 
         $japaneseDescriptionForDuplicateCheck = $this->effectiveJapaneseDescriptionForUpdate(

@@ -6,6 +6,8 @@ use App\Enums\AutocompleteOrder;
 use App\Enums\ContentFocus;
 use App\Enums\FetchedTagLanguage;
 use App\Enums\ProductIndexSortField;
+use App\Enums\RatingScale;
+use App\Enums\RatingVisualStyle;
 use App\Enums\UiLanguage;
 use App\Support\OptionStylesheet;
 use App\Support\ProductFieldLayout;
@@ -31,6 +33,10 @@ class Option extends Model
     public const INDEX_PER_PAGE = 'index_per_page';
 
     public const INDEX_SEARCH_HIDDEN_DESCRIPTIONS_ENABLED = 'index_search_hidden_descriptions_enabled';
+
+    public const RATING_SCALE = 'rating_scale';
+
+    public const RATING_VISUAL_STYLE = 'rating_visual_style';
 
     public const INDEX_IMAGE_VIEWER_ENABLED = 'index_image_viewer_enabled';
 
@@ -181,6 +187,8 @@ class Option extends Model
         self::EXPORT_PART_MIB,
         self::INDEX_PER_PAGE,
         self::INDEX_SEARCH_HIDDEN_DESCRIPTIONS_ENABLED,
+        self::RATING_SCALE,
+        self::RATING_VISUAL_STYLE,
         self::INDEX_IMAGE_VIEWER_ENABLED,
         self::OPTIONAL_PRODUCT_STATUSES,
         self::TAG_AUTOCOMPLETE_ORDER,
@@ -210,6 +218,8 @@ class Option extends Model
         self::CONTENT_FOCUS,
         self::INDEX_PER_PAGE,
         self::INDEX_SEARCH_HIDDEN_DESCRIPTIONS_ENABLED,
+        self::RATING_SCALE,
+        self::RATING_VISUAL_STYLE,
         self::INDEX_IMAGE_VIEWER_ENABLED,
         self::OPTIONAL_PRODUCT_STATUSES,
         self::TAG_AUTOCOMPLETE_ORDER,
@@ -278,6 +288,8 @@ class Option extends Model
             self::EXPORT_PART_MIB => config('transfers.default_part_mib'),
             self::INDEX_PER_PAGE => self::DEFAULT_INDEX_PER_PAGE,
             self::INDEX_SEARCH_HIDDEN_DESCRIPTIONS_ENABLED => false,
+            self::RATING_SCALE => RatingScale::Ten->value,
+            self::RATING_VISUAL_STYLE => RatingVisualStyle::Simple->value,
             self::INDEX_IMAGE_VIEWER_ENABLED => false,
             self::USER_AUTHENTICATION_ENABLED => false,
             self::ADMIN_PASSWORD_RESET_CONSUMED => false,
@@ -427,6 +439,41 @@ class Option extends Model
     public static function resetIndexPerPageToDefault(): void
     {
         self::forget(self::INDEX_PER_PAGE);
+    }
+
+    public static function ratingScale(): RatingScale
+    {
+        return RatingScale::tryFrom((string) self::valueFor(self::RATING_SCALE))
+            ?? RatingScale::from((string) self::defaultFor(self::RATING_SCALE));
+    }
+
+    public static function setRatingScale(RatingScale|string $scale): void
+    {
+        $normalized = $scale instanceof RatingScale
+            ? $scale
+            : (RatingScale::tryFrom($scale) ?? RatingScale::from((string) self::defaultFor(self::RATING_SCALE)));
+
+        self::setValue(self::RATING_SCALE, $normalized->value);
+    }
+
+    public static function ratingVisualStyle(): RatingVisualStyle
+    {
+        return RatingVisualStyle::tryFrom((string) self::valueFor(self::RATING_VISUAL_STYLE))
+            ?? RatingVisualStyle::from((string) self::defaultFor(self::RATING_VISUAL_STYLE));
+    }
+
+    public static function setRatingVisualStyle(RatingVisualStyle|string $style): void
+    {
+        $normalized = $style instanceof RatingVisualStyle
+            ? $style
+            : (RatingVisualStyle::tryFrom($style) ?? RatingVisualStyle::from((string) self::defaultFor(self::RATING_VISUAL_STYLE)));
+
+        self::setValue(self::RATING_VISUAL_STYLE, $normalized->value);
+    }
+
+    public static function resetRatingSettingsToDefault(): void
+    {
+        self::forget(self::RATING_SCALE, self::RATING_VISUAL_STYLE);
     }
 
     public static function indexSearchHiddenDescriptionsEnabled(): bool
@@ -899,6 +946,8 @@ class Option extends Model
             ->whereIn('key', [
                 self::INDEX_PER_PAGE,
                 self::INDEX_SEARCH_HIDDEN_DESCRIPTIONS_ENABLED,
+                self::RATING_SCALE,
+                self::RATING_VISUAL_STYLE,
                 self::INDEX_IMAGE_VIEWER_ENABLED,
                 self::OPTIONAL_PRODUCT_STATUSES,
                 self::INDEX_FIELD_LAYOUT,
@@ -946,6 +995,10 @@ class Option extends Model
             contentOverflow: ProductIndexContentOverflow::normalize(
                 self::jsonFromValue($values->get(self::INDEX_CONTENT_OVERFLOW)),
             ),
+            ratingScale: RatingScale::tryFrom((string) $values->get(self::RATING_SCALE))
+                ?? RatingScale::from((string) self::defaultFor(self::RATING_SCALE)),
+            ratingVisualStyle: RatingVisualStyle::tryFrom((string) $values->get(self::RATING_VISUAL_STYLE))
+                ?? RatingVisualStyle::from((string) self::defaultFor(self::RATING_VISUAL_STYLE)),
             searchHiddenDescriptionsEnabled: self::normalizeBoolean(
                 $values->get(self::INDEX_SEARCH_HIDDEN_DESCRIPTIONS_ENABLED),
                 self::defaultFor(self::INDEX_SEARCH_HIDDEN_DESCRIPTIONS_ENABLED),
@@ -1123,7 +1176,7 @@ class Option extends Model
 
     private static function regenerateStylesheetAfterCommit(array $keys): void
     {
-        if (array_intersect($keys, [self::INDEX_TABLE_WIDTH, self::INDEX_CONTENT_OVERFLOW, self::INDEX_FIELD_LAYOUT]) !== []) {
+        if (array_intersect($keys, [self::INDEX_TABLE_WIDTH, self::INDEX_CONTENT_OVERFLOW, self::INDEX_FIELD_LAYOUT, self::RATING_VISUAL_STYLE]) !== []) {
             DB::afterCommit(fn() => app(OptionStylesheet::class)->regenerate());
         }
     }

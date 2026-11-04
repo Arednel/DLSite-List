@@ -9,6 +9,7 @@ use App\Enums\ProductPriority;
 use App\Enums\ProductProgress;
 use App\Enums\ProductReListenValue;
 use App\Enums\ProductScore;
+use App\Enums\RatingScale;
 use App\Enums\UiLanguage;
 use App\Livewire\ProductIndex;
 use App\Livewire\TagLibraryManager;
@@ -2655,6 +2656,139 @@ class ProductControllerTest extends TestCase
         );
     }
 
+    public function test_custom_quick_add_stores_manual_dlsite_rating_in_both_scales(): void
+    {
+        Storage::fake('public');
+        Option::setRatingScale(RatingScale::Five);
+        Option::setCustomQuickAddFieldLayout([
+            ['field' => ProductField::DLSiteRating->value, 'visible' => true],
+        ]);
+
+        $xpath = $this->responseXPath($this->get('/create/custom')->assertOk());
+        $this->assertCount(1, $xpath->query('//input[@name="dlsite_rating"]'));
+        $this->assertSame('', $xpath->evaluate('string(//input[@name="dlsite_rating"]/@value)'));
+        $this->assertSame('5', $xpath->evaluate('string(//input[@name="dlsite_rating"]/@max)'));
+        $this->assertSame('', $xpath->evaluate('string(//input[@name="dlsite_rating_count"]/@value)'));
+
+        $workId = 'RJ000009904';
+
+        $this->post('/store/custom', $this->customStorePayload($workId, [
+            'work_name' => 'CUSTOM_DLSITE_RATING_TOKEN',
+            'dlsite_rating' => '4.75',
+            'dlsite_rating_count' => '321',
+        ]))->assertSessionHasNoErrors();
+
+        $product = Product::query()->findOrFail($workId);
+        $this->assertSame('4.75', $product->dlsite_rating_5);
+        $this->assertSame('9.50', $product->dlsite_rating_10);
+        $this->assertSame(321, $product->dlsite_rating_count);
+    }
+
+    public function test_create_forms_only_read_rating_scale_when_dlsite_rating_is_visible(): void
+    {
+        Option::setRatingScale(RatingScale::Five);
+        Option::setQuickAddFieldLayout([
+            ['field' => ProductField::DLSiteRating->value, 'visible' => false],
+        ]);
+        Option::setCustomQuickAddFieldLayout([
+            ['field' => ProductField::DLSiteRating->value, 'visible' => false],
+        ]);
+
+        $ratingScaleQueries = 0;
+        DB::listen(function ($query) use (&$ratingScaleQueries): void {
+            if (in_array(Option::RATING_SCALE, $query->bindings, true)) {
+                $ratingScaleQueries++;
+            }
+        });
+
+        $this->get('/create')->assertOk();
+        $this->get('/create/custom')->assertOk();
+        $this->assertSame(0, $ratingScaleQueries);
+
+        Option::setQuickAddFieldLayout([
+            ['field' => ProductField::DLSiteRating->value, 'visible' => true],
+        ]);
+        $this->get('/create')->assertOk();
+        $this->assertSame(1, $ratingScaleQueries);
+
+        Option::setCustomQuickAddFieldLayout([
+            ['field' => ProductField::DLSiteRating->value, 'visible' => true],
+        ]);
+        $this->get('/create/custom')->assertOk();
+        $this->assertSame(2, $ratingScaleQueries);
+    }
+
+    public function test_edit_only_reads_rating_scale_when_visible_fields_need_it(): void
+    {
+        Option::setRatingScale(RatingScale::Five);
+        Option::setEditFieldLayout([
+            ['field' => ProductField::Score->value, 'visible' => true, 'editable' => true],
+            ['field' => ProductField::DLSiteRating->value, 'visible' => false, 'editable' => false],
+        ]);
+        $product = Product::factory()->create(['score' => 9]);
+
+        $ratingScaleQueries = 0;
+        DB::listen(function ($query) use (&$ratingScaleQueries): void {
+            if (in_array(Option::RATING_SCALE, $query->bindings, true)) {
+                $ratingScaleQueries++;
+            }
+        });
+
+        $this->get("/edit/{$product->id}")->assertOk();
+        $this->assertSame(0, $ratingScaleQueries);
+
+        Option::setEditFieldLayout([
+            ['field' => ProductField::Score->value, 'visible' => true, 'editable' => false],
+            ['field' => ProductField::DLSiteRating->value, 'visible' => false, 'editable' => false],
+        ]);
+        $this->get("/edit/{$product->id}")->assertOk();
+        $this->assertSame(1, $ratingScaleQueries);
+
+        Option::setEditFieldLayout([
+            ['field' => ProductField::Score->value, 'visible' => true, 'editable' => true],
+            ['field' => ProductField::DLSiteRating->value, 'visible' => true, 'editable' => true],
+        ]);
+        $this->get("/edit/{$product->id}")->assertOk();
+        $this->assertSame(2, $ratingScaleQueries);
+    }
+
+    #[DataProvider('manualRatingScaleLookupProvider')]
+    public function test_custom_quick_add_reads_rating_scale_only_for_non_empty_manual_rating(array $ratingInput, int $expectedQueries): void
+    {
+        Storage::fake('public');
+        Option::setRatingScale(RatingScale::Five);
+        Option::setCustomQuickAddFieldLayout([
+            ['field' => ProductField::DLSiteRating->value, 'visible' => true],
+        ]);
+
+        $ratingScaleQueries = 0;
+        DB::listen(function ($query) use (&$ratingScaleQueries): void {
+            // Exclude the redirect's batched Index settings lookup.
+            if ($query->bindings === [Option::RATING_SCALE]) {
+                $ratingScaleQueries++;
+            }
+        });
+
+        $this->post('/store/custom', $this->customStorePayload('RJ000009905', [
+            'work_name' => 'CUSTOM_DLSITE_RATING_QUERY_TOKEN',
+            'dlsite_rating_count' => '10',
+            ...$ratingInput,
+        ]))->assertSessionHasNoErrors()->assertRedirect();
+
+        $this->assertSame($expectedQueries, $ratingScaleQueries);
+    }
+
+    public static function manualRatingScaleLookupProvider(): array
+    {
+        return [
+            'omitted rating' => [[], 0],
+            'blank rating' => [['dlsite_rating' => ''], 0],
+            'null rating' => [['dlsite_rating' => null], 0],
+            'zero rating' => [['dlsite_rating' => '0'], 1],
+            'positive rating' => [['dlsite_rating' => '4.75'], 1],
+        ];
+    }
+
     public function test_custom_store_saves_visible_custom_quick_add_metadata_and_ignores_hidden_optional_fields(): void
     {
         Storage::fake('public');
@@ -3182,6 +3316,226 @@ class ProductControllerTest extends TestCase
         $this->assertSame(5, $product->num_re_listen_times);
         $this->assertSame(4, $product->re_listen_value);
         $this->assertSame(2, $product->priority);
+    }
+
+    public function test_readonly_dlsite_rating_and_score_follow_the_selected_scale(): void
+    {
+        Option::setRatingScale(RatingScale::Five);
+        Option::setEditFieldLayout([
+            ['field' => ProductField::DLSiteRating->value, 'visible' => true, 'editable' => false],
+            ['field' => ProductField::Score->value, 'visible' => true, 'editable' => false],
+        ]);
+
+        $product = Product::factory()->create([
+            'work_name' => 'EDIT_DLSITE_RATING_TOKEN',
+            'score' => 9,
+            'dlsite_rating_5' => '4.97',
+            'dlsite_rating_10' => '9.93',
+            'dlsite_rating_count' => 1000,
+        ]);
+
+        foreach (
+            [
+                [RatingScale::Five, '4.97', '4.5'],
+                [RatingScale::Ten, '9.93', '9'],
+            ] as [$scale, $ratingValue, $scoreValue]
+        ) {
+            Option::setRatingScale($scale);
+            $response = $this->get("/edit/{$product->id}")
+                ->assertOk();
+
+            $xpath = $this->responseXPath($response);
+            $this->assertSame($ratingValue . ' (1,000 votes)', $xpath->evaluate('normalize-space(//tr[td[normalize-space()="DLsite Rating"]]/td[2]/div)'));
+            $this->assertSame($scoreValue, trim($xpath->evaluate('string(//tr[td[normalize-space()="Score"]]/td[2]/div)')));
+            $this->assertCount(0, $xpath->query('//input[@name="dlsite_rating"]'));
+        }
+    }
+
+    public function test_readonly_dlsite_rating_handles_missing_values_and_vote_counts(): void
+    {
+        Option::setRatingScale(RatingScale::Five);
+        Option::setEditFieldLayout([
+            ['field' => ProductField::DLSiteRating->value, 'visible' => true, 'editable' => false],
+        ]);
+        $product = Product::factory()->create();
+
+        foreach ([[null, 1, '(1 vote)'], [null, 0, '(0 votes)'], [null, null, '-'], ['4.97', null, '4.97']] as [$rating, $count, $expected]) {
+            $product->update([
+                'dlsite_rating_5' => $rating,
+                'dlsite_rating_10' => $rating === null ? null : '9.93',
+                'dlsite_rating_count' => $count,
+            ]);
+            $xpath = $this->responseXPath($this->get("/edit/{$product->id}")->assertOk());
+            $this->assertSame($expected, $xpath->evaluate('normalize-space(//tr[td[normalize-space()="DLsite Rating"]]/td[2]/div)'));
+        }
+    }
+
+    public function test_update_preserves_readonly_dlsite_rating_values(): void
+    {
+        Option::setRatingScale(RatingScale::Five);
+        Option::setEditFieldLayout([
+            ['field' => ProductField::DLSiteRating->value, 'visible' => true, 'editable' => false],
+        ]);
+        $product = Product::factory()->create([
+            'dlsite_rating_5' => '4.97',
+            'dlsite_rating_10' => '9.93',
+            'dlsite_rating_count' => 1000,
+        ]);
+
+        $this->post("/update/{$product->id}", [
+            'work_name' => $product->work_name,
+            'dlsite_rating' => '4.75',
+            'dlsite_rating_count' => '2000',
+        ])->assertSessionHasNoErrors();
+
+        $product->refresh();
+        $this->assertSame('4.97', $product->dlsite_rating_5);
+        $this->assertSame('9.93', $product->dlsite_rating_10);
+        $this->assertSame(1000, $product->dlsite_rating_count);
+    }
+
+    public function test_edit_dlsite_rating_inputs_follow_the_selected_scale_and_keep_canonical_scores(): void
+    {
+        Option::setEditFieldLayout([
+            ['field' => ProductField::DLSiteRating->value, 'visible' => true, 'editable' => true],
+            ['field' => ProductField::Score->value, 'visible' => true, 'editable' => true],
+        ]);
+        $product = Product::factory()->create([
+            'score' => 9,
+            'dlsite_rating_5' => '4.97',
+            'dlsite_rating_10' => '9.93',
+            'dlsite_rating_count' => 1000,
+        ]);
+
+        foreach ([[RatingScale::Five, '4.97'], [RatingScale::Ten, '9.93']] as [$scale, $ratingValue]) {
+            Option::setRatingScale($scale);
+            $xpath = $this->responseXPath($this->get("/edit/{$product->id}")->assertOk());
+            $this->assertSame($ratingValue, $xpath->evaluate('string(//input[@name="dlsite_rating"]/@value)'));
+            $this->assertSame($scale->value, $xpath->evaluate('string(//input[@name="dlsite_rating"]/@max)'));
+            $this->assertSame('1000', $xpath->evaluate('string(//input[@name="dlsite_rating_count"]/@value)'));
+            $this->assertSame('9', $xpath->evaluate('string(//select[@name="score"]/option[@selected]/@value)'));
+            $this->assertSame('(9) Great', $xpath->evaluate('normalize-space(//select[@name="score"]/option[@selected])'));
+        }
+    }
+
+    public function test_invalid_dlsite_rating_restores_submitted_form_values(): void
+    {
+        Option::setRatingScale(RatingScale::Five);
+        Option::setEditFieldLayout([
+            ['field' => ProductField::DLSiteRating->value, 'visible' => true, 'editable' => true],
+            ['field' => ProductField::Score->value, 'visible' => true, 'editable' => true],
+        ]);
+        $product = Product::factory()->create(['score' => 9]);
+
+        $this->from("/edit/{$product->id}")->post("/update/{$product->id}", [
+            'work_name' => $product->work_name,
+            'score' => '7',
+            'dlsite_rating' => '5.01',
+            'dlsite_rating_count' => '0',
+        ])->assertRedirect("/edit/{$product->id}")->assertSessionHasErrors('dlsite_rating');
+
+        $xpath = $this->responseXPath($this->get("/edit/{$product->id}")->assertOk());
+        $this->assertSame('5.01', $xpath->evaluate('string(//input[@name="dlsite_rating"]/@value)'));
+        $this->assertSame('0', $xpath->evaluate('string(//input[@name="dlsite_rating_count"]/@value)'));
+        $this->assertSame('7', $xpath->evaluate('string(//select[@name="score"]/option[@selected]/@value)'));
+        $this->assertSame(9, $product->fresh()->score);
+    }
+
+    public function test_updating_dlsite_vote_count_preserves_independently_rounded_ratings(): void
+    {
+        Option::setRatingScale(RatingScale::Five);
+        Option::setEditFieldLayout([
+            ['field' => ProductField::DLSiteRating->value, 'visible' => true, 'editable' => true],
+        ]);
+        $product = Product::factory()->create([
+            'dlsite_rating_5' => '4.97',
+            'dlsite_rating_10' => '9.93',
+            'dlsite_rating_count' => 1000,
+        ]);
+
+        $this->post("/update/{$product->id}", [
+            'work_name' => $product->work_name,
+            'dlsite_rating' => '4.97',
+            'dlsite_rating_count' => '1001',
+        ])->assertSessionHasNoErrors();
+
+        $product->refresh();
+        $this->assertSame('4.97', $product->dlsite_rating_5);
+        $this->assertSame('9.93', $product->dlsite_rating_10);
+        $this->assertSame(1001, $product->dlsite_rating_count);
+    }
+
+    public function test_updating_manual_dlsite_rating_converts_both_cached_scales(): void
+    {
+        Option::setRatingScale(RatingScale::Five);
+        Option::setEditFieldLayout([
+            ['field' => ProductField::DLSiteRating->value, 'visible' => true, 'editable' => true],
+        ]);
+        $product = Product::factory()->create([
+            'dlsite_rating_5' => '4.97',
+            'dlsite_rating_10' => '9.93',
+            'dlsite_rating_count' => 1000,
+        ]);
+        $this->post("/update/{$product->id}", [
+            'work_name' => $product->work_name,
+            'dlsite_rating' => '4.75',
+            'dlsite_rating_count' => '2000',
+        ])->assertSessionHasNoErrors();
+
+        $product->refresh();
+        $this->assertSame('4.75', $product->dlsite_rating_5);
+        $this->assertSame('9.50', $product->dlsite_rating_10);
+        $this->assertSame(2000, $product->dlsite_rating_count);
+    }
+
+    public function test_update_clears_dlsite_ratings_without_touching_already_null_values(): void
+    {
+        Option::setEditFieldLayout([
+            ['field' => ProductField::DLSiteRating->value, 'visible' => true, 'editable' => true],
+        ]);
+        $product = Product::factory()->create([
+            'work_name_english' => null,
+            'dlsite_rating_5' => '4.97',
+            'dlsite_rating_10' => '9.93',
+            'dlsite_rating_count' => 1000,
+        ]);
+        $updatedAt = $product->updated_at;
+        $this->travelTo($updatedAt->copy()->addMinute());
+
+        $this->post("/update/{$product->id}", [
+            'work_name' => $product->work_name,
+        ])->assertSessionHasNoErrors();
+
+        $product->refresh();
+        $this->assertSame('4.97', $product->dlsite_rating_5);
+        $this->assertSame('9.93', $product->dlsite_rating_10);
+        $this->assertSame(1000, $product->dlsite_rating_count);
+        $this->assertTrue($product->updated_at->equalTo($updatedAt));
+
+        $this->post("/update/{$product->id}", [
+            'work_name' => $product->work_name,
+            'dlsite_rating' => '',
+        ])->assertSessionHasNoErrors();
+
+        $product->refresh();
+        $this->assertNull($product->dlsite_rating_5);
+        $this->assertNull($product->dlsite_rating_10);
+        $this->assertSame(1000, $product->dlsite_rating_count);
+        $this->assertTrue($product->updated_at->greaterThan($updatedAt));
+
+        $updatedAt = $product->updated_at;
+        $this->travelTo($updatedAt->copy()->addMinute());
+        $this->post("/update/{$product->id}", [
+            'work_name' => $product->work_name,
+            'dlsite_rating' => null,
+        ])->assertSessionHasNoErrors();
+
+        $product->refresh();
+        $this->assertNull($product->dlsite_rating_5);
+        $this->assertNull($product->dlsite_rating_10);
+        $this->assertSame(1000, $product->dlsite_rating_count);
+        $this->assertTrue($product->updated_at->equalTo($updatedAt));
+        $this->travelBack();
     }
 
     public function test_update_preserves_non_editable_title_fields_when_not_submitted(): void

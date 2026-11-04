@@ -9,7 +9,10 @@ use App\Enums\ProductPriority;
 use App\Enums\ProductProgress;
 use App\Enums\ProductReListenValue;
 use App\Enums\ProductScore;
+use App\Enums\RatingScale;
+use App\Models\Option;
 use App\Rules\ValidProductFormat;
+use App\Support\DLSite\DLSiteRating;
 use App\Support\TagInput;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Support\Arr;
@@ -58,6 +61,8 @@ abstract class BaseProductRequest extends FormRequest
         return [
             'progress' => ['nullable', Rule::enum(ProductProgress::class)],
             'score' => ['nullable', Rule::enum(ProductScore::class)],
+            'dlsite_rating' => DLSiteRating::manualRatingRules($this->enum('dlsite_rating_scale', RatingScale::class, RatingScale::Ten),),
+            'dlsite_rating_count' => DLSiteRating::manualCountRules(),
             'series' => ['nullable', 'string'],
             'age_category' => ['nullable', Rule::enum(ProductAgeCategory::class)],
             'product_format' => ['nullable', 'array', 'list', 'max:50'],
@@ -97,6 +102,7 @@ abstract class BaseProductRequest extends FormRequest
         $this->originalInput = $this->all();
 
         $this->merge([
+            'dlsite_rating_scale' => $this->filled('dlsite_rating') ? Option::ratingScale()->value : null,
             'genre_custom' => $this->normalizeGenreList($this->input('genre_custom')),
             ProductContributorRole::Scenario->value => $this->normalizeGenreList($this->input(ProductContributorRole::Scenario->value)),
             ProductContributorRole::VoiceActor->value => $this->normalizeGenreList($this->input(ProductContributorRole::VoiceActor->value)),

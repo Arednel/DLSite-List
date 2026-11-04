@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use App\Enums\RatingScale;
 use App\Enums\UiLanguage;
 use App\Models\Genre;
 use App\Models\Option;
@@ -101,6 +102,50 @@ class ReturnTargetProductTest extends TestCase
 
         $this->assertSame('/?series=VISIBLE_SERIES&progress=Listening&sort_first_field=score&sort_first_direction=asc#RJ000000003', $target->toUrl());
         $this->assertCount(3, $queryLog);
+    }
+
+    public function test_for_product_only_reads_rating_scale_when_dlsite_rating_affects_the_return_query(): void
+    {
+        Product::factory()->create([
+            'id' => 'RJ000000001',
+            'dlsite_rating_5' => '4.96',
+            'dlsite_rating_10' => '9.94',
+        ]);
+        $product = Product::factory()->create([
+            'id' => 'RJ000000002',
+            'dlsite_rating_5' => '4.97',
+            'dlsite_rating_10' => '9.93',
+        ]);
+
+        Option::setRatingScale(RatingScale::Five);
+        DB::flushQueryLog();
+        DB::enableQueryLog();
+
+        $target = ReturnTarget::fromRequest(Request::create('/update/RJ000000002', 'POST', [
+            'return_query' => [
+                'sort_first_field' => 'dlsite_rating',
+                'sort_first_direction' => 'asc',
+                'page' => '2',
+            ],
+        ]))->forProduct($product, perPage: 1);
+
+        $queryLog = DB::getQueryLog();
+        DB::disableQueryLog();
+
+        $this->assertSame('/?sort_first_field=dlsite_rating&sort_first_direction=asc&page=2#RJ000000002', $target->toUrl());
+        $this->assertCount(2, $queryLog);
+
+        Option::setRatingScale(RatingScale::Ten);
+
+        $target = ReturnTarget::fromRequest(Request::create('/update/RJ000000002', 'POST', [
+            'return_query' => [
+                'sort_first_field' => 'dlsite_rating',
+                'sort_first_direction' => 'asc',
+                'page' => '2',
+            ],
+        ]))->forProduct($product, perPage: 1);
+
+        $this->assertSame('/?sort_first_field=dlsite_rating&sort_first_direction=asc#RJ000000002', $target->toUrl());
     }
 
     public function test_for_product_still_cleans_hidden_filters_when_visibility_is_marked_unchanged(): void

@@ -6,6 +6,8 @@ use App\Enums\FetchedTagLanguage;
 use App\Enums\ProductContributorRole;
 use App\Enums\ProductField;
 use App\Enums\ProductIndexSortField;
+use App\Enums\RatingScale;
+use App\Enums\RatingVisualStyle;
 use App\Enums\UiLanguage;
 use App\Livewire\ProductIndex;
 use App\Models\Genre;
@@ -127,6 +129,292 @@ class ProductIndexLivewireTest extends TestCase
             ->assertSeeInOrder(['SORT_GAMMA', 'SORT_BETA', 'SORT_ALPHA']);
     }
 
+    public function test_dlsite_rating_sort_uses_the_selected_stored_scale_and_vote_count_sort(): void
+    {
+        Option::setIndexPerPage(Option::INDEX_PER_PAGE_UNLIMITED);
+        $higherCode = $this->createProduct(20, [
+            'work_name' => 'RATING_SCALE_HIGHER_CODE',
+            'dlsite_rating_5' => '4.97',
+            'dlsite_rating_10' => '9.93',
+            'dlsite_rating_count' => 100,
+        ]);
+        $lowerCode = $this->createProduct(10, [
+            'work_name' => 'RATING_SCALE_LOWER_CODE',
+            'dlsite_rating_5' => '4.97',
+            'dlsite_rating_10' => '9.94',
+            'dlsite_rating_count' => 200,
+        ]);
+        $withoutRating = $this->createProduct(30, [
+            'work_name' => 'RATING_SCALE_NULL',
+            'dlsite_rating_5' => null,
+            'dlsite_rating_10' => null,
+            'dlsite_rating_count' => null,
+        ]);
+        $ratingSort = fn(string $direction): ProductIndexFilters => ProductIndexFilters::fromQuery([
+            'sort_first_field' => ProductIndexSortField::DLSiteRating->value,
+            'sort_first_direction' => $direction,
+        ]);
+        $results = app(ProductIndexResults::class);
+
+        $this->assertSame(
+            [$higherCode->work_name, $lowerCode->work_name, $withoutRating->work_name],
+            $results->getProducts($ratingSort('asc'), Option::INDEX_PER_PAGE_UNLIMITED, [], RatingScale::Five, RatingVisualStyle::Simple)
+                ->pluck('work_name')->all(),
+        );
+        $this->assertSame(
+            [$higherCode->work_name, $lowerCode->work_name, $withoutRating->work_name],
+            $results->getProducts($ratingSort('desc'), Option::INDEX_PER_PAGE_UNLIMITED, [], RatingScale::Five, RatingVisualStyle::Simple)
+                ->pluck('work_name')->all(),
+        );
+        $this->assertSame(
+            [$higherCode->work_name, $lowerCode->work_name, $withoutRating->work_name],
+            $results->getProducts($ratingSort('asc'), Option::INDEX_PER_PAGE_UNLIMITED, [], RatingScale::Ten, RatingVisualStyle::Simple)
+                ->pluck('work_name')->all(),
+        );
+        $this->assertSame(
+            [$lowerCode->work_name, $higherCode->work_name, $withoutRating->work_name],
+            $results->getProducts($ratingSort('desc'), Option::INDEX_PER_PAGE_UNLIMITED, [], RatingScale::Ten, RatingVisualStyle::Simple)
+                ->pluck('work_name')->all(),
+        );
+        $this->assertSame(1, $results->pageForProduct($ratingSort('desc'), $higherCode, 1, RatingScale::Five, []));
+        $this->assertSame(2, $results->pageForProduct($ratingSort('desc'), $higherCode, 1, RatingScale::Ten, []));
+
+        Option::setRatingScale(RatingScale::Five);
+        Livewire::test(ProductIndex::class)
+            ->set('draft.sort_first_field', ProductIndexSortField::DLSiteRating->value)
+            ->set('draft.sort_first_direction', 'desc')
+            ->call('applyFilters')
+            ->assertSeeInOrder([$higherCode->work_name, $lowerCode->work_name]);
+
+        Option::setRatingScale(RatingScale::Ten);
+        Livewire::test(ProductIndex::class)
+            ->set('draft.sort_first_field', ProductIndexSortField::DLSiteRating->value)
+            ->set('draft.sort_first_direction', 'desc')
+            ->call('applyFilters')
+            ->assertSeeInOrder([$lowerCode->work_name, $higherCode->work_name]);
+
+        Livewire::test(ProductIndex::class)
+            ->set('draft.sort_first_field', ProductIndexSortField::DLSiteRatingCount->value)
+            ->set('draft.sort_first_direction', 'asc')
+            ->call('applyFilters')
+            ->assertSeeInOrder([$higherCode->work_name, $lowerCode->work_name]);
+    }
+
+    public function test_dlsite_rating_filter_uses_selected_scale_and_exact_vote_count(): void
+    {
+        Option::setIndexPerPage(Option::INDEX_PER_PAGE_UNLIMITED);
+        $first = $this->createProduct(1, [
+            'work_name' => 'RATING_FILTER_FIRST',
+            'dlsite_rating_5' => '4.97',
+            'dlsite_rating_10' => '9.93',
+            'dlsite_rating_count' => 1330,
+        ]);
+        $second = $this->createProduct(2, [
+            'work_name' => 'RATING_FILTER_SECOND',
+            'dlsite_rating_5' => '4.96',
+            'dlsite_rating_10' => '9.93',
+            'dlsite_rating_count' => 1400,
+        ]);
+        $results = app(ProductIndexResults::class);
+
+        Option::setRatingScale(RatingScale::Ten);
+        $this->assertSame(
+            [$first->work_name],
+            $results->getProducts(
+                ProductIndexFilters::fromQuery(['dlsite_rating' => '4.97']),
+                Option::INDEX_PER_PAGE_UNLIMITED,
+                [],
+                RatingScale::Five,
+                RatingVisualStyle::Simple,
+            )->pluck('work_name')->all(),
+        );
+        $this->assertSame(
+            [$second->work_name, $first->work_name],
+            $results->getProducts(
+                ProductIndexFilters::fromQuery(['dlsite_rating' => '9.93']),
+                Option::INDEX_PER_PAGE_UNLIMITED,
+                [],
+                RatingScale::Ten,
+                RatingVisualStyle::Simple,
+            )->pluck('work_name')->all(),
+        );
+
+        Option::setRatingScale(RatingScale::Five);
+        Livewire::test(ProductIndex::class)
+            ->set('draft.dlsite_rating', '4.97')
+            ->call('applyFilters')
+            ->assertSee($first->work_name)
+            ->assertDontSee($second->work_name);
+
+        Option::setRatingScale(RatingScale::Ten);
+        Livewire::test(ProductIndex::class)
+            ->set('draft.dlsite_rating', '9.93')
+            ->call('applyFilters')
+            ->assertSee($first->work_name)
+            ->assertSee($second->work_name)
+            ->set('draft.dlsite_rating_count', '1400')
+            ->call('applyFilters')
+            ->assertDontSee($first->work_name)
+            ->assertSee($second->work_name);
+
+        $filtered = $results->getProducts(
+            ProductIndexFilters::fromQuery([
+                'dlsite_rating' => '9.93',
+                'dlsite_rating_count' => '1400',
+                'sort_first_field' => ProductIndexSortField::DLSiteRatingCount->value,
+                'sort_first_direction' => 'desc',
+            ]),
+            Option::INDEX_PER_PAGE_UNLIMITED,
+            [ProductField::Rating->value],
+            RatingScale::Ten,
+            RatingVisualStyle::Simple,
+        );
+
+        $this->assertSame([$second->id], $filtered->modelKeys());
+        $this->assertArrayNotHasKey('dlsite_rating_count', $filtered->sole()->getAttributes());
+        $this->assertArrayNotHasKey('dlsite_rating_5', $filtered->sole()->getAttributes());
+    }
+
+    public function test_dlsite_rating_stars_use_the_independently_rounded_five_point_value(): void
+    {
+        Option::setRatingScale(RatingScale::Ten);
+        Option::setRatingVisualStyle(RatingVisualStyle::ExtendedDLSite);
+        Option::setIndexFieldLayout([
+            ['field' => ProductField::Rating->value, 'visible' => false],
+            ['field' => ProductField::Score->value, 'visible' => false],
+            ['field' => ProductField::DLSiteRating->value, 'visible' => true],
+        ]);
+
+        $this->createProduct(1, [
+            'score' => 9,
+            'dlsite_rating_5' => '4.75',
+            'dlsite_rating_10' => '9.49',
+        ]);
+
+        $html = Livewire::test(ProductIndex::class)->html();
+
+        $this->assertStringContainsString('>9.49<', $html);
+        $this->assertStringContainsString('--rating-fill: 100%', $html);
+        $this->assertSame(1, substr_count($html, 'class="rating-display__stars"'));
+    }
+
+    public function test_combined_rating_handles_missing_ratings_and_zero_or_absent_vote_counts(): void
+    {
+        Option::setRatingVisualStyle(RatingVisualStyle::ExtendedDLSite);
+        Option::setIndexFieldLayout([
+            ['field' => ProductField::Rating->value, 'visible' => true],
+            ['field' => ProductField::Score->value, 'visible' => false],
+            ['field' => ProductField::DLSiteRating->value, 'visible' => false],
+        ]);
+        $product = $this->createProduct(1, [
+            'score' => null,
+            'dlsite_rating_5' => null,
+            'dlsite_rating_10' => null,
+            'dlsite_rating_count' => 0,
+        ]);
+        $html = Livewire::test(ProductIndex::class)->html();
+
+        $this->assertSame(2, substr_count($html, 'class="rating-display__value">-</span>'));
+        $this->assertSame(2, substr_count($html, '--rating-fill: 0%'));
+        $this->assertStringContainsString('class="rating-display__count">(0)</span>', $html);
+
+        $product->update(['dlsite_rating_count' => null]);
+        $html = Livewire::test(ProductIndex::class)->html();
+        $this->assertStringNotContainsString('class="rating-display__count"', $html);
+    }
+
+    public function test_score_filter_labels_follow_the_scale_but_keep_canonical_values(): void
+    {
+        foreach (
+            [
+                [RatingScale::Five, '(4.5) Great', '(0.5) Appalling'],
+                [RatingScale::Ten, '(9) Great', '(1) Appalling'],
+            ] as [$scale, $nineLabel, $oneLabel]
+        ) {
+            Option::setRatingScale($scale);
+            $document = new DOMDocument;
+            @$document->loadHTML(Livewire::test(ProductIndex::class)->html());
+            $xpath = new DOMXPath($document);
+
+            $this->assertSame($nineLabel, $xpath->evaluate('normalize-space(//select[@id="filter_score"]/option[@value="9"])'));
+            $this->assertSame($oneLabel, $xpath->evaluate('normalize-space(//select[@id="filter_score"]/option[@value="1"])'));
+        }
+    }
+
+    public function test_individual_and_combined_rating_columns_preserve_each_style_and_scale(): void
+    {
+        Option::setIndexFieldLayout([
+            ['field' => ProductField::Score->value, 'visible' => true],
+            ['field' => ProductField::DLSiteRating->value, 'visible' => true],
+            ['field' => ProductField::Rating->value, 'visible' => true],
+        ]);
+        $this->createProduct(1, [
+            'score' => 9,
+            'dlsite_rating_5' => '4.97',
+            'dlsite_rating_10' => '9.93',
+            'dlsite_rating_count' => 1330,
+        ]);
+
+        foreach (
+            [
+                [RatingScale::Five, '4.5', '4.97'],
+                [RatingScale::Ten, '9', '9.93'],
+            ] as [$scale, $scoreValue, $dlsiteValue]
+        ) {
+            Option::setRatingScale($scale);
+
+            foreach (
+                [
+                    [RatingVisualStyle::Simple, 0, 0],
+                    [RatingVisualStyle::DLSite, 1, 0],
+                    [RatingVisualStyle::ExtendedDLSite, 1, 1],
+                ] as [$style, $starTracksPerRating, $voteCounts]
+            ) {
+                Option::setRatingVisualStyle($style);
+                $document = new DOMDocument;
+                @$document->loadHTML(Livewire::test(ProductIndex::class)->html());
+                $xpath = new DOMXPath($document);
+
+                foreach (
+                    [
+                        [ProductField::Score, [$scoreValue], 0],
+                        [ProductField::DLSiteRating, [$dlsiteValue], $voteCounts],
+                        [ProductField::Rating, [$dlsiteValue, $scoreValue], $voteCounts],
+                    ] as [$field, $expectedValues, $expectedCounts]
+                ) {
+                    $cells = $xpath->query('//td[@data-label="' . $field->label() . '"]');
+                    $this->assertCount(1, $cells);
+                    $cell = $cells->item(0);
+                    $values = $xpath->query(
+                        './/span[@class="rating-display__value" or @class="cell-value"]',
+                        $cell,
+                    );
+                    $this->assertSame($expectedValues, array_map(
+                        fn($node): string => $node->textContent,
+                        iterator_to_array($values),
+                    ));
+                    $this->assertCount(
+                        $starTracksPerRating * count($expectedValues),
+                        $xpath->query('.//span[@class="rating-display__stars"]', $cell),
+                    );
+                    if ($style === RatingVisualStyle::Simple && $field !== ProductField::Rating) {
+                        $this->assertCount(0, $xpath->query('.//span[contains(@class, "rating-display")]', $cell));
+                    }
+                    $counts = $xpath->query('.//span[@class="rating-display__count"]', $cell);
+                    $this->assertCount($expectedCounts, $counts);
+                    if ($expectedCounts > 0) {
+                        $this->assertSame('(1,330)', $counts->item(0)->textContent);
+                    }
+                    $sources = $xpath->query('.//span[@class="rating-display__source"]', $cell);
+                    $this->assertSame(
+                        $field === ProductField::Rating ? ['DLsite', 'Your'] : [],
+                        array_map(fn($node): string => $node->textContent, iterator_to_array($sources)),
+                    );
+                }
+            }
+        }
+    }
+
     public function test_query_string_sort_is_selected_in_filter_modal(): void
     {
         Livewire::withQueryParams([
@@ -212,6 +500,8 @@ class ProductIndexLivewireTest extends TestCase
                 ]),
                 Option::INDEX_PER_PAGE_UNLIMITED,
                 [],
+                RatingScale::Ten,
+                RatingVisualStyle::Simple,
             );
 
             $this->assertSame(
@@ -318,6 +608,8 @@ class ProductIndexLivewireTest extends TestCase
             ]),
             Option::INDEX_PER_PAGE_UNLIMITED,
             [],
+            RatingScale::Ten,
+            RatingVisualStyle::Simple,
         );
 
         $product = $products->first();
@@ -474,6 +766,73 @@ class ProductIndexLivewireTest extends TestCase
         $this->assertStringNotContainsString("/announce/=/product_id/{$announced->id}.html", $disabledHtml);
     }
 
+    public function test_index_results_skip_dlsite_rating_attributes_when_only_score_or_neither_is_visible(): void
+    {
+        $this->createProduct(1, ['score' => 9]);
+        $results = app(ProductIndexResults::class);
+
+        foreach ([[], ['score']] as $visibleFields) {
+            $product = $results->getProducts(
+                new ProductIndexFilters,
+                Option::INDEX_PER_PAGE_UNLIMITED,
+                $visibleFields,
+                RatingScale::Ten,
+                RatingVisualStyle::ExtendedDLSite,
+            )->sole();
+
+            $this->assertEqualsCanonicalizing(
+                $visibleFields,
+                array_intersect(array_keys($product->getAttributes()), ['score', 'dlsite_rating_5', 'dlsite_rating_10', 'dlsite_rating_count']),
+            );
+        }
+    }
+
+    public function test_index_results_hydrate_rating_attributes_for_visible_columns_scale_and_style(): void
+    {
+        $this->createProduct(1, [
+            'score' => 9,
+            'dlsite_rating_5' => '4.75',
+            'dlsite_rating_10' => '9.49',
+            'dlsite_rating_count' => 1330,
+        ]);
+        $results = app(ProductIndexResults::class);
+        $ratingKeys = ['score', 'dlsite_rating_5', 'dlsite_rating_10', 'dlsite_rating_count'];
+
+        foreach (
+            [
+                [RatingScale::Five, RatingVisualStyle::Simple, ['dlsite_rating_5']],
+                [RatingScale::Ten, RatingVisualStyle::Simple, ['dlsite_rating_10']],
+                [RatingScale::Five, RatingVisualStyle::DLSite, ['dlsite_rating_5']],
+                [RatingScale::Ten, RatingVisualStyle::DLSite, ['dlsite_rating_5', 'dlsite_rating_10']],
+                [RatingScale::Five, RatingVisualStyle::ExtendedDLSite, ['dlsite_rating_5', 'dlsite_rating_count']],
+                [RatingScale::Ten, RatingVisualStyle::ExtendedDLSite, ['dlsite_rating_5', 'dlsite_rating_10', 'dlsite_rating_count']],
+            ] as [$scale, $style, $dlsiteColumns]
+        ) {
+            foreach (
+                [
+                    [['dlsite_rating'], $dlsiteColumns],
+                    [['score', 'dlsite_rating'], ['score', ...$dlsiteColumns]],
+                    [['rating'], ['score', ...$dlsiteColumns]],
+                    [['score', 'dlsite_rating', 'rating'], ['score', ...$dlsiteColumns]],
+                ] as [$visibleFields, $expectedColumns]
+            ) {
+                $product = $results->getProducts(
+                    new ProductIndexFilters,
+                    Option::INDEX_PER_PAGE_UNLIMITED,
+                    $visibleFields,
+                    $scale,
+                    $style,
+                )->sole();
+
+                $this->assertEqualsCanonicalizing(
+                    $expectedColumns,
+                    array_intersect(array_keys($product->getAttributes()), $ratingKeys),
+                    $scale->value . '/' . $style->value . '/' . implode(',', $visibleFields),
+                );
+            }
+        }
+    }
+
     public function test_index_results_hydrate_columns_for_visible_index_fields(): void
     {
         $this->createProduct(1, [
@@ -518,6 +877,8 @@ class ProductIndexLivewireTest extends TestCase
                 ProductField::DescriptionEnglish->value,
                 ProductField::Tags->value,
             ],
+            RatingScale::Ten,
+            RatingVisualStyle::Simple,
         );
 
         $product = $products->first();
@@ -569,7 +930,7 @@ class ProductIndexLivewireTest extends TestCase
         $unknown = $this->createProduct(3, ['work_name' => 'SITE_UNKNOWN', 'site_id' => null]);
 
         $results = app(ProductIndexResults::class);
-        $products = $results->getProducts(ProductIndexFilters::fromQuery([]), Option::INDEX_PER_PAGE_UNLIMITED, [ProductField::SiteId->value]);
+        $products = $results->getProducts(ProductIndexFilters::fromQuery([]), Option::INDEX_PER_PAGE_UNLIMITED, [ProductField::SiteId->value], RatingScale::Ten, RatingVisualStyle::Simple);
         $displayValues = $results->displayValues($products, [ProductField::SiteId->value]);
         $this->assertSame('home', $displayValues->get($home->id)['site_id']);
         $this->assertSame('-', $displayValues->get($unknown->id)['site_id']);
@@ -628,6 +989,8 @@ class ProductIndexLivewireTest extends TestCase
             ProductIndexFilters::fromQuery($filter),
             Option::INDEX_PER_PAGE_UNLIMITED,
             [],
+            RatingScale::Ten,
+            RatingVisualStyle::Simple,
         )->pluck('work_name')->all();
 
         $this->assertSame(['MAKER_CIRCLE'], $names(['maker_names' => 'Zulu']));
@@ -726,6 +1089,8 @@ class ProductIndexLivewireTest extends TestCase
             ProductIndexFilters::fromQuery($query),
             Option::INDEX_PER_PAGE_UNLIMITED,
             [],
+            RatingScale::Ten,
+            RatingVisualStyle::Simple,
         )->pluck('work_name')->all();
 
         $makerPrimary = [
@@ -776,12 +1141,12 @@ class ProductIndexLivewireTest extends TestCase
         ], $names([...$scorePrimary, 'sort_second_direction' => 'desc']));
 
         $filters = ProductIndexFilters::fromQuery($makerPrimary);
-        $this->assertSame(1, $results->pageForProduct($filters, $alphaHigh, 2, []));
-        $this->assertSame(2, $results->pageForProduct($filters, $betaHigh, 2, []));
-        $this->assertSame(3, $results->pageForProduct($filters, $emptyHigh, 2, []));
-        $this->assertTrue($results->pageContainsProduct($filters, $emptyHigh, 2, 3, []));
-        $this->assertFalse($results->pageContainsProduct($filters, $emptyHigh, 2, 2, []));
-        $this->assertSame(1, $results->pageForProduct($filters, $alphaLow, 2, []));
+        $this->assertSame(1, $results->pageForProduct($filters, $alphaHigh, 2, RatingScale::Ten, []));
+        $this->assertSame(2, $results->pageForProduct($filters, $betaHigh, 2, RatingScale::Ten, []));
+        $this->assertSame(3, $results->pageForProduct($filters, $emptyHigh, 2, RatingScale::Ten, []));
+        $this->assertTrue($results->pageContainsProduct($filters, $emptyHigh, 2, 3, RatingScale::Ten, []));
+        $this->assertFalse($results->pageContainsProduct($filters, $emptyHigh, 2, 2, RatingScale::Ten, []));
+        $this->assertSame(1, $results->pageForProduct($filters, $alphaLow, 2, RatingScale::Ten, []));
 
         Option::setIndexPerPage(2);
         Livewire::withQueryParams($makerPrimary)
@@ -829,6 +1194,8 @@ class ProductIndexLivewireTest extends TestCase
             ]),
             Option::INDEX_PER_PAGE_UNLIMITED,
             [],
+            RatingScale::Ten,
+            RatingVisualStyle::Simple,
         );
 
         $this->assertSame([
@@ -991,6 +1358,8 @@ class ProductIndexLivewireTest extends TestCase
             new ProductIndexFilters,
             Option::INDEX_PER_PAGE_UNLIMITED,
             [ProductField::DescriptionJapanese->value, ProductField::DescriptionEnglish->value],
+            RatingScale::Ten,
+            RatingVisualStyle::Simple,
         );
 
         $this->assertArrayHasKey('description', $products->first()->getAttributes());

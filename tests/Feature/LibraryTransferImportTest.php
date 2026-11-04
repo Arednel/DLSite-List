@@ -12,6 +12,7 @@ use App\Models\LibraryImportItem;
 use App\Models\LibraryTransferRun;
 use App\Models\Option;
 use App\Models\Product;
+use App\Support\DLSite\DLSiteRating;
 use App\Support\ProductContributorSync;
 use App\Support\Transfers\InvalidArchive;
 use App\Support\Transfers\PortableOptions;
@@ -703,6 +704,52 @@ class LibraryTransferImportTest extends TestCase
         $this->assertSame([], $roles['author'] ?? []);
         $this->assertSame(['Keep scenario'], $roles['scenario']);
         $this->assertSame('2026-09-24 00:00:00', $product->announce_date?->format('Y-m-d H:i:s'));
+    }
+
+    #[DataProvider('dlsiteRatingFieldPresence')]
+    public function test_dlsite_rating_import_preserves_omissions_and_applies_explicit_values(?array $incomingRating, array $expectedRating): void
+    {
+        $product = Product::factory()->create([
+            'id' => 'RJ123456',
+            'dlsite_rating_5' => '4.97',
+            'dlsite_rating_10' => '9.93',
+            'dlsite_rating_count' => 1000,
+        ]);
+        $export = $this->exported();
+        $this->rewriteWorkData($export->parts()->firstOrFail(), function (array $work) use ($incomingRating): array {
+            unset(
+                $work['dlsite_list']['dlsite_rating_5'],
+                $work['dlsite_list']['dlsite_rating_10'],
+                $work['dlsite_list']['dlsite_rating_count'],
+            );
+            $work['dlsite_list'] = [...$work['dlsite_list'], ...($incomingRating ?? [])];
+
+            return $work;
+        });
+
+        $run = $this->imported($export);
+        $ratingItem = $run->items()->where('category', 'dlsite_rating')->first();
+        if ($incomingRating === null) {
+            $this->assertNull($ratingItem);
+        } else {
+            $this->assertNotNull($ratingItem);
+            $this->assertSame($incomingRating, $ratingItem->incoming);
+        }
+
+        $this->apply($run);
+        $this->assertSame($expectedRating, $product->fresh()->only(DLSiteRating::ATTRIBUTE_KEYS));
+    }
+
+    public static function dlsiteRatingFieldPresence(): array
+    {
+        $originalRating = ['dlsite_rating_5' => '4.97', 'dlsite_rating_10' => '9.93', 'dlsite_rating_count' => 1000];
+        $nullRating = array_fill_keys(DLSiteRating::ATTRIBUTE_KEYS, null);
+
+        return [
+            'omitted ratings' => [null, $originalRating],
+            'explicit null ratings' => [$nullRating, $nullRating],
+            'zero count with omitted ratings' => [['dlsite_rating_count' => 0], [...$originalRating, 'dlsite_rating_count' => 0]],
+        ];
     }
 
     public function test_legacy_work_archive_without_announcement_date_preserves_existing_date(): void

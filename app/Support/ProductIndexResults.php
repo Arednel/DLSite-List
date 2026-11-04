@@ -9,6 +9,8 @@ use App\Enums\ProductIndexSortField;
 use App\Enums\ProductPriority;
 use App\Enums\ProductProgress;
 use App\Enums\ProductReListenValue;
+use App\Enums\RatingScale;
+use App\Enums\RatingVisualStyle;
 use App\Models\Genre;
 use App\Models\Option;
 use App\Models\Product;
@@ -32,6 +34,7 @@ final class ProductIndexResults
 
     private const VISIBLE_FIELD_COLUMNS = [
         'image' => ['work_image'],
+        'rating' => ['score'],
         'score' => ['score'],
         'series' => ['series'],
         'age_category' => ['age_category'],
@@ -72,17 +75,20 @@ final class ProductIndexResults
         ProductIndexFilters $filters,
         int|string $perPage,
         array $visibleFields,
+        RatingScale $ratingScale,
+        RatingVisualStyle $ratingVisualStyle,
         bool $searchHiddenDescriptionsEnabled = false,
         ?string $fetchedLanguage = null,
     ): EloquentCollection|LengthAwarePaginator {
         $query = $this->filteredQuery(
             $filters,
-            $this->indexColumns($visibleFields),
+            $this->indexColumns($visibleFields, $ratingScale, $ratingVisualStyle),
             $this->descriptionSearchColumns($visibleFields, $searchHiddenDescriptionsEnabled),
             in_array(ProductField::Tags->value, $visibleFields, true),
+            $ratingScale,
             $fetchedLanguage,
         );
-        $query = $this->applySqlSorting($query, $filters->sorts());
+        $query = $this->applySqlSorting($query, $filters->sorts(), $ratingScale);
 
         return $perPage === Option::INDEX_PER_PAGE_UNLIMITED
             ? $query->get()
@@ -92,11 +98,12 @@ final class ProductIndexResults
     public function containsProduct(
         ProductIndexFilters $filters,
         Product $product,
+        RatingScale $ratingScale,
         array $descriptionSearchColumns,
         bool $searchTags = true,
         ?string $fetchedLanguage = null,
     ): bool {
-        return $this->filteredQuery($filters, null, $descriptionSearchColumns, $searchTags, $fetchedLanguage)
+        return $this->filteredQuery($filters, null, $descriptionSearchColumns, $searchTags, $ratingScale, $fetchedLanguage)
             ->whereKey($product->getKey())
             ->exists();
     }
@@ -106,15 +113,16 @@ final class ProductIndexResults
         Product $product,
         int|string $perPage,
         int $page,
+        RatingScale $ratingScale,
         array $descriptionSearchColumns,
         bool $searchTags = true,
         ?string $fetchedLanguage = null,
     ): bool {
         if ($perPage === Option::INDEX_PER_PAGE_UNLIMITED) {
-            return $this->containsProduct($filters, $product, $descriptionSearchColumns, $searchTags, $fetchedLanguage);
+            return $this->containsProduct($filters, $product, $ratingScale, $descriptionSearchColumns, $searchTags, $fetchedLanguage);
         }
 
-        return $this->applySqlSorting($this->filteredQuery($filters, null, $descriptionSearchColumns, $searchTags, $fetchedLanguage), $filters->sorts())
+        return $this->applySqlSorting($this->filteredQuery($filters, null, $descriptionSearchColumns, $searchTags, $ratingScale, $fetchedLanguage), $filters->sorts(), $ratingScale)
             ->forPage(max(1, $page), max(1, (int) $perPage))
             ->pluck('id')
             ->containsStrict((string) $product->getKey());
@@ -124,6 +132,7 @@ final class ProductIndexResults
         ProductIndexFilters $filters,
         Product $product,
         int|string $perPage,
+        RatingScale $ratingScale,
         array $descriptionSearchColumns,
         bool $searchTags = true,
         ?string $fetchedLanguage = null,
@@ -132,7 +141,7 @@ final class ProductIndexResults
             return null;
         }
 
-        $position = $this->applySqlSorting($this->filteredQuery($filters, null, $descriptionSearchColumns, $searchTags, $fetchedLanguage), $filters->sorts())
+        $position = $this->applySqlSorting($this->filteredQuery($filters, null, $descriptionSearchColumns, $searchTags, $ratingScale, $fetchedLanguage), $filters->sorts(), $ratingScale)
             ->pluck('id')
             ->search((string) $product->getKey(), true);
 
@@ -144,6 +153,7 @@ final class ProductIndexResults
     public function lastPage(
         ProductIndexFilters $filters,
         int|string $perPage,
+        RatingScale $ratingScale,
         array $descriptionSearchColumns,
         bool $searchTags = true,
         ?string $fetchedLanguage = null,
@@ -153,7 +163,7 @@ final class ProductIndexResults
         }
 
         $perPage = max(1, (int) $perPage);
-        $total = $this->filteredQuery($filters, null, $descriptionSearchColumns, $searchTags, $fetchedLanguage)->count();
+        $total = $this->filteredQuery($filters, null, $descriptionSearchColumns, $searchTags, $ratingScale, $fetchedLanguage)->count();
 
         return max(1, (int) ceil($total / $perPage));
     }
@@ -179,9 +189,10 @@ final class ProductIndexResults
 
     private function filteredQuery(
         ProductIndexFilters $filters,
-        ?array $columns = null,
-        array $descriptionSearchColumns = [],
-        bool $searchTags = true,
+        ?array $columns,
+        array $descriptionSearchColumns,
+        bool $searchTags,
+        RatingScale $ratingScale,
         ?string $fetchedLanguage = null,
     ): Builder {
         if ($fetchedLanguage === null && (
@@ -269,6 +280,14 @@ final class ProductIndexResults
             ->when(
                 $filters->score !== null,
                 fn($query) => $query->where('score', (int) $filters->score->value)
+            )
+            ->when(
+                $filters->dlsiteRating !== '',
+                fn($query) => $query->where($ratingScale->dlsiteColumn(), $filters->dlsiteRating)
+            )
+            ->when(
+                $filters->dlsiteRatingCount !== null,
+                fn($query) => $query->where('dlsite_rating_count', $filters->dlsiteRatingCount)
             )
             ->when(
                 $filters->priority !== null,
@@ -514,13 +533,18 @@ final class ProductIndexResults
     /**
      * @param  list<ProductIndexSort>  $sorts
      */
-    private function applySqlSorting(Builder $query, array $sorts): Builder
+    private function applySqlSorting(Builder $query, array $sorts, RatingScale $ratingScale): Builder
     {
         $codeDirection = null;
 
         foreach ($sorts as $sort) {
             if ($sort->field === ProductIndexSortField::Code) {
                 $codeDirection = $sort->direction->value;
+            }
+
+            if ($sort->field === ProductIndexSortField::DLSiteRating) {
+                $this->orderByNullableColumn($query, $ratingScale->dlsiteColumn(), $sort->direction->value);
+                continue;
             }
 
             if ($this->orderBySpecialSortField($query, $sort->field, $sort->direction->value)) {
@@ -762,12 +786,27 @@ final class ProductIndexResults
         return implode(', ', ProductFormat::labelsFor($formats ?? [])) ?: '-';
     }
 
-    private function indexColumns(array $visibleFields): array
+    private function indexColumns(array $visibleFields, RatingScale $ratingScale, RatingVisualStyle $ratingVisualStyle): array
     {
         $columns = self::BASE_INDEX_COLUMNS;
 
         foreach ($visibleFields as $field) {
             $columns = array_merge($columns, self::VISIBLE_FIELD_COLUMNS[$field] ?? []);
+        }
+
+        $dlsiteRatingVisible = in_array(ProductField::Rating->value, $visibleFields, true)
+            || in_array(ProductField::DLSiteRating->value, $visibleFields, true);
+
+        if ($dlsiteRatingVisible) {
+            $columns[] = $ratingScale->dlsiteColumn();
+
+            if ($ratingVisualStyle->showsStars()) {
+                $columns[] = 'dlsite_rating_5';
+            }
+
+            if ($ratingVisualStyle->showsVoteCount()) {
+                $columns[] = 'dlsite_rating_count';
+            }
         }
 
         return array_values(array_unique($columns));

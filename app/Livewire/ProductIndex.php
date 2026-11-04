@@ -7,6 +7,8 @@ use App\Enums\ProductIndexSortDirection;
 use App\Enums\ProductIndexSortField;
 use App\Enums\ProductIndexTagMatch;
 use App\Enums\ProductProgress;
+use App\Enums\ProductScore;
+use App\Enums\RatingScale;
 use App\Models\GenreGroup;
 use App\Models\Option;
 use App\Models\Product;
@@ -69,6 +71,10 @@ class ProductIndex extends Component
     public string $progress = '';
 
     public string $score = '';
+
+    public string $dlsite_rating = '';
+
+    public string $dlsite_rating_count = '';
 
     public string $priority = '';
 
@@ -146,6 +152,8 @@ class ProductIndex extends Component
             $filters,
             $settings->perPage,
             $hydratedIndexFields,
+            $settings->ratingScale,
+            $settings->ratingVisualStyle,
             $settings->searchHiddenDescriptionsEnabled,
             $settings->fetchedTagLanguage,
         );
@@ -191,10 +199,24 @@ class ProductIndex extends Component
         $productRows = app(ProductIndexRowBuilder::class)->build(
             $visibleProducts,
             $productContributors,
+            $settings->visibleIndexFields,
             $settings->dlsiteAgeAppropriateLinksEnabled,
             $currentQuery,
+            $settings->ratingScale,
+            $settings->ratingVisualStyle,
             $settings->dlsiteAnnounceLinksEnabled,
         );
+
+        $filterOptions = ProductIndexFilters::optionSets(
+            $settings->indexSortFieldOptions,
+            ProductProgress::visibleOptions($settings->optionalProductStatuses),
+        );
+
+        if ($settings->ratingScale === RatingScale::Five) {
+            foreach (ProductScore::cases() as $score) {
+                $filterOptions['scores'][$score->value] = $settings->ratingScale->scoreLabel($score);
+            }
+        }
 
         $terminology = app(ContentTerminology::class);
 
@@ -203,12 +225,12 @@ class ProductIndex extends Component
             'productRows' => $productRows,
             'productGenres' => $productGenres,
             'productDisplayValues' => $productDisplayValues,
-            'filterOptions' => ProductIndexFilters::optionSets(
-                $settings->indexSortFieldOptions,
-                ProductProgress::visibleOptions($settings->optionalProductStatuses),
-            ),
+            'filterOptions' => $filterOptions,
             'optionalProductStatuses' => $settings->optionalProductStatuses,
             'contentOverflow' => $settings->contentOverflow,
+            'ratingScale' => $settings->ratingScale,
+            'dlsiteRatingLabel' => __('DLsite'),
+            'personalRatingLabel' => __('Your'),
             'titleNotesVisible' => $settings->titleNotesVisible,
             'indexColumns' => $settings->indexColumns,
             'filterFields' => $settings->filterFields,

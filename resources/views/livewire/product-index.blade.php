@@ -71,7 +71,8 @@
                         {{ $progressHeading }}
                     </span>
                     <x-index.search class="search-container--mobile" data-index-search="mobile" />
-                    <x-index.advanced-filters :filter-options="$filterOptions" :filter-active="$filterActive" :has-current-tag-filter="$hasCurrentTagFilter" :filter-fields="$filterFields" />
+                    <x-index.advanced-filters :filter-options="$filterOptions" :filter-active="$filterActive" :has-current-tag-filter="$hasCurrentTagFilter" :filter-fields="$filterFields"
+                        :rating-scale="$ratingScale" />
                 </div>
 
                 <table class="list-table">
@@ -203,8 +204,67 @@
                 @endif
             @break
 
+            @case('rating')
+                <div class="rating-combined">
+                    <span class="rating-display rating-display--source">
+                        <span class="rating-display__source">{{ $dlsiteRatingLabel }}</span>
+                        @if ($product->dlsiteStarFill === null)
+                            <span class="rating-display__value">{{ $product->dlsiteRating ?? '-' }}</span>
+                        @else
+                            <span class="rating-display__content">
+                                <span class="rating-display__stars" style="--rating-fill: {{ $product->dlsiteStarFill }}%"
+                                    aria-hidden="true"></span>
+                                <span class="rating-display__value">{{ $product->dlsiteRating ?? '-' }}</span>
+                                @if ($product->dlsiteVotes !== null)
+                                    <span class="rating-display__count">({{ $product->dlsiteVotes }})</span>
+                                @endif
+                            </span>
+                        @endif
+                    </span>
+                    <span class="rating-display rating-display--source">
+                        <span class="rating-display__source">{{ $personalRatingLabel }}</span>
+                        @if ($product->scoreStarFill === null)
+                            <span class="rating-display__value">{{ $product->score ?? '-' }}</span>
+                        @else
+                            <span class="rating-display__content">
+                                <span class="rating-display__stars" style="--rating-fill: {{ $product->scoreStarFill }}%"
+                                    aria-hidden="true"></span>
+                                <span class="rating-display__value">{{ $product->score ?? '-' }}</span>
+                            </span>
+                        @endif
+                    </span>
+                </div>
+            @break
+
             @case('score')
-                <span class="cell-value">{{ $product->score ?? '-' }}</span>
+                @if ($product->scoreStarFill === null)
+                    <span class="cell-value">{{ $product->score ?? '-' }}</span>
+                @else
+                    <span class="rating-display">
+                        <span class="rating-display__content">
+                            <span class="rating-display__stars" style="--rating-fill: {{ $product->scoreStarFill }}%"
+                                aria-hidden="true"></span>
+                            <span class="rating-display__value">{{ $product->score ?? '-' }}</span>
+                        </span>
+                    </span>
+                @endif
+            @break
+
+            @case('dlsite_rating')
+                @if ($product->dlsiteStarFill === null)
+                    <span class="cell-value">{{ $product->dlsiteRating ?? '-' }}</span>
+                @else
+                    <span class="rating-display">
+                        <span class="rating-display__content">
+                            <span class="rating-display__stars" style="--rating-fill: {{ $product->dlsiteStarFill }}%"
+                                aria-hidden="true"></span>
+                            <span class="rating-display__value">{{ $product->dlsiteRating ?? '-' }}</span>
+                            @if ($product->dlsiteVotes !== null)
+                                <span class="rating-display__count">({{ $product->dlsiteVotes }})</span>
+                            @endif
+                        </span>
+                    </span>
+                @endif
             @break
 
             @case('series')
@@ -237,8 +297,7 @@
             @case('notes')
                 <div class="notes">
                     @if ($contentOverflow['notes_column']['enabled'])
-                        <div class="index-content-overflow" x-data="{ expanded: false }"
-                            data-overflow-target="notes_column">
+                        <div class="index-content-overflow" x-data="{ expanded: false }" data-overflow-target="notes_column">
                             <div id="index-notes-column-{{ $product->id }}"
                                 x-bind:class="{ 'index-content-overflow__content--collapsed': !expanded }">
                     @endif
@@ -368,8 +427,7 @@
         @case('tags')
             <div class="tags">
                 @if ($contentOverflow['tags']['enabled'])
-                    <div class="index-content-overflow" x-data="{ expanded: false }"
-                        data-overflow-target="tags">
+                    <div class="index-content-overflow" x-data="{ expanded: false }" data-overflow-target="tags">
                         <div id="index-tags-{{ $product->id }}"
                             x-bind:class="{ 'index-content-overflow__content--collapsed': !expanded }">
                 @endif
@@ -381,8 +439,7 @@
                                 ($genre->has_background_color ?? false) === true,
                             'index-tag-chip--text-colored' =>
                                 ($genre->has_font_color ?? false) === true,
-                        ])
-                            @if (filled($genre->color_style ?? null)) style="{{ $genre->color_style }}" @endif
+                        ]) @if (filled($genre->color_style ?? null)) style="{{ $genre->color_style }}" @endif
                             href="{{ $tagHrefPrefix }}genre={{ $genre->id }}">
                             {{ $genre->title }}</a>{{ !$loop->last ? ',' : '' }}
                     @else

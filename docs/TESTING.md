@@ -182,7 +182,7 @@ Covers the full Refetch workflow:
 - run creation and batch/result rows
 - staged fetch data
 - image-check choice
-- review categories
+- review categories, including DLsite Rating review with both cached scales and staged-file promotion
 - apply/ignore/reject behavior, including Product Format, announcement-date, and Site ID Overwrite/Ignore
 - localized Product Format review values
 - incremental application
@@ -200,7 +200,7 @@ Covers Refetch queue failure recovery, cancellation, continued processing after 
 
 #### `tests/Feature/BulkImportTest.php`
 
-Covers Bulk Import parsing/validation, shared-input snapshots, queued item processing, skips/failures, transactional persistence (including failed completion writes, worker interruption before commit, and stale item/run state), and run completion. Product Format coverage verifies fetched values when the field is hidden or blank and manual override behavior when a visible value is supplied. Also verifies announcement dates and Site IDs are saved by the shared importer, and failed cover/sample downloads are omitted from persisted image references.
+Covers Bulk Import parsing/validation, shared-input snapshots (including preserving the submitted Rating Scale if the global Option changes before queued execution), queued item processing, skips/failures, transactional persistence (including failed completion writes, worker interruption before commit, and stale item/run state), and run completion. Product Format coverage verifies fetched values when the field is hidden or blank and manual override behavior when a visible value is supplied. Also verifies announcement dates and Site IDs are saved by the shared importer, and failed cover/sample downloads are omitted from persisted image references.
 
 Busy-start coverage checks the wrapped cache lock timeout and ensures unrelated dispatch exceptions with the same message are not misclassified as lock contention.
 
@@ -214,7 +214,7 @@ Covers core transfer contracts, route/review smoke coverage, transfer error rend
 
 #### `tests/Feature/LibraryTransferExportTest.php`
 
-Covers export selection/planning, deterministic work/image inventory, Tag Library/Options fragmentation, multipart manifests and size boundaries, work-level progress, source-change replanning, downloads, and English/Japanese download failure messages rendered by the transfer view. Product Format coverage verifies that ordered canonical/custom values are written to both locale documents and survive export/import round trips; announcement dates are exported in both locales.
+Covers export selection/planning, deterministic work/image inventory, Tag Library/Options fragmentation, multipart manifests and size boundaries, work-level progress, source-change replanning, downloads, and English/Japanese download failure messages rendered by the transfer view. Product Format coverage verifies that ordered canonical/custom values are written to both locale documents and survive export/import round trips; announcement dates are exported in both locales. DLsite Rating coverage verifies round trips and Merge filling an absent vote count without overwriting existing cached rating values.
 
 Regression coverage injects failures after successor-job insertion in every planning phase, verifies transaction rollback and successful retry, and checks stale planning calls. Empty-library and empty-selection export errors are checked in English and Japanese, including that no transfer is started.
 
@@ -222,7 +222,7 @@ Regression coverage injects failures after successor-job insertion in every plan
 
 Covers multipart upload/validation, missing or replacement parts, archive/path/checksum safety, bounded analysis/checkpoint retries, image validation, existing/new work analysis, incomplete-image imports for existing and new works, and data-only continuation. Incomplete-image warnings remain canonical in staged metadata and are rendered from the operational error catalog in the current UI locale. Product Format coverage includes custom/empty values, invalid-value quarantine, locale fallback, and compatibility with archives created before the field existed. `announce_date` tests cover round trips, omitted fields, and invalid-date quarantine. Site ID tests cover round trips and locale metadata fallback when importing older archives without an explicit stored site. Archive compatibility tests cover v2 output, released v1 manifests and legacy `rj_code`/Index sort Options layouts.
 
-DLsite work-data compatibility coverage includes Circle, Publisher, Brand, Description, and Author aliases, plus announcement dates ending in `+09:00`. Tests check that archive Series values take precedence, personal notes are preserved, omitted fields are handled separately from explicitly cleared values, explicit `null` dates clear stored values, and malformed string or non-string dates are quarantined before normalization.
+DLsite work-data compatibility coverage includes Circle, Publisher, Brand, Description, and Author aliases, plus announcement dates ending in `+09:00`. Tests check that archive Series values take precedence, personal notes are preserved, omitted fields are handled separately from explicitly cleared values, explicit `null` dates clear stored values, malformed string or non-string dates are quarantined before normalization, and imported cached 5-point/10-point DLsite ratings cannot be half-populated. DLsite Rating Overwrite coverage verifies that omitted rating keys preserve local values, explicit nulls clear them, and a zero vote count remains zero.
 
 #### `tests/Feature/TranslatedWorkCircleTest.php`
 
@@ -230,7 +230,7 @@ Covers original-Circle resolution from Japanese `language_editions` through Quic
 
 #### `tests/Feature/LibraryTransferReviewTest.php`
 
-Covers Ignore/Overwrite/Merge decisions, work/tag/group/relationship/option application, stale-conflict handling, atomic work updates, image promotion/recovery, timestamps, and read-only completed reviews. Work-review navigation checks category identifiers and the items returned when switching repeat-field tabs.
+Covers Ignore/Overwrite/Merge decisions, work/tag/group/relationship/option application, stale-conflict handling, atomic work updates, image promotion/recovery, timestamps, and read-only completed reviews. Work-review navigation checks category identifiers and the items returned when switching repeat-field tabs; DLsite Rating review also covers grouped rating values and localized vote-count display. New-work review counts cover empty runs and distinguish omitted rating keys from explicit nulls and zero vote counts, including the items shown in the rating tab.
 
 Partial contributor document coverage verifies that omitted roles survive Overwrite and explicitly empty roles can still be cleared. Announcement-date review checks use matching date formats for unchanged imported values.
 
@@ -338,6 +338,8 @@ Covers the main product HTTP workflows:
 - all-tags pattern matching, overlapping matches, missing tags, and per-attachment language/custom-source visibility
 - Create/Edit field order using submitted input names, product binding, and return-navigation data, including rejection of unsafe (non-http(s)) `return_url` values
 - hidden/read-only field preservation
+- focused DLsite Rating input/read-only display across both scales, read-only mutation protection, canonical Score input, validation restoration, manual conversion, vote-count updates that preserve independently rounded ratings, and conditional Rating Scale lookups for form rendering and manual submissions
+- DLsite Rating clearing and omission semantics, independent vote-count preservation, and unchanged Updated Date when already-null ratings are submitted again
 - DLsite Quick Add fetch/store/error behavior and shared importer regression coverage
 - Product Format Edit/Custom Quick Add input, fetched Quick Add fallback, visible override, blank fallback, and localized validation
 - Custom Quick Add/Edit browser-local image editor rendering and normal multipart uploads
@@ -370,9 +372,10 @@ Covers the Livewire Index:
 - pagination/query-string state
 - filtering/search/date ranges, including inclusive Scheduled Release Date boundaries
 - Product Format display, partial label/custom search, exact-code matching, JSON-element boundaries, and special-character search escaping
-- sort behavior, including Product Format sorting by its first stored value and announcement-date sorting with nulls last
+- sort behavior, including Product Format sorting by its first stored value, scale-aware DLsite Rating sorting/filtering with nulls last, and announcement-date sorting with nulls last
+- separate and combined rating rendering across both scales and all visual styles, with focused cases for independent star rounding, missing ratings, zero/absent vote counts, and scale-adjusted Score filter labels that retain canonical values
 - individual/combined maker links, comma-separated combined display, and SQL sorting with first-nonblank Circle/Publisher/Brand fallback, case-insensitive comparison, blanks last, primary/secondary priorities, and global page-location checks
-- narrow hydration
+- narrow hydration, including rating-column selection for visible fields/styles while rating/count filtering and sorting remain independent of selected attributes
 - batched settings
 - field visibility/order, optional-column sort mappings (including optional Site ID display, exact filtering, and sorting), and hydrated values independent of UI wording
 - timestamps
@@ -433,7 +436,7 @@ Covers the server-rendered DLSite Quick Add fetching-status contract across stan
 
 #### `tests/Feature/ReturnTargetProductTest.php`
 
-Covers product-aware Index return URLs, visibility checks, pagination/page cleanup, filters, hidden-description behavior, and selected-language tag filtering.
+Covers product-aware Index return URLs, visibility checks, pagination/page cleanup, filters, hidden-description behavior, selected-language tag filtering, the no-Options-query fast path for ordinary returns, and scale-aware DLsite-rating return-page calculations.
 
 #### `tests/Feature/SetUiLocaleTest.php`
 
@@ -514,7 +517,7 @@ Covers server-rendered Add/Edit modal completion fallback output and conditional
 - Covers exact-code and partial-label search, editable-field round trips for every canonical Product Format in English, Japanese, and Traditional Chinese, ambiguous-label fallbacks, and replacing the main format without dropping manual additional/custom values.
 
 `tests/Unit/Enums/ProductIndexSortFieldTest.php`
-- Covers valid Index sort fields (including Publisher, Brand, and the virtual combined Maker sort), labels/backend metadata, and sort-dropdown behavior.
+- Covers valid Index sort fields (including DLsite Rating, DLsite Rating Count, Publisher, Brand, and the virtual combined Maker sort), labels/backend metadata, and sort-dropdown behavior.
 
 `tests/Unit/Enums/FetchedTagLanguageTest.php`
 - Covers fetched tag language values, labels, and UI language mapping.
@@ -536,7 +539,7 @@ Covers server-rendered Add/Edit modal completion fallback output and conditional
 - Covers normalized tag identity/display casing, Hiragana/Katakana distinction, and inverse parent/child relationships.
 
 `tests/Unit/Models/OptionMetadataSettingsTest.php`
-- Covers Option defaults, normalization, persistence, reset behavior, content-focus persistence, batched metadata/Index settings, and the saved product-code layout field migration.
+- Covers Option defaults, normalization, persistence, reset behavior, content-focus and rating presentation settings, batched metadata/Index settings, and the saved product-code layout field migration.
 
 `tests/Unit/Models/ProductDLSiteUrlTest.php`
 - Covers default Maniax URLs, age-aware Home/Maniax mapping, and independent announcement/regular page-type selection.
@@ -556,7 +559,7 @@ Covers server-rendered Add/Edit modal completion fallback output and conditional
 - Covers normalized contributor identity, maker id, role-specific sync, cross-role isolation, and Updated Date touching only on effective change.
 
 `tests/Unit/Support/ProductFieldLayoutTest.php`
-- Covers surface defaults/availability (including independent Publisher/Brand fields and the virtual Index-only combined field), localized fetched-tag labels, row normalization without stored help notes, required locks, editability, and prepared layout metadata.
+- Covers surface defaults/availability (including combined Rating, separate DLsite Rating, independent Publisher/Brand fields, and virtual Index-only combined fields), localized fetched-tag labels, row normalization without stored help notes, required locks, editability, and prepared layout metadata.
 
 `tests/Unit/Support/ProductGenreSyncTest.php`
 - Covers fetched language buckets, custom/fetched preservation/precedence, recursive ancestor expansion, and Updated Date touching only on effective change.
@@ -565,13 +568,16 @@ Covers server-rendered Add/Edit modal completion fallback output and conditional
 - Covers overflow defaults, malformed stored data, target filtering, canonical CSS-length normalization, and accepted/rejected units.
 
 `tests/Unit/Support/ProductIndexFiltersTest.php`
-- Covers Index query normalization, invalid-value rejection, filter/date round trips, defaults, sort options, input keys, visibility groups, and query export.
+- Covers Index query normalization, invalid-value rejection, DLsite rating/count filtering across the active rating scale, filter/date round trips, defaults, sort options, input keys, visibility groups, and query export.
+
+`tests/Unit/Support/Transfers/ImportValueTest.php`
+- Covers grouped DLsite Rating paths and labels used by new-work Library Import review, nonempty JSON-path mappings for every configured new-work review category, and preservation of numeric/null vote counts in persisted previews.
 
 `tests/Unit/Support/ProductIndexRowBuilderTest.php`
-- Covers typed Index row construction from narrow product hydration, encoded Series/Circle/contributor filter URLs, preserved Edit return state/fragment, age-aware DLsite URLs, defaults for unhydrated optional attributes, and rejection of a missing required `work_name`.
+- Covers typed Index row construction from narrow product hydration, visibility-aware rating preparation, scale-dependent display values, star fills, vote counts, missing/unhydrated ratings, encoded Series/Circle/contributor filter URLs, preserved Edit return state/fragment, age-aware DLsite URLs, and rejection of a missing required `work_name`. Localized combined source labels are covered by `ProductSurfaceLocalizationTest`.
 
 `tests/Unit/Support/RefetchDiffBuilderTest.php`
-- Covers all Refetch metadata/creator/tag categories (including independent Publisher/Brand changes), main-only Product Format comparison that ignores fetched additional formats, plus tag identity handling, cover hashing, and unavailable sample-image behavior.
+- Covers all Refetch metadata/creator/tag categories (including grouped DLsite Rating changes when both scales change or only the ten-point cache changes, and independent Publisher/Brand changes), main-only Product Format comparison that ignores fetched additional formats, plus tag identity handling, cover hashing, and unavailable sample-image behavior.
 - Checks that normalized scraper fields and dates ending in `+09:00` do not cause false removal suggestions, while changed creator-name lists are shown in the Refetch review.
 
 `tests/Unit/Support/ReturnTargetTest.php`
@@ -588,11 +594,14 @@ Covers server-rendered Add/Edit modal completion fallback output and conditional
 `tests/Unit/Support/DLSite/DLSitePythonRunnerTest.php`
 - Covers Laravel Process command construction, explicit output destinations, venv executable, unlimited timeout behavior, and log-retention environment.
 
+`tests/Unit/Support/DLSite/DLSiteRatingTest.php`
+- Covers fetched weighted averages, independent 5/10-point rounding, manual scale conversion, separate scale-limit and decimal-precision validation, null/zero handling, vote-count bounds, and rating/vote-count display formatting.
+
 `tests/Unit/Support/DLSite/DLSiteWorkDataTest.php`
 - Covers original-work ID resolution from Japanese `language_editions`, with `translation_info.original_workno` as fallback.
 - Covers original Circle and Maker ID precedence, matching ID/name pairs from one locale, and preservation of the translated work's other fields.
 - Covers Circle/Publisher/Brand mapping, description selection, Author fallback, explicit fields taking precedence, translation-provider Circles, and removal of the trailing `+09:00` from announcement dates.
-- Covers shared scraped metadata extraction for titles/descriptions/creators/maker data (Circle, Publisher, and Brand remain independent), Product Format normalization, announcement-date and site-id locale fallback, product ids, and missing-id errors.
+- Covers shared scraped metadata extraction for titles/descriptions/creators/maker data (Circle, Publisher, and Brand remain independent), DLsite rating-distribution normalization, Product Format normalization, announcement-date and site-id locale fallback, product ids, and missing-id errors.
 
 `tests/Unit/Support/DLSite/DLSiteWorkFetcherTest.php`
 - Covers the PHP-owned five-attempt retry loop, manifest/JSON validation, partial results, immediate success, and rejection of stale JSON fallback.

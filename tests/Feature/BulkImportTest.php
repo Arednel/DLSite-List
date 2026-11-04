@@ -5,6 +5,7 @@ namespace Tests\Feature;
 use App\Enums\BulkImportItemStatus;
 use App\Enums\BulkImportRunStatus;
 use App\Enums\ProductField;
+use App\Enums\RatingScale;
 use App\Enums\UiLanguage;
 use App\Jobs\FinishBulkImportRunJob;
 use App\Jobs\ImportBulkWorkJob;
@@ -158,6 +159,69 @@ class BulkImportTest extends TestCase
             ->assertSee('Start Bulk Import')
             ->assertSee(route('products.create', [], false), false)
             ->assertSee(route('products.create.custom', [], false), false);
+    }
+
+    public function test_bulk_import_page_only_reads_rating_scale_when_dlsite_rating_is_visible(): void
+    {
+        Option::setRatingScale(RatingScale::Five);
+        Option::setBulkImportFieldLayout([
+            ['field' => ProductField::DLSiteRating->value, 'visible' => false],
+        ]);
+
+        $ratingScaleQueries = 0;
+        DB::listen(function ($query) use (&$ratingScaleQueries): void {
+            if (in_array(Option::RATING_SCALE, $query->bindings, true)) {
+                $ratingScaleQueries++;
+            }
+        });
+
+        $this->get(route('products.create.bulk'))->assertOk();
+        $this->assertSame(0, $ratingScaleQueries);
+
+        Option::setBulkImportFieldLayout([
+            ['field' => ProductField::DLSiteRating->value, 'visible' => true],
+        ]);
+        $this->get(route('products.create.bulk'))->assertOk();
+        $this->assertSame(1, $ratingScaleQueries);
+    }
+
+    public function test_bulk_import_job_uses_snapshotted_rating_scale_after_option_changes(): void
+    {
+        Bus::fake();
+        Storage::fake('local');
+        Storage::fake('public');
+        Process::fake([
+            '*' => Process::result(output: '{"failed_images":[]}'),
+        ])->preventStrayProcesses();
+
+        Option::setRatingScale(RatingScale::Five);
+        Option::setBulkImportFieldLayout([
+            ['field' => ProductField::DLSiteRating->value, 'visible' => true],
+        ]);
+
+        $productCode = 'RJ000000107';
+        $this->post(route('products.store.bulk'), [
+            'product_code_list' => $productCode,
+            'dlsite_rating' => '4.75',
+            'dlsite_rating_count' => '321',
+        ])->assertRedirect();
+
+        $run = BulkImportRun::query()->firstOrFail();
+        $this->assertSame(RatingScale::Five->value, data_get($run->input_snapshot, 'rating_scale'));
+
+        Option::setRatingScale(RatingScale::Ten);
+        Storage::disk('local')->put(
+            "Works/{$productCode}.json",
+            json_encode($this->scrapedWorkPayload($productCode), JSON_THROW_ON_ERROR),
+        );
+
+        $item = $run->items()->firstOrFail();
+        (new ImportBulkWorkJob($item->id))->handle(app(DLSiteProductImporter::class));
+
+        $product = Product::query()->findOrFail($productCode);
+        $this->assertSame('4.75', $product->dlsite_rating_5);
+        $this->assertSame('9.50', $product->dlsite_rating_10);
+        $this->assertSame(321, $product->dlsite_rating_count);
     }
 
     public function test_start_normalizes_deduplicates_snapshots_and_queues_product_codes_in_order(): void
@@ -638,6 +702,10 @@ class BulkImportTest extends TestCase
         $payload['japanese']['site_id'] = 'home';
         $payload['japanese']['publisher'] = 'Bulk Publisher';
         $payload['japanese']['brand'] = 'Bulk Brand';
+        $payload['japanese']['rate_count_detail'] = [
+            '5' => 966,
+            '4' => 34,
+        ];
         Storage::disk('local')->put("Works/{$productCode}.json", json_encode($payload, JSON_THROW_ON_ERROR));
         [$run, $item] = $this->createRunItem($productCode);
 
@@ -651,8 +719,12 @@ class BulkImportTest extends TestCase
             Product::query()->findOrFail($productCode)->announce_date?->format('Y-m-d H:i:s'),
         );
         $this->assertSame('home', Product::query()->findOrFail($productCode)->site_id);
-        $this->assertSame('Bulk Publisher', Product::query()->findOrFail($productCode)->publisher);
-        $this->assertSame('Bulk Brand', Product::query()->findOrFail($productCode)->brand);
+        $product = Product::query()->findOrFail($productCode);
+        $this->assertSame('Bulk Publisher', $product->publisher);
+        $this->assertSame('Bulk Brand', $product->brand);
+        $this->assertSame('4.97', $product->dlsite_rating_5);
+        $this->assertSame('9.93', $product->dlsite_rating_10);
+        $this->assertSame(1000, $product->dlsite_rating_count);
     }
 
     public function test_successful_job_uses_scraped_product_format_when_the_field_is_hidden(): void

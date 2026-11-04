@@ -8,6 +8,7 @@ use App\Enums\RefetchCategory;
 use App\Models\Genre;
 use App\Models\Product;
 use App\Support\DLSite\DLSiteFetchResult;
+use App\Support\DLSite\DLSiteRating;
 use App\Support\ProductContributorSync;
 use Illuminate\Support\Facades\Storage;
 
@@ -38,6 +39,14 @@ final class RefetchDiffBuilder
         $this->add($changes, RefetchCategory::SiteId, 'site_id', 'Site ID', $product->site_id, $work->siteId);
         $this->addProductFormat($changes, RefetchCategory::ProductFormat, 'product_format', 'Product Format', $product->product_format ?? [], $work->productFormat);
         $this->add($changes, RefetchCategory::AnnouncementDate, 'announce_date', 'Scheduled release date', $product->announce_date?->format('Y-m-d H:i:s'), $work->announceDate);
+        $this->add(
+            $changes,
+            RefetchCategory::Rating,
+            'dlsite_rating',
+            'DLsite Rating',
+            $product->only(DLSiteRating::ATTRIBUTE_KEYS),
+            $work->rating->attributes(),
+        );
         $this->add(
             $changes,
             RefetchCategory::Circle,
@@ -99,7 +108,11 @@ final class RefetchDiffBuilder
         mixed $old,
         mixed $new,
     ): void {
-        if ($this->equivalent($old, $new)) {
+        $equivalent = $category === RefetchCategory::Rating
+            ? $old === $new
+            : $this->equivalent($old, $new);
+
+        if ($equivalent) {
             return;
         }
 

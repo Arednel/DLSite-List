@@ -83,6 +83,16 @@
                     <livewire:content-terminology-settings />
 
                     <h2>
+                        <i class="fa-solid fa-star-half-stroke fa-fw options-section-icon" aria-hidden="true"></i>
+                        {{ __('Rating') }}
+                    </h2>
+                    <p class="option-description">
+                        {{ __('Choose the displayed rating scale and visual style for personal and DLsite ratings.') }}
+                    </p>
+
+                    <livewire:rating-settings />
+
+                    <h2>
                         <i class="fa-solid fa-list-ol fa-fw options-section-icon" aria-hidden="true"></i>
                         {{ __('Index Pagination') }}
                     </h2>

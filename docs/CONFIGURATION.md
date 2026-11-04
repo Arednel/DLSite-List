@@ -498,6 +498,25 @@ Choices:
 
 Controls which UI wording profile is used in the interface.
 
+#### Rating
+
+Rating Scale default: `Up to 10`.
+
+Choices:
+- `Up to 10`
+- `Up to 5`
+
+Personal Score is always entered and stored on the existing 1-10 scale. Rating Scale changes only how Score is displayed; for example, Score `9` appears as `4.5` on the 5-point scale.
+
+Rating Visual Style default: `Simple`.
+
+Choices:
+- `Simple` - number only
+- `DLsite` - five stars plus the number
+- `Extended DLsite` - five stars plus the number and the DLsite vote count
+
+With `Extended DLsite`, the combined Rating field spans the full mobile card row at viewport widths of 768px or less.
+
 #### Index Pagination
 
 Default: `100`
@@ -707,7 +726,9 @@ Fetched Tags are readonly by default. If made editable, editing changes only the
 
 - `image` - shown as `Cover Image` in Field Layout settings; the Index table column is `Image`.
 - `title` - locked visible; Notes below Title enabled
+- `rating` - hidden; combines DLsite Rating first and personal Score second
 - `score`
+- `dlsite_rating` - hidden
 - `series`
 - `age_category`
 - `site_id` - hidden
@@ -742,6 +763,7 @@ Index columns also have a width mode:
 
 - `title`
 - `score`
+- `dlsite_rating` - hidden
 - `series`
 - `age_category`
 - `site_id` - hidden
@@ -772,6 +794,8 @@ Index columns also have a width mode:
 
 - `product_code`
 - `score`
+- `dlsite_rating` - hidden
+- `dlsite_rating_count` - hidden
 - `series`
 - `age_category`
 - `site_id` - hidden
@@ -800,6 +824,7 @@ Hiding a value from the Index Sort Menu only removes it from that dropdown. It d
 
 - `progress`
 - `score`
+- `dlsite_rating` - hidden and read-only by default
 - `series`
 - `title` - locked visible
 - `image` - hidden
@@ -829,6 +854,7 @@ Hiding a value from the Index Sort Menu only removes it from that dropdown. It d
 - `product_code` - locked visible
 - `progress`
 - `score`
+- `dlsite_rating` - hidden
 - `series`
 - `title`
 - `tags`
@@ -857,6 +883,7 @@ Hidden DLsite Quick Add metadata fields are not accepted as user overrides, but 
 - `product_code` - locked visible
 - `progress`
 - `score`
+- `dlsite_rating` - hidden
 - `series`
 - `title`
 - `tags`
@@ -883,6 +910,7 @@ Hidden DLsite Quick Add metadata fields are not accepted as user overrides, but 
 - `product_code` - locked visible
 - `progress`
 - `score`
+- `dlsite_rating` - hidden
 - `series`
 - `title` - locked visible
 - `tags`

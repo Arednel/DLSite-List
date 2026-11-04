@@ -14,6 +14,8 @@
     'years' => [],
     'showReadonlyGenreColors' => false,
     'progressOptions' => null,
+    'ratingScale',
+    'dlsiteRatingValue',
 ])
 
 @switch($field['field'])
@@ -39,7 +41,15 @@
         @if ($field['editable'])
             <x-fields.score-select :value="$product->score" />
         @else
-            <x-fields.readonly-text :label="__('Score')" :value="$product->score" :long="false" />
+            <x-fields.readonly-text :label="__('Score')" :value="$readonlyFieldValues['score'] ?? null" :long="false" />
+        @endif
+    @break
+
+    @case('dlsite_rating')
+        @if ($field['editable'])
+            <x-fields.dlsite-rating :rating-scale="$ratingScale" :value="$dlsiteRatingValue" :rating-count="$product->dlsite_rating_count" />
+        @else
+            <x-fields.readonly-text :label="__('DLsite Rating')" :value="$readonlyFieldValues['dlsite_rating'] ?? null" :long="false" />
         @endif
     @break
 

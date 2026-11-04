@@ -14,6 +14,7 @@ use App\Models\Product;
 use App\Support\GraphCycleValidator;
 use App\Support\ProductContributorSync;
 use App\Support\ProductGenreSync;
+use App\Support\DLSite\DLSiteRating;
 use App\Support\ProductImagePromotion;
 use Closure;
 use Illuminate\Support\Arr;
@@ -49,6 +50,7 @@ final class ImportReview
             'sample_images',
             'notes',
             'score',
+            'dlsite_rating',
             'progress',
             'start_date',
             'end_date',
@@ -221,6 +223,19 @@ final class ImportReview
                 foreach ($record[$category] ?? [] as $field => $value) {
                     $this->item($run, $section, $category, $product->id, $current[$category][$field] ?? null, $value, [...$metadata, 'field' => $field]);
                 }
+            }
+            $ratingFields = DLSiteRating::ATTRIBUTE_KEYS;
+            $incomingRating = Arr::only($record['details'] ?? [], $ratingFields);
+            if ($incomingRating !== []) {
+                $this->item(
+                    $run,
+                    $section,
+                    'dlsite_rating',
+                    $product->id,
+                    Arr::only($current['details'] ?? [], array_keys($incomingRating)),
+                    $incomingRating,
+                    [...$metadata, 'domain' => 'details'],
+                );
             }
             foreach (self::WORK_SCALAR_CATEGORIES as $category => [$group, $field]) {
                 if (array_key_exists($field, $record[$group] ?? [])) {
@@ -746,6 +761,25 @@ final class ImportReview
                 if ($product->isDirty()) {
                     $product->save();
                 }
+            }
+        } elseif (($item->metadata['domain'] ?? null) === 'details') {
+            if (! $merge) {
+                $product->fill($value);
+            } else {
+                if ($product->dlsite_rating_5 === null && $product->dlsite_rating_10 === null) {
+                    $product->fill(Arr::only($value, DLSiteRating::RATING_KEYS));
+                }
+
+                if (
+                    array_key_exists('dlsite_rating_count', $value)
+                    && $product->dlsite_rating_count === null
+                ) {
+                    $product->dlsite_rating_count = $value['dlsite_rating_count'];
+                }
+            }
+
+            if ($product->isDirty()) {
+                $product->save();
             }
         } elseif (($item->metadata['domain'] ?? null) === 'contributors') {
             $current = $this->data->category($product, 'contributors', true);

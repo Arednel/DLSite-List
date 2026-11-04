@@ -6,6 +6,8 @@ use App\Enums\ContentFocus;
 use App\Enums\FetchedTagLanguage;
 use App\Enums\ProductField;
 use App\Enums\ProductIndexSortField;
+use App\Enums\RatingScale;
+use App\Enums\RatingVisualStyle;
 use App\Enums\UiLanguage;
 use App\Models\Option;
 use App\Support\ProductFieldLayout;
@@ -38,6 +40,30 @@ class OptionMetadataSettingsTest extends TestCase
             'key' => Option::UI_LANGUAGE,
             'value' => UiLanguage::English->value,
         ]);
+    }
+
+
+    public function test_rating_settings_default_normalize_and_reset(): void
+    {
+        $this->assertSame(RatingScale::Ten, Option::ratingScale());
+        $this->assertSame(RatingVisualStyle::Simple, Option::ratingVisualStyle());
+
+        Option::setRatingScale(RatingScale::Five);
+        Option::setRatingVisualStyle(RatingVisualStyle::ExtendedDLSite);
+
+        $this->assertSame(RatingScale::Five, Option::ratingScale());
+        $this->assertSame(RatingVisualStyle::ExtendedDLSite, Option::ratingVisualStyle());
+
+        Option::query()->updateOrCreate(['key' => Option::RATING_SCALE], ['value' => 'invalid']);
+        Option::query()->updateOrCreate(['key' => Option::RATING_VISUAL_STYLE], ['value' => 'invalid']);
+
+        $this->assertSame(RatingScale::Ten, Option::ratingScale());
+        $this->assertSame(RatingVisualStyle::Simple, Option::ratingVisualStyle());
+
+        Option::resetRatingSettingsToDefault();
+
+        $this->assertDatabaseMissing('options', ['key' => Option::RATING_SCALE]);
+        $this->assertDatabaseMissing('options', ['key' => Option::RATING_VISUAL_STYLE]);
     }
 
     public function test_ui_language_can_be_reset_to_english_by_removing_its_option(): void
@@ -545,6 +571,8 @@ class OptionMetadataSettingsTest extends TestCase
         $this->assertFalse($defaults->indexGroupOrderingEnabled);
         $this->assertFalse($defaults->searchHiddenDescriptionsEnabled);
         $this->assertFalse($defaults->indexImageViewerEnabled);
+        $this->assertSame(RatingScale::Ten, $defaults->ratingScale);
+        $this->assertSame(RatingVisualStyle::Simple, $defaults->ratingVisualStyle);
         $this->assertSame(Option::DEFAULT_OPTIONAL_PRODUCT_STATUSES, $defaults->optionalProductStatuses);
         $this->assertSame(Option::DEFAULT_TAG_COLOR_SURFACES, $defaults->tagColorSurfaces);
         $this->assertSame(ProductIndexContentOverflow::DEFAULTS, $defaults->contentOverflow);
@@ -584,6 +612,8 @@ class OptionMetadataSettingsTest extends TestCase
         Option::setTagLibraryIndexGroupOrderingEnabled(true);
         Option::setIndexSearchHiddenDescriptionsEnabled(true);
         Option::setIndexImageViewerEnabled(true);
+        Option::setRatingScale(RatingScale::Five);
+        Option::setRatingVisualStyle(RatingVisualStyle::ExtendedDLSite);
         Option::setOptionalProductStatuses([
             'on_hold' => true,
             'dropped' => false,
@@ -620,6 +650,8 @@ class OptionMetadataSettingsTest extends TestCase
         $this->assertTrue($settings->indexGroupOrderingEnabled);
         $this->assertTrue($settings->searchHiddenDescriptionsEnabled);
         $this->assertTrue($settings->indexImageViewerEnabled);
+        $this->assertSame(RatingScale::Five, $settings->ratingScale);
+        $this->assertSame(RatingVisualStyle::ExtendedDLSite, $settings->ratingVisualStyle);
         $this->assertSame([
             'on_hold' => true,
             'dropped' => false,
@@ -822,6 +854,7 @@ class OptionMetadataSettingsTest extends TestCase
             [[Option::INDEX_PER_PAGE], fn() => Option::resetIndexPerPageToDefault()],
             [[Option::FETCHED_TAG_LANGUAGE_FOLLOWS_UI, Option::FETCHED_TAG_LANGUAGE], fn() => Option::resetFetchedTagLanguageSettingsToDefault()],
             [[Option::INDEX_SEARCH_HIDDEN_DESCRIPTIONS_ENABLED], fn() => Option::resetIndexSearchHiddenDescriptionsEnabledToDefault()],
+            [[Option::RATING_SCALE, Option::RATING_VISUAL_STYLE], fn() => Option::resetRatingSettingsToDefault()],
             [[Option::TAG_AUTOCOMPLETE_ORDER, Option::SERIES_AUTOCOMPLETE_ORDER], fn() => Option::resetAutocompleteToDefault()],
             [[Option::AUTO_SERIES_FROM_TITLE_NAME], fn() => Option::resetAutoSeriesFromTitleNameToDefault()],
             [[Option::PRODUCT_FORM_THEME], fn() => Option::resetProductFormThemeToDefault()],
@@ -861,6 +894,8 @@ class OptionMetadataSettingsTest extends TestCase
     {
         return array_diff_key(ProductIndexSortField::options(), array_flip([
             ProductIndexSortField::UpdatedAt->value,
+            ProductIndexSortField::DLSiteRating->value,
+            ProductIndexSortField::DLSiteRatingCount->value,
             ProductIndexSortField::SiteId->value,
             ProductIndexSortField::ProductFormat->value,
             ProductIndexSortField::AnnouncementDate->value,

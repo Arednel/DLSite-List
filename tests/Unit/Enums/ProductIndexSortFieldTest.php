@@ -16,11 +16,12 @@ class ProductIndexSortFieldTest extends TestCase
         $this->app->instance(ContentTerminology::class, new ContentTerminology(ContentFocus::General));
     }
 
-    public function test_it_exposes_sql_sort_columns_for_all_fields(): void
+    public function test_it_exposes_fixed_sql_sort_columns(): void
     {
         $expectedColumns = [
             ProductIndexSortField::Code->value => 'code_number',
             ProductIndexSortField::Score->value => 'score',
+            ProductIndexSortField::DLSiteRatingCount->value => 'dlsite_rating_count',
             ProductIndexSortField::Series->value => 'series',
             ProductIndexSortField::AgeCategory->value => 'age_category',
             ProductIndexSortField::SiteId->value => 'site_id',
@@ -44,8 +45,8 @@ class ProductIndexSortFieldTest extends TestCase
             ProductIndexSortField::Author->value => 'author',
         ];
 
-        foreach (ProductIndexSortField::cases() as $field) {
-            $this->assertSame($expectedColumns[$field->value], $field->sqlColumn());
+        foreach ($expectedColumns as $fieldValue => $column) {
+            $this->assertSame($column, ProductIndexSortField::from($fieldValue)->sqlColumn());
         }
     }
 
@@ -54,6 +55,8 @@ class ProductIndexSortFieldTest extends TestCase
         $this->assertSame([
             ProductIndexSortField::Code->value,
             ProductIndexSortField::Score->value,
+            ProductIndexSortField::DLSiteRating->value,
+            ProductIndexSortField::DLSiteRatingCount->value,
             ProductIndexSortField::Series->value,
             ProductIndexSortField::AgeCategory->value,
             ProductIndexSortField::SiteId->value,
@@ -84,6 +87,8 @@ class ProductIndexSortFieldTest extends TestCase
         $this->assertArrayNotHasKey(ProductIndexSortField::ProductFormat->value, $visibleOptions);
         $this->assertArrayNotHasKey(ProductIndexSortField::SiteId->value, $visibleOptions);
         $this->assertArrayNotHasKey(ProductIndexSortField::AnnouncementDate->value, $visibleOptions);
+        $this->assertArrayNotHasKey(ProductIndexSortField::DLSiteRating->value, $visibleOptions);
+        $this->assertArrayNotHasKey(ProductIndexSortField::DLSiteRatingCount->value, $visibleOptions);
         $this->assertArrayNotHasKey(ProductIndexSortField::Circle->value, $visibleOptions);
         $this->assertArrayNotHasKey(ProductIndexSortField::MakerNames->value, $visibleOptions);
     }
@@ -101,6 +106,8 @@ class ProductIndexSortFieldTest extends TestCase
             ProductIndexSortField::Series->value,
             ProductIndexSortField::Score->value,
             ProductIndexSortField::Code->value,
+            ProductIndexSortField::DLSiteRating->value,
+            ProductIndexSortField::DLSiteRatingCount->value,
             ProductIndexSortField::AgeCategory->value,
             ProductIndexSortField::SiteId->value,
             ProductIndexSortField::ProductFormat->value,
@@ -142,6 +149,8 @@ class ProductIndexSortFieldTest extends TestCase
             ['field' => ProductIndexSortField::Series->value, 'visible' => true],
             ['field' => ProductIndexSortField::Score->value, 'visible' => false],
             ['field' => ProductIndexSortField::Code->value, 'visible' => true],
+            ['field' => ProductIndexSortField::DLSiteRating->value, 'visible' => false],
+            ['field' => ProductIndexSortField::DLSiteRatingCount->value, 'visible' => false],
             ['field' => ProductIndexSortField::AgeCategory->value, 'visible' => true],
             ['field' => ProductIndexSortField::SiteId->value, 'visible' => false],
             ['field' => ProductIndexSortField::ProductFormat->value, 'visible' => false],

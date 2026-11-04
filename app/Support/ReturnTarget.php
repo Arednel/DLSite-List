@@ -2,6 +2,8 @@
 
 namespace App\Support;
 
+use App\Enums\ProductIndexSortField;
+use App\Enums\RatingScale;
 use App\Models\Option;
 use App\Models\Product;
 use Illuminate\Http\Request;
@@ -47,11 +49,11 @@ final readonly class ReturnTarget
     ): self {
         $results ??= app(ProductIndexResults::class);
         $query = $this->queryWithoutPage();
-        [$perPage, $descriptionSearchColumns, $searchTags] = $this->indexPaginationAndSearchPolicy($results, $query, $perPage);
+        [$perPage, $descriptionSearchColumns, $searchTags, $ratingScale] = $this->indexPaginationAndSearchPolicy($results, $query, $perPage);
         $savedPage = self::normalizePage($this->query['page'] ?? null) ?? 1;
         $filters = ProductIndexFilters::fromQuery($query);
 
-        if ($results->pageContainsProduct($filters, $product, $perPage, $savedPage, $descriptionSearchColumns, $searchTags)) {
+        if ($results->pageContainsProduct($filters, $product, $perPage, $savedPage, $ratingScale, $descriptionSearchColumns, $searchTags)) {
             if ($savedPage > 1 && $perPage !== Option::INDEX_PER_PAGE_UNLIMITED) {
                 $query['page'] = (string) $savedPage;
             }
@@ -63,7 +65,7 @@ final readonly class ReturnTarget
         }
 
         if (! $visibilityMayHaveChanged) {
-            $page = $results->pageForProduct($filters, $product, $perPage, $descriptionSearchColumns, $searchTags);
+            $page = $results->pageForProduct($filters, $product, $perPage, $ratingScale, $descriptionSearchColumns, $searchTags);
 
             if ($page !== null) {
                 if ($page > 1) {
@@ -77,11 +79,12 @@ final readonly class ReturnTarget
             }
         }
 
-        $query = $this->queryForVisibleProduct($product, $results, $descriptionSearchColumns, $searchTags);
+        $query = $this->queryForVisibleProduct($product, $results, $ratingScale, $descriptionSearchColumns, $searchTags);
         $page = $results->pageForProduct(
             ProductIndexFilters::fromQuery($query),
             $product,
             $perPage,
+            $ratingScale,
             $descriptionSearchColumns,
             $searchTags,
         );
@@ -108,13 +111,13 @@ final readonly class ReturnTarget
             return new self(query: $query);
         }
 
-        [$perPage, $descriptionSearchColumns, $searchTags] = $this->indexPaginationAndSearchPolicy($results, $query, $perPage);
+        [$perPage, $descriptionSearchColumns, $searchTags, $ratingScale] = $this->indexPaginationAndSearchPolicy($results, $query, $perPage);
 
         if ($perPage === Option::INDEX_PER_PAGE_UNLIMITED) {
             return new self(query: $query);
         }
 
-        $lastPage = $results->lastPage(ProductIndexFilters::fromQuery($query), $perPage, $descriptionSearchColumns, $searchTags);
+        $lastPage = $results->lastPage(ProductIndexFilters::fromQuery($query), $perPage, $ratingScale, $descriptionSearchColumns, $searchTags);
         $page = min($savedPage, $lastPage ?? 1);
 
         if ($page > 1) {
@@ -177,45 +180,61 @@ final readonly class ReturnTarget
     }
 
     /**
-     * @return array{0: int|string, 1: list<string>, 2: bool}
+     * @return array{0: int|string, 1: list<string>, 2: bool, 3: RatingScale}
      */
     private function indexPaginationAndSearchPolicy(
         ProductIndexResults $results,
         array $query,
         int|string|null $perPage,
     ): array {
-        if ($perPage !== null && blank($query['search'] ?? null)) {
-            return [$perPage, [], true];
+        $hasSearch = filled($query['search'] ?? null);
+
+        if ($perPage !== null && ! $hasSearch) {
+            return [
+                $perPage,
+                [],
+                true,
+                self::queryUsesDLSiteRating($query) ? Option::ratingScale() : RatingScale::Ten,
+            ];
         }
 
         $settings = Option::productIndexSettings();
 
         return [
             $perPage ?? $settings->perPage,
-            filled($query['search'] ?? null)
+            $hasSearch
                 ? $results->descriptionSearchColumns(
                     $settings->visibleIndexFields,
                     $settings->searchHiddenDescriptionsEnabled,
                 )
                 : [],
-            ! filled($query['search'] ?? null)
-                || in_array('tags', $settings->visibleIndexFields, true),
+            ! $hasSearch || in_array('tags', $settings->visibleIndexFields, true),
+            $settings->ratingScale,
         ];
+    }
+
+    private static function queryUsesDLSiteRating(array $query): bool
+    {
+        return filled($query['dlsite_rating'] ?? null)
+            || ($query['sort_first_field'] ?? null) === ProductIndexSortField::DLSiteRating->value
+            || ($query['sort_second_field'] ?? null) === ProductIndexSortField::DLSiteRating->value;
     }
 
     private function queryForVisibleProduct(
         Product $product,
         ProductIndexResults $results,
+        RatingScale $ratingScale,
         array $descriptionSearchColumns,
         bool $searchTags,
     ): array {
         $query = $this->queryWithoutPage();
+        $filters = ProductIndexFilters::fromQuery($query);
 
         if (
             ! self::hasVisibilityFilters($query)
-            || $results->containsProduct(ProductIndexFilters::fromQuery($query), $product, $descriptionSearchColumns, $searchTags)
+            || $results->containsProduct($filters, $product, $ratingScale, $descriptionSearchColumns, $searchTags)
         ) {
-            return ProductIndexFilters::fromQuery($query)->toQuery();
+            return $filters->toQuery();
         }
 
         foreach (ProductIndexFilters::VISIBILITY_FILTER_GROUPS as $filterGroup) {
@@ -225,7 +244,7 @@ final readonly class ReturnTarget
 
             $groupQuery = Arr::only($query, $filterGroup);
 
-            if (! $results->containsProduct(ProductIndexFilters::fromQuery($groupQuery), $product, $descriptionSearchColumns, $searchTags)) {
+            if (! $results->containsProduct(ProductIndexFilters::fromQuery($groupQuery), $product, $ratingScale, $descriptionSearchColumns, $searchTags)) {
                 $query = Arr::except($query, $filterGroup);
             }
         }

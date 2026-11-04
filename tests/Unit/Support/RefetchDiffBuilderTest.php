@@ -13,6 +13,7 @@ use App\Support\ProductGenreSync;
 use App\Support\Refetch\RefetchDiffBuilder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Storage;
+use PHPUnit\Framework\Attributes\DataProvider;
 use Tests\TestCase;
 
 class RefetchDiffBuilderTest extends TestCase
@@ -375,6 +376,61 @@ class RefetchDiffBuilderTest extends TestCase
         $this->assertArrayNotHasKey('tags', $changes);
         $this->assertTrue($tag->is($resolved));
         $this->assertSame('Asmr', $resolved->title);
+    }
+
+    #[DataProvider('changedDLSiteRatings')]
+    public function test_dlsite_rating_diff_is_grouped_as_one_reviewable_change(array $oldRating): void
+    {
+        $product = Product::factory()->create([
+            'id' => 'RJ123456',
+            ...$oldRating,
+        ]);
+
+        $changes = app(RefetchDiffBuilder::class)->build(
+            $product,
+            new DLSiteFetchResult(
+                workData: DLSiteWorkData::fromArray([
+                    'japanese' => [
+                        'product_id' => $product->getKey(),
+                        'rate_count_detail' => [
+                            '5' => 966,
+                            '4' => 34,
+                            '3' => 0,
+                            '2' => 0,
+                            '1' => 0,
+                        ],
+                    ],
+                ]),
+                failedImages: [],
+            ),
+            null,
+        );
+
+        $this->assertSame([
+            'label' => 'DLsite Rating',
+            'old' => $oldRating,
+            'new' => [
+                'dlsite_rating_5' => '4.97',
+                'dlsite_rating_10' => '9.93',
+                'dlsite_rating_count' => 1000,
+            ],
+        ], $changes[RefetchCategory::Rating->value]['dlsite_rating']);
+    }
+
+    public static function changedDLSiteRatings(): array
+    {
+        return [
+            'both scales and count changed' => [[
+                'dlsite_rating_5' => '4.50',
+                'dlsite_rating_10' => '9.00',
+                'dlsite_rating_count' => 100,
+            ]],
+            'only ten-point scale changed' => [[
+                'dlsite_rating_5' => '4.97',
+                'dlsite_rating_10' => '9.94',
+                'dlsite_rating_count' => 1000,
+            ]],
+        ];
     }
 
     /**

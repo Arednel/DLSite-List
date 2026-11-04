@@ -5,6 +5,8 @@ namespace Tests\Feature;
 use App\Enums\AutocompleteOrder;
 use App\Enums\ContentFocus;
 use App\Enums\ProductField;
+use App\Enums\RatingScale;
+use App\Enums\RatingVisualStyle;
 use App\Enums\UiLanguage;
 use App\Livewire\AutocompleteSettings;
 use App\Livewire\ContentTerminologySettings;
@@ -18,6 +20,7 @@ use App\Livewire\OptionsResetDefaults;
 use App\Livewire\ProductFieldLayoutSettings;
 use App\Livewire\ProductFormModalSettings;
 use App\Livewire\ProductFormThemeSettings;
+use App\Livewire\RatingSettings;
 use App\Livewire\TagLibraryDisplaySettings;
 use App\Livewire\UiLanguageSettings;
 use App\Models\Option;
@@ -89,6 +92,31 @@ class ProductMetadataSettingsTest extends TestCase
             ->assertRedirectToRoute('options.index', ['tab' => 'general']);
 
         $this->assertSame(ContentFocus::General, Option::contentFocus());
+    }
+
+    public function test_rating_settings_save_and_reset_scale_and_visual_style(): void
+    {
+        Livewire::test(RatingSettings::class)
+            ->assertSet('scale', RatingScale::Ten->value)
+            ->assertSet('visualStyle', RatingVisualStyle::Simple->value)
+            ->set('scale', RatingScale::Five->value)
+            ->set('visualStyle', RatingVisualStyle::ExtendedDLSite->value)
+            ->call('save')
+            ->assertHasNoErrors()
+            ->assertSet('saved', true);
+
+        $this->assertSame(RatingScale::Five, Option::ratingScale());
+        $this->assertSame(RatingVisualStyle::ExtendedDLSite, Option::ratingVisualStyle());
+
+        Livewire::test(RatingSettings::class)
+            ->call('askResetToDefault')
+            ->call('resetToDefault')
+            ->assertHasNoErrors()
+            ->assertSet('scale', RatingScale::Ten->value)
+            ->assertSet('visualStyle', RatingVisualStyle::Simple->value);
+
+        $this->assertSame(RatingScale::Ten, Option::ratingScale());
+        $this->assertSame(RatingVisualStyle::Simple, Option::ratingVisualStyle());
     }
 
     public static function wordingPreviewProvider(): array
@@ -693,6 +721,9 @@ class ProductMetadataSettingsTest extends TestCase
         $help = [
             ['index', 'notes_below_title', "Shows each work's Notes beneath its title on the Index."],
             ['index', ProductField::Notes->value, 'Notes are already shown inside Title; enable this for a separate column.'],
+            ['index', ProductField::Rating->value, 'Shows DLsite work rating and your personal Score in one column.'],
+            ['index', ProductField::Score->value, 'Shows your score/rating. Your Score is always entered and stored from 1 to 10.'],
+            ['index', ProductField::DLSiteRating->value, 'Shows the DLsite work rating.'],
             ['index', ProductField::MakerNames->value, 'Combines the separate Circle, Publisher, and Brand fields into one Index column.'],
             ['filter', ProductField::MakerNames->value, 'Searches Circle, Publisher, and Brand together.'],
             ['sort', ProductField::MakerNames->value, 'Sorts by the first available name: Circle, then Publisher, then Brand.'],
@@ -1157,6 +1188,7 @@ class ProductMetadataSettingsTest extends TestCase
             ->assertOk()
             ->assertSeeLivewire(UiLanguageSettings::class)
             ->assertSeeLivewire(ContentTerminologySettings::class)
+            ->assertSeeLivewire(RatingSettings::class)
             ->assertSeeLivewire(IndexPaginationSettings::class)
             ->assertSeeLivewire(IndexContentOverflowSettings::class)
             ->assertSeeLivewire(IndexTableWidthSettings::class)
@@ -1177,6 +1209,7 @@ class ProductMetadataSettingsTest extends TestCase
             ->assertOk()
             ->assertDontSeeLivewire(UiLanguageSettings::class)
             ->assertDontSeeLivewire(ContentTerminologySettings::class)
+            ->assertDontSeeLivewire(RatingSettings::class)
             ->assertDontSeeLivewire(IndexPaginationSettings::class)
             ->assertDontSeeLivewire(IndexContentOverflowSettings::class)
             ->assertDontSeeLivewire(IndexTableWidthSettings::class)

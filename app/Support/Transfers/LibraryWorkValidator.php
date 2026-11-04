@@ -12,6 +12,7 @@ use App\Enums\ProductScore;
 use App\Rules\MaxBytes;
 use App\Rules\ValidPartialDate;
 use App\Rules\ValidProductFormat;
+use App\Support\DLSite\DLSiteRating;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Validation\Rule;
 
@@ -79,6 +80,9 @@ final class LibraryWorkValidator
             ...self::productFormatRules('details.product_format'),
             'details.announce_date' => ['sometimes', 'nullable', 'date'],
             'details.notes' => ['sometimes', 'nullable', 'string', 'max:1000'],
+            'details.dlsite_rating_5' => ['present_with:details.dlsite_rating_10', 'required_with:details.dlsite_rating_10', 'nullable', 'numeric', 'min:0', 'max:5', 'decimal:0,2'],
+            'details.dlsite_rating_10' => ['present_with:details.dlsite_rating_5', 'required_with:details.dlsite_rating_5', 'nullable', 'numeric', 'min:0', 'max:10', 'decimal:0,2'],
+            'details.dlsite_rating_count' => ['sometimes', ...DLSiteRating::manualCountRules()],
             'listening' => ['sometimes', 'array:' . implode(',', LibraryData::FIELDS['listening'])],
             'listening.progress' => ['sometimes', 'nullable', Rule::enum(ProductProgress::class)],
             'listening.score' => ['sometimes', 'nullable', Rule::enum(ProductScore::class)],
@@ -127,6 +131,10 @@ final class LibraryWorkValidator
         return [
             'contributors.circle.*.max' => 'Circle exceeds the legacy field limit of 200 characters.',
             'cover.files.max' => 'A work can have only one cover.',
+            'details.dlsite_rating_5.present_with' => 'DLsite 5-point and 10-point ratings must be provided together.',
+            'details.dlsite_rating_5.required_with' => 'DLsite 5-point and 10-point ratings must be provided together.',
+            'details.dlsite_rating_10.present_with' => 'DLsite 5-point and 10-point ratings must be provided together.',
+            'details.dlsite_rating_10.required_with' => 'DLsite 5-point and 10-point ratings must be provided together.',
         ];
     }
 }

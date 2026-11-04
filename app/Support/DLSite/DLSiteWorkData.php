@@ -29,6 +29,7 @@ final readonly class DLSiteWorkData
         public array $englishGenres,
         public array $sampleImages,
         public array $contributorsByRole,
+        public DLSiteRating $rating,
     ) {}
 
     public static function fromArray(array $workData, ?string $fallbackProductId = null, ?array $originalWorkData = null): self
@@ -75,6 +76,7 @@ final readonly class DLSiteWorkData
             englishGenres: self::list($english['genre'] ?? []),
             sampleImages: self::list($japanese['sample_images'] ?? []),
             contributorsByRole: self::contributorsByRole($japanese, $english, $circle),
+            rating: DLSiteRating::fromDistribution($japanese['rate_count_detail'] ?? $english['rate_count_detail'] ?? null),
         );
     }
 

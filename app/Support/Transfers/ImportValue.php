@@ -10,6 +10,7 @@ use App\Enums\ProductReListenValue;
 use App\Enums\ProductScore;
 use App\Models\LibraryImportItem;
 use App\Models\Product;
+use App\Support\DLSite\DLSiteRating;
 use App\Support\ContentTerminology;
 use Illuminate\Support\Arr;
 
@@ -41,6 +42,10 @@ final class ImportValue
             'end_date' => __('Finish Date'),
             'num_re_listen_times' => app(ContentTerminology::class)->repeatCount(),
             're_listen_value' => app(ContentTerminology::class)->repeatValue(),
+            'dlsite_rating' => __('DLsite Rating'),
+            'dlsite_rating_5' => __('Up to 5'),
+            'dlsite_rating_10' => __('Up to 10'),
+            'dlsite_rating_count' => __('Vote count'),
             'memberships' => __('Tags in Groups'),
             'relationships' => __('Parent Tags'),
             default => __(ucwords(str_replace('_', ' ', $key))),
@@ -81,6 +86,10 @@ final class ImportValue
     {
         $paths = match (true) {
             in_array($category, ['titles', 'descriptions'], true) => [$category],
+            $category === 'dlsite_rating' => array_map(
+                fn(string $field): string => 'details->' . $field,
+                DLSiteRating::ATTRIBUTE_KEYS,
+            ),
             isset(ImportReview::WORK_SCALAR_CATEGORIES[$category]) => [implode('->', ImportReview::WORK_SCALAR_CATEGORIES[$category])],
             in_array($category, ImportReview::WORK_CONTRIBUTOR_CATEGORIES, true) => ['contributors->' . $category],
             $category === 'tags' => ['tags->jp', 'tags->en'],
@@ -107,6 +116,10 @@ final class ImportValue
         $values = [];
         if (in_array($category, ['titles', 'descriptions'], true)) {
             $values = is_array($record[$category] ?? null) ? $record[$category] : [];
+        } elseif ($category === 'dlsite_rating') {
+            $values = is_array($record['details'] ?? null)
+                ? Arr::only($record['details'], DLSiteRating::ATTRIBUTE_KEYS)
+                : [];
         } elseif (isset(ImportReview::WORK_SCALAR_CATEGORIES[$category])) {
             [$group, $field] = ImportReview::WORK_SCALAR_CATEGORIES[$category];
             if (is_array($record[$group] ?? null) && array_key_exists($field, $record[$group])) {
@@ -143,6 +156,9 @@ final class ImportValue
 
     private static function display(mixed $value, string $field): mixed
     {
+        if ($field === 'dlsite_rating_count' && is_numeric($value)) {
+            return (int) $value;
+        }
         if (is_bool($value)) {
             return $value ? __('Yes') : __('No');
         }
@@ -175,6 +191,8 @@ final class ImportValue
         foreach ($value as $key => $entry) {
             if ($list && ! is_array($entry)) {
                 $result[] = ['value' => self::display($entry, $field)];
+            } elseif ($key === 'dlsite_rating_count') {
+                $result[$key] = self::display($entry, $key);
             } else {
                 $result[$list ? __('Item :number', ['number' => $key + 1]) : self::label((string) $key)] = self::display($entry, (string) $key);
             }

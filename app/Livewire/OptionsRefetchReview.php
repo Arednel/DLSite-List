@@ -8,6 +8,7 @@ use App\Models\Genre;
 use App\Models\Option;
 use App\Models\RefetchRun;
 use App\Models\RefetchWorkResult;
+use App\Support\DLSite\DLSiteRating;
 use App\Support\Localization\ErrorMessage;
 use App\Support\ProductImageMessage;
 use App\Support\Refetch\RefetchService;
@@ -514,6 +515,16 @@ class OptionsRefetchReview extends Component
      */
     private function prepareCategoryReviewValue(mixed $value, RefetchCategory $category, array $colors): mixed
     {
+        if ($category === RefetchCategory::Rating && is_array($value)) {
+            $count = isset($value['dlsite_rating_count']) ? (int) $value['dlsite_rating_count'] : null;
+
+            return [
+                'Up to 5' => DLSiteRating::displayValue($value['dlsite_rating_5'] ?? null),
+                'Up to 10' => DLSiteRating::displayValue($value['dlsite_rating_10'] ?? null),
+                'Vote count' => DLSiteRating::displayVoteCount($count),
+            ];
+        }
+
         if ($category === RefetchCategory::ProductFormat && is_array($value)) {
             $value = ProductFormat::labelsFor($value);
         }

@@ -4,6 +4,7 @@ namespace App\Support\Transfers;
 
 use App\Enums\ProductAgeCategory;
 use App\Enums\ProductContributorRole;
+use App\Support\DLSite\DLSiteRating;
 use App\Models\Product;
 use App\Support\DLSite\DLSiteWorkData;
 use Illuminate\Support\Arr;
@@ -53,6 +54,7 @@ final class WorkArchiveData
     private const CUSTOM_FIELDS = [
         'notes',
         'score',
+        ...DLSiteRating::ATTRIBUTE_KEYS,
         'progress',
         'start_date',
         'end_date',
@@ -101,6 +103,9 @@ final class WorkArchiveData
         $custom = [
             'notes' => $product->notes,
             'score' => $product->score,
+            'dlsite_rating_5' => $product->dlsite_rating_5,
+            'dlsite_rating_10' => $product->dlsite_rating_10,
+            'dlsite_rating_count' => $product->dlsite_rating_count,
             'progress' => $product->progress,
             'start_date' => $product->start_date,
             'end_date' => $product->end_date,
@@ -236,6 +241,7 @@ final class WorkArchiveData
         if (array_key_exists('notes', $custom)) {
             $details['notes'] = $custom['notes'];
         }
+        $details = [...$details, ...Arr::only($custom, DLSiteRating::ATTRIBUTE_KEYS)];
         if ($details !== []) {
             $record['details'] = $details;
         }

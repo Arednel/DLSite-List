@@ -41,6 +41,9 @@ class Product extends Model
         'notes',
         'sample_images',
         'score',
+        'dlsite_rating_5',
+        'dlsite_rating_10',
+        'dlsite_rating_count',
         'series',
         'progress',
         'start_date',
@@ -62,6 +65,9 @@ class Product extends Model
         'num_re_listen_times' => 'integer',
         're_listen_value' => 'integer',
         'priority' => 'integer',
+        'dlsite_rating_5' => 'decimal:2',
+        'dlsite_rating_10' => 'decimal:2',
+        'dlsite_rating_count' => 'integer',
     ];
 
     protected static function booted(): void

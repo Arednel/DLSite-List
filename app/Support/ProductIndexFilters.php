@@ -10,6 +10,7 @@ use App\Enums\ProductPriority;
 use App\Enums\ProductProgress;
 use App\Enums\ProductReListenValue;
 use App\Enums\ProductScore;
+use App\Support\DLSite\DLSiteRating;
 use BackedEnum;
 use Illuminate\Support\Arr;
 
@@ -39,6 +40,8 @@ final readonly class ProductIndexFilters
         'site_id',
         'progress',
         'score',
+        'dlsite_rating',
+        'dlsite_rating_count',
         'priority',
         'num_re_listen_times',
         're_listen_value',
@@ -81,6 +84,7 @@ final readonly class ProductIndexFilters
         ['site_id'],
         ['progress'],
         ['score'],
+        ['dlsite_rating', 'dlsite_rating_count'],
         ['priority'],
         ['num_re_listen_times'],
         ['re_listen_value'],
@@ -114,6 +118,8 @@ final readonly class ProductIndexFilters
         public string $siteId = '',
         public ?ProductProgress $progress = null,
         public ?ProductScore $score = null,
+        public string $dlsiteRating = '',
+        public ?int $dlsiteRatingCount = null,
         public ?ProductPriority $priority = null,
         public ?int $numReListenTimes = null,
         public ?ProductReListenValue $reListenValue = null,
@@ -176,6 +182,11 @@ final readonly class ProductIndexFilters
             siteId: strtolower(self::normalizeText($query['site_id'] ?? null)),
             progress: self::normalizeEnum($query['progress'] ?? null, ProductProgress::class),
             score: self::normalizeEnum($query['score'] ?? null, ProductScore::class),
+            dlsiteRating: self::normalizeDecimal($query['dlsite_rating'] ?? null, 10),
+            dlsiteRatingCount: self::normalizeNonNegativeInteger(
+                $query['dlsite_rating_count'] ?? null,
+                DLSiteRating::MAX_COUNT,
+            ),
             priority: self::normalizeEnum($query['priority'] ?? null, ProductPriority::class),
             numReListenTimes: self::normalizeNonNegativeInteger($query['num_re_listen_times'] ?? null),
             reListenValue: self::normalizeEnum($query['re_listen_value'] ?? null, ProductReListenValue::class),
@@ -258,6 +269,8 @@ final readonly class ProductIndexFilters
             'site_id' => $this->siteId,
             'progress' => $this->progress?->value ?? '',
             'score' => $this->score?->value ?? '',
+            'dlsite_rating' => $this->dlsiteRating,
+            'dlsite_rating_count' => $this->dlsiteRatingCount === null ? '' : (string) $this->dlsiteRatingCount,
             'priority' => $this->priority?->value ?? '',
             'num_re_listen_times' => $this->numReListenTimes === null ? '' : (string) $this->numReListenTimes,
             're_listen_value' => $this->reListenValue?->value ?? '',
@@ -306,8 +319,27 @@ final readonly class ProductIndexFilters
         return is_scalar($value) ? trim((string) $value) : '';
     }
 
-    private static function normalizeNonNegativeInteger(mixed $value): ?int
+    private static function normalizeDecimal(mixed $value, int $max): string
     {
+        $value = self::normalizeText($value);
+
+        if (! preg_match('/\A\d+(?:\.\d{1,2})?\z/', $value)) {
+            return '';
+        }
+
+        return (float) $value <= $max ? $value : '';
+    }
+
+    private static function normalizeNonNegativeInteger(mixed $value, ?int $max = null): ?int
+    {
+        if ($max !== null) {
+            $normalized = filter_var($value, FILTER_VALIDATE_INT, [
+                'options' => ['min_range' => 0, 'max_range' => $max],
+            ]);
+
+            return $normalized === false ? null : $normalized;
+        }
+
         $value = self::normalizeText($value);
 
         if ($value === '' || !ctype_digit($value)) {

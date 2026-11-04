@@ -4,6 +4,7 @@ namespace Tests\Feature;
 
 use App\Enums\ProductContributorRole;
 use App\Enums\RefetchCategory;
+use App\Enums\RatingScale;
 use App\Jobs\FetchProductWorkJob;
 use App\Livewire\OptionsRefetchReview;
 use App\Models\Genre;
@@ -165,6 +166,76 @@ class FullRefetchTest extends TestCase
             ->assertSee('Sets each unresolved tab that contains changes to Overwrite.')
             ->assertSee('Apply All Tabs')
             ->assertSee('Reject Run');
+    }
+
+    public function test_dlsite_rating_review_always_shows_both_scales_and_overwrites_cached_values_together(): void
+    {
+        Option::setRatingScale(RatingScale::Five);
+        $product = Product::factory()->create([
+            'dlsite_rating_5' => '4.50',
+            'dlsite_rating_10' => '9.00',
+            'dlsite_rating_count' => 100,
+        ]);
+        $run = app(RefetchService::class)->createRun([$product->id], false);
+        $result = $run->results()->firstOrFail();
+        $result->forceFill([
+            'status' => RefetchWorkResult::STATUS_FETCHED,
+            'changes' => [
+                RefetchCategory::Rating->value => [
+                    'dlsite_rating' => [
+                        'label' => 'DLsite Rating',
+                        'old' => [
+                            'dlsite_rating_5' => '4.50',
+                            'dlsite_rating_10' => '9.00',
+                            'dlsite_rating_count' => 100,
+                        ],
+                        'new' => [
+                            'dlsite_rating_5' => '4.97',
+                            'dlsite_rating_10' => '9.93',
+                            'dlsite_rating_count' => 1000,
+                        ],
+                    ],
+                ],
+            ],
+        ])->save();
+        $run->forceFill([
+            'status' => RefetchRun::STATUS_REVIEW,
+            'processed_count' => 1,
+            'fetched_count' => 1,
+            'completed_at' => now(),
+            'resolved_tabs' => array_values(array_diff(
+                RefetchCategory::values(),
+                [RefetchCategory::Rating->value],
+            )),
+        ])->save();
+
+        Livewire::test(OptionsRefetchReview::class, ['run' => $run])
+            ->call('showCategory', RefetchCategory::Rating->value)
+            ->assertSee('Up to 5')
+            ->assertSee('Up to 10')
+            ->assertSee('Vote count')
+            ->assertSee('4.5')
+            ->assertSee('9.0')
+            ->assertSee('100')
+            ->assertSee('4.97')
+            ->assertSee('9.93')
+            ->assertSee('(1,000 votes)');
+
+        Storage::disk('local')->put(
+            "Refetch/{$run->id}/Works/{$product->id}.json",
+            '{"rating":"fetched"}',
+        );
+
+        app(RefetchService::class)->applyTab(
+            $run,
+            RefetchCategory::Rating,
+            RefetchService::ACTION_OVERWRITE,
+        );
+
+        $product->refresh();
+        $this->assertSame('4.97', $product->dlsite_rating_5);
+        $this->assertSame('9.93', $product->dlsite_rating_10);
+        $this->assertSame(1000, $product->dlsite_rating_count);
     }
 
     public function test_product_format_review_overwrites_dlsite_values_and_preserves_custom_values(): void

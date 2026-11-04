@@ -13,7 +13,9 @@ enum ProductField: string
     case Title = 'title';
     case Image = 'image';
     case SampleImages = 'sample_images';
+    case Rating = 'rating';
     case Score = 'score';
+    case DLSiteRating = 'dlsite_rating';
     case Series = 'series';
     case AgeCategory = 'age_category';
     case SiteId = 'site_id';
@@ -48,7 +50,9 @@ enum ProductField: string
             self::Title => __('Title'),
             self::Image => __('Image'),
             self::SampleImages => __('Sample Images'),
+            self::Rating => __('Rating'),
             self::Score => __('Score'),
+            self::DLSiteRating => __('DLsite Rating'),
             self::Series => __('Series'),
             self::AgeCategory => __('Age'),
             self::SiteId => __('Site ID'),
@@ -95,6 +99,7 @@ enum ProductField: string
         return match ($this) {
             self::Title => ProductIndexSortField::Code,
             self::Score => ProductIndexSortField::Score,
+            self::DLSiteRating => ProductIndexSortField::DLSiteRating,
             self::Series => ProductIndexSortField::Series,
             self::AgeCategory => ProductIndexSortField::AgeCategory,
             self::SiteId => ProductIndexSortField::SiteId,
@@ -177,6 +182,7 @@ enum ProductField: string
                 'fields' => [
                     self::Progress,
                     self::Score,
+                    self::DLSiteRating,
                     self::Series,
                     self::Title,
                     self::Image,
@@ -230,6 +236,7 @@ enum ProductField: string
                 'fields' => [
                     self::Title,
                     self::Score,
+                    self::DLSiteRating,
                     self::Series,
                     self::AgeCategory,
                     self::SiteId,
@@ -275,6 +282,7 @@ enum ProductField: string
                     self::ProductCode,
                     self::Progress,
                     self::Score,
+                    self::DLSiteRating,
                     self::Series,
                     self::Title,
                     self::Tags,
@@ -306,6 +314,7 @@ enum ProductField: string
                     self::ProductCode,
                     self::Progress,
                     self::Score,
+                    self::DLSiteRating,
                     self::Series,
                     self::Title,
                     self::Tags,
@@ -342,7 +351,9 @@ enum ProductField: string
                 'fields' => [
                     self::Image,
                     self::Title,
+                    self::Rating,
                     self::Score,
+                    self::DLSiteRating,
                     self::Series,
                     self::AgeCategory,
                     self::SiteId,
@@ -371,6 +382,7 @@ enum ProductField: string
                 ],
                 'visibility_locked' => [self::Title],
                 'hidden_by_default' => [
+                    self::Rating,
                     ...self::metadataFields(),
                     self::MakerNames,
                     self::SiteId,
@@ -397,6 +409,7 @@ enum ProductField: string
     {
         return [
             ...($hiddenAgeCategory ? [self::AgeCategory] : []),
+            self::DLSiteRating,
             self::ProductFormat,
             self::Circle,
             self::Publisher,

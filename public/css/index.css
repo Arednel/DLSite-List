@@ -316,7 +316,8 @@ a {
     min-width: 140px;
 }
 
-.list-table .list-table-header .header-title.score {
+.list-table .list-table-header .header-title.score,
+.list-table .list-table-header .header-title.dlsite-rating {
     width: 65px
 }
 
@@ -960,6 +961,101 @@ body.filter-modal-open {
 
 .list-table .list-table-header .header-title {
     word-break: keep-all;
+}
+
+/* Rating display */
+.list-table .list-table-header .header-title.rating {
+    min-width: 80px;
+}
+
+.rating-combined {
+    display: grid;
+    gap: 3px;
+    width: 100%;
+    text-align: left;
+}
+
+.rating-display {
+    display: inline-flex;
+    align-items: flex-start;
+    width: 100%;
+    min-width: 0;
+    max-width: 100%;
+}
+
+.rating-display--source {
+    display: inline-grid;
+    grid-template-columns: 48px minmax(0, 1fr);
+    width: 100%;
+}
+
+.rating-display__source,
+.rating-display__count {
+    color: #7D6A6A;
+    font-size: 11px;
+}
+
+.rating-display__source {
+    font-weight: bold;
+}
+
+.rating-display__content {
+    display: inline-grid;
+    grid-template-columns: 82px 30px minmax(0, 1fr);
+    align-items: center;
+    width: 100%;
+    min-width: 0;
+    max-width: 100%;
+    column-gap: 3px;
+    text-align: left;
+}
+
+.list-table .list-table-data .data.score .rating-display__content {
+    grid-template-columns: 82px 30px;
+    width: max-content;
+}
+
+.rating-display__value {
+    text-align: left;
+}
+
+.rating-display__stars {
+    position: relative;
+    display: inline-block;
+    flex: 0 0 82px;
+    width: 82px;
+    height: 16px;
+    overflow: hidden;
+    font-family: Arial, sans-serif;
+    font-size: 16px;
+    line-height: 16px;
+    letter-spacing: 1px;
+    text-align: left;
+    white-space: nowrap;
+}
+
+.rating-display__stars::before,
+.rating-display__stars::after {
+    content: "★★★★★";
+    position: absolute;
+    inset: 0 auto 0 0;
+    overflow: hidden;
+}
+
+.rating-display__stars::before {
+    width: 100%;
+    color: #d7d7d7;
+}
+
+.rating-display__stars::after {
+    width: var(--rating-fill, 0%);
+    color: #f4a33b;
+}
+
+.rating-display__count {
+    min-width: 0;
+    font-weight: normal;
+    text-align: left;
 }
 
 @media (max-width: 768px) {

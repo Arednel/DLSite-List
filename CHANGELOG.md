@@ -8,7 +8,14 @@ All notable changes to this project are documented in this file.
 
 For existing manual installations:
 
+* Run `php artisan migrate`.
 * Activate the Python virtual environment and run `pip install -r python/requirements.txt`.
+
+### Added
+
+* Added DLsite Rating and vote count metadata support.
+* Added a Rating Visual Style option to display ratings as a number, with DLsite-style stars, or with stars and vote counts. With Extended DLsite, combined Rating spans a full row on mobile.
+* Added a Rating Scale option to display user Score and DLsite Rating on a 5-point or 10-point scale.
 
 ### Changed
 

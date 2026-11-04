@@ -2,6 +2,8 @@
 
 namespace Tests\Feature;
 
+use App\Enums\RatingScale;
+use App\Enums\RatingVisualStyle;
 use App\Models\Option;
 use App\Models\Product;
 use App\Support\ProductIndexFilters;
@@ -97,6 +99,8 @@ class ProductSortKeysTest extends TestCase
             ProductIndexFilters::fromQuery([]),
             Option::INDEX_PER_PAGE_UNLIMITED,
             [],
+            RatingScale::Ten,
+            RatingVisualStyle::Simple,
         );
 
         $this->assertSame(
@@ -111,6 +115,8 @@ class ProductSortKeysTest extends TestCase
             ]),
             Option::INDEX_PER_PAGE_UNLIMITED,
             [],
+            RatingScale::Ten,
+            RatingVisualStyle::Simple,
         );
 
         $this->assertSame(
