@@ -178,6 +178,14 @@ return [
     */
 
     'custom' => [
+        'indexFields.*.width' => [
+            'required' => '自訂欄寬為必填。',
+            'regex' => '欄寬格式無效。請使用 px、rem、em、% 或 vw。',
+        ],
+        'indexFields.*.width_mode' => [
+            'required' => '欄寬模式為必填。',
+            'in' => '選取的欄寬模式無效。',
+        ],
         'attribute-name' => [
             'rule-name' => '自訂訊息',
         ],

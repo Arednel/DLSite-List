@@ -651,20 +651,41 @@ class ProductMetadataSettingsTest extends TestCase
         $this->assertSame(ProductFieldLayout::INDEX_WIDTH_MODE_DEFAULT, $tags['width_mode']);
     }
 
-    public function test_index_field_layout_width_errors_are_reported_together_and_cleared_after_correction(): void
-    {
-        Livewire::test(ProductFieldLayoutSettings::class)
+    #[DataProvider('columnWidthMessagesProvider')]
+    public function test_index_field_layout_width_errors_are_reported_together_and_cleared_after_correction(
+        UiLanguage $language,
+        string $requiredMessage,
+        string $formatMessage,
+        string $requiredModeMessage,
+        string $invalidModeMessage,
+    ): void {
+        App::setLocale($language->value);
+
+        $component = Livewire::test(ProductFieldLayoutSettings::class)
             ->set('indexFields.tags.width_mode', ProductFieldLayout::INDEX_WIDTH_MODE_CUSTOM)
             ->set('indexFields.tags.width', '')
             ->set('indexFields.score.width_mode', ProductFieldLayout::INDEX_WIDTH_MODE_CUSTOM)
             ->set('indexFields.score.width', 'invalid')
+            ->set('indexFields.series.width_mode', 'invalid')
+            ->set('indexFields.progress.width_mode', '')
             ->call('saveLayout', 'index')
             ->assertHasErrors([
                 'indexFields.tags.width' => 'required',
                 'indexFields.score.width' => 'regex',
+                'indexFields.series.width_mode' => 'in',
+                'indexFields.progress.width_mode' => 'required',
             ])
+            ->assertSee($requiredMessage)
+            ->assertSee($formatMessage);
+
+        $this->assertSame($invalidModeMessage, $component->instance()->getErrorBag()->first('indexFields.series.width_mode'));
+        $this->assertSame($requiredModeMessage, $component->instance()->getErrorBag()->first('indexFields.progress.width_mode'));
+
+        $component
             ->set('indexFields.tags.width', '12.5rem')
             ->set('indexFields.score.width_mode', ProductFieldLayout::INDEX_WIDTH_MODE_DEFAULT)
+            ->set('indexFields.series.width_mode', ProductFieldLayout::INDEX_WIDTH_MODE_DEFAULT)
+            ->set('indexFields.progress.width_mode', ProductFieldLayout::INDEX_WIDTH_MODE_DEFAULT)
             ->call('saveLayout', 'index')
             ->assertHasNoErrors()
             ->assertSet('indexFields.tags.width', '12.5rem')
@@ -1344,6 +1365,31 @@ class ProductMetadataSettingsTest extends TestCase
         yield 'arbitrary text' => ['wide'];
         yield 'unsupported unit' => ['10vh'];
         yield 'missing unit' => ['1200'];
+    }
+
+    public static function columnWidthMessagesProvider(): iterable
+    {
+        yield 'English' => [
+            UiLanguage::English,
+            'A custom column width is required.',
+            'The column width format is invalid. Use px, rem, em, %, or vw.',
+            'A column width mode is required.',
+            'The selected column width mode is invalid.',
+        ];
+        yield 'Japanese' => [
+            UiLanguage::Japanese,
+            '列のカスタム幅は必須です。',
+            '列幅の形式が正しくありません。px、rem、em、%、vwのいずれかの単位を指定してください。',
+            '列幅モードは必須です。',
+            '選択した列幅モードは無効です。',
+        ];
+        yield 'Traditional Chinese' => [
+            UiLanguage::TraditionalChinese,
+            '自訂欄寬為必填。',
+            '欄寬格式無效。請使用 px、rem、em、% 或 vw。',
+            '欄寬模式為必填。',
+            '選取的欄寬模式無效。',
+        ];
     }
 
     public static function separateFieldLayoutSaveProvider(): iterable

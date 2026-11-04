@@ -25,6 +25,7 @@ For existing manual installations:
 ### Fixed
 
 * Fixed missing Circle, Tags, and Sample Images when fetching AI-generated works (#6).
+* Added width validation error messages for Field Layouts.
 
 ## 2.2.0 - 2026-10-27
 

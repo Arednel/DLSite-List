@@ -182,6 +182,14 @@ return [
     */
 
     'custom' => [
+        'indexFields.*.width' => [
+            'required' => '列のカスタム幅は必須です。',
+            'regex' => '列幅の形式が正しくありません。px、rem、em、%、vwのいずれかの単位を指定してください。',
+        ],
+        'indexFields.*.width_mode' => [
+            'required' => '列幅モードは必須です。',
+            'in' => '選択した列幅モードは無効です。',
+        ],
         'attribute-name' => [
             'rule-name' => 'カスタムメッセージ',
         ],

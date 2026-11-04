@@ -398,7 +398,7 @@ Covers metadata-backfill behavior when canonical work JSON is missing or invalid
 #### `tests/Feature/ProductMetadataSettingsTest.php`
 
 Covers metadata-related UI settings:
-- field layouts, including Index column-width modes, combined validation errors and correction, collapsed section rendering, and sortable-control interaction isolation
+- field layouts, including Index column-width modes, localized width and width-mode validation errors from Laravel's validation catalogs in English, Japanese, and Traditional Chinese, combined validation errors and correction, collapsed section rendering, and sortable-control interaction isolation
 - Series Metadata
 - DLsite Links, including the age-based fallback, default-on announcement toggle, save/reset behavior, and tooltip
 - Form Page Theme
