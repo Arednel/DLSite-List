@@ -20,6 +20,7 @@ For existing manual installations:
 ### Changed
 
 * Updated `dlsite-async` Python package to 1.0.0b4 version and adapted metadata fetching, storage, and archive imports to its updated data format.
+* Updated the mobile Index layout to follow the configured column order, split regular fields evenly, and keep Image column compact when paired with another column or full-width when followed by a full-width column.
 
 ### Fixed
 

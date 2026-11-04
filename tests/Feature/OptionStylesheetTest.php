@@ -5,6 +5,7 @@ namespace Tests\Feature;
 use App\Models\Option;
 use App\Models\User;
 use App\Enums\ProductField;
+use App\Enums\RatingVisualStyle;
 use App\Support\OptionStylesheet;
 use App\Support\ProductFieldLayout;
 use App\Support\Transfers\PortableOptions;
@@ -94,6 +95,20 @@ class OptionStylesheetTest extends TestCase
 
         $this->assertStringNotContainsString('.header-title.tags', $css);
         $this->assertStringNotContainsString('.header-title.score', $css);
+    }
+
+    public function test_extended_rating_style_keeps_combined_rating_and_preceding_image_on_separate_mobile_rows(): void
+    {
+        Option::setRatingVisualStyle(RatingVisualStyle::ExtendedDLSite);
+
+        $css = file_get_contents(app(OptionStylesheet::class)->path());
+
+        $this->assertStringContainsString('.header-title.score {', $css);
+        $this->assertStringContainsString('min-width: 115px;', $css);
+        $this->assertStringContainsString('.data.rating,', $css);
+        $this->assertStringContainsString('.data.image + .data.rating,', $css);
+        $this->assertStringContainsString('.data.image:has(+ .data.rating)', $css);
+        $this->assertStringContainsString('grid-column: 1 / -1;', $css);
     }
 
     public function test_overflow_targets_and_resets_regenerate_the_stylesheet(): void

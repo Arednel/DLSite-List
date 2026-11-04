@@ -141,7 +141,9 @@ CSS;
 }
 
 @media (max-width: 768px) {
-    .product-index-layout .list-table .list-table-data .data.rating {
+    .product-index-layout .list-table .list-table-data .data.rating,
+    .product-index-layout .list-table .list-table-data .data.image + .data.rating,
+    .product-index-layout .list-table .list-table-data .data.image:has(+ .data.rating) {
         grid-column: 1 / -1;
     }
 }

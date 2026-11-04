@@ -1256,13 +1256,7 @@ body.filter-modal-open {
     /* Switch desktop rows into stacked cards so the list fits narrow screens. */
     .list-table .list-table-data {
         display: grid;
-        grid-template-columns: 74px minmax(0, 1fr);
-        grid-template-areas:
-            "status status"
-            "image title"
-            "score series"
-            "age progress"
-            "tags tags";
+        grid-template-columns: 74px minmax(0, 1fr) 74px minmax(0, 1fr);
         gap: 10px 12px;
         margin-bottom: 12px;
         padding: 12px;
@@ -1292,7 +1286,7 @@ body.filter-modal-open {
     }
 
     .list-table .list-table-data .data.status {
-        grid-area: status;
+        grid-column: 1 / -1;
         height: 4px;
         width: 100%;
         overflow: hidden;
@@ -1302,8 +1296,21 @@ body.filter-modal-open {
         display: none;
     }
 
+    /* Image starts a new mobile row and pairs with the next half-width field. */
     .list-table .list-table-data .data.image {
-        grid-area: image;
+        grid-column: 1 / span 1;
+    }
+
+    .list-table .list-table-data .data.image:has(+ .data:is(.description,
+            .notes,
+            .start-date,
+            .end-date,
+            .announce-date,
+            .created-at,
+            .updated-at,
+            .tags,
+            .actions)) {
+        grid-column: 1 / -1;
     }
 
     .list-table .list-table-data .data.image .image {
@@ -1313,33 +1320,25 @@ body.filter-modal-open {
     }
 
     .list-table .list-table-data .data.title {
-        grid-area: title;
+        grid-column: span 2;
         padding-left: 0;
         word-break: break-word;
     }
 
-    .list-table .list-table-data .data.score {
-        grid-area: score;
-    }
-
-    .list-table .list-table-data .data.series {
-        grid-area: series;
-    }
-
-    .list-table .list-table-data .data.age-category {
-        grid-area: age;
-    }
-
-    .list-table .list-table-data .data.progress {
-        grid-area: progress;
-    }
-
-    .list-table .list-table-data .data.tags {
-        grid-area: tags;
-    }
-
     .list-table .list-table-data .data.configurable {
-        grid-area: auto;
+        grid-column: span 2;
+    }
+
+    .list-table .list-table-data .data.image+.data.title,
+    .list-table .list-table-data .data.image+.data.configurable:not(:is(.description,
+            .notes,
+            .start-date,
+            .end-date,
+            .announce-date,
+            .created-at,
+            .updated-at,
+            .tags)) {
+        grid-column: span 3;
     }
 
     .list-table .list-table-data .data.description,
