@@ -1039,17 +1039,17 @@ body.filter-modal-open {
     content: "★★★★★";
     position: absolute;
     inset: 0 auto 0 0;
+    width: max-content;
     overflow: hidden;
 }
 
 .rating-display__stars::before {
-    width: 100%;
     color: #d7d7d7;
 }
 
 .rating-display__stars::after {
-    width: var(--rating-fill, 0%);
     color: #f4a33b;
+    clip-path: inset(0 calc(100% - var(--rating-fill, 0%)) 0 0);
 }
 
 .rating-display__count {

@@ -373,7 +373,7 @@ Covers the Livewire Index:
 - filtering/search/date ranges, including inclusive Scheduled Release Date boundaries
 - Product Format display, partial label/custom search, exact-code matching, JSON-element boundaries, and special-character search escaping
 - sort behavior, including Product Format sorting by its first stored value, scale-aware DLsite Rating sorting/filtering with nulls last, and announcement-date sorting with nulls last
-- separate and combined rating rendering across both scales and all visual styles, with focused cases for independent star rounding, missing ratings, zero/absent vote counts, and scale-adjusted Score filter labels that retain canonical values
+- separate and combined rating rendering across both scales and all visual styles, with focused cases for upward half-star rounding, independent star rounding, missing ratings, zero/absent vote counts, and scale-adjusted Score filter labels that retain canonical values
 - individual/combined maker links, comma-separated combined display, and SQL sorting with first-nonblank Circle/Publisher/Brand fallback, case-insensitive comparison, blanks last, primary/secondary priorities, and global page-location checks
 - narrow hydration, including rating-column selection for visible fields/styles while rating/count filtering and sorting remain independent of selected attributes
 - batched settings
@@ -574,7 +574,7 @@ Covers server-rendered Add/Edit modal completion fallback output and conditional
 - Covers grouped DLsite Rating paths and labels used by new-work Library Import review, nonempty JSON-path mappings for every configured new-work review category, and preservation of numeric/null vote counts in persisted previews.
 
 `tests/Unit/Support/ProductIndexRowBuilderTest.php`
-- Covers typed Index row construction from narrow product hydration, visibility-aware rating preparation, scale-dependent display values, star fills, vote counts, missing/unhydrated ratings, encoded Series/Circle/contributor filter URLs, preserved Edit return state/fragment, age-aware DLsite URLs, and rejection of a missing required `work_name`. Localized combined source labels are covered by `ProductSurfaceLocalizationTest`.
+- Covers typed Index row construction from narrow product hydration, visibility-aware rating preparation, scale-dependent display values, half-star fills, vote counts, missing/unhydrated ratings, encoded Series/Circle/contributor filter URLs, preserved Edit return state/fragment, age-aware DLsite URLs, and rejection of a missing required `work_name`. Localized combined source labels are covered by `ProductSurfaceLocalizationTest`.
 
 `tests/Unit/Support/RefetchDiffBuilderTest.php`
 - Covers all Refetch metadata/creator/tag categories (including grouped DLsite Rating changes when both scales change or only the ten-point cache changes, and independent Publisher/Brand changes), main-only Product Format comparison that ignores fetched additional formats, plus tag identity handling, cover hashing, and unavailable sample-image behavior.

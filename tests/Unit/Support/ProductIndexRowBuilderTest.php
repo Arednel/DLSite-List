@@ -124,6 +124,47 @@ class ProductIndexRowBuilderTest extends TestCase
         $this->assertNull($hiddenRatingRow->dlsiteVotes);
     }
 
+    public function test_it_rounds_star_fills_up_to_the_next_half_star(): void
+    {
+        $ratings = [
+            '0.00' => 0,
+            '3.00' => 60,
+            '3.01' => 70,
+            '3.50' => 70,
+            '3.51' => 80,
+            '4.00' => 80,
+            '4.01' => 90,
+            '4.50' => 90,
+            '4.51' => 100,
+            '4.73' => 100,
+            '5.00' => 100,
+        ];
+
+        foreach ($ratings as $ratingFive => $expectedFill) {
+            $product = new Product;
+            $product->setRawAttributes([
+                'id' => 'RJ000000001',
+                'work_name' => 'Half Star Test',
+                'score' => 9,
+                'dlsite_rating_5' => $ratingFive,
+                'dlsite_rating_10' => '9.00',
+            ]);
+
+            $row = app(ProductIndexRowBuilder::class)->build(
+                collect([$product]),
+                collect(),
+                ['rating'],
+                false,
+                [],
+                RatingScale::Ten,
+                RatingVisualStyle::DLSite,
+            )->sole();
+
+            $this->assertSame(90, $row->scoreStarFill);
+            $this->assertSame($expectedFill, $row->dlsiteStarFill, "Unexpected fill for rating {$ratingFive}");
+        }
+    }
+
     public function test_it_defaults_unhydrated_optional_attributes_without_changing_required_fields(): void
     {
         $product = new Product;

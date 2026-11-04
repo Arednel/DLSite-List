@@ -89,9 +89,11 @@ final readonly class ProductIndexRowBuilder
                     : Product::versionedImagePath($workImage),
                 score: $ratingScale->displayScore($score),
                 dlsiteRating: DLSiteRating::displayValue($dlsiteRating),
-                scoreStarFill: $showScoreStars ? ($score ?? 0) * 10 : null,
+                scoreStarFill: $showScoreStars
+                    ? $this->halfStarFill(($score ?? 0) / 2)
+                    : null,
                 dlsiteStarFill: $showDLSiteStars
-                    ? $this->dlsiteStarFill($attributes['dlsite_rating_5'] ?? null)
+                    ? $this->halfStarFill($attributes['dlsite_rating_5'] ?? null)
                     : null,
                 dlsiteVotes: $showVoteCount && isset($attributes['dlsite_rating_count'])
                     ? number_format((int) $attributes['dlsite_rating_count'])
@@ -131,15 +133,15 @@ final readonly class ProductIndexRowBuilder
         });
     }
 
-    private function dlsiteStarFill(string|int|float|null $ratingFive): int
+    private function halfStarFill(string|int|float|null $ratingFive): int
     {
         if ($ratingFive === null) {
             return 0;
         }
 
-        $halfUnits = max(0, min(10, (int) round(((float) $ratingFive) * 2, 0, PHP_ROUND_HALF_UP)));
+        $halfStars = max(0, min(10, (int) ceil(((float) $ratingFive) * 2)));
 
-        return $halfUnits * 10;
+        return $halfStars * 10;
     }
 
     /**

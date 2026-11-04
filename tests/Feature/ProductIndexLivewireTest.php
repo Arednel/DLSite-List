@@ -287,13 +287,13 @@ class ProductIndexLivewireTest extends TestCase
 
         $this->createProduct(1, [
             'score' => 9,
-            'dlsite_rating_5' => '4.75',
-            'dlsite_rating_10' => '9.49',
+            'dlsite_rating_5' => '4.73',
+            'dlsite_rating_10' => '9.47',
         ]);
 
         $html = Livewire::test(ProductIndex::class)->html();
 
-        $this->assertStringContainsString('>9.49<', $html);
+        $this->assertStringContainsString('>9.47<', $html);
         $this->assertStringContainsString('--rating-fill: 100%', $html);
         $this->assertSame(1, substr_count($html, 'class="rating-display__stars"'));
     }
