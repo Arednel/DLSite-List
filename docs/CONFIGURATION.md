@@ -759,6 +759,8 @@ Index columns also have a width mode:
 - `Default` - use the existing Index CSS
 - `Custom` - uses the entered width. Supports `px`, `rem`, `em`, `%`, or `vw`
 
+Custom widths for `rating`, `score`, and `dlsite_rating` take precedence over the minimum widths applied by the Rating Visual Style setting.
+
 #### Index Filter Default Order
 
 - `title`

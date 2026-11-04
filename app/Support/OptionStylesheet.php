@@ -97,19 +97,6 @@ final class OptionStylesheet
 CSS;
         }
 
-        foreach ($indexFieldLayout as $row) {
-            if ($row['width_mode'] !== ProductFieldLayout::INDEX_WIDTH_MODE_CUSTOM) {
-                continue;
-            }
-
-            $rules[] = sprintf(
-                ".product-index-layout .list-table .list-table-header .header-title.%s {\n    width: %s;\n    min-width: %s;\n}",
-                str_replace('_', '-', $row['field']),
-                $row['width'],
-                $row['width'],
-            );
-        }
-
         if ($ratingVisualStyle === RatingVisualStyle::DLSite) {
             $rules[] = <<<'CSS'
 .product-index-layout .list-table .list-table-header .header-title.score {
@@ -148,6 +135,19 @@ CSS;
     }
 }
 CSS;
+        }
+
+        foreach ($indexFieldLayout as $row) {
+            if ($row['width_mode'] !== ProductFieldLayout::INDEX_WIDTH_MODE_CUSTOM) {
+                continue;
+            }
+
+            $rules[] = sprintf(
+                ".product-index-layout .list-table .list-table-header .header-title.%s {\n    width: %s;\n    min-width: %s;\n}",
+                str_replace('_', '-', $row['field']),
+                $row['width'],
+                $row['width'],
+            );
         }
 
         foreach ($contentOverflow as $target => $setting) {
