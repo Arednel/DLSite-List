@@ -453,13 +453,13 @@ Application UI settings are stored in the `options` table and configured from `/
 
 Tabs:
 - `General`
-- `Field Layouts`
+- `Display`
 - `Authentication`
 - `Refetch`
 - `Import / Export`
 - `Bulk Imports`
 
-`Reset All Options` is available on both General and Field Layouts. Using it resets all settings from both tabs to their defaults. Authentication settings are not affected.
+`Reset All Options` is available on both General and Display. Using it resets all settings from both tabs to their defaults. Authentication settings are not affected.
 
 ### General
 
@@ -482,40 +482,6 @@ The setting is application-wide, not per browser/user.
 When disabled, `Fetched Tags language` selects which fetched tags are shown and available for editing:
 - `English` (`en`)
 - `日本語` (`jp`)
-
-#### UI Wording
-
-Default: `General` (`general`)
-
-Choices:
-- `General` (`general`)
-- `Listening (Voice / ASMR / Voice Dramas)` (`listening`)
-- `Reading (Manga / Comics / Light Novels / Novels / Books)` (`reading`)
-- `Games (Games, PC Games)` (`games`)
-- `Video (Anime / Videos)` (`video`)
-- `Music (Music)` (`music`)
-- `Artwork (CG)` (`artwork`)
-
-Controls which UI wording profile is used in the interface.
-
-#### Rating
-
-Rating Scale default: `Up to 10`.
-
-Choices:
-- `Up to 10`
-- `Up to 5`
-
-Personal Score is always entered and stored on the existing 1-10 scale. Rating Scale changes only how Score is displayed; for example, Score `9` appears as `4.5` on the 5-point scale.
-
-Rating Visual Style default: `Simple`.
-
-Choices:
-- `Simple` - number only
-- `DLsite` - five stars plus the number
-- `Extended DLsite` - five stars plus the number and the DLsite vote count
-
-With `Extended DLsite`, the combined Rating field spans the full mobile card row at viewport widths of 768px or less.
 
 #### Index Pagination
 
@@ -575,33 +541,6 @@ When enabled:
 
 Hiding the Image field does not reset the saved Image Viewer option.
 
-#### Index Table Width
-
-Default: `default` choice
-
-Choices:
-- `default` - 1024px
-- `wide` - 1400px
-- `full` - 100%
-- custom width - supports `px`, `rem`, `em`, `%`, or `vw`
-
-Table side margins are optional. Leave empty for no side margin. Enter a value to apply that margin to both sides. Supports `px`, `rem`, `em`, `%`, or `vw`.
-
-#### Overflow
-
-Three independent targets:
-- Notes below Title
-- Notes column
-- Tags
-
-Defaults for each are:
-- disabled
-- `80px`
-
-When enabled, each target accepts a positive value using `px`, `rem`, `em`, `%`, `vw`, `vh`, `vmin`, `vmax`, `svh`, `lvh`, or `dvh`
-
-Disabled targets are normalized back to the default `80px`.
-
 #### Series Metadata
 
 `Set Series from DLsite metadata when no Series is entered in Quick Add` is enabled by default.
@@ -632,21 +571,6 @@ Enabled:
 - works with a stored announcement date -> `announce/` URL
 - works without an announcement date -> regular `work/` URL
 
-#### Form Page Theme
-
-Default: `black`.
-
-Choices:
-- `cherry`
-- `black`
-
-This theme applies to:
-- DLSite Quick Add
-- Custom Quick Add
-- Edit Details
-
-The cover/sample image editor and viewer inside Custom Quick Add/Edit follow this theme. The Index Image Viewer does not; it keeps Cherry styling.
-
 #### Add/Edit Modals
 
 Default:
@@ -674,25 +598,9 @@ Series autocomplete order:
 - `usage` - default; most-used matching series are shown first
 - `first_word` - prioritizes matches at the start of the series name, then at the start of later words; usage breaks ties
 
-#### Tag Library
+### Display
 
-Defaults:
-- "All Tags" list collapsed
-- Index tag group ordering disabled
-
-When Index tag group ordering is enabled:
-1. grouped tags follow saved group order
-2. tags within groups follow saved per-group order
-3. ungrouped tags follow alphabetically
-
-Tag/group color defaults:
-- Index - enabled
-- Tag Library - enabled
-- Autocomplete suggestions - disabled
-- Edit readonly tags - disabled
-- Refetch review tags - disabled
-
-### Field Layouts
+#### Field Layouts
 
 Seven layouts are configurable:
 
@@ -722,7 +630,7 @@ Edit uses separate rows for:
 
 Fetched Tags are readonly by default. If made editable, editing changes only the selected language's fetched bucket.
 
-#### Index Table Columns Default Order
+##### Index Table Columns Default Order
 
 - `image` - shown as `Cover Image` in Field Layout settings; the Index table column is `Image`.
 - `title` - locked visible; Notes below Title enabled
@@ -761,7 +669,7 @@ Index columns also have a width mode:
 
 Custom widths for `rating`, `score`, and `dlsite_rating` take precedence over the minimum widths applied by the Rating Visual Style setting.
 
-#### Index Filter Default Order
+##### Index Filter Default Order
 
 - `title`
 - `score`
@@ -792,7 +700,7 @@ Custom widths for `rating`, `score`, and `dlsite_rating` take precedence over th
 - `description_japanese` - hidden
 - `description_english` - hidden
 
-#### Index Sort Menu Default Order
+##### Index Sort Menu Default Order
 
 - `product_code`
 - `score`
@@ -822,7 +730,7 @@ Custom widths for `rating`, `score`, and `dlsite_rating` take precedence over th
 
 Hiding a value from the Index Sort Menu only removes it from that dropdown. It does not invalidate otherwise supported URL/table-header sorting.
 
-#### Edit Form Default Order
+##### Edit Form Default Order
 
 - `progress`
 - `score`
@@ -851,7 +759,7 @@ Hiding a value from the Index Sort Menu only removes it from that dropdown. It d
 - `description_japanese` - hidden
 - `description_english` - hidden
 
-#### Quick Add Default Order
+##### Quick Add Default Order
 
 - `product_code` - locked visible
 - `progress`
@@ -880,7 +788,7 @@ Hiding a value from the Index Sort Menu only removes it from that dropdown. It d
 
 Hidden DLsite Quick Add metadata fields are not accepted as user overrides, but their scraped values are still preserved.
 
-#### Bulk Import Default Order
+##### Bulk Import Default Order
 
 - `product_code` - locked visible
 - `progress`
@@ -907,7 +815,7 @@ Hidden DLsite Quick Add metadata fields are not accepted as user overrides, but 
 - `description_japanese` - hidden
 - `description_english` - hidden
 
-#### Custom Quick Add Default Order
+##### Custom Quick Add Default Order
 
 - `product_code` - locked visible
 - `progress`
@@ -938,6 +846,114 @@ Hidden DLsite Quick Add metadata fields are not accepted as user overrides, but 
 
 Custom Quick Add has no scraper fallback.
 
+#### Index Table Width
+
+Default: `default` choice
+
+Choices:
+- `default` - 1024px
+- `wide` - 1400px
+- `full` - 100%
+- custom width - supports `px`, `rem`, `em`, `%`, or `vw`
+
+Table side margins are optional. Leave empty for no side margin. Enter a value to apply that margin to both sides. Supports `px`, `rem`, `em`, `%`, or `vw`.
+
+#### Overflow
+
+Three independent targets:
+- Notes below Title
+- Notes column
+- Tags
+
+Defaults for each are:
+- disabled
+- `80px`
+
+When enabled, each target accepts a positive value using `px`, `rem`, `em`, `%`, `vw`, `vh`, `vmin`, `vmax`, `svh`, `lvh`, or `dvh`
+
+Disabled targets are normalized back to the default `80px`.
+
+#### Rating
+
+Rating Scale default: `Up to 10`.
+
+Choices:
+- `Up to 10`
+- `Up to 5`
+
+Personal Score is always entered and stored on the existing 1-10 scale. Rating Scale changes only how Score is displayed; for example, Score `9` appears as `4.5` on the 5-point scale.
+
+Rating Visual Style default: `Simple`.
+
+Choices:
+- `Simple` - number only
+- `DLsite` - five stars plus the number
+- `Extended DLsite` - five stars plus the number and the DLsite vote count
+
+With `Extended DLsite`, the combined Rating field spans the full mobile card row at viewport widths of 768px or less.
+
+#### Tag Library
+
+Defaults:
+- "All Tags" list collapsed
+- Index tag group ordering disabled
+
+When Index tag group ordering is enabled:
+1. grouped tags follow saved group order
+2. tags within groups follow saved per-group order
+3. ungrouped tags follow alphabetically
+
+Tag/group color defaults:
+- Index - enabled
+- Tag Library - enabled
+- Autocomplete suggestions - disabled
+- Edit readonly tags - disabled
+- Refetch review tags - disabled
+
+#### Theme
+
+##### Authentication Page Theme
+
+Default: `cherry`.
+
+Choices:
+- `cherry`
+- `black`
+
+This theme applies to authentication pages such as administrator sign-in and setup.
+
+##### Form Page Theme
+
+Default: `black`.
+
+Choices:
+- `cherry`
+- `black`
+
+This theme applies to:
+- DLSite Quick Add
+- Custom Quick Add
+- Edit Details
+
+The cover/sample image editor and viewer inside Custom Quick Add/Edit follow this theme. The Index Image Viewer does not; it keeps Cherry styling.
+
+Use **Save theme** to save both page theme choices together. Use the Theme section reset to restore both page themes to their defaults together.
+
+#### UI Wording
+
+Default: `General` (`general`)
+
+Choices:
+- `General` (`general`)
+- `Listening (Voice / ASMR / Voice Dramas)` (`listening`)
+- `Reading (Manga / Comics / Light Novels / Novels / Books)` (`reading`)
+- `Games (Games, PC Games)` (`games`)
+- `Video (Anime / Videos)` (`video`)
+- `Music (Music)` (`music`)
+- `Artwork (CG)` (`artwork`)
+
+Controls which UI wording profile is used in the interface.
+
 ### Authentication
 
 Administrator authentication is disabled by default.
@@ -945,14 +961,7 @@ Administrator authentication is disabled by default.
 `Authentication` configures:
 
 - administrator login enabled/disabled
-- authentication-page theme
 - authenticated password change
-
-Authentication theme choices:
-- `Cherry` - default
-- `Black`
-
-Authentication settings are not affected by `Reset All Options`.
 
 When authentication is enabled, application supports a single administrator account.
 

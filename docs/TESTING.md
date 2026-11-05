@@ -141,13 +141,14 @@ Covers trusted-environment `ADMIN_PASSWORD_RESET` recovery, including enabled/di
 
 Covers the Authentication Options tab:
 - enable/disable flow
-- authentication theme
 - account state
 - password change
 - current-password validation
 - remember-token rotation
 - logout after password change
-- exclusion from global Options reset
+- authentication enablement exclusion from global Options reset
+- authentication changes preserve the Authentication Page Theme setting
+
 
 #### `tests/Feature/AuthenticationTest.php`
 
@@ -401,12 +402,13 @@ Covers metadata-related UI settings:
 - field layouts, including Index column-width modes, localized width and width-mode validation errors from Laravel's validation catalogs in English, Japanese, and Traditional Chinese, combined validation errors and correction, collapsed section rendering, and sortable-control interaction isolation
 - Series Metadata
 - DLsite Links, including the age-based fallback, default-on announcement toggle, save/reset behavior, and tooltip
-- Form Page Theme
+- Display tab composition and manual section order, including Tag Library
+- consolidated Theme settings, including Authentication Page Theme and Form Page Theme load/save/validation/reset behavior and semantic radio-group/heading structure
 - Add/Edit Modals
 - Index Table Width
 - Overflow
 - UI wording profile previews in English and Japanese, selection changes without saving, persistence after submission, and reset behavior
-- other general/field-layout reset behavior
+- General/Display reset behavior
 
 #### `tests/Feature/OptionStylesheetTest.php`
 

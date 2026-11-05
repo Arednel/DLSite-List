@@ -34,11 +34,13 @@ class OptionsRefetchLocalizationTest extends TestCase
             ->assertSee('すべての設定をリセット')
             ->assertSee('href="/options?tab=refetch"', false);
 
-        $this->get(route('options.index', ['tab' => 'field-layouts']))
+        $this->get(route('options.index', ['tab' => 'display']))
             ->assertOk()
             ->assertSee('<html lang="ja">', false)
             ->assertSee('フィールドレイアウト')
             ->assertSee('一覧表の列')
+            ->assertSee('チェリー')
+            ->assertSee('ブラック')
             ->assertSee('aria-label="更新日をドラッグ"', false)
             ->assertSee('編集可能');
 
@@ -177,17 +179,17 @@ class OptionsRefetchLocalizationTest extends TestCase
         Option::setUiLanguage(UiLanguage::Japanese);
         Option::setIndexPerPage(25);
 
-        Livewire::test(OptionsResetDefaults::class, ['activeTab' => 'field-layouts'])
+        Livewire::test(OptionsResetDefaults::class, ['activeTab' => 'display'])
             ->call('resetAll')
-            ->assertRedirectToRoute('options.index', ['tab' => 'field-layouts']);
+            ->assertRedirectToRoute('options.index', ['tab' => 'display']);
 
         $this->assertSame('All Options settings reset to defaults.', session('options_reset_notice'));
         $this->assertSame(UiLanguage::English, Option::uiLanguage());
 
-        $this->get(route('options.index', ['tab' => 'field-layouts']))
+        $this->get(route('options.index', ['tab' => 'display']))
             ->assertOk()
             ->assertSee('<html lang="en">', false)
             ->assertSee('All Options settings reset to defaults.')
-            ->assertSee('href="/options?tab=field-layouts"', false);
+            ->assertSee('href="/options?tab=display"', false);
     }
 }

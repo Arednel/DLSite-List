@@ -377,13 +377,13 @@ class LibraryTransferExportTest extends TestCase
         );
     }
 
-    public function test_export_size_resets_but_authentication_theme_remains_local_setting(): void
+    public function test_export_size_resets_to_default(): void
     {
         Option::setExportPartMib(8192);
-        Option::setAuthenticationPageTheme('black');
+
         Option::resetVisibleSettingsToDefault();
+
         $this->assertSame(256, Option::exportPartMib());
-        $this->assertSame('black', Option::authenticationPageTheme());
     }
 
     public function test_irrelevant_deleted_selections_do_not_block_export(): void

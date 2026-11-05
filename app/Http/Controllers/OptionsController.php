@@ -10,7 +10,7 @@ class OptionsController extends Controller
 {
     private const SECTIONS = [
         'general' => 'General',
-        'field-layouts' => 'Field Layouts',
+        'display' => 'Display',
         'authentication' => 'Authentication',
         'refetch' => 'Refetch',
         'transfers' => 'Import / Export',
@@ -31,6 +31,7 @@ class OptionsController extends Controller
     private function activeTab(Request $request): string
     {
         $activeTab = $request->old('tab', $request->query('tab', 'general'));
+        $activeTab = $activeTab === 'field-layouts' ? 'display' : $activeTab;
 
         return is_string($activeTab) && array_key_exists($activeTab, self::SECTIONS)
             ? $activeTab

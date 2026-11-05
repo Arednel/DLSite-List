@@ -23,13 +23,13 @@ class OptionsGeneralTest extends TestCase
             ->assertOk()
             ->assertSee('Options')
             ->assertSee('href="/options?tab=general"', false)
-            ->assertSee('href="/options?tab=field-layouts"', false)
+            ->assertSee('href="/options?tab=display"', false)
             ->assertSee('href="/options?tab=authentication"', false)
             ->assertSee('href="/options?tab=refetch"', false)
             ->assertSee('href="/options?tab=transfers"', false)
             ->assertSee('href="/options?tab=bulk-imports"', false)
             ->assertSee('Index Pagination')
-            ->assertSee('Overflow')
+            ->assertDontSee('Overflow')
             ->assertSee('Add/Edit Modals')
             ->assertSee('Reset All Options')
             ->assertDontSee('Index Sort Menu')
@@ -58,7 +58,7 @@ class OptionsGeneralTest extends TestCase
 
     public function test_active_option_category_is_exposed_as_the_current_navigation_page(): void
     {
-        foreach (['general', 'field-layouts', 'authentication', 'refetch', 'transfers', 'bulk-imports'] as $tab) {
+        foreach (['general', 'display', 'authentication', 'refetch', 'transfers', 'bulk-imports'] as $tab) {
             $response = $this->get('/options?tab=' . $tab)
                 ->assertOk()
                 ->assertSee('data-active-options-category="' . $tab . '"', false)
@@ -67,6 +67,16 @@ class OptionsGeneralTest extends TestCase
 
             $this->assertSame(1, substr_count($response->getContent(), 'aria-current="page"'));
         }
+    }
+
+    public function test_legacy_field_layouts_tab_opens_display(): void
+    {
+        $this->get('/options?tab=field-layouts')
+            ->assertOk()
+            ->assertSee('data-active-options-category="display"', false)
+            ->assertSee('href="/options?tab=display"', false)
+            ->assertSee('Field Layouts')
+            ->assertDontSee('href="/options?tab=field-layouts"', false);
     }
 
     public function test_invalid_options_tab_falls_back_to_general(): void

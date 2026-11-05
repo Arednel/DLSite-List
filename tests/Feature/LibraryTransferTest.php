@@ -157,7 +157,6 @@ class LibraryTransferTest extends TestCase
         $this->assertArrayNotHasKey('authentication_enabled', $options->all());
         $this->assertSame($options->defaults(), $options->all());
         $normal = array_values(array_diff((new ReflectionClass(Option::class))->getConstant('RESETTABLE_OPTIONS'), [Option::EXPORT_PART_MIB]));
-        $normal[] = Option::AUTHENTICATION_PAGE_THEME;
         $portable = array_keys($options->all());
         sort($normal);
         sort($portable);

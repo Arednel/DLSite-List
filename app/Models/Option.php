@@ -228,6 +228,7 @@ class Option extends Model
         self::DLSITE_AGE_APPROPRIATE_LINKS_ENABLED,
         self::DLSITE_ANNOUNCE_LINKS_ENABLED,
         self::PRODUCT_FORM_THEME,
+        self::AUTHENTICATION_PAGE_THEME,
         self::PRODUCT_FORM_MODAL_ENABLED,
         self::PRODUCT_FORM_MODAL_COMPLETION_ACTION,
         self::TAG_LIBRARY_TAGS_EXPANDED_BY_DEFAULT,
@@ -608,11 +609,6 @@ class Option extends Model
         self::setValue(self::PRODUCT_FORM_THEME, self::normalizeProductFormTheme($theme));
     }
 
-    public static function resetProductFormThemeToDefault(): void
-    {
-        self::forget(self::PRODUCT_FORM_THEME);
-    }
-
     public static function userAuthenticationEnabled(): bool
     {
         return self::booleanValueFor(self::USER_AUTHENTICATION_ENABLED, self::defaultFor(self::USER_AUTHENTICATION_ENABLED));
@@ -635,6 +631,14 @@ class Option extends Model
         self::setValue(
             self::AUTHENTICATION_PAGE_THEME,
             self::normalizeAuthenticationPageTheme($theme),
+        );
+    }
+
+    public static function resetThemeSettingsToDefault(): void
+    {
+        self::forget(
+            self::AUTHENTICATION_PAGE_THEME,
+            self::PRODUCT_FORM_THEME,
         );
     }
 

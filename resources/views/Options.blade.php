@@ -73,26 +73,6 @@
                     <livewire:ui-language-settings />
 
                     <h2>
-                        <i class="fa-solid fa-shapes fa-fw options-section-icon" aria-hidden="true"></i>
-                        {{ __('UI Wording') }}
-                    </h2>
-                    <p class="option-description">
-                        {{ __('Choose the UI wording profile used throughout the application. This only changes displayed text; your saved data and status values stay the same.') }}
-                    </p>
-
-                    <livewire:content-terminology-settings />
-
-                    <h2>
-                        <i class="fa-solid fa-star-half-stroke fa-fw options-section-icon" aria-hidden="true"></i>
-                        {{ __('Rating') }}
-                    </h2>
-                    <p class="option-description">
-                        {{ __('Choose the displayed rating scale and visual style for personal and DLsite ratings.') }}
-                    </p>
-
-                    <livewire:rating-settings />
-
-                    <h2>
                         <i class="fa-solid fa-list-ol fa-fw options-section-icon" aria-hidden="true"></i>
                         {{ __('Index Pagination') }}
                     </h2>
@@ -133,27 +113,6 @@
                     <livewire:index-image-viewer-settings />
 
                     <h2>
-                        <i class="fa-solid fa-arrows-left-right fa-fw options-section-icon" aria-hidden="true"></i>
-                        {{ __('Index Table Width') }}
-                    </h2>
-                    <p class="option-description">
-                        {{ __('Choose how wide the Index table can be before horizontal scrolling is used.') }}
-                    </p>
-
-                    <livewire:index-table-width-settings />
-
-                    <h2>
-                        <i class="fa-solid fa-up-right-and-down-left-from-center fa-fw options-section-icon"
-                            aria-hidden="true"></i>
-                        {{ __('Overflow') }}
-                    </h2>
-                    <p class="option-description">
-                        {{ __('Set height limits for Notes and Tags on the Index. Content that exceeds the limit can be expanded with ‘Show all’.') }}
-                    </p>
-
-                    <livewire:index-content-overflow-settings />
-
-                    <h2>
                         <i class="fa-solid fa-layer-group fa-fw options-section-icon" aria-hidden="true"></i>
                         {{ __('Series Metadata') }}
                     </h2>
@@ -172,16 +131,6 @@
                     </p>
 
                     <livewire:dlsite-link-settings />
-
-                    <h2>
-                        <i class="fa-solid fa-palette fa-fw options-section-icon" aria-hidden="true"></i>
-                        {{ __('Form Page Theme') }}
-                    </h2>
-                    <p class="option-description">
-                        {{ __('Choose the visual theme for add and edit pages.') }}
-                    </p>
-
-                    <livewire:product-form-theme-settings />
 
                     <h2>
                         <i class="fa-solid fa-window-restore fa-fw options-section-icon" aria-hidden="true"></i>
@@ -203,6 +152,53 @@
 
                     <livewire:autocomplete-settings />
 
+                    <livewire:options-reset-defaults :active-tab="$activeTab" />
+                </section>
+            @endif
+
+            @if ($activeTab === 'display')
+                <section id="display-tab-panel" class="panel options-panel">
+                    <h2>
+                        <i class="fa-solid fa-table-columns fa-fw options-section-icon" aria-hidden="true"></i>
+                        {{ __('Field Layouts') }}
+                    </h2>
+                    <p class="option-description">
+                        {{ __('Choose which fields are visible and editable, and set their order.') }}
+                    </p>
+
+                    <livewire:product-field-layout-settings />
+
+                    <h2>
+                        <i class="fa-solid fa-arrows-left-right fa-fw options-section-icon" aria-hidden="true"></i>
+                        {{ __('Index Table Width') }}
+                    </h2>
+                    <p class="option-description">
+                        {{ __('Choose how wide the Index table can be before horizontal scrolling is used.') }}
+                    </p>
+
+                    <livewire:index-table-width-settings />
+
+                    <h2>
+                        <i class="fa-solid fa-up-right-and-down-left-from-center fa-fw options-section-icon"
+                            aria-hidden="true"></i>
+                        {{ __('Overflow') }}
+                    </h2>
+                    <p class="option-description">
+                        {{ __('Set height limits for Notes and Tags on the Index. Content that exceeds the limit can be expanded with ‘Show all’.') }}
+                    </p>
+
+                    <livewire:index-content-overflow-settings />
+
+                    <h2>
+                        <i class="fa-solid fa-star-half-stroke fa-fw options-section-icon" aria-hidden="true"></i>
+                        {{ __('Rating') }}
+                    </h2>
+                    <p class="option-description">
+                        {{ __('Choose the displayed rating scale and visual style for personal and DLsite ratings.') }}
+                    </p>
+
+                    <livewire:rating-settings />
+
                     <h2>
                         <i class="fa-solid fa-tags fa-fw options-section-icon" aria-hidden="true"></i>
                         {{ __('Tag Library') }}
@@ -213,22 +209,25 @@
 
                     <livewire:tag-library-display-settings />
 
-                    <livewire:options-reset-defaults :active-tab="$activeTab" />
-                </section>
-            @endif
+                    <h2>
+                        <i class="fa-solid fa-palette fa-fw options-section-icon" aria-hidden="true"></i>
+                        {{ __('Theme') }}
+                    </h2>
+                    <p class="option-description">
+                        {{ __('Choose visual themes for application pages.') }}
+                    </p>
 
-            @if ($activeTab === 'field-layouts')
-                <section id="field-layouts-tab-panel" class="panel options-panel">
-                    <header class="options-panel-intro">
-                        <h2>
-                            {{ __('Field Layouts') }}
-                        </h2>
-                        <p class="option-description">
-                            {{ __('Choose which fields are visible and editable, and set their order.') }}
-                        </p>
-                    </header>
+                    <livewire:theme-settings />
 
-                    <livewire:product-field-layout-settings />
+                    <h2>
+                        <i class="fa-solid fa-shapes fa-fw options-section-icon" aria-hidden="true"></i>
+                        {{ __('UI Wording') }}
+                    </h2>
+                    <p class="option-description">
+                        {{ __('Choose the UI wording profile used throughout the application. This only changes displayed text; your saved data and status values stay the same.') }}
+                    </p>
+
+                    <livewire:content-terminology-settings />
 
                     <livewire:options-reset-defaults :active-tab="$activeTab" />
                 </section>

@@ -723,6 +723,7 @@ class OptionMetadataSettingsTest extends TestCase
             'dropped' => true,
         ]);
         Option::setProductFormTheme(Option::PRODUCT_FORM_THEME_CHERRY);
+        Option::setAuthenticationPageTheme(Option::AUTHENTICATION_PAGE_THEME_BLACK);
         Option::setProductFormModalEnabled(true);
         Option::setProductFormModalCompletionAction(Option::PRODUCT_FORM_MODAL_COMPLETION_CLOSE);
         Option::setDlsiteAgeAppropriateLinksEnabled(true);
@@ -746,6 +747,7 @@ class OptionMetadataSettingsTest extends TestCase
         $this->assertFalse(Option::indexImageViewerEnabled());
         $this->assertSame(Option::DEFAULT_OPTIONAL_PRODUCT_STATUSES, Option::optionalProductStatuses());
         $this->assertSame(Option::PRODUCT_FORM_THEME_BLACK, Option::productFormTheme());
+        $this->assertSame(Option::AUTHENTICATION_PAGE_THEME_CHERRY, Option::authenticationPageTheme());
         $this->assertFalse(Option::productFormModalEnabled());
         $this->assertFalse(Option::dlsiteAgeAppropriateLinksEnabled());
         $this->assertSame(
@@ -857,7 +859,10 @@ class OptionMetadataSettingsTest extends TestCase
             [[Option::RATING_SCALE, Option::RATING_VISUAL_STYLE], fn() => Option::resetRatingSettingsToDefault()],
             [[Option::TAG_AUTOCOMPLETE_ORDER, Option::SERIES_AUTOCOMPLETE_ORDER], fn() => Option::resetAutocompleteToDefault()],
             [[Option::AUTO_SERIES_FROM_TITLE_NAME], fn() => Option::resetAutoSeriesFromTitleNameToDefault()],
-            [[Option::PRODUCT_FORM_THEME], fn() => Option::resetProductFormThemeToDefault()],
+            [[
+                Option::AUTHENTICATION_PAGE_THEME,
+                Option::PRODUCT_FORM_THEME,
+            ], fn() => Option::resetThemeSettingsToDefault()],
             [[Option::TAG_LIBRARY_TAGS_EXPANDED_BY_DEFAULT], fn() => Option::resetTagLibraryTagsExpandedByDefaultToDefault()],
             [[Option::TAG_LIBRARY_INDEX_GROUP_ORDERING_ENABLED], fn() => Option::resetTagLibraryIndexGroupOrderingEnabledToDefault()],
             [[Option::TAG_COLOR_SURFACES], fn() => Option::resetTagColorSurfacesToDefault()],

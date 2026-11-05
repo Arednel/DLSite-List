@@ -148,7 +148,7 @@ Tag Library uses the same stored tag rows as products. Renaming a tag updates th
 `GET /options` renders one of six tabs:
 
 - `General`
-- `Field Layouts`
+- `Display`
 - `Authentication`
 - `Refetch`
 - `Import / Export`
@@ -164,7 +164,7 @@ The setting does not change stored or internal values. Status values such as `Li
 
 Enums and field-label presenters delegate only focus-sensitive labels to `ContentTerminology`; all other interface text continues to use normal Laravel translations directly.
 
-Field Layouts configure seven independent layouts:
+The Display tab's Field Layouts section configures seven independent layouts:
 - Index Table Columns
 - Index Filter Fields
 - Index Sort Menu
@@ -350,7 +350,8 @@ Settings components include:
 - `AutoSeriesSettings`
 - `DlsiteLinkSettings`
 - `OptionalProductStatusesSettings`
-- `ProductFormThemeSettings`
+- `RatingSettings`
+- `ThemeSettings`
 - `ProductFormModalSettings`
 - `TagLibraryDisplaySettings`
 - `ProductFieldLayoutSettings`

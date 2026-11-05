@@ -25,11 +25,12 @@ class AuthenticationSettingsTest extends TestCase
             ->assertDontSee('action="' . route('logout') . '"', false);
     }
 
-    public function test_settings_save_theme_and_redirect_to_setup_when_enabling_without_an_account(): void
+    public function test_settings_redirect_to_setup_when_enabling_without_an_account(): void
     {
+        Option::setAuthenticationPageTheme(Option::AUTHENTICATION_PAGE_THEME_BLACK);
+
         Livewire::test(AuthenticationSettings::class)
             ->set('enabled', true)
-            ->set('theme', Option::AUTHENTICATION_PAGE_THEME_BLACK)
             ->call('saveSettings')
             ->assertRedirect(route('admin.setup'));
 
@@ -50,18 +51,13 @@ class AuthenticationSettingsTest extends TestCase
             ->assertRedirect(route('login'));
     }
 
-    public function test_authentication_options_are_not_changed_by_global_reset(): void
+    public function test_authentication_enabled_state_is_preserved_by_global_reset(): void
     {
         Option::setUserAuthenticationEnabled(true);
-        Option::setAuthenticationPageTheme(Option::AUTHENTICATION_PAGE_THEME_BLACK);
 
         Option::resetVisibleSettingsToDefault();
 
         $this->assertTrue(Option::userAuthenticationEnabled());
-        $this->assertSame(
-            Option::AUTHENTICATION_PAGE_THEME_BLACK,
-            Option::authenticationPageTheme(),
-        );
     }
 
     public function test_authenticated_admin_can_change_password_and_is_logged_out(): void

@@ -19,9 +19,9 @@ use App\Livewire\OptionalProductStatusesSettings;
 use App\Livewire\OptionsResetDefaults;
 use App\Livewire\ProductFieldLayoutSettings;
 use App\Livewire\ProductFormModalSettings;
-use App\Livewire\ProductFormThemeSettings;
 use App\Livewire\RatingSettings;
 use App\Livewire\TagLibraryDisplaySettings;
+use App\Livewire\ThemeSettings;
 use App\Livewire\UiLanguageSettings;
 use App\Models\Option;
 use App\Models\Product;
@@ -73,7 +73,7 @@ class ProductMetadataSettingsTest extends TestCase
         $component
             ->call('save')
             ->assertHasNoErrors()
-            ->assertRedirectToRoute('options.index', ['tab' => 'general']);
+            ->assertRedirectToRoute('options.index', ['tab' => 'display']);
 
         $this->assertSame(ContentFocus::Listening, Option::contentFocus());
 
@@ -89,7 +89,7 @@ class ProductMetadataSettingsTest extends TestCase
         $component
             ->call('save')
             ->assertHasNoErrors()
-            ->assertRedirectToRoute('options.index', ['tab' => 'general']);
+            ->assertRedirectToRoute('options.index', ['tab' => 'display']);
 
         $this->assertSame(ContentFocus::General, Option::contentFocus());
     }
@@ -145,7 +145,7 @@ class ProductMetadataSettingsTest extends TestCase
             ->assertSet('focus', ContentFocus::Listening->value)
             ->call('askResetToDefault')
             ->call('resetToDefault')
-            ->assertRedirectToRoute('options.index', ['tab' => 'general']);
+            ->assertRedirectToRoute('options.index', ['tab' => 'display']);
 
         $this->assertSame(ContentFocus::General, Option::contentFocus());
         $this->assertDatabaseMissing('options', ['key' => Option::CONTENT_FOCUS]);
@@ -328,72 +328,100 @@ class ProductMetadataSettingsTest extends TestCase
             ->assertSet('saved', false);
     }
 
-    public function test_product_form_theme_setting_hydrates_from_option_and_saves_changes(): void
+    public function test_theme_settings_load_both_persisted_values(): void
     {
+        Option::setAuthenticationPageTheme(Option::AUTHENTICATION_PAGE_THEME_BLACK);
         Option::setProductFormTheme(Option::PRODUCT_FORM_THEME_CHERRY);
 
-        Livewire::test(ProductFormThemeSettings::class)
-            ->assertSet('theme', Option::PRODUCT_FORM_THEME_CHERRY)
-            ->assertSet('saved', false)
-            ->assertSet('notice', '')
-            ->set('theme', Option::PRODUCT_FORM_THEME_BLACK)
-            ->call('save')
-            ->assertHasNoErrors()
-            ->assertSet('theme', Option::PRODUCT_FORM_THEME_BLACK)
-            ->assertSet('saved', true)
-            ->assertSet('notice', 'Form page theme setting saved.');
-
-        $this->assertSame(Option::PRODUCT_FORM_THEME_BLACK, Option::productFormTheme());
+        Livewire::test(ThemeSettings::class)
+            ->assertSet('authenticationTheme', Option::AUTHENTICATION_PAGE_THEME_BLACK)
+            ->assertSet('formTheme', Option::PRODUCT_FORM_THEME_CHERRY);
     }
 
-    public function test_product_form_theme_setting_rejects_invalid_theme(): void
+    public function test_theme_settings_save_both_themes_together(): void
     {
-        Option::setProductFormTheme(Option::PRODUCT_FORM_THEME_CHERRY);
-
-        Livewire::test(ProductFormThemeSettings::class)
-            ->set('theme', 'not-a-theme')
+        Livewire::test(ThemeSettings::class)
+            ->set('authenticationTheme', Option::AUTHENTICATION_PAGE_THEME_BLACK)
+            ->set('formTheme', Option::PRODUCT_FORM_THEME_CHERRY)
             ->call('save')
-            ->assertHasErrors(['theme'])
-            ->assertSet('saved', false)
-            ->assertSet('notice', '');
+            ->assertHasNoErrors()
+            ->assertSet('authenticationTheme', Option::AUTHENTICATION_PAGE_THEME_BLACK)
+            ->assertSet('formTheme', Option::PRODUCT_FORM_THEME_CHERRY)
+            ->assertSet('saved', true)
+            ->assertSet('notice', 'Theme settings saved.');
 
+        $this->assertSame(Option::AUTHENTICATION_PAGE_THEME_BLACK, Option::authenticationPageTheme());
         $this->assertSame(Option::PRODUCT_FORM_THEME_CHERRY, Option::productFormTheme());
     }
 
-    public function test_product_form_theme_setting_resets_to_default_after_confirmation(): void
+    public function test_theme_settings_reject_invalid_authentication_theme(): void
     {
+        Livewire::test(ThemeSettings::class)
+            ->set('authenticationTheme', 'not-a-theme')
+            ->call('save')
+            ->assertHasErrors(['authenticationTheme'])
+            ->assertSet('saved', false)
+            ->assertSet('notice', '');
+
+        $this->assertSame(Option::AUTHENTICATION_PAGE_THEME_CHERRY, Option::authenticationPageTheme());
+        $this->assertSame(Option::PRODUCT_FORM_THEME_BLACK, Option::productFormTheme());
+    }
+
+    public function test_theme_settings_reject_invalid_form_theme(): void
+    {
+        Livewire::test(ThemeSettings::class)
+            ->set('formTheme', 'not-a-theme')
+            ->call('save')
+            ->assertHasErrors(['formTheme'])
+            ->assertSet('saved', false)
+            ->assertSet('notice', '');
+
+        $this->assertSame(Option::AUTHENTICATION_PAGE_THEME_CHERRY, Option::authenticationPageTheme());
+        $this->assertSame(Option::PRODUCT_FORM_THEME_BLACK, Option::productFormTheme());
+    }
+
+    public function test_theme_settings_reset_restores_both_defaults_and_updates_component_state(): void
+    {
+        Option::setAuthenticationPageTheme(Option::AUTHENTICATION_PAGE_THEME_BLACK);
         Option::setProductFormTheme(Option::PRODUCT_FORM_THEME_CHERRY);
 
-        Livewire::test(ProductFormThemeSettings::class)
-            ->assertSet('theme', Option::PRODUCT_FORM_THEME_CHERRY)
+        Livewire::test(ThemeSettings::class)
+            ->assertSet('authenticationTheme', Option::AUTHENTICATION_PAGE_THEME_BLACK)
+            ->assertSet('formTheme', Option::PRODUCT_FORM_THEME_CHERRY)
             ->call('askResetToDefault')
             ->assertSet('confirmingResetToDefault', true)
             ->call('resetToDefault')
             ->assertHasNoErrors()
+            ->assertSet('authenticationTheme', Option::AUTHENTICATION_PAGE_THEME_CHERRY)
+            ->assertSet('formTheme', Option::PRODUCT_FORM_THEME_BLACK)
             ->assertSet('confirmingResetToDefault', false)
-            ->assertSet('theme', Option::PRODUCT_FORM_THEME_BLACK)
             ->assertSet('saved', true)
-            ->assertSet('notice', 'Form page theme reset to default.');
+            ->assertSet('notice', 'Theme settings reset to defaults.');
 
+        $this->assertSame(Option::AUTHENTICATION_PAGE_THEME_CHERRY, Option::authenticationPageTheme());
         $this->assertSame(Option::PRODUCT_FORM_THEME_BLACK, Option::productFormTheme());
     }
 
-    public function test_product_form_theme_setting_refreshes_after_global_defaults_reset(): void
+    public function test_theme_settings_render_semantic_groups_in_expected_order(): void
     {
-        Option::setProductFormTheme(Option::PRODUCT_FORM_THEME_CHERRY);
+        $html = Livewire::test(ThemeSettings::class)->html();
+        $document = new \DOMDocument;
+        @$document->loadHTML('<?xml encoding="UTF-8">' . $html);
+        $xpath = new \DOMXPath($document);
 
-        $component = Livewire::test(ProductFormThemeSettings::class)
-            ->assertSet('theme', Option::PRODUCT_FORM_THEME_CHERRY)
-            ->call('save')
-            ->assertSet('saved', true);
+        $this->assertSame(2, $xpath->query('//fieldset')->length);
 
-        Option::resetProductFormThemeToDefault();
+        $themeHeadings = array_map(
+            static fn(\DOMNode $heading): string => trim($heading->textContent),
+            iterator_to_array(
+                $xpath->query('//fieldset/legend/*[@role="heading" and @aria-level="3"]'),
+            ),
+        );
 
-        $component
-            ->call('refreshFromSettings')
-            ->assertSet('theme', Option::PRODUCT_FORM_THEME_BLACK)
-            ->assertSet('saved', false)
-            ->assertSet('notice', '');
+        $this->assertSame([
+            'Authentication Page Theme',
+            'Form Page Theme',
+        ], $themeHeadings);
     }
 
     public function test_product_form_modal_setting_hydrates_saves_and_dispatches_runtime_update(): void
@@ -1118,6 +1146,7 @@ class ProductMetadataSettingsTest extends TestCase
             'dropped' => true,
         ]);
         Option::setProductFormTheme(Option::PRODUCT_FORM_THEME_CHERRY);
+        Option::setAuthenticationPageTheme(Option::AUTHENTICATION_PAGE_THEME_BLACK);
         Option::setProductFormModalEnabled(true);
         Option::setProductFormModalCompletionAction(Option::PRODUCT_FORM_MODAL_COMPLETION_CLOSE);
         Option::setTagLibraryTagsExpandedByDefault(true);
@@ -1165,6 +1194,7 @@ class ProductMetadataSettingsTest extends TestCase
         $this->assertTrue(Option::dlsiteAnnounceLinksEnabled());
         $this->assertSame(Option::DEFAULT_OPTIONAL_PRODUCT_STATUSES, Option::optionalProductStatuses());
         $this->assertSame(Option::PRODUCT_FORM_THEME_BLACK, Option::productFormTheme());
+        $this->assertSame(Option::AUTHENTICATION_PAGE_THEME_CHERRY, Option::authenticationPageTheme());
         $this->assertFalse(Option::productFormModalEnabled());
         $this->assertSame(
             Option::PRODUCT_FORM_MODAL_COMPLETION_REDIRECT,
@@ -1187,62 +1217,81 @@ class ProductMetadataSettingsTest extends TestCase
         $this->assertSame(['unrelated_option'], Option::query()->pluck('key')->all());
     }
 
-    public function test_global_reset_redirects_back_to_the_active_field_layouts_tab(): void
+    public function test_global_reset_redirects_back_to_the_active_display_tab(): void
     {
         Option::setIndexPerPage(25);
 
-        Livewire::test(OptionsResetDefaults::class, ['activeTab' => 'field-layouts'])
-            ->assertSet('activeTab', 'field-layouts')
+        Livewire::test(OptionsResetDefaults::class, ['activeTab' => 'display'])
+            ->assertSet('activeTab', 'display')
             ->call('askResetToDefault')
             ->call('resetAll')
-            ->assertRedirectToRoute('options.index', ['tab' => 'field-layouts']);
+            ->assertRedirectToRoute('options.index', ['tab' => 'display']);
 
         $this->assertSame(Option::DEFAULT_INDEX_PER_PAGE, Option::indexPerPage());
-        $this->get(route('options.index', ['tab' => 'field-layouts']))
+        $this->get(route('options.index', ['tab' => 'display']))
             ->assertOk()
             ->assertSee('All Options settings reset to defaults.');
     }
 
-    public function test_general_options_page_mounts_non_layout_settings_components(): void
+    public function test_general_options_page_mounts_general_settings_components(): void
     {
         $this->get('/options')
             ->assertOk()
             ->assertSeeLivewire(UiLanguageSettings::class)
-            ->assertSeeLivewire(ContentTerminologySettings::class)
-            ->assertSeeLivewire(RatingSettings::class)
             ->assertSeeLivewire(IndexPaginationSettings::class)
-            ->assertSeeLivewire(IndexContentOverflowSettings::class)
-            ->assertSeeLivewire(IndexTableWidthSettings::class)
             ->assertSeeLivewire(OptionalProductStatusesSettings::class)
-            ->assertDontSeeLivewire(ProductFieldLayoutSettings::class)
             ->assertSeeLivewire(AutoSeriesSettings::class)
             ->assertSeeLivewire(DlsiteLinkSettings::class)
-            ->assertSeeLivewire(ProductFormThemeSettings::class)
             ->assertSeeLivewire(ProductFormModalSettings::class)
             ->assertSeeLivewire(AutocompleteSettings::class)
-            ->assertSeeLivewire(TagLibraryDisplaySettings::class)
+            ->assertDontSeeLivewire(TagLibraryDisplaySettings::class)
+            ->assertDontSeeLivewire(ProductFieldLayoutSettings::class)
+            ->assertDontSeeLivewire(IndexTableWidthSettings::class)
+            ->assertDontSeeLivewire(IndexContentOverflowSettings::class)
+            ->assertDontSeeLivewire(RatingSettings::class)
+            ->assertDontSeeLivewire(ThemeSettings::class)
+            ->assertDontSeeLivewire(ContentTerminologySettings::class)
             ->assertSeeLivewire(OptionsResetDefaults::class);
     }
 
-    public function test_field_layouts_options_page_mounts_layout_settings_components(): void
+    public function test_display_options_page_mounts_display_settings_components_in_manual_order(): void
     {
-        $this->get('/options?tab=field-layouts')
+        $response = $this->get('/options?tab=display')
             ->assertOk()
-            ->assertDontSeeLivewire(UiLanguageSettings::class)
-            ->assertDontSeeLivewire(ContentTerminologySettings::class)
-            ->assertDontSeeLivewire(RatingSettings::class)
-            ->assertDontSeeLivewire(IndexPaginationSettings::class)
-            ->assertDontSeeLivewire(IndexContentOverflowSettings::class)
-            ->assertDontSeeLivewire(IndexTableWidthSettings::class)
-            ->assertDontSeeLivewire(OptionalProductStatusesSettings::class)
             ->assertSeeLivewire(ProductFieldLayoutSettings::class)
+            ->assertSeeLivewire(IndexTableWidthSettings::class)
+            ->assertSeeLivewire(IndexContentOverflowSettings::class)
+            ->assertSeeLivewire(RatingSettings::class)
+            ->assertSeeLivewire(TagLibraryDisplaySettings::class)
+            ->assertSeeLivewire(ThemeSettings::class)
+            ->assertSeeLivewire(ContentTerminologySettings::class)
+            ->assertDontSeeLivewire(UiLanguageSettings::class)
+            ->assertDontSeeLivewire(IndexPaginationSettings::class)
+            ->assertDontSeeLivewire(OptionalProductStatusesSettings::class)
             ->assertDontSeeLivewire(AutoSeriesSettings::class)
             ->assertDontSeeLivewire(DlsiteLinkSettings::class)
-            ->assertDontSeeLivewire(ProductFormThemeSettings::class)
             ->assertDontSeeLivewire(ProductFormModalSettings::class)
             ->assertDontSeeLivewire(AutocompleteSettings::class)
-            ->assertDontSeeLivewire(TagLibraryDisplaySettings::class)
             ->assertSeeLivewire(OptionsResetDefaults::class);
+
+        $document = new \DOMDocument;
+        @$document->loadHTML('<?xml encoding="UTF-8">' . $response->getContent());
+        $xpath = new \DOMXPath($document);
+
+        $displayHeadings = array_map(
+            static fn(\DOMNode $heading): string => trim($heading->textContent),
+            iterator_to_array($xpath->query("//*[@id='display-tab-panel']/h2")),
+        );
+
+        $this->assertSame([
+            'Field Layouts',
+            'Index Table Width',
+            'Overflow',
+            'Rating',
+            'Tag Library',
+            'Theme',
+            'UI Wording',
+        ], $displayHeadings);
     }
 
     public function test_field_layout_sections_render_collapsed_by_default(): void
@@ -1319,11 +1368,11 @@ class ProductMetadataSettingsTest extends TestCase
             ->assertSet('indexOrder', $originalOrder);
     }
 
-    public function test_global_reset_modal_mentions_general_and_field_layout_tabs(): void
+    public function test_global_reset_modal_describes_all_options(): void
     {
         Livewire::test(OptionsResetDefaults::class)
             ->call('askResetToDefault')
-            ->assertSee('Reset all General and Field Layouts options to their defaults?');
+            ->assertSee('Reset all Options settings to their defaults?');
     }
 
     public function test_reset_all_options_uses_countdown_delay(): void

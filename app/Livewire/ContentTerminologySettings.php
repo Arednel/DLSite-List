@@ -47,7 +47,7 @@ class ContentTerminologySettings extends Component
             'UI wording saved.',
         );
 
-        $this->redirectRoute('options.index', ['tab' => 'general']);
+        $this->redirectRoute('options.index', ['tab' => 'display']);
     }
 
     public function resetToDefault(): void
@@ -59,6 +59,6 @@ class ContentTerminologySettings extends Component
             'UI wording reset to default.',
         );
 
-        $this->redirectRoute('options.index', ['tab' => 'general']);
+        $this->redirectRoute('options.index', ['tab' => 'display']);
     }
 }

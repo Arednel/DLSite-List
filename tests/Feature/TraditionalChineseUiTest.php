@@ -144,13 +144,17 @@ class TraditionalChineseUiTest extends TestCase
             'completed_at' => now(),
         ]);
 
-        foreach (['general', 'field-layouts', 'authentication', 'refetch', 'transfers', 'bulk-imports'] as $tab) {
+        foreach (['general', 'display', 'authentication', 'refetch', 'transfers', 'bulk-imports'] as $tab) {
             $this->get(route('options.index', ['tab' => $tab]))
                 ->assertOk()
                 ->assertSee('<html lang="zh-TW">', false)
                 ->assertSee('data-active-options-category="' . $tab . '"', false)
                 ->assertDontSee('<title>Options</title>', false);
         }
+
+        $this->get(route('options.index', ['tab' => 'display']))
+            ->assertSee('櫻桃')
+            ->assertSee('黑色');
 
         $this->get(route('options.index', ['tab' => 'bulk-imports']))
             ->assertSee('RJ99999004')

@@ -352,6 +352,23 @@ body.options-page {
     font-weight: bold;
 }
 
+.options-page .theme-settings-fieldset {
+    display: grid;
+    gap: 10px;
+    min-width: 0;
+    margin: 0;
+    padding: 0;
+    border: 0;
+}
+
+.options-page .theme-settings-fieldset legend {
+    margin: 0;
+    padding: 0;
+    color: var(--options-text);
+    font-size: 12px;
+    font-weight: bold;
+}
+
 .options-page .option-actions {
     display: flex;
     flex-wrap: wrap;
@@ -1030,25 +1047,6 @@ body.options-page {
 .options-page .options-panel>h2:first-child,
 .options-page .authentication-password-section>h2:first-child {
     margin-top: 0;
-}
-
-.options-page .options-panel-intro {
-    display: grid;
-    gap: 6px;
-    padding: 0 2px 0px;
-}
-
-.options-page .options-panel-intro h2 {
-    display: flex;
-    align-items: center;
-    margin: 0;
-    color: var(--options-text);
-    font: bold 18px Verdana;
-}
-
-.options-page .options-panel-intro .options-section-icon {
-    color: var(--options-accent);
-    font-size: 16px;
 }
 
 .options-page .options-section-icon {

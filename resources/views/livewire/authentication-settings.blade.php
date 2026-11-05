@@ -11,22 +11,7 @@
             </span>
         </div>
 
-        <fieldset class="option-fieldset">
-            <legend>{{ __('Authentication Page Theme') }}</legend>
-            <div class="option-radio-grid">
-                @foreach ($themeOptions as $value => $label)
-                    <label class="option-radio">
-                        <input type="radio" wire:model.live="theme" value="{{ $value }}">
-                        <span>{{ __($label) }}</span>
-                    </label>
-                @endforeach
-            </div>
-        </fieldset>
-
         @error('enabled')
-            <div class="text-error">{{ $message }}</div>
-        @enderror
-        @error('theme')
             <div class="text-error">{{ $message }}</div>
         @enderror
 
