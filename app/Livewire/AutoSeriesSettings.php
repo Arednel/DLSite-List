@@ -5,7 +5,6 @@ namespace App\Livewire;
 use App\Livewire\Concerns\ConfirmsOptionReset;
 use App\Models\Option;
 use Illuminate\View\View;
-use Livewire\Attributes\On;
 use Livewire\Component;
 
 class AutoSeriesSettings extends Component
@@ -40,13 +39,6 @@ class AutoSeriesSettings extends Component
         Option::resetAutoSeriesFromTitleNameToDefault();
         $this->enabled = Option::autoSeriesFromTitleName();
         $this->completeResetWithNotice('Auto-series setting reset to default.');
-    }
-
-    #[On('options-defaults-reset')]
-    public function refreshFromSettings(): void
-    {
-        $this->enabled = Option::autoSeriesFromTitleName();
-        $this->clearSavedNotice();
     }
 
     public function updated(string $property): void

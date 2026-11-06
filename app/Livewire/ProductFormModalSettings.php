@@ -6,7 +6,6 @@ use App\Livewire\Concerns\ConfirmsOptionReset;
 use App\Models\Option;
 use Illuminate\Validation\Rule;
 use Illuminate\View\View;
-use Livewire\Attributes\On;
 use Livewire\Component;
 
 class ProductFormModalSettings extends Component
@@ -56,14 +55,6 @@ class ProductFormModalSettings extends Component
         Option::resetProductFormModalSettingsToDefault();
         $this->syncFromOptions();
         $this->completeResetWithNotice('Add/Edit modal settings reset.');
-        $this->dispatchSettingsUpdated();
-    }
-
-    #[On('options-defaults-reset')]
-    public function refreshFromSettings(): void
-    {
-        $this->syncFromOptions();
-        $this->clearSavedNotice();
         $this->dispatchSettingsUpdated();
     }
 

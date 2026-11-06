@@ -47,20 +47,4 @@ class IndexSearchSettingsTest extends TestCase
 
         $this->assertFalse(Option::indexSearchHiddenDescriptionsEnabled());
     }
-
-    public function test_it_refreshes_after_global_reset(): void
-    {
-        Option::setIndexSearchHiddenDescriptionsEnabled(true);
-
-        $component = Livewire::test(IndexSearchSettings::class)
-            ->assertSet('searchHiddenDescriptions', true);
-
-        Option::resetVisibleSettingsToDefault();
-
-        $component
-            ->call('refreshFromSettings')
-            ->assertSet('searchHiddenDescriptions', false)
-            ->assertSet('saved', false)
-            ->assertSet('notice', '');
-    }
 }

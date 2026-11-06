@@ -8,7 +8,6 @@ use App\Livewire\Concerns\ConfirmsOptionReset;
 use App\Models\Option;
 use Illuminate\Validation\Rule;
 use Illuminate\View\View;
-use Livewire\Attributes\On;
 use Livewire\Component;
 
 class RatingSettings extends Component
@@ -50,13 +49,6 @@ class RatingSettings extends Component
         Option::resetRatingSettingsToDefault();
         $this->fillFromSettings();
         $this->completeResetWithNotice('Rating settings reset to default.');
-    }
-
-    #[On('options-defaults-reset')]
-    public function refreshFromSettings(): void
-    {
-        $this->fillFromSettings();
-        $this->clearSavedNotice();
     }
 
     public function updated(string $property): void

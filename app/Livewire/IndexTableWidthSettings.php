@@ -6,7 +6,6 @@ use App\Livewire\Concerns\ConfirmsOptionReset;
 use App\Models\Option;
 use Illuminate\Validation\Rule;
 use Illuminate\View\View;
-use Livewire\Attributes\On;
 use Livewire\Component;
 
 class IndexTableWidthSettings extends Component
@@ -61,13 +60,6 @@ class IndexTableWidthSettings extends Component
         Option::resetIndexTableWidthToDefault();
         $this->fillFromSetting();
         $this->completeResetWithNotice('Index table width reset to default.');
-    }
-
-    #[On('options-defaults-reset')]
-    public function refreshFromSettings(): void
-    {
-        $this->fillFromSetting();
-        $this->clearSavedNotice();
     }
 
     public function updated(string $property): void

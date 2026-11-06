@@ -104,37 +104,4 @@ class TagLibraryDisplaySettingsTest extends TestCase
             'refetch' => false,
         ], Option::tagColorSurfaces());
     }
-
-    public function test_tag_library_display_setting_refreshes_group_ordering_after_global_reset(): void
-    {
-        Option::setTagLibraryTagsExpandedByDefault(true);
-        Option::setTagLibraryIndexGroupOrderingEnabled(true);
-        Option::setTagColorSurfaces([
-            'index' => false,
-            'tag_library' => false,
-            'autocomplete' => true,
-            'edit_readonly' => true,
-            'refetch' => true,
-        ]);
-
-        $component = Livewire::test(TagLibraryDisplaySettings::class)
-            ->assertSet('expandedByDefault', true)
-            ->assertSet('indexGroupOrderingEnabled', true)
-            ->assertSet('colorSurfaces.index', false)
-            ->assertSet('colorSurfaces.autocomplete', true);
-
-        Option::resetVisibleSettingsToDefault();
-
-        $component
-            ->call('refreshFromSettings')
-            ->assertSet('expandedByDefault', false)
-            ->assertSet('indexGroupOrderingEnabled', false)
-            ->assertSet('colorSurfaces.index', true)
-            ->assertSet('colorSurfaces.tag_library', true)
-            ->assertSet('colorSurfaces.autocomplete', false)
-            ->assertSet('colorSurfaces.edit_readonly', false)
-            ->assertSet('colorSurfaces.refetch', false)
-            ->assertSet('saved', false)
-            ->assertSet('notice', '');
-    }
 }

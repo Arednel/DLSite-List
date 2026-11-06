@@ -5,7 +5,6 @@ namespace App\Livewire;
 use App\Livewire\Concerns\ConfirmsOptionReset;
 use App\Models\Option;
 use Illuminate\View\View;
-use Livewire\Attributes\On;
 use Livewire\Component;
 
 class DlsiteLinkSettings extends Component
@@ -48,14 +47,6 @@ class DlsiteLinkSettings extends Component
         $this->enabled = Option::dlsiteAgeAppropriateLinksEnabled();
         $this->announceEnabled = Option::dlsiteAnnounceLinksEnabled();
         $this->completeResetWithNotice('DLsite link settings reset to default.');
-    }
-
-    #[On('options-defaults-reset')]
-    public function refreshFromSettings(): void
-    {
-        $this->enabled = Option::dlsiteAgeAppropriateLinksEnabled();
-        $this->announceEnabled = Option::dlsiteAnnounceLinksEnabled();
-        $this->clearSavedNotice();
     }
 
     public function updated(string $property): void

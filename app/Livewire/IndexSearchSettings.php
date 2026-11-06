@@ -5,7 +5,6 @@ namespace App\Livewire;
 use App\Livewire\Concerns\ConfirmsOptionReset;
 use App\Models\Option;
 use Illuminate\View\View;
-use Livewire\Attributes\On;
 use Livewire\Component;
 
 class IndexSearchSettings extends Component
@@ -40,13 +39,6 @@ class IndexSearchSettings extends Component
         Option::resetIndexSearchHiddenDescriptionsEnabledToDefault();
         $this->searchHiddenDescriptions = Option::indexSearchHiddenDescriptionsEnabled();
         $this->completeResetWithNotice('Index search setting reset to default.');
-    }
-
-    #[On('options-defaults-reset')]
-    public function refreshFromSettings(): void
-    {
-        $this->searchHiddenDescriptions = Option::indexSearchHiddenDescriptionsEnabled();
-        $this->clearSavedNotice();
     }
 
     public function updated(string $property): void

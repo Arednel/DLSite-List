@@ -208,26 +208,6 @@ class IndexPaginationSettingsTest extends TestCase
             ->assertSet('notice', '');
     }
 
-    public function test_it_refreshes_from_settings_and_clears_notice_after_global_defaults_reset(): void
-    {
-        Option::setIndexPerPage(25);
-
-        $component = Livewire::test(IndexPaginationSettings::class)
-            ->set('mode', '50')
-            ->call('save')
-            ->assertSet('mode', '50')
-            ->assertSet('saved', true);
-
-        Option::setIndexPerPage(500);
-
-        $component
-            ->call('refreshFromSettings')
-            ->assertSet('mode', '500')
-            ->assertSet('customValue', '')
-            ->assertSet('saved', false)
-            ->assertSet('notice', '');
-    }
-
     public function test_it_passes_supported_option_values_to_the_view(): void
     {
         Livewire::test(IndexPaginationSettings::class)

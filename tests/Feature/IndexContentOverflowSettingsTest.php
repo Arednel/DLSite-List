@@ -114,22 +114,4 @@ class IndexContentOverflowSettingsTest extends TestCase
 
         $this->assertDatabaseMissing('options', ['key' => Option::INDEX_CONTENT_OVERFLOW]);
     }
-
-    public function test_it_refreshes_after_global_reset(): void
-    {
-        Option::setIndexContentOverflow([
-            'inline_notes' => ['enabled' => true, 'height' => '2rem'],
-        ]);
-
-        $component = Livewire::test(IndexContentOverflowSettings::class)
-            ->assertSet('overflow.inline_notes.enabled', true);
-
-        Option::resetVisibleSettingsToDefault();
-
-        $component
-            ->dispatch('options-defaults-reset')
-            ->assertSet('overflow', ProductIndexContentOverflow::DEFAULTS)
-            ->assertSet('saved', false)
-            ->assertSet('notice', '');
-    }
 }

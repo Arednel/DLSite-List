@@ -5,7 +5,6 @@ namespace App\Livewire;
 use App\Livewire\Concerns\ConfirmsOptionReset;
 use App\Models\Option;
 use Illuminate\View\View;
-use Livewire\Attributes\On;
 use Livewire\Component;
 
 class TagLibraryDisplaySettings extends Component
@@ -62,15 +61,6 @@ class TagLibraryDisplaySettings extends Component
         $this->indexGroupOrderingEnabled = Option::tagLibraryIndexGroupOrderingEnabled();
         $this->colorSurfaces = Option::tagColorSurfaces();
         $this->completeResetWithNotice('Tag Library settings reset to default.');
-    }
-
-    #[On('options-defaults-reset')]
-    public function refreshFromSettings(): void
-    {
-        $this->expandedByDefault = Option::tagLibraryTagsExpandedByDefault();
-        $this->indexGroupOrderingEnabled = Option::tagLibraryIndexGroupOrderingEnabled();
-        $this->colorSurfaces = Option::tagColorSurfaces();
-        $this->clearSavedNotice();
     }
 
     public function updated(string $property): void

@@ -6,7 +6,6 @@ use App\Livewire\Concerns\ConfirmsOptionReset;
 use App\Models\Option;
 use App\Support\ProductIndexContentOverflow;
 use Illuminate\View\View;
-use Livewire\Attributes\On;
 use Livewire\Component;
 
 class IndexContentOverflowSettings extends Component
@@ -64,13 +63,6 @@ class IndexContentOverflowSettings extends Component
         Option::resetIndexContentOverflowToDefault();
         $this->fillFromSetting();
         $this->completeResetWithNotice('Overflow settings reset to default.');
-    }
-
-    #[On('options-defaults-reset')]
-    public function refreshFromSettings(): void
-    {
-        $this->fillFromSetting();
-        $this->clearSavedNotice();
     }
 
     public function updatedOverflow(): void

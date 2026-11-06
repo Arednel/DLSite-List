@@ -199,24 +199,6 @@ class ProductMetadataSettingsTest extends TestCase
         $this->assertTrue(Option::autoSeriesFromTitleName());
     }
 
-    public function test_auto_series_setting_refreshes_after_global_defaults_reset(): void
-    {
-        Option::setAutoSeriesFromTitleName(false);
-
-        $component = Livewire::test(AutoSeriesSettings::class)
-            ->assertSet('enabled', false)
-            ->call('save')
-            ->assertSet('saved', true);
-
-        Option::resetAutoSeriesFromTitleNameToDefault();
-
-        $component
-            ->call('refreshFromSettings')
-            ->assertSet('enabled', true)
-            ->assertSet('saved', false)
-            ->assertSet('notice', '');
-    }
-
     public function test_optional_product_status_setting_hydrates_and_saves_switches_independently(): void
     {
         Option::setOptionalProductStatuses([
@@ -244,14 +226,14 @@ class ProductMetadataSettingsTest extends TestCase
         ], Option::optionalProductStatuses());
     }
 
-    public function test_optional_product_status_setting_resets_and_refreshes_after_global_reset(): void
+    public function test_optional_product_status_setting_resets_to_default(): void
     {
         Option::setOptionalProductStatuses([
             'on_hold' => true,
             'dropped' => true,
         ]);
 
-        $component = Livewire::test(OptionalProductStatusesSettings::class)
+        Livewire::test(OptionalProductStatusesSettings::class)
             ->call('askResetToDefault')
             ->assertSet('confirmingResetToDefault', true)
             ->call('resetToDefault')
@@ -260,17 +242,10 @@ class ProductMetadataSettingsTest extends TestCase
             ->assertSet('droppedEnabled', false)
             ->assertSet('notice', 'Optional status settings reset to default.');
 
-        Option::setOptionalProductStatuses([
-            'on_hold' => true,
+        $this->assertSame([
+            'on_hold' => false,
             'dropped' => false,
-        ]);
-
-        $component
-            ->call('refreshFromSettings')
-            ->assertSet('onHoldEnabled', true)
-            ->assertSet('droppedEnabled', false)
-            ->assertSet('saved', false)
-            ->assertSet('notice', '');
+        ], Option::optionalProductStatuses());
     }
 
     public function test_dlsite_link_setting_hydrates_saves_and_resets_to_default(): void
@@ -306,27 +281,14 @@ class ProductMetadataSettingsTest extends TestCase
         $this->assertTrue(Option::dlsiteAnnounceLinksEnabled());
     }
 
-    public function test_dlsite_link_setting_refreshes_after_global_reset_and_renders_tooltip(): void
+    public function test_dlsite_link_setting_renders_tooltips(): void
     {
-        Option::setDlsiteAgeAppropriateLinksEnabled(true);
-        Option::setDlsiteAnnounceLinksEnabled(false);
-
-        $component = Livewire::test(DlsiteLinkSettings::class)
-            ->assertSet('enabled', true)
-            ->assertSet('announceEnabled', false)
+        Livewire::test(DlsiteLinkSettings::class)
             ->assertSee('Use age-appropriate fallback when Site ID is missing')
             ->assertSee('When enabled, works without a Site ID, use Home for All Ages and Maniax for R15/R18. Otherwise, they use Maniax. Works with a Site ID always use their Site ID.')
             ->assertSee('Use announcement links when available')
             ->assertSee('When enabled, works that have an announcement date use DLsite announcement links (announce/). Released works will automatically redirect to their regular product pages (work/). When disabled, all links use regular product pages, which may show an error for not yet released works.')
             ->assertDontSee('DLsite announcement links (`announce/`)', false);
-
-        Option::resetVisibleSettingsToDefault();
-
-        $component
-            ->call('refreshFromSettings')
-            ->assertSet('enabled', false)
-            ->assertSet('announceEnabled', true)
-            ->assertSet('saved', false);
     }
 
     public function test_theme_settings_load_both_persisted_values(): void
@@ -615,30 +577,6 @@ class ProductMetadataSettingsTest extends TestCase
             'custom' => '72vw',
             'side_margin' => null,
         ], Option::indexTableWidth());
-    }
-
-    public function test_table_width_component_refreshes_after_global_defaults_reset(): void
-    {
-        Option::setIndexTableWidth([
-            'mode' => Option::INDEX_TABLE_WIDTH_CUSTOM,
-            'custom' => '72vw',
-        ]);
-
-        $component = Livewire::test(IndexTableWidthSettings::class)
-            ->assertSet('mode', Option::INDEX_TABLE_WIDTH_CUSTOM)
-            ->assertSet('custom', '72vw')
-            ->call('save')
-            ->assertSet('saved', true);
-
-        Option::resetIndexTableWidthToDefault();
-
-        $component
-            ->call('refreshFromSettings')
-            ->assertSet('mode', Option::INDEX_TABLE_WIDTH_DEFAULT)
-            ->assertSet('custom', '')
-            ->assertSet('sideMargin', '')
-            ->assertSet('saved', false)
-            ->assertSet('notice', '');
     }
 
     public function test_index_field_layout_width_modes_save_and_validate_custom_widths(): void
@@ -1089,26 +1027,6 @@ class ProductMetadataSettingsTest extends TestCase
         $this->assertTrue($this->layoutRow(Option::indexFieldLayout(), ProductField::Tags)['fetched_visible']);
         $this->assertFalse($this->layoutRow(Option::editFieldLayout(), ProductField::FetchedTags)['editable']);
         $this->assertSame(ProductField::Image->value, Option::indexFieldLayout()[0]['field']);
-    }
-
-    public function test_field_layout_component_refreshes_after_global_defaults_reset(): void
-    {
-        Option::setIndexFieldLayout([
-            ['field' => ProductField::Score->value, 'visible' => false],
-        ]);
-
-        $component = Livewire::test(ProductFieldLayoutSettings::class)
-            ->assertSet('indexFields.score.visible', false)
-            ->call('save')
-            ->assertSet('saved', true);
-
-        Option::resetFieldLayoutsToDefault();
-
-        $component
-            ->call('refreshFromSettings')
-            ->assertSet('indexFields.score.visible', true)
-            ->assertSet('saved', false)
-            ->assertSet('notice', '');
     }
 
     public function test_global_reset_all_options_resets_visible_settings_and_keeps_unrelated_options(): void

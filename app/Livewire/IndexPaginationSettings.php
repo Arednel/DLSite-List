@@ -6,7 +6,6 @@ use App\Livewire\Concerns\ConfirmsOptionReset;
 use App\Models\Option;
 use Illuminate\Validation\Rule;
 use Illuminate\View\View;
-use Livewire\Attributes\On;
 use Livewire\Component;
 
 class IndexPaginationSettings extends Component
@@ -54,13 +53,6 @@ class IndexPaginationSettings extends Component
         Option::resetIndexPerPageToDefault();
         $this->fillFromSetting();
         $this->completeResetWithNotice('Index pagination reset to default.');
-    }
-
-    #[On('options-defaults-reset')]
-    public function refreshFromSettings(): void
-    {
-        $this->fillFromSetting();
-        $this->clearSavedNotice();
     }
 
     public function updated(string $property): void

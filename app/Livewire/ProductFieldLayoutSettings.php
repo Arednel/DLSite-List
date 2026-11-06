@@ -9,7 +9,6 @@ use App\Models\Option;
 use App\Support\ProductFieldLayout;
 use Illuminate\Validation\Rule;
 use Illuminate\View\View;
-use Livewire\Attributes\On;
 use Livewire\Component;
 
 class ProductFieldLayoutSettings extends Component
@@ -175,12 +174,6 @@ class ProductFieldLayoutSettings extends Component
         $this->clearLayoutSavedNotice();
     }
 
-    #[On('options-defaults-reset')]
-    public function refreshFromSettings(): void
-    {
-        $this->fillFromSettings();
-        $this->clearLayoutSavedNotice();
-    }
 
     private function fillFromSettings(): void
     {

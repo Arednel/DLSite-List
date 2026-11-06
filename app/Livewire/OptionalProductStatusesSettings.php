@@ -5,7 +5,6 @@ namespace App\Livewire;
 use App\Livewire\Concerns\ConfirmsOptionReset;
 use App\Models\Option;
 use Illuminate\View\View;
-use Livewire\Attributes\On;
 use Livewire\Component;
 
 class OptionalProductStatusesSettings extends Component
@@ -46,13 +45,6 @@ class OptionalProductStatusesSettings extends Component
         Option::resetOptionalProductStatusesToDefault();
         $this->syncFromSettings();
         $this->completeResetWithNotice('Optional status settings reset to default.');
-    }
-
-    #[On('options-defaults-reset')]
-    public function refreshFromSettings(): void
-    {
-        $this->syncFromSettings();
-        $this->clearSavedNotice();
     }
 
     public function updated(string $property): void
