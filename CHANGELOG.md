@@ -4,6 +4,10 @@ All notable changes to this project are documented in this file.
 
 ## Unreleased
 
+## 2.3.0 - 2026-11-07
+
+*Rating Metadata & Display Options*
+
 ### Upgrade notes
 
 For existing manual installations:
@@ -13,7 +17,7 @@ For existing manual installations:
 
 ### Added
 
-* Added DLsite Rating and vote count metadata support.
+* Added DLsite Rating and vote count metadata support. Existing works require running Refetch to backfill this metadata.
 * Added a Rating Visual Style option to display ratings as a number, with DLsite-style stars, or with stars and vote counts. With Extended DLsite, combined Rating spans a full row on mobile.
 * Added a Rating Scale option to display user Score and DLsite Rating on a 5-point or 10-point scale.
 * Added support for custom CSS in Display settings.
@@ -21,9 +25,9 @@ For existing manual installations:
 ### Changed
 
 * Moved display-related Options under a new Display tab. Specifically Field Layouts, Index Table Width, Overflow, Rating, Tag Library, Themes, and UI Wording.
-* Updated `dlsite-async` Python package to 1.0.0b4 version and adapted metadata fetching, storage, and archive imports to its updated data format.
-* Updated the mobile Index layout to follow the configured column order, split regular fields evenly, and keep Image column compact when paired with another column or full-width when followed by a full-width column.
-* Updated the Import / Export archive schema to v3 with added support for custom CSS.
+* Updated `dlsite-async` Python package to version 1.0.0b4 and adapted metadata fetching, storage, and archive imports to its updated data format.
+* Updated the mobile Index layout to follow the configured column order and display non-full-width fields in equal-width columns. The Image column shares a row when possible, or uses the full row when the following field is full-width.
+* Updated the Import / Export archive schema to v3 to include the custom CSS `user.css` file.
 
 ### Fixed
 
