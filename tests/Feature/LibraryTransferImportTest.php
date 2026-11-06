@@ -1216,6 +1216,10 @@ class LibraryTransferImportTest extends TestCase
     {
         $export = $this->exported(['options']);
         $data = $export->parts()->first();
+        $conflictingPath = $data->path . '.conflicting.zip';
+        $this->assertTrue(Storage::disk('local')->copy($data->path, $conflictingPath));
+        $this->rewriteDataPath($conflictingPath, fn($records) => []);
+
         $run = $this->service()->startImport();
         $part = $this->service()->upload($run, new UploadedFile(Storage::disk('local')->path($data->path), $data->filename, null, null, true));
         $other = $this->exported(['options'])->parts()->first();
@@ -1227,8 +1231,7 @@ class LibraryTransferImportTest extends TestCase
         }
         $this->service()->inspect($run->fresh(), $part->id);
         $originalHash = $part->fresh()->sha256;
-        $this->rewriteData($data, fn($records) => []);
-        $candidate = $this->service()->upload($run->fresh(), new UploadedFile(Storage::disk('local')->path($data->path), $data->filename, null, null, true));
+        $candidate = $this->service()->upload($run->fresh(), new UploadedFile(Storage::disk('local')->path($conflictingPath), $data->filename, null, null, true));
         $this->service()->inspect($run->fresh(), $candidate->id);
         $this->assertStringContainsString('Different content', $part->fresh()->error);
         $this->assertSame(1, $run->parts()->count());

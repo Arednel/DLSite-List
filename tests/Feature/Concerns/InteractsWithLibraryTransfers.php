@@ -103,7 +103,12 @@ trait InteractsWithLibraryTransfers
 
     private function rewriteData(LibraryTransferPart $part, Closure $change): void
     {
-        $this->rewriteArchiveEntry($part, function (array $data) use ($change): array {
+        $this->rewriteDataPath($part->path, $change);
+    }
+
+    private function rewriteDataPath(string $path, Closure $change): void
+    {
+        $this->rewriteArchiveEntryPath($path, function (array $data) use ($change): array {
             $data['records'] = $change($data['records']);
 
             return $data;
@@ -112,13 +117,13 @@ trait InteractsWithLibraryTransfers
 
     private function rewriteWorkData(LibraryTransferPart $part, Closure $change): void
     {
-        $this->rewriteArchiveEntry($part, $change, 'works');
+        $this->rewriteArchiveEntryPath($part->path, $change, 'works');
     }
 
-    private function rewriteArchiveEntry(LibraryTransferPart $part, Closure $change, ?string $section = null): void
+    private function rewriteArchiveEntryPath(string $archivePath, Closure $change, ?string $section = null): void
     {
         $zip = new ZipArchive;
-        $zip->open(Storage::disk('local')->path($part->path));
+        $zip->open(Storage::disk('local')->path($archivePath));
         $manifest = json_decode($zip->getFromName('manifest.json'), true);
         $entry = $section === null
             ? $manifest['entries'][0]
