@@ -114,6 +114,11 @@ class OptionsTransferRun extends Component
                 'section' => 'options',
                 'categories' => ImportReview::CATEGORIES['options'],
             ],
+            'user_css' => [
+                'label' => __('Custom CSS style'),
+                'section' => 'user_css',
+                'categories' => ImportReview::CATEGORIES['user_css'],
+            ],
         ];
     }
 
@@ -437,7 +442,7 @@ class OptionsTransferRun extends Component
         $decisionHelp = [
             'ignore' => __('Ignore keeps current library data and skips the imported changes.'),
             'overwrite' => __('Overwrite replaces values included in the archive. For Options, absent keys reset to defaults. For group lists, groups absent from the archive are deleted while their tags and work attachments remain.'),
-            'merge' => __('Merge fills empty work fields and adds imported tags, contributors, and images without removing existing ones. For Options, keys absent from the archive keep their current values.'),
+            'merge' => __('Merge fills empty work fields and adds imported tags, contributors, and images without removing existing ones. For Options, keys absent from the archive keep their current values. Custom CSS is ignored because it cannot be merged.'),
         ];
         $mainTabs = $this->mainTabs();
         $availableMainTabs = collect($mainTabs)
@@ -449,9 +454,11 @@ class OptionsTransferRun extends Component
         return compact('counts', 'items', 'itemLabels', 'labels', 'newWorkChanges', 'newWorkCounts', 'previews', 'decisionOptions', 'decisionLoading', 'decisionHelp') + [
             'section' => $this->section,
             'category' => $this->category,
-            'tabDecisionOptions' => $this->category === 'new_works'
-                ? ['ignore' => 'Ignore', 'merge' => 'Add']
-                : $decisionOptions,
+            'tabDecisionOptions' => match ($this->category) {
+                'new_works' => ['ignore' => 'Ignore', 'merge' => 'Add'],
+                'user_css' => ['ignore' => 'Ignore', 'overwrite' => 'Overwrite'],
+                default => $decisionOptions,
+            },
             'availableMainTabs' => $availableMainTabs,
         ];
     }
@@ -493,6 +500,10 @@ class OptionsTransferRun extends Component
 
         if ($item->section === 'options') {
             return ImportValue::label($item->entity_key);
+        }
+
+        if ($item->section === 'user_css') {
+            return __('Custom CSS style');
         }
 
         if ($item->section === 'tag-library' && is_string($item->metadata['title'] ?? null)) {
@@ -543,7 +554,7 @@ class OptionsTransferRun extends Component
     {
         $targetId = match (true) {
             $this->category === 'new_works' => 'new-work-tab-' . $this->newWorkCategory,
-            $this->section === 'options' => 'transfer-main-tab-options',
+            in_array($this->section, ['options', 'user_css'], true) => 'transfer-main-tab-' . $this->section,
             default => 'transfer-category-tab-' . $this->section . '-' . $this->category,
         };
 

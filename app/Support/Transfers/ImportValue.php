@@ -48,6 +48,7 @@ final class ImportValue
             'dlsite_rating_count' => __('Vote count'),
             'memberships' => __('Tags in Groups'),
             'relationships' => __('Parent Tags'),
+            'user_css' => __('Custom CSS style'),
             default => __(ucwords(str_replace('_', ' ', $key))),
         };
     }
@@ -65,6 +66,9 @@ final class ImportValue
 
     public static function previewValue(mixed $value, string $category, string $field, int $runId, bool $baseline = false): array
     {
+        if ($category === 'user_css') {
+            return ['value' => is_array($value) ? (string) ($value['css'] ?? '') : '', 'image' => false, 'truncated' => false];
+        }
         if (in_array($category, ['cover', 'sample_images'], true)) {
             $paths = $baseline ? ($value['references'] ?? []) : array_map(
                 fn($file) => route('options.transfers.image', [$runId, $file['entry_id']], absolute: false),

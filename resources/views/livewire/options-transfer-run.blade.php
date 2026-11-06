@@ -204,7 +204,7 @@
                             </button>
                         @endforeach
                     </nav>
-                @elseif ($section !== 'options')
+                @elseif (!in_array($section, ['options', 'user_css'], true))
                     <nav class="refetch-tabs" role="tablist" aria-label="{{ __('Review categories') }}">
                         @foreach ($section === 'works' ? array_values(array_diff($categories[$section], ['new_works'])) : $categories[$section] as $tab)
                             @if (isset($counts[$section . '.' . $tab]))
@@ -222,7 +222,7 @@
                     </nav>
                 @endif
                 <section id="transfer-review-panel" class="refetch-tab-panel" role="tabpanel"
-                    aria-labelledby="{{ $section === 'options' ? 'transfer-main-tab-options' : ($category === 'new_works' ? 'new-work-tab-' . $newWorkCategory : 'transfer-category-tab-' . $section . '-' . $category) }}"
+                    aria-labelledby="{{ in_array($section, ['options', 'user_css'], true) ? 'transfer-main-tab-' . $section : ($category === 'new_works' ? 'new-work-tab-' . $newWorkCategory : 'transfer-category-tab-' . $section . '-' . $category) }}"
                     wire:key="transfer-category-{{ $section }}-{{ $category }}">
                     <header class="refetch-tab-header">
                         <div>
@@ -285,7 +285,11 @@
                                         @foreach ($previews[$item->id] ?? [] as $label => $preview)
                                             <div>
                                                 <strong>{{ __($label) }}</strong>
-                                                <x-options.refetch-value :value="$preview['value']" :image="$preview['image']" />
+                                                @if ($section === 'user_css')
+                                                    <pre class="transfer-css-preview">{{ $preview['value'] }}</pre>
+                                                @else
+                                                    <x-options.refetch-value :value="$preview['value']" :image="$preview['image']" />
+                                                @endif
                                             </div>
                                         @endforeach
                                     </div>

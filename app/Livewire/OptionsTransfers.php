@@ -19,7 +19,7 @@ use RuntimeException;
 
 class OptionsTransfers extends Component
 {
-    public array $scopes = ['works', 'tag-library', 'options'];
+    public array $scopes = ['works', 'tag-library', 'options', 'user_css'];
 
     public string $mode = 'all';
 
@@ -71,7 +71,7 @@ class OptionsTransfers extends Component
     {
         $this->scopes = array_values(array_unique(array_intersect(
             $this->scopes,
-            ['works', 'images', 'tag-library', 'options'],
+            ['works', 'images', 'tag-library', 'options', 'user_css'],
         )));
 
         if (! in_array('works', $this->scopes, true)) {

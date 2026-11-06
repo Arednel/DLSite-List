@@ -6,6 +6,7 @@ use App\Http\Controllers\AutocompleteController;
 use App\Http\Controllers\LibraryTransferController;
 use App\Http\Controllers\OptionsController;
 use App\Http\Controllers\OptionStylesheetController;
+use App\Http\Controllers\UserStylesheetController;
 use App\Http\Controllers\ProductController;
 use App\Http\Controllers\PublicStorageController;
 use App\Http\Controllers\RefetchController;
@@ -49,6 +50,14 @@ Route::controller(ProductController::class)->group(function () {
 
 // Serve the generated CSS overrides for saved Options
 Route::get('/styles/options.css', OptionStylesheetController::class)->name('styles.options');
+
+// Serve user-defined CSS publicly
+Route::get('/styles/user.css', UserStylesheetController::class)
+    ->name('styles.user')
+    ->withoutMiddleware([ // Bypass optional authentication and UI locale middleware so custom CSS can load on auth pages
+        RequireOptionalAuthentication::class,
+        SetUiLocale::class,
+    ]);
 
 // Options
 Route::controller(OptionsController::class)->group(function () {

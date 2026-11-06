@@ -21,6 +21,9 @@
     <link rel="stylesheet"
         href="{{ url('/styles/options.css') }}?v={{ filemtime(storage_path('app/public/generated/options.css')) }}">
 
+    <link rel="stylesheet"
+        href="{{ url('/styles/user.css') }}?v={{ filemtime(storage_path('app/public/generated/user.css')) }}">
+
     @livewireStyles
 </head>
 

@@ -7,6 +7,9 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <link rel="stylesheet"
         href="{{ asset('css/work-form-completed.css') }}?v={{ filemtime(public_path('css/work-form-completed.css')) }}">
+
+    <link rel="stylesheet"
+        href="{{ url('/styles/user.css') }}?v={{ filemtime(storage_path('app/public/generated/user.css')) }}">
 </head>
 
 <body class="work-form-completed-page">

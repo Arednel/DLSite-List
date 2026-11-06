@@ -11,6 +11,7 @@ use App\Models\LibraryTransferEntry;
 use App\Models\LibraryTransferPart;
 use App\Models\LibraryTransferRun;
 use App\Models\Product;
+use App\Support\UserStylesheet;
 use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
@@ -30,6 +31,7 @@ final class TransferArchive
         private readonly PortableOptions $options,
         private readonly TransferJobDispatcher $dispatcher,
         private readonly TransferStorage $storage,
+        private readonly UserStylesheet $userStylesheet,
     ) {}
 
     public static function filename(string $date, string $kind, int $number, int $count): string
@@ -65,6 +67,7 @@ final class TransferArchive
             'works' => $this->planWorks($run),
             'tag-library' => $this->planTagLibrary($run),
             'options' => $this->planOptions($run),
+            'user_css' => $this->planUserCss($run),
             'pack-data' => $this->packEntries($run, 'data'),
             'pack-images' => $this->packEntries($run, 'images'),
             'normalize-fragments' => $this->normalizeFragments($run),
@@ -83,9 +86,8 @@ final class TransferArchive
         }
 
         $scopes = $run->settings['scopes'];
-        $phase = in_array('works', $scopes, true)
-            ? 'works'
-            : (in_array('tag-library', $scopes, true) ? 'tag-library' : 'options');
+        $phase = collect(['works', 'tag-library', 'options', 'user_css'])
+            ->first(fn(string $scope): bool => in_array($scope, $scopes, true)) ?? 'pack-data';
         $planning = [
             'phase' => $phase,
             'work_offset' => 0,
@@ -203,8 +205,34 @@ final class TransferArchive
         $fragments = $this->fragments($run, 'options', $records);
         $planning['fragment_count'] = count($fragments);
         $this->insertEntries($run, $fragments, $planning);
-        $planning['phase'] = 'pack-data';
+        $planning['phase'] = $this->nextInventoryPhase($run->settings['scopes'], 'options');
         $this->continuePlanning($run, $planning, 'Options', $run->processed);
+    }
+
+    private function planUserCss(LibraryTransferRun $run): void
+    {
+        $planning = $run->settings['planning'];
+        $css = $this->userStylesheet->contents();
+        if (strlen($css) > config('transfers.max_json_bytes')) {
+            throw new InvalidArchive('Custom CSS exceeds the configured transfer safety limit.');
+        }
+        $source = $run->directory() . '/data/user.css';
+        self::space(strlen($css), Storage::disk('local')->path($run->directory()));
+        Storage::disk('local')->makeDirectory(dirname($source));
+        if (! Storage::disk('local')->put($source, $css)) {
+            throw new RuntimeException('Unable to stage Custom CSS for export.');
+        }
+        $this->insertEntries($run, [[
+            'path' => 'user.css',
+            'source' => $source,
+            'disk' => 'local',
+            'bytes' => strlen($css),
+            'sha256' => hash('sha256', $css),
+            'media_type' => 'text/css',
+            'section' => 'user_css',
+        ]], $planning);
+        $planning['phase'] = 'pack-data';
+        $this->continuePlanning($run, $planning, 'Custom CSS style', $run->processed);
     }
 
     private function insertEntries(LibraryTransferRun $run, array $files, array &$planning): void
@@ -258,7 +286,7 @@ final class TransferArchive
 
     private function nextInventoryPhase(array $scopes, string $completed): string
     {
-        $order = ['works', 'tag-library', 'options'];
+        $order = ['works', 'tag-library', 'options', 'user_css'];
         $position = array_search($completed, $order, true);
         foreach (array_slice($order, $position === false ? 0 : $position + 1) as $scope) {
             if (in_array($scope, $scopes, true)) {
@@ -275,6 +303,7 @@ final class TransferArchive
             'works' => in_array('images', $scopes, true) ? 'Works and Images' : 'Works',
             'tag-library' => 'Tag Library',
             'options' => 'Options',
+            'user_css' => 'Custom CSS style',
             default => 'Archive parts',
         };
     }
@@ -383,7 +412,7 @@ final class TransferArchive
             $name = self::filename($run->settings['exported_at'], $part->kind, $part->number, $counts[$part->kind]);
             $manifest = [
                 'format' => 'dlsite-list',
-                'schema_version' => 2,
+                'schema_version' => 3,
                 'archive_set_id' => $run->archive_set_id,
                 'exported_at' => $run->settings['exported_at'],
                 'scopes' => $run->settings['scopes'],
@@ -801,8 +830,9 @@ final class TransferArchive
             && ! in_array('works', $manifest['scopes'], true);
         $unexpectedImageParts = ! in_array('images', $manifest['scopes'], true)
             && $manifest['parts']['images'] !== 0;
+        $userCssBeforeV3 = $manifest['schema_version'] < 3 && in_array('user_css', $manifest['scopes'], true);
 
-        if ($partCountExceeded || $partCountMismatch || $imagesWithoutWorks || $unexpectedImageParts) {
+        if ($partCountExceeded || $partCountMismatch || $imagesWithoutWorks || $unexpectedImageParts || $userCssBeforeV3) {
             throw new InvalidArchive('Inconsistent part counts or scopes.');
         }
         if (in_array('works', $manifest['scopes'], true) && ($manifest['work_entry_format'] ?? null) !== WorkArchiveData::FORMAT) {
@@ -820,7 +850,7 @@ final class TransferArchive
     {
         return [
             'format' => ['required', Rule::in(['dlsite-list'])],
-            'schema_version' => ['required', 'integer:strict', Rule::in([1, 2])],
+            'schema_version' => ['required', 'integer:strict', Rule::in([1, 2, 3])],
             'archive_set_id' => ['required', 'uuid'],
             'exported_at' => ['required', 'date', 'regex:' . LibraryData::UTC_DATE_PATTERN],
             'work_entry_format' => ['sometimes', 'string'],
@@ -830,7 +860,7 @@ final class TransferArchive
             'work_selection.mode' => ['required', Rule::in(['all', 'selected'])],
             'work_selection.count' => ['required', 'integer:strict', 'min:0'],
             'scopes' => ['required', 'array', 'list', 'min:1'],
-            'scopes.*' => ['required', 'distinct', Rule::in(['works', 'images', 'tag-library', 'options'])],
+            'scopes.*' => ['required', 'distinct', Rule::in(['works', 'images', 'tag-library', 'options', 'user_css'])],
             'part.kind' => ['required', Rule::in(['data', 'images'])],
             'part.number' => ['required', 'integer:strict', 'min:1', 'lte:part.count'],
             'part.count' => ['required', 'integer:strict', 'min:1'],
@@ -879,13 +909,20 @@ final class TransferArchive
     {
         if ($kind === 'data') {
             $section = $entry['section'] ?? null;
-            $validWork = $this->validWorkEntry($entry, $version);
-            $validFragment = $this->validFragmentEntry($entry, $section);
             $validSection = in_array($section, $scopes, true);
-            $validType = ($entry['media_type'] ?? null) === 'application/json';
             $withinSize = ($entry['bytes'] ?? PHP_INT_MAX) <= config('transfers.max_json_bytes');
+            $validUserCss = $version >= 3
+                && $section === 'user_css'
+                && ($entry['path'] ?? null) === 'user.css'
+                && ($entry['media_type'] ?? null) === 'text/css'
+                && ! array_key_exists('product_code', $entry)
+                && ! array_key_exists('rj_code', $entry)
+                && ! array_key_exists('fragment', $entry)
+                && ! array_key_exists('fragments', $entry);
+            $validJson = ($entry['media_type'] ?? null) === 'application/json'
+                && ($this->validWorkEntry($entry, $version) || $this->validFragmentEntry($entry, $section));
 
-            if ((! $validWork && ! $validFragment) || ! $validSection || ! $validType || ! $withinSize) {
+            if ((! $validJson && ! $validUserCss) || ! $validSection || ! $withinSize) {
                 throw new InvalidArchive('Unsupported or invalid archive layout: invalid data entry.');
             }
 
@@ -944,7 +981,7 @@ final class TransferArchive
         $category = self::imageCategory($entry['path'], $version);
         $codeField = $version === 1 ? 'rj_code' : 'product_code';
         preg_match('/\Aworks\/((?:RJ|BJ|VJ)\d+)\/images\//', $entry['path'], $match);
-        if (($version === 2 && ! array_key_exists($codeField, $entry))
+        if (($version >= 2 && ! array_key_exists($codeField, $entry))
             || (array_key_exists($codeField, $entry) && $entry[$codeField] !== ($match[1] ?? null))
         ) {
             return false;

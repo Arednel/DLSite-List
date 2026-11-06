@@ -23,6 +23,9 @@
     <script src="{{ asset('scripts/title-tooltips.js') }}?v={{ filemtime(public_path('scripts/title-tooltips.js')) }}"
         defer></script>
 
+    <link rel="stylesheet"
+        href="{{ url('/styles/user.css') }}?v={{ filemtime(storage_path('app/public/generated/user.css')) }}">
+
     @livewireStyles
 </head>
 

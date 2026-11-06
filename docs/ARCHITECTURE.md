@@ -181,6 +181,14 @@ Index table width, side margins, Index column-width overrides, and enabled overf
 
 The stylesheet is regenerated after CSS-affecting Options are saved, reset, or imported. Static CSS remains authoritative for defaults, so the generated file contains only saved overrides and is loaded after the normal Index styles.
 
+#### User Stylesheet
+
+Application-wide Custom CSS is stored in `storage/app/public/generated/user.css` and served through `/styles/user.css` as `text/css`. `CustomCssSettings` reads and replaces the file directly. `Option::resetVisibleSettingsToDefault()` clears `user.css`.
+
+Custom CSS uses last-write-wins semantics. Writes and import recovery share a short stylesheet-specific lock. Import publication keeps a durable backup/journal and restores it only when an interrupted uncommitted import is still the latest stylesheet write.
+
+Every standalone user-visible page loads `user.css` after its normal stylesheets. Nested components do not load it again. The stylesheet route bypasses optional authentication and locale middleware so Custom CSS also applies to authentication pages.
+
 ### Refetch DLsite Data
 
 Refetch updates scraped DLsite-owned data without immediately overwriting the existing product.
@@ -243,17 +251,20 @@ Incomplete image categories remain importable. Import applies the valid image fi
 
 #### Archive Boundary
 
-New exports use schema v2, while imports support both the released schema v1 and schema v2. Both use one archive-set identity across independent data and image ZIP parts. Every part contains `manifest.json`, which identifies the schema, part kind/count, scopes, and declared entries with sizes and SHA-256 checksums. Parts from different schema versions cannot be mixed.
+New exports use schema v3, while imports support the released schema v1, schema v2, and schema v3. All versions use one archive-set identity across independent data and image ZIP parts. Every part contains `manifest.json`, which identifies the schema, part kind/count, scopes, and declared entries with sizes and SHA-256 checksums. Parts from different schema versions cannot be mixed.
 
 Portable entries are domain-oriented:
 
-- each work is a deterministic `works/{product_code}/work.json` document using the `dlsite-async+dlsite-list` format; v2 manifests use `product_code` (RJ/BJ/VJ), while v1 uses the historical `rj_code` (RJ only)
+- each work is a deterministic `works/{product_code}/work.json` document using the `dlsite-async+dlsite-list` format; v2/v3 manifests use `product_code` (RJ/BJ/VJ), while v1 uses the historical `rj_code` (RJ only)
 - Tag Library and Options are stored as bounded JSON fragments
+- schema v3 can include the independent `user_css` scope as one raw root-level `user.css` entry with `text/css` media type; imports keep that file in transfer staging through review and promote it only when Overwrite is applied. Publication uses a durable undo journal plus an import-item commit marker, so ordinary failures and interrupted workers restore uncommitted CSS while committed replacements survive recovery
 - images are separate binary entries referenced by archive path, checksum, size, and media type
 
 The portable format excludes database IDs, authentication data, internal storage paths, and deployment-specific settings. Import reads explicitly declared entries rather than extracting archives wholesale, and rejects unsupported/mixed layouts, unsafe paths, undeclared or conflicting entries, and integrity mismatches before review.
 
-For v1 archives, legacy `rj_code` fields in the three portable Add/Import Options layouts and the `rj` Index sort field are normalized to `product_code` before Import Review. Site ID is imported from `dlsite_list.site_id` when present, otherwise from the Japanese/English JSON `site_id`, without age-based inference.
+For v1 archives, legacy `rj_code` fields in the three portable Add/Import Options layouts and the `rj` Index sort field are normalized to `product_code` before Import Review. 
+Schema v1/v2 archives have no `user_css` scope, so importing them never changes the local `user.css` file. 
+Site ID is imported from `dlsite_list.site_id` when present, otherwise from the Japanese/English JSON `site_id`, without age-based inference.
 
 ### Authentication
 
@@ -341,6 +352,7 @@ Settings components include:
 
 - `UiLanguageSettings`
 - `ContentTerminologySettings`
+- `CustomCssSettings`
 - `IndexPaginationSettings`
 - `IndexSearchSettings`
 - `IndexImageViewerSettings`

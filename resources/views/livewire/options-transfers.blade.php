@@ -87,6 +87,9 @@
                     <x-options.switch value="tag-library"
                         wire:model.live="scopes">{{ __('Tag Library') }}</x-options.switch>
                     <x-options.switch value="options" wire:model.live="scopes">{{ __('Options') }}</x-options.switch>
+                    <x-options.switch value="user_css" wire:model.live="scopes">
+                        {{ __('Custom CSS style') }}
+                    </x-options.switch>
                 </div>
                 @error('scopes')
                     <p class="text-error">{{ $message }}</p>

@@ -9,6 +9,9 @@
     <meta name="csrf-token" content="{{ csrf_token() }}">
 
     <link rel="stylesheet" href="{{ asset('css/auth.css') }}?v={{ filemtime(public_path('css/auth.css')) }}">
+
+    <link rel="stylesheet"
+        href="{{ url('/styles/user.css') }}?v={{ filemtime(storage_path('app/public/generated/user.css')) }}">
 </head>
 
 <body class="auth-page auth-theme-{{ $authTheme }}">

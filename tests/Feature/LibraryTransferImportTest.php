@@ -2,6 +2,8 @@
 
 namespace Tests\Feature;
 
+use App\Enums\LibraryImportDecision;
+use App\Enums\LibraryImportItemStatus;
 use App\Enums\LibraryTransferAction;
 use App\Enums\LibraryTransferOperation;
 use App\Enums\LibraryTransferPartStatus;
@@ -16,6 +18,8 @@ use App\Support\DLSite\DLSiteRating;
 use App\Support\ProductContributorSync;
 use App\Support\Transfers\InvalidArchive;
 use App\Support\Transfers\PortableOptions;
+use App\Support\UserStylesheet;
+use App\Support\UserStylesheetPromotion;
 use Exception;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Bus;
@@ -386,6 +390,271 @@ class LibraryTransferImportTest extends TestCase
         $this->assertSame('2026-09-24 00:00:00', Product::findOrFail('RJ123456')->announce_date?->format('Y-m-d H:i:s'));
     }
 
+    public function test_schema_v2_archive_remains_importable(): void
+    {
+        $export = $this->exported(['options']);
+        $part = $export->parts()->firstOrFail();
+        $path = Storage::disk('local')->path($part->path);
+        $zip = new ZipArchive;
+        $this->assertTrue($zip->open($path));
+        $manifest = json_decode($zip->getFromName('manifest.json'), true);
+        $manifest['schema_version'] = 2;
+        $zip->addFromString('manifest.json', json_encode($manifest, JSON_THROW_ON_ERROR));
+        $this->assertTrue($zip->close());
+
+        $this->assertSame(2, $this->archive()->inspect($path, true)['schema_version']);
+        $this->assertSame(LibraryTransferRunStatus::Review, $this->imported($export)->status);
+    }
+
+    public function test_custom_css_import_review_shows_text_and_overwrite_replaces_user_css(): void
+    {
+        $stylesheet = app(UserStylesheet::class);
+        $original = $stylesheet->contents();
+        $importedCss = "body { color: blue; }\n";
+        $currentCss = "body { color: green; }\n";
+
+        try {
+            Storage::disk('local')->deleteDirectory('UserStylesheetPromotions');
+            $stylesheet->save($importedCss);
+            $export = $this->exported(['user_css']);
+            $stylesheet->save($currentCss);
+
+            $run = $this->imported($export);
+            $item = $run->items()->where('section', 'user_css')->where('category', 'user_css')->firstOrFail();
+            $this->assertSame(['css' => $currentCss], $item->baseline);
+            $this->assertSame(['css' => $importedCss], $item->incoming);
+
+            Livewire::test(OptionsTransferRun::class, ['run' => $run->fresh()])
+                ->call('mainTab', 'user_css')
+                ->assertSee('Current')
+                ->assertSee($currentCss)
+                ->assertSee('Imported')
+                ->assertSee($importedCss)
+                ->assertSee('Overwrite');
+
+            $item->update(['decision' => LibraryImportDecision::Overwrite]);
+            $this->service()->action($run->fresh(), LibraryTransferAction::Apply, 'user_css', 'user_css');
+            while ($run->fresh()->status === LibraryTransferRunStatus::Applying) {
+                $this->service()->apply($run->fresh());
+            }
+
+            $this->assertSame($importedCss, $stylesheet->contents());
+            $this->assertFalse(Storage::disk('local')->exists('UserStylesheetPromotions/active.json'));
+            $this->assertSame([], Storage::disk('local')->allFiles('UserStylesheetPromotions'));
+            $this->assertSame([], Storage::disk('local')->allDirectories('UserStylesheetPromotions'));
+        } finally {
+            Storage::disk('local')->deleteDirectory('UserStylesheetPromotions');
+            $stylesheet->save($original);
+        }
+    }
+
+    public function test_empty_custom_css_import_overwrite_clears_the_live_stylesheet(): void
+    {
+        $stylesheet = app(UserStylesheet::class);
+        $original = $stylesheet->contents();
+
+        try {
+            $stylesheet->save('');
+            $export = $this->exported(['user_css']);
+            $stylesheet->save("body { color: green; }\n");
+
+            $run = $this->imported($export);
+            $item = $run->items()->where('section', 'user_css')->where('category', 'user_css')->firstOrFail();
+            $item->update(['decision' => LibraryImportDecision::Overwrite]);
+
+            $this->service()->action($run->fresh(), LibraryTransferAction::Apply, 'user_css', 'user_css');
+            while ($run->fresh()->status === LibraryTransferRunStatus::Applying) {
+                $this->service()->apply($run->fresh());
+            }
+
+            $this->assertSame('', $stylesheet->contents());
+        } finally {
+            $stylesheet->save($original);
+        }
+    }
+
+    public function test_failed_custom_css_apply_restores_the_live_stylesheet_and_remains_retryable(): void
+    {
+        $stylesheet = app(UserStylesheet::class);
+        $original = $stylesheet->contents();
+        $importedCss = "body { color: blue; }\n";
+        $currentCss = "body { color: green; }\n";
+
+        try {
+            $stylesheet->save($importedCss);
+            $export = $this->exported(['user_css']);
+            $stylesheet->save($currentCss);
+
+            $run = $this->imported($export);
+            $item = $run->items()->where('section', 'user_css')->where('category', 'user_css')->firstOrFail();
+            $item->update(['decision' => LibraryImportDecision::Overwrite]);
+            $this->assertIsInt($item->fresh()->metadata['entry_id'] ?? null);
+
+            $thrown = false;
+            LibraryImportItem::updating(function (LibraryImportItem $updating) use (&$thrown): void {
+                if (! $thrown && $updating->status === LibraryImportItemStatus::Applied) {
+                    $thrown = true;
+                    throw new RuntimeException('Simulated Custom CSS result write failure');
+                }
+            });
+
+            try {
+                $this->review()->applyItem($item->fresh());
+                $this->fail('Operational write failures must restore Custom CSS and remain retryable.');
+            } catch (RuntimeException $exception) {
+                $this->assertSame('Simulated Custom CSS result write failure', $exception->getMessage());
+            } finally {
+                LibraryImportItem::flushEventListeners();
+            }
+
+            $this->assertSame($currentCss, $stylesheet->contents());
+            $this->assertSame(LibraryImportItemStatus::Pending, $item->fresh()->status);
+
+            $this->review()->applyItem($item->fresh());
+            $this->assertSame($importedCss, $stylesheet->contents());
+            $this->assertSame(LibraryImportItemStatus::Applied, $item->fresh()->status);
+        } finally {
+            LibraryImportItem::flushEventListeners();
+            $stylesheet->save($original);
+        }
+    }
+
+
+    public function test_custom_css_recovery_restores_uncommitted_replacement_and_keeps_committed_replacement(): void
+    {
+        $stylesheet = app(UserStylesheet::class);
+        $original = $stylesheet->contents();
+
+        try {
+            $stylesheet->save("body { color: green; }\n");
+            $export = $this->exported(['user_css']);
+            $run = $this->imported($export);
+            $item = $run->items()->where('section', 'user_css')->where('category', 'user_css')->firstOrFail();
+
+            foreach ([false, true] as $committed) {
+                $stylesheet->save("body { color: blue; }\n");
+                $this->stageInterruptedUserStylesheetPromotion(
+                    $item,
+                    "body { color: green; }\n",
+                    "body { color: blue; }\n",
+                    $committed,
+                );
+
+                app(UserStylesheetPromotion::class)->recover();
+
+                $this->assertSame(
+                    $committed ? "body { color: blue; }\n" : "body { color: green; }\n",
+                    $stylesheet->contents(),
+                );
+                $this->assertFalse(Storage::disk('local')->exists('UserStylesheetPromotions/active.json'));
+            }
+        } finally {
+            Storage::disk('local')->delete('UserStylesheetPromotions/active.json');
+            Storage::disk('local')->deleteDirectory('UserStylesheetPromotions');
+            $stylesheet->save($original);
+        }
+    }
+
+
+    public function test_custom_css_recovery_preserves_a_newer_stylesheet_write(): void
+    {
+        $stylesheet = app(UserStylesheet::class);
+        $original = $stylesheet->contents();
+
+        try {
+            $stylesheet->save("body { color: purple; }\n");
+            $export = $this->exported(['user_css']);
+            $run = $this->imported($export);
+            $item = $run->items()->where('section', 'user_css')->where('category', 'user_css')->firstOrFail();
+
+            $this->stageInterruptedUserStylesheetPromotion(
+                $item,
+                "body { color: green; }\n",
+                "body { color: blue; }\n",
+            );
+
+            app(UserStylesheetPromotion::class)->recover();
+
+            $this->assertSame("body { color: purple; }\n", $stylesheet->contents());
+            $this->assertFalse(Storage::disk('local')->exists('UserStylesheetPromotions/active.json'));
+        } finally {
+            Storage::disk('local')->delete('UserStylesheetPromotions/active.json');
+            Storage::disk('local')->deleteDirectory('UserStylesheetPromotions');
+            $stylesheet->save($original);
+        }
+    }
+
+    public function test_custom_css_reset_supersedes_an_interrupted_identical_import_publication(): void
+    {
+        $stylesheet = app(UserStylesheet::class);
+        $promotion = app(UserStylesheetPromotion::class);
+        $original = $stylesheet->contents();
+
+        try {
+            $stylesheet->save('');
+            $export = $this->exported(['user_css']);
+            $run = $this->imported($export);
+            $item = $run->items()->where('section', 'user_css')->where('category', 'user_css')->firstOrFail();
+
+            $this->stageInterruptedUserStylesheetPromotion(
+                $item,
+                "body { color: green; }\n",
+                '',
+            );
+
+            $promotion->reset();
+
+            $this->assertSame('', $stylesheet->contents());
+            $this->assertFalse(Storage::disk('local')->exists('UserStylesheetPromotions/active.json'));
+        } finally {
+            Storage::disk('local')->delete('UserStylesheetPromotions/active.json');
+            Storage::disk('local')->deleteDirectory('UserStylesheetPromotions');
+            $stylesheet->save($original);
+        }
+    }
+
+    public function test_custom_css_promotion_rejects_nested_transactions(): void
+    {
+        $stylesheet = app(UserStylesheet::class);
+        $original = $stylesheet->contents();
+
+        try {
+            $stylesheet->save("body { color: green; }\n");
+            $export = $this->exported(['user_css']);
+            $run = $this->imported($export);
+            $item = $run->items()->where('section', 'user_css')->where('category', 'user_css')->firstOrFail();
+            $promotion = app(UserStylesheetPromotion::class);
+
+            $this->expectException(RuntimeException::class);
+            $this->expectExceptionMessage('Custom CSS promotion transaction is already active.');
+
+            $promotion->transaction(
+                fn() => $promotion->transaction(fn() => null, $item),
+                $item,
+            );
+        } finally {
+            Storage::disk('local')->delete('UserStylesheetPromotions/active.json');
+            Storage::disk('local')->deleteDirectory('UserStylesheetPromotions');
+            $stylesheet->save($original);
+        }
+    }
+
+    public function test_schema_v2_rejects_user_css_scope(): void
+    {
+        $export = $this->exported(['user_css']);
+        $part = $export->parts()->firstOrFail();
+        $path = Storage::disk('local')->path($part->path);
+        $zip = new ZipArchive;
+        $this->assertTrue($zip->open($path));
+        $manifest = json_decode($zip->getFromName('manifest.json'), true);
+        $manifest['schema_version'] = 2;
+        $zip->addFromString('manifest.json', json_encode($manifest, JSON_THROW_ON_ERROR));
+        $this->assertTrue($zip->close());
+
+        $this->expectException(InvalidArchive::class);
+        $this->archive()->inspect($path, true);
+    }
+
     public function test_schema_v1_archive_imports_released_identifiers_images_and_option_layouts(): void
     {
         $product = Product::factory()->create([
@@ -448,7 +717,7 @@ class LibraryTransferImportTest extends TestCase
         $this->archive()->inspect($path, true);
     }
 
-    public function test_schema_v2_image_entry_requires_product_code(): void
+    public function test_schema_v3_image_entry_requires_product_code(): void
     {
         Product::factory()->create(['id' => 'RJ123456', 'work_image' => 'storage/Works/RJ123456/cover.png']);
         $this->saveImage('Works/RJ123456/cover.png');
@@ -510,7 +779,7 @@ class LibraryTransferImportTest extends TestCase
         $this->service()->upload($run->fresh(), new UploadedFile(Storage::disk('local')->path($imagePart->path), $imagePart->filename, 'application/zip', null, true));
     }
 
-    public function test_v2_updates_existing_and_creates_new_bj_vj_products(): void
+    public function test_v3_updates_existing_and_creates_new_bj_vj_products(): void
     {
         $bj = Product::factory()->create(['id' => 'BJ123456', 'site_id' => 'books', 'work_image' => 'storage/Works/BJ123456/cover.png']);
         $vj = Product::factory()->create(['id' => 'VJ234567', 'site_id' => 'pro']);
@@ -518,7 +787,7 @@ class LibraryTransferImportTest extends TestCase
         $export = $this->exported(['works', 'images']);
         $data = $export->parts()->where('kind', 'data')->firstOrFail();
         $this->assertEqualsCanonicalizing(['BJ123456', 'VJ234567'], array_column($data->manifest['entries'], 'product_code'));
-        $this->assertSame(2, $this->archive()->inspect(Storage::disk('local')->path($data->path), true)['schema_version']);
+        $this->assertSame(3, $this->archive()->inspect(Storage::disk('local')->path($data->path), true)['schema_version']);
 
         $bj->update(['site_id' => null, 'work_image' => null]);
         $vj->update(['site_id' => null]);
@@ -879,7 +1148,7 @@ class LibraryTransferImportTest extends TestCase
         $entry = $manifest['entries'][0]['path'];
         switch ($case) {
             case 'schema':
-                $manifest['schema_version'] = 3;
+                $manifest['schema_version'] = 4;
                 break;
             case 'checksum':
                 $manifest['entries'][0]['sha256'] = str_repeat('0', 64);
@@ -1218,5 +1487,27 @@ class LibraryTransferImportTest extends TestCase
         }
         $this->assertSame(LibraryTransferRunStatus::Review, $run->fresh()->status);
         $this->assertSame(2, $run->items()->distinct()->count('entity_key'));
+    }
+
+    private function stageInterruptedUserStylesheetPromotion(
+        LibraryImportItem $item,
+        string $backupCss,
+        string $publishedCss,
+        bool $committed = false,
+    ): void {
+        $token = bin2hex(random_bytes(16));
+        $backup = 'UserStylesheetPromotions/' . $token . '/user.css';
+
+        Storage::disk('local')->put($backup, $backupCss);
+        Storage::disk('local')->put('UserStylesheetPromotions/active.json', json_encode([
+            'token' => $token,
+            'item_id' => $item->id,
+            'backup' => $backup,
+            'published' => true,
+            'published_sha256' => hash('sha256', $publishedCss),
+        ], JSON_THROW_ON_ERROR));
+        $item->update([
+            'result' => $committed ? ['_user_stylesheet_promotion' => $token] : [],
+        ]);
     }
 }

@@ -948,5 +948,13 @@
     "DLsite rating follows your chosen rating scale (up to 5 or 10) and allows up to two digits after the decimal point.": "DLsite 評分依照你選擇的評分制（滿分為 5 分或 10 分），最多可輸入小數點後兩位數字。",
     "(:count vote)|(:count votes)": "(:count 票)",
     "Save theme": "儲存主題",
-    "Theme settings saved.": "主題設定已儲存。"
+    "Theme settings saved.": "主題設定已儲存。",
+    "CSS": "CSS",
+    "Save custom CSS": "儲存自訂 CSS",
+    "Custom CSS saved.": "自訂 CSS 已儲存。",
+    "Custom CSS reset to default.": "自訂 CSS 已重設為預設值。",
+    "Reset Custom CSS to default?": "將自訂 CSS 重設為預設值？",
+    "style": "樣式",
+    "Custom CSS style": "自訂 CSS 樣式",
+    "Merge fills empty work fields and adds imported tags, contributors, and images without removing existing ones. For Options, keys absent from the archive keep their current values. Custom CSS is ignored because it cannot be merged.": "合併會填入空白的作品欄位，並加入匯入的標籤、貢獻者與圖片，而不移除現有內容。Options 中未包含於封存檔的鍵會保留目前值。自訂 CSS 無法合併，因此會被忽略。"
 }

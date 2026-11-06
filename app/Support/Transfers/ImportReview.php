@@ -16,6 +16,8 @@ use App\Support\ProductContributorSync;
 use App\Support\ProductGenreSync;
 use App\Support\DLSite\DLSiteRating;
 use App\Support\ProductImagePromotion;
+use App\Support\UserStylesheet;
+use App\Support\UserStylesheetPromotion;
 use Closure;
 use Illuminate\Support\Arr;
 use Illuminate\Support\Collection;
@@ -24,6 +26,7 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 use InvalidArgumentException;
 use RuntimeException;
+use Throwable;
 
 final class ImportReview
 {
@@ -61,6 +64,7 @@ final class ImportReview
         ],
         'tag-library' => ['tags', 'groups', 'memberships', 'relationships'],
         'options' => ['options'],
+        'user_css' => ['user_css'],
     ];
 
     public const WORK_SCALAR_CATEGORIES = [
@@ -98,6 +102,8 @@ final class ImportReview
         private readonly ProductContributorSync $contributors,
         private readonly ProductGenreSync $genres,
         private readonly TransferJobDispatcher $dispatcher,
+        private readonly UserStylesheet $userStylesheet,
+        private readonly UserStylesheetPromotion $userStylesheetPromotion,
     ) {}
 
     public function setItemDecision(int $runId, int $itemId, ?LibraryImportDecision $decision): void
@@ -149,10 +155,12 @@ final class ImportReview
                 ->when(! $all, fn($query) => $query->forSectionCategory($section, $category));
 
             if ($all) {
-                (clone $items)->where('category', '!=', 'new_works')->update(['decision' => $decision]);
-                $items->where('category', 'new_works')->update([
-                    'decision' => $this->decisionForCategory($decision, 'new_works'),
-                ]);
+                (clone $items)->whereNotIn('category', ['new_works', 'user_css'])->update(['decision' => $decision]);
+                foreach (['new_works', 'user_css'] as $specialCategory) {
+                    (clone $items)->where('category', $specialCategory)->update([
+                        'decision' => $this->decisionForCategory($decision, $specialCategory),
+                    ]);
+                }
             } else {
                 $items->update(['decision' => $this->decisionForCategory($decision, $category)]);
             }
@@ -161,7 +169,11 @@ final class ImportReview
 
     private function decisionForCategory(LibraryImportDecision $decision, string $category): LibraryImportDecision
     {
-        return $category === 'new_works' ? $decision->forNewWork() : $decision;
+        return match ($category) {
+            'new_works' => $decision->forNewWork(),
+            'user_css' => $decision === LibraryImportDecision::Overwrite ? LibraryImportDecision::Overwrite : LibraryImportDecision::Ignore,
+            default => $decision,
+        };
     }
 
     private function withReviewableRun(int $runId, Closure $callback): mixed
@@ -177,9 +189,18 @@ final class ImportReview
             }));
     }
 
-    public function stage(LibraryTransferRun $run, string $section, array $record, array $imageEntries, ?string $recordIdentity = null): void
-    {
+    public function stage(
+        LibraryTransferRun $run,
+        string $section,
+        array $record,
+        array $imageEntries,
+        ?string $recordIdentity = null,
+        ?int $sourceEntryId = null,
+    ): void {
         $source = ['record_identity' => $recordIdentity];
+        if ($sourceEntryId !== null) {
+            $source['entry_id'] = $sourceEntryId;
+        }
         if ($section === 'works') {
             if ($run->settings['without_images'] ?? false) {
                 unset($record['cover'], $record['sample_images']);
@@ -278,6 +299,19 @@ final class ImportReview
             }
             $this->options->validate($record['key'], $record['value']);
             $this->item($run, $section, 'options', $record['key'], $this->options->current($record['key']), $record['value'], $source);
+        } elseif ($section === 'user_css') {
+            if (! is_string($record['css'] ?? null)) {
+                throw new InvalidArgumentException('Invalid Custom CSS record.');
+            }
+            $this->item(
+                $run,
+                $section,
+                'user_css',
+                'user.css',
+                ['css' => $this->userStylesheet->contents()],
+                ['css' => $record['css']],
+                $source,
+            );
         } else {
             $this->tagValidator->validate($record);
             $type = $record['type'];
@@ -523,6 +557,9 @@ final class ImportReview
         if ($item->section === 'options') {
             return $this->options->current($item->entity_key, $this->locking);
         }
+        if ($item->section === 'user_css') {
+            return ['css' => $this->userStylesheet->contents()];
+        }
         if ($item->section === 'tag-library') {
             if ($item->category === 'relationships' && isset($item->metadata['edge'])) {
                 $edge = $item->metadata['edge'];
@@ -595,6 +632,16 @@ final class ImportReview
 
             return;
         }
+        if ($item->section === 'user_css') {
+            try {
+                $this->applyUserCssItem($item);
+            } catch (InvalidArgumentException $exception) {
+                $item->update(['status' => LibraryImportItemStatus::Failed, 'error' => mb_substr($exception->getMessage(), 0, 2000)]);
+            }
+
+            return;
+        }
+
         try {
             $this->locking = true;
             $this->groupIndex = null;
@@ -638,6 +685,68 @@ final class ImportReview
             $this->locking = false;
             $this->groupIndex = null;
         }
+    }
+
+    private function applyUserCssItem(LibraryImportItem $item): void
+    {
+        $this->userStylesheetPromotion->transaction(function () use ($item): void {
+            $locked = LibraryImportItem::whereKey($item->id)->lockForUpdate()->firstOrFail();
+            $item->setRawAttributes($locked->getAttributes(), true);
+            if ($item->status !== LibraryImportItemStatus::Pending) {
+                return;
+            }
+
+            $current = $this->current($item);
+            if (LibraryData::hash($current) !== LibraryData::hash($item->baseline)) {
+                $item->update([
+                    'status' => LibraryImportItemStatus::Conflict,
+                    'error' => 'Local data changed after review. Click `Refresh conflicts` to review the latest changes.',
+                ]);
+
+                return;
+            }
+
+            $this->userStylesheetPromotion->publish($this->stagedUserCss($item));
+            $item->update(['status' => LibraryImportItemStatus::Applied, 'error' => null]);
+        }, $item);
+    }
+
+    private function stagedUserCss(LibraryImportItem $item): string
+    {
+        $entryId = $item->metadata['entry_id'] ?? null;
+        if (! is_int($entryId)) {
+            throw new RuntimeException('Staged Custom CSS is unavailable.');
+        }
+
+        $entry = LibraryTransferEntry::query()
+            ->whereKey($entryId)
+            ->where('library_transfer_run_id', $item->library_transfer_run_id)
+            ->where('section', 'user_css')
+            ->where('path', 'user.css')
+            ->whereRelation('part', 'status', LibraryTransferPartStatus::Valid)
+            ->first();
+        if (! $entry) {
+            throw new RuntimeException('Staged Custom CSS is unavailable.');
+        }
+
+        $disk = Storage::disk($entry->source_disk);
+        if (! $disk->exists($entry->source_path)) {
+            throw new RuntimeException('Staged Custom CSS is missing or changed.');
+        }
+        $path = $disk->path($entry->source_path);
+        if (filesize($path) !== $entry->bytes || hash_file('sha256', $path) !== $entry->sha256) {
+            throw new RuntimeException('Staged Custom CSS is missing or changed.');
+        }
+
+        $css = file_get_contents($path);
+        if ($css === false || ! mb_check_encoding($css, 'UTF-8')) {
+            throw new RuntimeException('Staged Custom CSS is missing or changed.');
+        }
+        if ((string) ($item->incoming['css'] ?? '') !== $css) {
+            throw new RuntimeException('Staged Custom CSS no longer matches the reviewed content.');
+        }
+
+        return $css;
     }
 
     /** Apply all selected categories for one product code as one database/filesystem unit. */

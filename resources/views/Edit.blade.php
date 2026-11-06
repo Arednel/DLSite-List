@@ -17,8 +17,13 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/7.0.1/css/all.min.css">
     <link rel="stylesheet"
         href="{{ asset('css/title-tooltips.css') }}?v={{ filemtime(public_path('css/title-tooltips.css')) }}">
+
     <script src="{{ asset('scripts/title-tooltips.js') }}?v={{ filemtime(public_path('scripts/title-tooltips.js')) }}"
         defer></script>
+
+    <link rel="stylesheet"
+        href="{{ url('/styles/user.css') }}?v={{ filemtime(storage_path('app/public/generated/user.css')) }}">
+
 </head>
 
 <body class="product-form-page">

@@ -948,5 +948,13 @@
     "DLsite rating follows your chosen rating scale (up to 5 or 10) and allows up to two digits after the decimal point.": "DLsite評価は選択した評価スケール（5点満点または10点満点）に従い、小数点以下2桁まで入力できます。",
     "(:count vote)|(:count votes)": "(:count 票)",
     "Save theme": "テーマを保存",
-    "Theme settings saved.": "テーマ設定を保存しました。"
+    "Theme settings saved.": "テーマ設定を保存しました。",
+    "CSS": "CSS",
+    "Save custom CSS": "カスタムCSSを保存",
+    "Custom CSS saved.": "カスタムCSSを保存しました。",
+    "Custom CSS reset to default.": "カスタムCSSをデフォルトに戻しました。",
+    "Reset Custom CSS to default?": "カスタムCSSをデフォルトに戻しますか？",
+    "style": "スタイル",
+    "Custom CSS style": "カスタム CSS スタイル",
+    "Merge fills empty work fields and adds imported tags, contributors, and images without removing existing ones. For Options, keys absent from the archive keep their current values. Custom CSS is ignored because it cannot be merged.": "マージは空の作品フィールドを補完し、既存の値を削除せずにインポートしたタグ、コントリビューター、画像を追加します。Options では、アーカイブにないキーは現在の値を保持します。カスタム CSS はマージできないため無視されます。"
 }

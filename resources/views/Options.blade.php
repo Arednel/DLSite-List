@@ -22,6 +22,9 @@
     <script src="{{ asset('scripts/transfer-upload.js') }}?v={{ filemtime(public_path('scripts/transfer-upload.js')) }}"
         defer></script>
 
+    <link rel="stylesheet"
+        href="{{ url('/styles/user.css') }}?v={{ filemtime(storage_path('app/public/generated/user.css')) }}">
+
     @livewireStyles
 </head>
 
@@ -158,6 +161,14 @@
 
             @if ($activeTab === 'display')
                 <section id="display-tab-panel" class="panel options-panel">
+                    <h2 id="custom-css-heading">
+                        <i class="fa-solid fa-code fa-fw options-section-icon" aria-hidden="true"></i>
+                        <span>{{ __('Custom') }} <a href="https://wikipedia.org/wiki/CSS" target="_blank"
+                                rel="noopener noreferrer">{{ __('CSS') }}</a> {{ __('style') }}</span>
+                    </h2>
+
+                    <livewire:custom-css-settings />
+
                     <h2>
                         <i class="fa-solid fa-table-columns fa-fw options-section-icon" aria-hidden="true"></i>
                         {{ __('Field Layouts') }}

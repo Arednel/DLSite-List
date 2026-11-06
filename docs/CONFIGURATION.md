@@ -600,6 +600,10 @@ Series autocomplete order:
 
 ### Display
 
+#### Custom CSS
+
+Custom CSS is stored as entered by user in `storage/app/public/generated/user.css` and applied throughout the application. The stylesheet is loaded after the normal application styles so saved rules can override them.
+
 #### Field Layouts
 
 Seven layouts are configurable:
@@ -982,7 +986,7 @@ Refetch requires the Laravel queue worker and the application's database, storag
 
 ### Import / Export
 
-`Import / Export` can transfer Works, Images, the Tag Library, and Options. See [ARCHITECTURE.md](ARCHITECTURE.md) for archive structure and runtime flow.
+`Import / Export` can transfer Works, Images, the Tag Library, Options, and Custom CSS style. See [ARCHITECTURE.md](ARCHITECTURE.md) for archive structure and runtime flow.
 
 For completed exports, `Download all` asks for a destination folder and saves every ZIP part there.
 

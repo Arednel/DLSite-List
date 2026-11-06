@@ -5,6 +5,7 @@ namespace App\Support\Transfers;
 use App\Models\LibraryTransferRun;
 use App\Support\LibraryMutationLock;
 use App\Support\ProductImagePromotion;
+use App\Support\UserStylesheetPromotion;
 use Illuminate\Contracts\Cache\Lock;
 use Illuminate\Contracts\Cache\LockTimeoutException;
 use Illuminate\Database\Eloquent\Builder;
@@ -27,6 +28,7 @@ final class LibraryTransferCleanupService
     public function __construct(
         private readonly LibraryMutationLock $mutationLock,
         private readonly ProductImagePromotion $promotion,
+        private readonly UserStylesheetPromotion $userStylesheetPromotion,
     ) {}
 
     public function unavailable(): bool
@@ -44,6 +46,7 @@ final class LibraryTransferCleanupService
                     try {
                         $this->mutationLock->run(function (): void {
                             $this->promotion->recover();
+                            $this->userStylesheetPromotion->recover();
                             DB::transaction(function (): void {
                                 if ($this->activeRunQuery()->lockForUpdate()->first(['id']) !== null) {
                                     throw new RuntimeException(self::UNAVAILABLE_MESSAGE);

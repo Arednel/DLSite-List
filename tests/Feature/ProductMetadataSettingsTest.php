@@ -10,6 +10,7 @@ use App\Enums\RatingVisualStyle;
 use App\Enums\UiLanguage;
 use App\Livewire\AutocompleteSettings;
 use App\Livewire\ContentTerminologySettings;
+use App\Livewire\CustomCssSettings;
 use App\Livewire\AutoSeriesSettings;
 use App\Livewire\DlsiteLinkSettings;
 use App\Livewire\IndexContentOverflowSettings;
@@ -1244,6 +1245,7 @@ class ProductMetadataSettingsTest extends TestCase
             ->assertSeeLivewire(DlsiteLinkSettings::class)
             ->assertSeeLivewire(ProductFormModalSettings::class)
             ->assertSeeLivewire(AutocompleteSettings::class)
+            ->assertDontSeeLivewire(CustomCssSettings::class)
             ->assertDontSeeLivewire(TagLibraryDisplaySettings::class)
             ->assertDontSeeLivewire(ProductFieldLayoutSettings::class)
             ->assertDontSeeLivewire(IndexTableWidthSettings::class)
@@ -1258,6 +1260,7 @@ class ProductMetadataSettingsTest extends TestCase
     {
         $response = $this->get('/options?tab=display')
             ->assertOk()
+            ->assertSeeLivewire(CustomCssSettings::class)
             ->assertSeeLivewire(ProductFieldLayoutSettings::class)
             ->assertSeeLivewire(IndexTableWidthSettings::class)
             ->assertSeeLivewire(IndexContentOverflowSettings::class)
@@ -1284,6 +1287,7 @@ class ProductMetadataSettingsTest extends TestCase
         );
 
         $this->assertSame([
+            'Custom CSS style',
             'Field Layouts',
             'Index Table Width',
             'Overflow',

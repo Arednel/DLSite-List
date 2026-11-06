@@ -7,6 +7,7 @@ use App\Models\User;
 use App\Enums\ProductField;
 use App\Enums\RatingVisualStyle;
 use App\Support\OptionStylesheet;
+use App\Support\UserStylesheet;
 use App\Support\ProductFieldLayout;
 use App\Support\Transfers\PortableOptions;
 use Illuminate\Filesystem\Filesystem;
@@ -221,17 +222,19 @@ class OptionStylesheetTest extends TestCase
         );
     }
 
-    public function test_migration_rebuilds_saved_options_and_down_removes_generated_file_and_directory(): void
+    public function test_migration_rebuilds_saved_options_and_down_preserves_shared_generated_directory(): void
     {
         Option::setIndexTableWidth(['mode' => 'wide']);
         $stylesheet = app(OptionStylesheet::class);
+        $userStylesheet = app(UserStylesheet::class);
         $migration = require database_path('migrations/2026_10_24_000000_generate_options_stylesheet.php');
         $path = $stylesheet->path();
         $directory = dirname($path);
 
         $migration->down();
         $this->assertFileDoesNotExist($path);
-        $this->assertDirectoryDoesNotExist($directory);
+        $this->assertFileExists($userStylesheet->path());
+        $this->assertDirectoryExists($directory);
 
         $migration->up();
         $this->assertFileExists($path);

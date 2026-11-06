@@ -17,6 +17,7 @@ use App\Models\Option;
 use App\Models\Product;
 use App\Support\LibraryMutationLock;
 use App\Support\ProductImagePromotion;
+use App\Support\UserStylesheetPromotion;
 use Closure;
 use Illuminate\Contracts\Cache\LockTimeoutException;
 use Illuminate\Http\UploadedFile;
@@ -44,6 +45,7 @@ final class LibraryTransferService
         private readonly TransferJobDispatcher $dispatcher,
         private readonly LibraryMutationLock $mutationLock,
         private readonly ProductImagePromotion $promotion,
+        private readonly UserStylesheetPromotion $userStylesheetPromotion,
         private readonly TransferStorage $storage,
     ) {}
 
@@ -64,7 +66,7 @@ final class LibraryTransferService
         $ids = array_map(fn($id) => is_string($id) ? strtoupper(trim($id)) : $id, $ids);
         Validator::make(compact('scopes', 'mode', 'ids'), [
             'scopes' => ['required', 'array', 'min:1'],
-            'scopes.*' => ['required', 'distinct', Rule::in(['works', 'images', 'tag-library', 'options'])],
+            'scopes.*' => ['required', 'distinct', Rule::in(['works', 'images', 'tag-library', 'options', 'user_css'])],
             'mode' => ['required', Rule::in(['all', 'selected'])],
             'ids' => ['array', Rule::exists('products', 'id')],
             'ids.*' => ['string', 'regex:/\A(?:RJ|BJ|VJ)\d+\z/'],
@@ -420,25 +422,36 @@ final class LibraryTransferService
             if (! is_file($path) || filesize($path) !== $entry->bytes || hash_file('sha256', $path) !== $entry->sha256) {
                 throw new InvalidArchive('Staged data is missing or changed.');
             }
-            $json = TransferArchive::decode(file_get_contents($path));
             $section = $entry->section;
-            if ($section === 'works') {
-                $key = $entry->logical_key;
-                $this->works->assertLayout($json, $key);
-                $records = [$json];
+            if ($section === 'user_css') {
+                $css = file_get_contents($path);
+                if ($css === false) {
+                    throw new InvalidArchive('Cannot read staged Custom CSS.');
+                }
+                if (! mb_check_encoding($css, 'UTF-8')) {
+                    throw new InvalidArchive('Custom CSS must be valid UTF-8 text.');
+                }
+                $records = [['css' => $css]];
             } else {
-                if (($json['section'] ?? '') !== $section) {
-                    throw new InvalidArchive('Unsupported or invalid archive layout: invalid JSON fragment envelope.');
+                $json = TransferArchive::decode(file_get_contents($path));
+                if ($section === 'works') {
+                    $key = $entry->logical_key;
+                    $this->works->assertLayout($json, $key);
+                    $records = [$json];
+                } else {
+                    if (($json['section'] ?? '') !== $section) {
+                        throw new InvalidArchive('Unsupported or invalid archive layout: invalid JSON fragment envelope.');
+                    }
+                    $validator = Validator::make($json, [
+                        'records' => ['present', 'array', 'list', 'max:' . config('transfers.max_fragment_records')],
+                    ]);
+                    if ($validator->fails()) {
+                        throw new InvalidArchive($validator->errors()->has('records.max')
+                            ? 'JSON fragment exceeds the configured record-count limit.'
+                            : 'Unsupported or invalid archive layout: invalid JSON fragment envelope.');
+                    }
+                    $records = $validator->validated()['records'];
                 }
-                $validator = Validator::make($json, [
-                    'records' => ['present', 'array', 'list', 'max:' . config('transfers.max_fragment_records')],
-                ]);
-                if ($validator->fails()) {
-                    throw new InvalidArchive($validator->errors()->has('records.max')
-                        ? 'JSON fragment exceeds the configured record-count limit.'
-                        : 'Unsupported or invalid archive layout: invalid JSON fragment envelope.');
-                }
-                $records = $validator->validated()['records'];
             }
             $pending = array_slice($records, $fragmentIndex === $offset ? $recordOffset : 0, null, true);
             $prepared = [];
@@ -446,7 +459,11 @@ final class LibraryTransferService
                 if (! is_array($record)) {
                     $record = ['invalid_record' => $record];
                 }
-                $key = $section === 'works' ? $entry->logical_key : ($record['key'] ?? $entry->path . ':' . $i);
+                $key = match ($section) {
+                    'works' => $entry->logical_key,
+                    'user_css' => 'user.css',
+                    default => $record['key'] ?? $entry->path . ':' . $i,
+                };
                 if (! is_string($key)) {
                     $key = $entry->path . ':' . $i;
                 }
@@ -469,18 +486,26 @@ final class LibraryTransferService
                 if ($section === 'tag-library' && ($record['type'] ?? '') === 'group') {
                     $record['_order'] = $groupOrder++;
                 }
-                DB::transaction(function () use ($run, $section, $record, $images, $natural, $key): void {
+                DB::transaction(function () use ($run, $section, $record, $images, $natural, $key, $entry): void {
                     try {
                         if ($section === 'works') {
                             $record = $this->works->import($record, $key);
                         } elseif ($section === 'options' && ($run->settings['manifest']['schema_version'] ?? null) === 1 && is_string($record['key'] ?? null) && array_key_exists('value', $record)) {
                             $record['value'] = $this->options->normalizeLegacy($record['key'], $record['value']);
                         }
-                        DB::transaction(fn() => $this->review->stage($run, $section, $record, $images, $natural));
+                        DB::transaction(fn() => $this->review->stage(
+                            $run,
+                            $section,
+                            $record,
+                            $images,
+                            $natural,
+                            $section === 'user_css' ? $entry->id : null,
+                        ));
                     } catch (InvalidArgumentException | ValidationException $exception) {
                         $category = match ($section) {
                             'works' => 'new_works',
                             'options' => 'options',
+                            'user_css' => 'user_css',
                             default => ($record['type'] ?? '') === 'group' ? 'groups' : 'tags'
                         };
                         $this->review->item($run, $section, $category, $key, null, $record, ['quarantine' => true, 'record_identity' => $natural], mb_substr($exception->getMessage(), 0, 2000));
@@ -560,6 +585,13 @@ final class LibraryTransferService
             if ($section === 'works') {
                 if ($fragments->count() !== $run->settings['manifest']['work_selection']['count']) {
                     throw new InvalidArchive('Unsupported or invalid archive layout: work entry count does not match the manifest.');
+                }
+
+                continue;
+            }
+            if ($section === 'user_css') {
+                if ($fragments->count() !== 1) {
+                    throw new InvalidArchive('Unsupported or invalid archive layout: Custom CSS must contain exactly one user.css entry.');
                 }
 
                 continue;
@@ -654,6 +686,7 @@ final class LibraryTransferService
         Cache::lock('transfer-upload-' . $run->id, config('transfers.lock_seconds'))->block(0, function () use ($run): void {
             $this->mutationLock->run(function () use ($run): void {
                 $this->promotion->recover();
+                $this->userStylesheetPromotion->recover();
                 DB::transaction(function () use ($run): void {
                     $this->storage->deleteRun($run);
                     $run->delete();
@@ -791,6 +824,7 @@ final class LibraryTransferService
         }
         $this->mutationLock->run(function () use ($run): void {
             $this->promotion->recover();
+            $this->userStylesheetPromotion->recover();
             $query = $run->items()->pending()->forSectionCategory(
                 $run->settings['apply_section'] ?? null,
                 $run->settings['apply_category'] ?? null,

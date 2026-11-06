@@ -56,6 +56,32 @@ class LibraryTransferReviewTest extends TestCase
         $this->assertFalse(Schema::hasColumn('library_transfer_entries', 'metadata'));
     }
 
+    public function test_custom_css_review_offers_only_ignore_or_overwrite(): void
+    {
+        $run = LibraryTransferRun::create(['direction' => 'import', 'status' => 'review', 'settings' => []]);
+        $item = $this->review()->item(
+            $run,
+            'user_css',
+            'user_css',
+            'user.css',
+            ['css' => 'body { color: green; }'],
+            ['css' => 'body { color: blue; }'],
+        );
+
+        $component = Livewire::test(OptionsTransferRun::class, ['run' => $run])
+            ->call('mainTab', 'user_css')
+            ->assertViewHas('tabDecisionOptions', [
+                'ignore' => 'Ignore',
+                'overwrite' => 'Overwrite',
+            ]);
+
+        $component->call('decideMany', 'merge');
+        $this->assertSame(LibraryImportDecision::Ignore, $item->fresh()->decision);
+
+        $component->call('decideMany', 'overwrite');
+        $this->assertSame(LibraryImportDecision::Overwrite, $item->fresh()->decision);
+    }
+
     public function test_group_membership_review_uses_the_clear_ui_label(): void
     {
         $this->assertSame('Tags in Groups', ImportValue::label('memberships'));

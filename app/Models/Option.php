@@ -13,6 +13,7 @@ use App\Support\OptionStylesheet;
 use App\Support\ProductFieldLayout;
 use App\Support\ProductIndexContentOverflow;
 use App\Support\ProductIndexSettings;
+use App\Support\UserStylesheetPromotion;
 use Closure;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\DB;
@@ -942,6 +943,7 @@ class Option extends Model
     public static function resetVisibleSettingsToDefault(): void
     {
         self::forget(...self::RESETTABLE_OPTIONS);
+        app(UserStylesheetPromotion::class)->reset();
     }
 
     public static function productIndexSettings(): ProductIndexSettings

@@ -40,7 +40,7 @@ BCRYPT_ROUNDS=4
 
 This means values such as file cache/session or SMTP mail in `.env.testing.example` are not the final values used by PHPUnit when an explicit `phpunit.xml` override exists.
 
-The test suite uses `storage/framework/testing/application` as Laravel's storage root, so generated Option CSS and other test storage never touch development storage. `RefreshDatabase` tests rebuild the derived Options stylesheet from the rolled-back database state during setup, preventing CSS state from leaking between tests. The complete testing storage root is removed when the test process exits.
+The test suite uses `storage/framework/testing/application` as Laravel's storage root, so generated stylesheets and other test storage never touch development storage. `RefreshDatabase` tests rebuild the derived Options stylesheet from the rolled-back database state during setup, preventing CSS state from leaking between tests. `UserStylesheetTest` owns reset/cleanup of the file-backed `user.css`. The complete testing storage root is removed when the test process exits.
 
 Feature tests use Laravel `RefreshDatabase`, so use a dedicated test database.
 
@@ -215,13 +215,13 @@ Covers core transfer contracts, route/review smoke coverage, transfer error rend
 
 #### `tests/Feature/LibraryTransferExportTest.php`
 
-Covers export selection/planning, deterministic work/image inventory, Tag Library/Options fragmentation, multipart manifests and size boundaries, work-level progress, source-change replanning, downloads, and English/Japanese download failure messages rendered by the transfer view. Product Format coverage verifies that ordered canonical/custom values are written to both locale documents and survive export/import round trips; announcement dates are exported in both locales. DLsite Rating coverage verifies round trips and Merge filling an absent vote count without overwriting existing cached rating values.
+Covers export selection/planning, deterministic work/image inventory, Tag Library/Options fragmentation, raw `user.css` export, multipart manifests and size boundaries, work-level progress, source-change replanning, downloads, and English/Japanese download failure messages rendered by the transfer view. Product Format coverage verifies that ordered canonical/custom values are written to both locale documents and survive export/import round trips; announcement dates are exported in both locales. DLsite Rating coverage verifies round trips and Merge filling an absent vote count without overwriting existing cached rating values.
 
 Regression coverage injects failures after successor-job insertion in every planning phase, verifies transaction rollback and successful retry, and checks stale planning calls. Empty-library and empty-selection export errors are checked in English and Japanese, including that no transfer is started.
 
 #### `tests/Feature/LibraryTransferImportTest.php`
 
-Covers multipart upload/validation, missing or replacement parts, archive/path/checksum safety, bounded analysis/checkpoint retries, image validation, existing/new work analysis, incomplete-image imports for existing and new works, and data-only continuation. Incomplete-image warnings remain canonical in staged metadata and are rendered from the operational error catalog in the current UI locale. Product Format coverage includes custom/empty values, invalid-value quarantine, locale fallback, and compatibility with archives created before the field existed. `announce_date` tests cover round trips, omitted fields, and invalid-date quarantine. Site ID tests cover round trips and locale metadata fallback when importing older archives without an explicit stored site. Archive compatibility tests cover v2 output, released v1 manifests and legacy `rj_code`/Index sort Options layouts.
+Covers multipart upload/validation, missing or replacement parts, archive/path/checksum safety, bounded analysis/checkpoint retries, image validation, existing/new work analysis, incomplete-image imports for existing and new works, and data-only continuation. Incomplete-image warnings remain canonical in staged metadata and are rendered from the operational error catalog in the current UI locale. Product Format coverage includes custom/empty values, invalid-value quarantine, locale fallback, and compatibility with archives created before the field existed. `announce_date` tests cover round trips, omitted fields, and invalid-date quarantine. Site ID tests cover round trips and locale metadata fallback when importing older archives without an explicit stored site. Archive compatibility tests cover v3 output, continued v2 imports, released v1 manifests, legacy `rj_code`/Index sort Options layouts, and the v3-only `user_css` scope. Custom CSS import coverage checks plain-text Current/Imported review values, empty-file clearing, staged-file Overwrite replacement, cleanup of the durable promotion journal/backups after a successful apply, restoration/retry behavior after a failed apply, durable recovery of interrupted committed/uncommitted stylesheet publication, preservation of a newer stylesheet write during recovery, last-write-wins handling when a later reset writes the same CSS bytes as an interrupted import, and rejection of nested stylesheet-promotion transactions.
 
 DLsite work-data compatibility coverage includes Circle, Publisher, Brand, Description, and Author aliases, plus announcement dates ending in `+09:00`. Tests check that archive Series values take precedence, personal notes are preserved, omitted fields are handled separately from explicitly cleared values, explicit `null` dates clear stored values, malformed string or non-string dates are quarantined before normalization, and imported cached 5-point/10-point DLsite ratings cannot be half-populated. DLsite Rating Overwrite coverage verifies that omitted rating keys preserve local values, explicit nulls clear them, and a zero vote count remains zero.
 
@@ -231,7 +231,7 @@ Covers original-Circle resolution from Japanese `language_editions` through Quic
 
 #### `tests/Feature/LibraryTransferReviewTest.php`
 
-Covers Ignore/Overwrite/Merge decisions, work/tag/group/relationship/option application, stale-conflict handling, atomic work updates, image promotion/recovery, timestamps, and read-only completed reviews. Work-review navigation checks category identifiers and the items returned when switching repeat-field tabs; DLsite Rating review also covers grouped rating values and localized vote-count display. New-work review counts cover empty runs and distinguish omitted rating keys from explicit nulls and zero vote counts, including the items shown in the rating tab.
+Covers Ignore/Overwrite/Merge decisions, work/tag/group/relationship/option application, Custom CSS Ignore/Overwrite-only decisions, stale-conflict handling, atomic work updates, image promotion/recovery, timestamps, and read-only completed reviews. Work-review navigation checks category identifiers and the items returned when switching repeat-field tabs; DLsite Rating review also covers grouped rating values and localized vote-count display. New-work review counts cover empty runs and distinguish omitted rating keys from explicit nulls and zero vote counts, including the items shown in the rating tab.
 
 Partial contributor document coverage verifies that omitted roles survive Overwrite and explicitly empty roles can still be cleared. Announcement-date review checks use matching date formats for unchanged imported values.
 
@@ -412,7 +412,11 @@ Covers metadata-related UI settings:
 
 #### `tests/Feature/OptionStylesheetTest.php`
 
-Covers generated Index dimension and column-width CSS, save/reset regeneration, committed and rolled-back portable imports, unchanged-content writes, migration generation/rollback cleanup, write-failure preservation, optional authentication, and the static `filemtime`-versioned stylesheet link. Existing Index tests also verify overflow target hooks, layout classes, and the batched Options lookup.
+Covers generated Index dimension and column-width CSS, save/reset regeneration, committed and rolled-back portable imports, unchanged-content writes, migration generation/rollback behavior, write-failure preservation, optional authentication, and the static `filemtime`-versioned stylesheet link. Existing Index tests also verify overflow target hooks, layout classes, and the batched Options lookup.
+
+#### `tests/Feature/UserStylesheetTest.php`
+
+Covers application-wide Custom CSS, including loading saved CSS as Livewire state without raw HTML rendering, verbatim `user.css` saves, individual clearing, direct `Option::resetVisibleSettingsToDefault()` clearing, Reset All clearing, unauthenticated stylesheet serving, stylesheet loading/order across every visible standalone HTML page, and migration creation/rollback cleanup.
 
 #### `tests/Unit/Support/Transfers/PortableOptionsTest.php`
 

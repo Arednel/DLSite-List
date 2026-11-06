@@ -948,5 +948,13 @@
     "DLsite rating follows your chosen rating scale (up to 5 or 10) and allows up to two digits after the decimal point.": "DLsite rating follows your chosen rating scale (up to 5 or 10) and allows up to two digits after the decimal point.",
     "(:count vote)|(:count votes)": "(:count vote)|(:count votes)",
     "Save theme": "Save theme",
-    "Theme settings saved.": "Theme settings saved."
+    "Theme settings saved.": "Theme settings saved.",
+    "CSS": "CSS",
+    "Save custom CSS": "Save custom CSS",
+    "Custom CSS saved.": "Custom CSS saved.",
+    "Custom CSS reset to default.": "Custom CSS reset to default.",
+    "Reset Custom CSS to default?": "Reset Custom CSS to default?",
+    "style": "style",
+    "Custom CSS style": "Custom CSS style",
+    "Merge fills empty work fields and adds imported tags, contributors, and images without removing existing ones. For Options, keys absent from the archive keep their current values. Custom CSS is ignored because it cannot be merged.": "Merge fills empty work fields and adds imported tags, contributors, and images without removing existing ones. For Options, keys absent from the archive keep their current values. Custom CSS is ignored because it cannot be merged."
 }

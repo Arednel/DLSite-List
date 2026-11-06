@@ -14,6 +14,7 @@ use App\Models\Option;
 use App\Models\Product;
 use App\Support\Transfers\SourceChanged;
 use App\Support\Transfers\TransferArchive;
+use App\Support\UserStylesheet;
 use Illuminate\Support\Facades\Bus;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
@@ -30,7 +31,7 @@ class LibraryTransferExportTest extends TestCase
 
     public static function planningPhases(): array
     {
-        return array_map(fn($phase) => [$phase], ['works', 'tag-library', 'options', 'pack-data', 'pack-images', 'normalize-fragments', 'finalize']);
+        return array_map(fn($phase) => [$phase], ['works', 'tag-library', 'options', 'user_css', 'pack-data', 'pack-images', 'normalize-fragments', 'finalize']);
     }
 
     public static function emptyExportMessages(): array
@@ -82,7 +83,7 @@ class LibraryTransferExportTest extends TestCase
         Genre::resolveByTitle('Exported tag');
         $this->saveImage('Works/RJ123456/cover.jpg');
         config(['transfers.database_batch_records' => 1]);
-        $run = $this->service()->export(['works', 'images', 'tag-library', 'options'], 'all', []);
+        $run = $this->service()->export(['works', 'images', 'tag-library', 'options', 'user_css'], 'all', []);
         $this->archive()->plan($run->fresh());
         while ($run->fresh()->settings['planning']['phase'] !== $phase) {
             $this->assertSame(LibraryTransferRunStatus::Planning, $run->fresh()->status);
@@ -377,6 +378,58 @@ class LibraryTransferExportTest extends TestCase
         );
     }
 
+    public function test_custom_css_exports_as_declared_raw_user_css_entry(): void
+    {
+        $stylesheet = app(UserStylesheet::class);
+        $original = $stylesheet->contents();
+        $css = "body { color: rebeccapurple; }\n";
+
+        try {
+            $stylesheet->save($css);
+            $export = $this->exported(['user_css']);
+            $part = $export->parts()->where('kind', 'data')->firstOrFail();
+
+            $this->assertSame(3, $part->manifest['schema_version']);
+            $this->assertSame(['user_css'], $part->manifest['scopes']);
+            $entry = $part->manifest['entries'][0];
+            $this->assertSame('user.css', $entry['path']);
+            $this->assertSame('user_css', $entry['section']);
+            $this->assertSame(strlen($css), $entry['bytes']);
+            $this->assertSame(hash('sha256', $css), $entry['sha256']);
+            $this->assertSame('text/css', $entry['media_type']);
+
+            $zip = new ZipArchive;
+            $this->assertTrue($zip->open(Storage::disk('local')->path($part->path)));
+            $this->assertSame($css, $zip->getFromName('user.css'));
+            $zip->close();
+        } finally {
+            $stylesheet->save($original);
+        }
+    }
+
+    public function test_empty_custom_css_exports_as_an_empty_raw_user_css_entry(): void
+    {
+        $stylesheet = app(UserStylesheet::class);
+        $original = $stylesheet->contents();
+
+        try {
+            $stylesheet->save('');
+            $export = $this->exported(['user_css']);
+            $part = $export->parts()->where('kind', 'data')->firstOrFail();
+            $entry = $part->manifest['entries'][0];
+
+            $this->assertSame(0, $entry['bytes']);
+            $this->assertSame(hash('sha256', ''), $entry['sha256']);
+
+            $zip = new ZipArchive;
+            $this->assertTrue($zip->open(Storage::disk('local')->path($part->path)));
+            $this->assertSame('', $zip->getFromName('user.css'));
+            $zip->close();
+        } finally {
+            $stylesheet->save($original);
+        }
+    }
+
     public function test_export_size_resets_to_default(): void
     {
         Option::setExportPartMib(8192);
@@ -414,7 +467,7 @@ class LibraryTransferExportTest extends TestCase
         $this->saveImage('Works/RJ123456/sample_2.jpeg');
         $export = $this->exported(['works', 'images']);
         $data = $export->parts()->where('kind', 'data')->firstOrFail();
-        $this->assertSame(2, $data->manifest['schema_version']);
+        $this->assertSame(3, $data->manifest['schema_version']);
         foreach ($data->manifest['entries'] as $entry) {
             $this->assertSame(explode('/', $entry['path'])[1], $entry['product_code']);
             $this->assertArrayNotHasKey('rj_code', $entry);

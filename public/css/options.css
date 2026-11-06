@@ -210,6 +210,16 @@ body.options-page {
     animation: none;
 }
 
+.options-page #custom-css-heading a {
+    color: var(--options-link);
+    text-decoration: none;
+}
+
+.options-page #custom-css-heading a:hover,
+.options-page #custom-css-heading a:focus-visible {
+    color: var(--options-link-hover);
+}
+
 .options-page .panel h3,
 .options-page .options-panel h3 {
     margin: 0;
@@ -322,6 +332,15 @@ body.options-page {
 
 .options-page .option-field input {
     width: min(100%, 18rem);
+}
+
+.options-page .custom-css-input {
+    height: 108px;
+    min-height: 0;
+    resize: vertical;
+    font-family: Consolas, "Courier New", monospace;
+    line-height: 1.45;
+    tab-size: 4;
 }
 
 .options-page .option-control:focus,
@@ -1309,6 +1328,16 @@ body.options-page {
     border-radius: var(--options-radius);
     background: rgba(var(--options-bg-rgb), 0.38);
     overflow-wrap: anywhere;
+}
+
+
+.options-page .transfer-css-preview {
+    margin: 0;
+    max-height: 320px;
+    overflow: auto;
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
+    font-family: Consolas, "Courier New", monospace;
 }
 
 .options-page .refetch-preview-image {

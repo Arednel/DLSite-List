@@ -41,11 +41,14 @@ class LibraryTransferLifecycleTest extends TestCase
 
         $component = Livewire::test(OptionsTransfers::class)
             ->assertSet('sizeChoice', '256')
+            ->assertSet('scopes', ['works', 'tag-library', 'options', 'user_css'])
             ->assertSee('1024 MiB')
             ->assertSee('8192 MiB')
+            ->assertSee('Custom CSS style')
+            ->assertDontSee('href="https://wikipedia.org/wiki/CSS"', false)
             ->set('scopes', ['works', 'images', 'options'])
-            ->set('scopes', ['options'])
-            ->assertSet('scopes', ['options']);
+            ->set('scopes', ['options', 'user_css'])
+            ->assertSet('scopes', ['options', 'user_css']);
 
         $export = LibraryTransferRun::create([
             'direction' => 'export',
