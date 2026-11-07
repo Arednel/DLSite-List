@@ -285,7 +285,7 @@ class OptionsTransferRun extends Component
             $callback();
             unset($this->run, $this->reviewData);
         } catch (LockTimeoutException | RuntimeException $exception) {
-            $this->addError('transfer', TransferMessage::diagnostic($exception->getMessage() ?: 'A transfer operation is in progress. Retry shortly.'));
+            $this->addError('transfer', TransferMessage::diagnostic($exception->getMessage() ?: 'transfer.busy'));
         }
     }
 
@@ -335,7 +335,7 @@ class OptionsTransferRun extends Component
                 $this->redirectRoute('options.index', ['tab' => 'transfers']);
             }
         } catch (Throwable $exception) {
-            $this->addError('transfer', TransferMessage::diagnostic($exception->getMessage() ?: 'A transfer operation is in progress. Retry shortly.'));
+            $this->addError('transfer', TransferMessage::diagnostic($exception->getMessage() ?: 'transfer.busy'));
         }
     }
 

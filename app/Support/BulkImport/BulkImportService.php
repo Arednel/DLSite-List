@@ -17,8 +17,6 @@ use Throwable;
 
 final class BulkImportService
 {
-    public const BUSY_MESSAGE = 'Bulk Import cannot start while another Bulk Import action is in progress.';
-
     /**
      * @param list<string> $productIds
      */
@@ -74,7 +72,7 @@ final class BulkImportService
                     return $run->fresh();
                 });
         } catch (LockTimeoutException $exception) {
-            throw new RuntimeException(self::BUSY_MESSAGE, previous: $exception);
+            throw new RuntimeException('bulk_import.busy', previous: $exception);
         }
     }
 }

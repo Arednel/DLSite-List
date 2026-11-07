@@ -58,7 +58,7 @@ class FinishBulkImportRunJob implements ShouldQueue
             $run->forceFill([
                 'status' => BulkImportRunStatus::Failed,
                 'failed_at' => now(),
-                'error' => mb_substr($exception?->getMessage() ?: 'Bulk import finalization failed.', 0, 2000),
+                'error' => mb_substr($exception?->getMessage() ?: 'bulk_import.finalization_failed', 0, 2000),
             ])->save();
         });
 

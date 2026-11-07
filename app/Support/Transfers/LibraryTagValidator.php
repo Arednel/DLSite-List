@@ -27,7 +27,7 @@ final class LibraryTagValidator
         ])->validate();
 
         if ($record['key'] !== Genre::titleKey($record['value']['title'])) {
-            throw new InvalidArgumentException('Tag identity does not match its title.');
+            throw new InvalidArgumentException('transfer.archive.tag_identity_mismatch');
         }
     }
 }

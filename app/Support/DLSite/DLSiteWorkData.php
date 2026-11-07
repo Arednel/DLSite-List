@@ -40,7 +40,7 @@ final readonly class DLSiteWorkData
         $productId = self::text($japanese['product_id'] ?? $english['product_id'] ?? $fallbackProductId);
 
         if ($productId === null) {
-            throw new \InvalidArgumentException('DLsite work data is missing a product id.');
+            throw new \InvalidArgumentException('dlsite.work.missing_product_id');
         }
 
         $workName = self::text($japanese['work_name'] ?? null);

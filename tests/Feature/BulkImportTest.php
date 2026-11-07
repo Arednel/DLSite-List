@@ -75,7 +75,7 @@ class BulkImportTest extends TestCase
                 );
                 $this->fail('Expected the shared Bulk Import lifecycle lock to block run creation.');
             } catch (RuntimeException $exception) {
-                $this->assertSame(BulkImportService::BUSY_MESSAGE, $exception->getMessage());
+                $this->assertSame('bulk_import.busy', $exception->getMessage());
                 $this->assertInstanceOf(LockTimeoutException::class, $exception->getPrevious());
             }
         } finally {
@@ -115,7 +115,7 @@ class BulkImportTest extends TestCase
     {
         Bus::shouldReceive('chain')
             ->once()
-            ->andThrow(new RuntimeException(BulkImportService::BUSY_MESSAGE));
+            ->andThrow(new RuntimeException('bulk_import.busy'));
 
         $this->withoutExceptionHandling();
 
@@ -125,7 +125,7 @@ class BulkImportTest extends TestCase
             ]);
             $this->fail('Expected the dispatch exception to propagate.');
         } catch (RuntimeException $exception) {
-            $this->assertSame(BulkImportService::BUSY_MESSAGE, $exception->getMessage());
+            $this->assertSame('bulk_import.busy', $exception->getMessage());
             $this->assertNull($exception->getPrevious());
         }
 
@@ -348,7 +348,7 @@ class BulkImportTest extends TestCase
 
         $this->assertSame(BulkImportItemStatus::Skipped, $item->status);
         $this->assertSame($product->id, $item->product_id);
-        $this->assertSame('Already in library.', $item->error);
+        $this->assertSame('bulk_import.already_in_library', $item->error);
         $this->assertSame(1, $run->processed_count);
         $this->assertSame(1, $run->skipped_count);
         $this->assertSame(0, $run->failed_count);
@@ -361,7 +361,7 @@ class BulkImportTest extends TestCase
         Storage::fake('local');
         Storage::fake('public');
         Process::fake([
-            '*' => Process::result(errorOutput: 'GeoBlocked DLsite work', exitCode: 2),
+            '*' => Process::result(errorOutput: 'dlsite.work.geo_blocked', exitCode: 2),
         ])->preventStrayProcesses();
         [$run, $item] = $this->createRunItem('RJ000000301');
 
@@ -371,7 +371,7 @@ class BulkImportTest extends TestCase
         $run->refresh();
 
         $this->assertSame(BulkImportItemStatus::Failed, $item->status);
-        $this->assertSame('GeoBlocked DLsite work', $item->error);
+        $this->assertSame('dlsite.work.geo_blocked', $item->error);
         $this->assertSame(BulkImportRunStatus::Running, $run->status);
         $this->assertSame(1, $run->processed_count);
         $this->assertSame(1, $run->failed_count);
@@ -446,7 +446,7 @@ class BulkImportTest extends TestCase
         $this->assertDatabaseMissing('products', ['id' => $productCode]);
         $this->assertSame(BulkImportItemStatus::Failed, $item->status);
         $this->assertSame(BulkImportRunStatus::Failed, $run->status);
-        $this->assertNotSame('Already in library.', $item->error);
+        $this->assertNotSame('bulk_import.already_in_library', $item->error);
     }
 
     public function test_completion_database_failure_rolls_back_product_and_fails_the_run(): void
@@ -583,7 +583,11 @@ class BulkImportTest extends TestCase
                 $job->handle(app(DLSiteProductImporter::class));
                 $this->fail('Expected stale successful completion to fail.');
             } catch (RuntimeException $exception) {
-                $this->assertStringContainsString('Bulk Import item', $exception->getMessage());
+                $expectedError = $changed === 'item'
+                    ? 'bulk_import.item_not_importing'
+                    : 'bulk_import.item_or_run_inactive';
+
+                $this->assertSame($expectedError, $exception->getMessage());
             }
         } finally {
             Event::forget($event);

@@ -5,7 +5,6 @@ namespace Tests\Unit\Support\Transfers;
 use App\Enums\UiLanguage;
 use App\Models\LibraryTransferRun;
 use App\Support\Transfers\ImportValue;
-use App\Support\Transfers\LibraryTransferCleanupService;
 use App\Support\Transfers\TransferMessage;
 use Illuminate\Support\Facades\App;
 use Tests\TestCase;
@@ -94,7 +93,7 @@ class TransferMessageTest extends TestCase
             ->assertSee('data-cancelled="転送をキャンセルしました。"', false);
     }
 
-    public function test_known_transfer_diagnostics_are_localized_with_laravel_fallback_for_unknown_diagnostics(): void
+    public function test_known_transfer_diagnostics_are_localized_and_unknown_diagnostics_use_laravel_missing_keys(): void
     {
         App::setLocale(UiLanguage::Japanese->value);
 
@@ -114,37 +113,65 @@ class TransferMessageTest extends TestCase
             'エントリのチェックサムが一致しません: images/RJ123456/sample_2.jpg',
             TransferMessage::diagnostic('Entry checksum mismatch: images/RJ123456/sample_2.jpg'),
         );
-        $this->assertSame('タグの識別子がタイトルと一致しません。', TransferMessage::diagnostic('Tag identity does not match its title.'));
         $this->assertSame('不明または移行対象外の設定です: mystery_option', TransferMessage::diagnostic('Unknown or non-portable option: mystery_option'));
 
         $known = [
-            'Manifest counts must be JSON integers and inventories must be JSON lists.' => 'マニフェストの件数はJSON整数、インベントリはJSONリストである必要があります。',
-            'JSON fragment exceeds the configured record-count limit.' => 'JSONフラグメントが設定されたレコード数上限を超えています。',
-            'Invalid group records prevent complete group replacement.' => '無効なグループデータがあるため、グループを完全に置き換えられません。',
-            'Invalid tags prevent complete relationship replacement.' => '無効なタグがあるため、親子関係を完全に置き換えられません。',
-            'Image validation worker stopped.' => '画像検証ワーカーが停止しました。',
-            'Transfer worker stopped.' => '転送ワーカーが停止しました。',
+            'transfer.archive.tag_identity_mismatch' => 'タグの識別子がタイトルと一致しません。',
+            'transfer.archive.invalid_manifest_types' => 'マニフェストの件数はJSON整数、インベントリはJSONリストである必要があります。',
+            'transfer.archive.invalid_manifest' => 'サポートされていない、または無効なアーカイブマニフェストです。',
+            'transfer.archive.fragment_record_count_limit' => 'JSONフラグメントが設定されたレコード数上限を超えています。',
+            'transfer.import.invalid_group_records' => '無効なグループデータがあるため、グループを完全に置き換えられません。',
+            'transfer.import.invalid_tags' => '無効なタグがあるため、親子関係を完全に置き換えられません。',
+            'transfer.image_validation.worker_stopped' => '画像検証ワーカーが停止しました。',
+            'transfer.worker_stopped' => '転送ワーカーが停止しました。',
+            'transfer.custom_css.staged_changed' => '一時保存したカスタムCSSが見つからないか変更されています。',
+            'transfer.custom_css.busy' => '別のカスタムCSS処理が進行中です。しばらくしてから再試行してください。',
+            'transfer.custom_css.recovery.failed' => 'カスタムCSSの復元に失敗しました。バックアップは保持されています。',
+            'transfer.custom_css.recovery.busy' => '別のカスタムCSS処理が進行中です。しばらくしてから復元を再試行してください。',
         ];
 
-        foreach ($known as $message => $translation) {
-            $this->assertSame($translation, TransferMessage::diagnostic($message));
+        foreach ($known as $error => $translation) {
+            $this->assertSame($translation, TransferMessage::diagnostic($error));
         }
 
         $this->assertSame(
             'インポートまたはエクスポートの処理中は転送履歴をクリーンアップできません。',
-            TransferMessage::diagnostic(LibraryTransferCleanupService::UNAVAILABLE_MESSAGE),
+            TransferMessage::diagnostic('transfer.cleanup.unavailable'),
         );
         $this->assertSame(
             '別の転送処理が進行中のため、転送履歴を一時的にクリーンアップできません。',
-            TransferMessage::diagnostic(LibraryTransferCleanupService::BUSY_MESSAGE),
+            TransferMessage::diagnostic('transfer.cleanup.busy'),
         );
         $this->assertSame(
             '一時ファイルの削除中に転送履歴のクリーンアップに失敗しました。',
-            TransferMessage::diagnostic(LibraryTransferCleanupService::FAILED_MESSAGE),
+            TransferMessage::diagnostic('transfer.cleanup.failed'),
         );
 
-        $this->assertSame('Unexpected upstream detail', TransferMessage::diagnostic('Unexpected upstream detail'));
-        $this->assertSame('Options', TransferMessage::diagnostic('Options'));
-        $this->assertSame('Errors', TransferMessage::diagnostic('Errors'));
+        $this->assertSame(
+            'カスタムCSSの復元に失敗しました。バックアップは保持されています。 一時保存したカスタムCSSが見つからないか変更されています。',
+            TransferMessage::diagnostic(
+                'transfer.custom_css.recovery.failed_with_detail|transfer.custom_css.staged_changed',
+            ),
+        );
+        $this->assertSame(
+            'カスタムCSSの復元に失敗しました。バックアップは保持されています。 別のカスタムCSS処理が進行中です。しばらくしてから復元を再試行してください。',
+            TransferMessage::diagnostic(
+                'transfer.custom_css.recovery.failed_with_detail|transfer.custom_css.recovery.busy',
+            ),
+        );
+        $this->assertSame(
+            'カスタムCSSの復元に失敗しました。バックアップは保持されています。 Syntax error',
+            TransferMessage::diagnostic(
+                'transfer.custom_css.recovery.failed_with_detail|Syntax error',
+            ),
+        );
+        $this->assertSame(
+            'カスタムCSSの復元に失敗しました。バックアップは保持されています。',
+            TransferMessage::diagnostic('transfer.custom_css.recovery.failed_with_detail|'),
+        );
+
+        $this->assertSame('errors.Unexpected upstream detail', TransferMessage::diagnostic('Unexpected upstream detail'));
+        $this->assertSame('errors.Options', TransferMessage::diagnostic('Options'));
+        $this->assertSame('errors.Errors', TransferMessage::diagnostic('Errors'));
     }
 }

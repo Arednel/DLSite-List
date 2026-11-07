@@ -17,7 +17,6 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Validation\Rule;
-use Illuminate\Validation\ValidationException;
 use JsonException;
 use RuntimeException;
 use Throwable;
@@ -72,7 +71,7 @@ final class TransferArchive
             'pack-images' => $this->packEntries($run, 'images'),
             'normalize-fragments' => $this->normalizeFragments($run),
             'finalize' => $this->finalizeParts($run),
-            default => throw new RuntimeException('Invalid export planning checkpoint.'),
+            default => throw new RuntimeException('transfer.export.invalid_planning_checkpoint'),
         };
     }
 
@@ -214,13 +213,13 @@ final class TransferArchive
         $planning = $run->settings['planning'];
         $css = $this->userStylesheet->contents();
         if (strlen($css) > config('transfers.max_json_bytes')) {
-            throw new InvalidArchive('Custom CSS exceeds the configured transfer safety limit.');
+            throw new InvalidArchive('transfer.custom_css.size_limit');
         }
         $source = $run->directory() . '/data/user.css';
         self::space(strlen($css), Storage::disk('local')->path($run->directory()));
         Storage::disk('local')->makeDirectory(dirname($source));
         if (! Storage::disk('local')->put($source, $css)) {
-            throw new RuntimeException('Unable to stage Custom CSS for export.');
+            throw new RuntimeException('transfer.custom_css.stage_export_failed');
         }
         $this->insertEntries($run, [[
             'path' => 'user.css',
@@ -241,7 +240,7 @@ final class TransferArchive
             return;
         }
         if ($run->entries()->count() + count($files) > config('transfers.max_entries')) {
-            throw new RuntimeException('Too many archive entries. Select fewer works or increase the server safety limit.');
+            throw new RuntimeException('transfer.archive.entry_limit');
         }
         $now = now();
         $rows = [];
@@ -311,7 +310,7 @@ final class TransferArchive
     private function packEntries(LibraryTransferRun $run, string $kind): void
     {
         if ($kind === 'data' && ! $run->entries()->where('kind', 'data')->exists()) {
-            throw new InvalidArchive('No exportable data remains. Start a new export after adding a work.');
+            throw new InvalidArchive('transfer.export.no_exportable_data');
         }
         $planning = $run->settings['planning'];
         $state = $planning['pack'][$kind] ?? [
@@ -355,7 +354,7 @@ final class TransferArchive
                     'entries' => 0,
                 ];
                 if ($run->parts()->count() > config('transfers.max_parts')) {
-                    throw new RuntimeException('Too many archive parts. Choose a larger part size.');
+                    throw new RuntimeException('transfer.archive.part_limit');
                 }
             }
             $entry->update(['library_transfer_part_id' => $state['part_id']]);
@@ -404,7 +403,7 @@ final class TransferArchive
             'images' => $run->parts()->where('kind', 'images')->count(),
         ];
         if (array_sum($counts) > config('transfers.max_parts')) {
-            throw new RuntimeException('Too many archive parts. Choose a larger part size.');
+            throw new RuntimeException('transfer.archive.part_limit');
         }
         $parts = $run->parts()->where('id', '>', $planning['part_cursor'])->orderBy('id')->limit(25)->get();
         $workCount = $run->entries()->where('section', 'works')->count();
@@ -425,7 +424,7 @@ final class TransferArchive
                 $manifest['work_entry_format'] = WorkArchiveData::FORMAT;
             }
             if (strlen(json_encode($manifest, JSON_THROW_ON_ERROR | JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES)) > config('transfers.max_manifest_bytes')) {
-                throw new InvalidArchive('Manifest is too large; choose smaller archive parts.');
+                throw new InvalidArchive('transfer.archive.manifest_too_large');
             }
             $part->update([
                 'filename' => $name,
@@ -482,7 +481,7 @@ final class TransferArchive
         self::space(strlen($json), Storage::disk('local')->path($run->directory()));
         Storage::disk('local')->makeDirectory(dirname($source));
         if (! Storage::disk('local')->put($source, $json)) {
-            throw new RuntimeException('Unable to stage export work data.');
+            throw new RuntimeException('transfer.export.stage_work_data_failed');
         }
 
         return [
@@ -501,7 +500,7 @@ final class TransferArchive
     {
         $maximum = min(config('transfers.fragment_bytes'), ($run->settings['part_bytes'] ?? PHP_INT_MAX) - 8192);
         if ($maximum < 128) {
-            throw new RuntimeException('Part size is too small for an archive manifest.');
+            throw new RuntimeException('transfer.archive.part_size_too_small_for_manifest');
         }
         $fragments = [];
         $buffer = [];
@@ -515,7 +514,7 @@ final class TransferArchive
             }
             self::space(strlen($json), Storage::disk('local')->path($run->directory()));
             if (! Storage::disk('local')->put($path, $json)) {
-                throw new RuntimeException('Unable to stage export data.');
+                throw new RuntimeException('transfer.export.stage_data_failed');
             }
             $fragments[] = ['source' => $path, 'disk' => 'local', 'bytes' => strlen($json), 'sha256' => hash('sha256', $json), 'media_type' => 'application/json', 'section' => $section, 'fragment' => $number, 'fragments' => 0, 'path' => $section . '.part' . str_pad((string) $number, 4, '0', STR_PAD_LEFT) . '.json'];
             $buffer = [];
@@ -523,7 +522,7 @@ final class TransferArchive
         };
         foreach ($records as $record) {
             if (LibraryTransferRun::whereKey($run->id)->value('status') === LibraryTransferRunStatus::Cancelled->value) {
-                throw new RuntimeException('Export cancelled.');
+                throw new RuntimeException('transfer.export.cancelled');
             }
             $length = strlen(json_encode($record, JSON_THROW_ON_ERROR | JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES)) + 1;
             if ($length + 64 > config('transfers.max_json_bytes') || ($run->settings['part_bytes'] !== null && $this->bound([['path' => $section . '.part0001.json', 'bytes' => $length + 64]]) > $run->settings['part_bytes'])) {
@@ -535,7 +534,7 @@ final class TransferArchive
             $buffer[] = $record;
             $bytes += $length;
             if (count($fragments) >= config('transfers.max_entries')) {
-                throw new RuntimeException('Too many archive fragments. Select less data or increase the server safety limit.');
+                throw new RuntimeException('transfer.archive.fragment_limit');
             }
         }
         if ($buffer !== [] || $fragments === []) {
@@ -606,12 +605,12 @@ final class TransferArchive
         $disk->makeDirectory(dirname($temporary));
         $zip = new ZipArchive;
         if ($zip->open($disk->path($temporary), ZipArchive::CREATE | ZipArchive::OVERWRITE) !== true) {
-            throw new RuntimeException('Unable to create ZIP.');
+            throw new RuntimeException('transfer.archive.create_zip_failed');
         }
         try {
             $json = json_encode($manifest, JSON_THROW_ON_ERROR | JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
             if (strlen($json) > config('transfers.max_manifest_bytes')) {
-                throw new RuntimeException('Manifest is too large; choose smaller archive parts.');
+                throw new RuntimeException('transfer.archive.manifest_too_large');
             }
             $zip->addFromString('manifest.json', $json);
             foreach ($files as $file) {
@@ -640,7 +639,7 @@ final class TransferArchive
                     throw new SourceChanged('Export source changed during finalization: ' . $file['path']);
                 }
             }
-            throw new RuntimeException('Unable to finalize ZIP.');
+            throw new RuntimeException('transfer.archive.finalize_zip_failed');
         }
         // ZipArchive reads addFile sources at close(), so check again after finalization.
         foreach ($files as $file) {
@@ -652,7 +651,7 @@ final class TransferArchive
         $this->dispatcher->checkpoint($run, ['stage' => "Validating {$part->kind} part {$part->number}"]);
         $this->inspect($disk->path($temporary), true);
         if ($run->settings['part_bytes'] !== null && $disk->size($temporary) > $run->settings['part_bytes']) {
-            throw new RuntimeException('Final ZIP exceeds the configured part size.');
+            throw new RuntimeException('transfer.export.part_size_exceeded');
         }
         $bytes = $disk->size($temporary);
         $hash = hash_file('sha256', $disk->path($temporary));
@@ -692,23 +691,23 @@ final class TransferArchive
     public function inspect(string $path, bool $verify = false, ?string $stage = null): array
     {
         if (! class_exists(ZipArchive::class)) {
-            throw new RuntimeException('Enable the PHP zip extension before importing.');
+            throw new RuntimeException('transfer.import.zip_extension_required');
         }
         $zip = new ZipArchive;
         if ($zip->open($path, ZipArchive::RDONLY) !== true) {
-            throw new InvalidArchive('Invalid ZIP archive.');
+            throw new InvalidArchive('transfer.archive.invalid_zip');
         }
         try {
             $stat = $zip->statName('manifest.json');
             if (! $stat || $stat['size'] > config('transfers.max_manifest_bytes') || ($stat['encryption_method'] ?? 0) !== 0 || $zip->numFiles > config('transfers.max_entries')) {
-                throw new InvalidArchive('Missing or oversized manifest / too many ZIP entries.');
+                throw new InvalidArchive('transfer.archive.manifest_missing_or_oversized');
             }
             $manifest = self::decode($zip->getFromName('manifest.json'));
             $this->validateManifest($manifest);
             $declared = ['manifest.json' => true];
             foreach ($manifest['entries'] as $entry) {
                 if (isset($declared[$entry['path']])) {
-                    throw new InvalidArchive('Duplicate declared path.');
+                    throw new InvalidArchive('transfer.archive.duplicate_declared_path');
                 }
                 $declared[$entry['path']] = true;
             }
@@ -723,12 +722,12 @@ final class TransferArchive
                 }
                 $seen[$name] = true;
                 if ($entry['size'] > PHP_INT_MAX - $expanded) {
-                    throw new InvalidArchive('Expanded archive size exceeds supported limits.');
+                    throw new InvalidArchive('transfer.archive.expanded_size_limit');
                 }
                 $expanded += $entry['size'];
             }
             if (count($seen) !== count($declared)) {
-                throw new InvalidArchive('Declared ZIP entries are missing.');
+                throw new InvalidArchive('transfer.archive.declared_entries_missing');
             }
             if ($stage !== null) {
                 Storage::disk('local')->makeDirectory($stage);
@@ -744,7 +743,7 @@ final class TransferArchive
                 }
                 $stream = $zip->getStream($entry['path']);
                 if (! is_resource($stream)) {
-                    throw new InvalidArchive('Cannot read archive entry.');
+                    throw new InvalidArchive('transfer.archive.read_entry_failed');
                 }
                 $hash = hash_init('sha256');
                 $bytes = 0;
@@ -758,22 +757,22 @@ final class TransferArchive
                     $output = fopen($temporary, 'wb');
                     if (! is_resource($output)) {
                         fclose($stream);
-                        throw new RuntimeException('Cannot stage archive entry.');
+                        throw new RuntimeException('transfer.archive.stage_entry_failed');
                     }
                 }
                 try {
                     while (! feof($stream)) {
                         $chunk = fread($stream, min(1048576, $entry['bytes'] - $bytes + 1));
                         if ($chunk === false || ($chunk === '' && ! feof($stream))) {
-                            throw new InvalidArchive('Cannot read archive entry.');
+                            throw new InvalidArchive('transfer.archive.read_entry_failed');
                         }
                         $bytes += strlen($chunk);
                         if ($bytes > $entry['bytes']) {
-                            throw new InvalidArchive('Entry exceeds its declared size.');
+                            throw new InvalidArchive('transfer.archive.entry_exceeds_declared_size');
                         }
                         hash_update($hash, $chunk);
                         if ($output && fwrite($output, $chunk) !== strlen($chunk)) {
-                            throw new RuntimeException('Cannot stage archive entry.');
+                            throw new RuntimeException('transfer.archive.stage_entry_failed');
                         }
                     }
                 } finally {
@@ -790,14 +789,12 @@ final class TransferArchive
                         throw new InvalidArchive('Invalid image content: ' . $entry['path']);
                     }
                     if (! rename($temporary, Storage::disk('local')->path($target))) {
-                        throw new RuntimeException('Cannot publish validated archive entry.');
+                        throw new RuntimeException('transfer.archive.publish_validated_entry_failed');
                     }
                 }
             }
 
             return $manifest;
-        } catch (ValidationException $exception) {
-            throw new InvalidArchive($exception->getMessage(), previous: $exception);
         } finally {
             $zip->close();
         }
@@ -806,15 +803,15 @@ final class TransferArchive
     public static function decode(string|false $json): array
     {
         if ($json === false) {
-            throw new InvalidArchive('Cannot read archive JSON.');
+            throw new InvalidArchive('transfer.archive.read_json_failed');
         }
         try {
             $decoded = json_decode($json, true, 64, JSON_THROW_ON_ERROR);
         } catch (JsonException $exception) {
-            throw new InvalidArchive('Invalid archive JSON.', previous: $exception);
+            throw new InvalidArchive('transfer.archive.invalid_json', previous: $exception);
         }
         if (! is_array($decoded) || array_is_list($decoded)) {
-            throw new InvalidArchive('Archive JSON must be an object.');
+            throw new InvalidArchive('transfer.archive.json_must_be_object');
         }
 
         return $decoded;
@@ -822,7 +819,19 @@ final class TransferArchive
 
     private function validateManifest(array $manifest): void
     {
-        Validator::make($manifest, $this->rules(), $this->messages())->validate();
+        $validator = Validator::make($manifest, $this->rules(), $this->messages());
+        if ($validator->fails()) {
+            $error = 'transfer.archive.invalid_manifest';
+            foreach ($validator->errors()->all() as $message) {
+                if (str_starts_with($message, 'transfer.archive.')) {
+                    $error = $message;
+                    break;
+                }
+            }
+
+            throw new InvalidArchive($error);
+        }
+
         $kind = $manifest['part']['kind'];
         $partCountExceeded = array_sum($manifest['parts']) > config('transfers.max_parts');
         $partCountMismatch = $manifest['part']['count'] !== $manifest['parts'][$kind];
@@ -833,10 +842,10 @@ final class TransferArchive
         $userCssBeforeV3 = $manifest['schema_version'] < 3 && in_array('user_css', $manifest['scopes'], true);
 
         if ($partCountExceeded || $partCountMismatch || $imagesWithoutWorks || $unexpectedImageParts || $userCssBeforeV3) {
-            throw new InvalidArchive('Inconsistent part counts or scopes.');
+            throw new InvalidArchive('transfer.archive.inconsistent_parts_or_scopes');
         }
         if (in_array('works', $manifest['scopes'], true) && ($manifest['work_entry_format'] ?? null) !== WorkArchiveData::FORMAT) {
-            throw new InvalidArchive('Unsupported or invalid archive layout: missing work entry format.');
+            throw new InvalidArchive('transfer.archive.missing_work_entry_format');
         }
         foreach ($manifest['entries'] as $entry) {
             $this->validateManifestEntry($entry, $kind, $manifest['scopes'], $manifest['schema_version']);
@@ -879,7 +888,7 @@ final class TransferArchive
      */
     private function messages(): array
     {
-        $integerMessage = 'Manifest counts must be JSON integers and inventories must be JSON lists.';
+        $integerMessage = 'transfer.archive.invalid_manifest_types';
 
         return [
             'schema_version.integer' => $integerMessage,
@@ -923,14 +932,14 @@ final class TransferArchive
                 && ($this->validWorkEntry($entry, $version) || $this->validFragmentEntry($entry, $section));
 
             if ((! $validJson && ! $validUserCss) || ! $validSection || ! $withinSize) {
-                throw new InvalidArchive('Unsupported or invalid archive layout: invalid data entry.');
+                throw new InvalidArchive('transfer.archive.invalid_data_entry');
             }
 
             return;
         }
 
         if (! in_array('images', $scopes, true) || ! self::validImageEntry($entry, $version)) {
-            throw new InvalidArchive('Unsupported or invalid archive layout: invalid image entry.');
+            throw new InvalidArchive('transfer.archive.invalid_image_entry');
         }
     }
 
@@ -1007,7 +1016,7 @@ final class TransferArchive
         }
         $free = disk_free_space($directory);
         if ($free !== false && $free < $bytes + config('transfers.disk_reserve_bytes')) {
-            throw new RuntimeException('Not enough free disk space for this transfer.');
+            throw new RuntimeException('transfer.archive.insufficient_disk_space');
         }
     }
 }

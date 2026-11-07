@@ -102,7 +102,7 @@ class TagLibraryLocalizationTest extends TestCase
             ->assertSee('タグを作成しました。')
             ->set('newTagTitle', 'RAW_CREATED_TAG_TITLE')
             ->call('createTag')
-            ->assertSet('notice', 'Tag already exists.')
+            ->assertSet('notice', 'tag.exists')
             ->assertSet('noticeIsError', true)
             ->assertSee('タグはすでに存在します。')
             ->assertDontSee('Tag already exists.')

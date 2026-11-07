@@ -169,11 +169,11 @@ class LibraryTransferTest extends TestCase
         $export = $this->exported(['works']);
         $run = $this->imported($export);
         $item = $run->items()->firstOrFail();
-        $item->update(['error' => 'Imported value is invalid.']);
+        $item->update(['error' => 'transfer.review.invalid_category']);
 
         Livewire::test(OptionsTransferRun::class, ['run' => $run->fresh()])
             ->assertSee('Errors (1)')
-            ->assertSee("{$item->entity_key}: Imported value is invalid.")
+            ->assertSee("{$item->entity_key}: Invalid review category.")
             ->assertHasNoErrors();
     }
 

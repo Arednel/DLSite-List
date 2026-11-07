@@ -13,6 +13,7 @@ use App\Models\Product;
 use App\Support\ProductContributorSync;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\App;
 use Illuminate\Support\Facades\Storage;
 use Livewire\Livewire;
@@ -301,19 +302,19 @@ class ProductSurfaceLocalizationTest extends TestCase
         );
         $this->assertSame(
             'DLsite作品データの取得でJSONファイルが作成されませんでした。',
-            __('errors.DLsite work fetch did not create JSON.'),
+            __('errors.dlsite.fetch.json_missing'),
         );
         $this->assertSame(
             'DLsite作品データの取得で無効なJSONが返されました。',
-            __('errors.DLsite work fetch returned invalid JSON.'),
+            __('errors.dlsite.fetch.invalid_json'),
         );
         $this->assertSame(
             'DLsite作品データの取得で無効なマニフェストが返されました。',
-            __('errors.DLsite work fetch returned an invalid manifest.'),
+            __('errors.dlsite.fetch.invalid_manifest'),
         );
         $this->assertSame(
             'DLsite作品データに作品IDがありません。',
-            __('errors.DLsite work data is missing a product id.'),
+            __('errors.dlsite.work.missing_product_id'),
         );
     }
 
@@ -321,8 +322,8 @@ class ProductSurfaceLocalizationTest extends TestCase
     {
         $english = json_decode(file_get_contents(lang_path('en.json')), true, 512, JSON_THROW_ON_ERROR);
         $japanese = json_decode(file_get_contents(lang_path('ja.json')), true, 512, JSON_THROW_ON_ERROR);
-        $englishErrors = require lang_path('en/errors.php');
-        $japaneseErrors = require lang_path('ja/errors.php');
+        $englishErrors = Arr::dot(require lang_path('en/errors.php'));
+        $japaneseErrors = Arr::dot(require lang_path('ja/errors.php'));
         $englishDisplayOverrides = [
             'Custom->Fetched' => 'Custom -> Fetched',
             'Custom->Fetched JP' => 'Custom -> Fetched JP',
@@ -359,13 +360,10 @@ class ProductSurfaceLocalizationTest extends TestCase
         $this->assertEqualsCanonicalizing(array_keys($englishErrors), array_keys($japaneseErrors));
         $this->assertSame([], array_values(array_intersect(array_keys($english), array_keys($englishErrors))));
 
-        foreach ($englishErrors as $message => $value) {
-            $this->assertNotSame('', trim($japaneseErrors[$message]));
-            $this->assertSame($placeholders($value), $placeholders($japaneseErrors[$message]), $message);
-
-            if ($message !== 'login_throttled') {
-                $this->assertSame($message, $value);
-            }
+        foreach ($englishErrors as $key => $value) {
+            $this->assertMatchesRegularExpression('/\A[a-z0-9_]+(?:\.[a-z0-9_]+)*\z/', $key);
+            $this->assertNotSame('', trim($japaneseErrors[$key]));
+            $this->assertSame($placeholders($value), $placeholders($japaneseErrors[$key]), $key);
         }
     }
 }

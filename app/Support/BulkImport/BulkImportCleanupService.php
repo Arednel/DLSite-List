@@ -12,10 +12,6 @@ use RuntimeException;
 
 final class BulkImportCleanupService
 {
-    public const UNAVAILABLE_MESSAGE = 'Bulk Import history cleanup is unavailable while a Bulk Import is queued or running.';
-
-    public const BUSY_MESSAGE = 'Bulk Import history cleanup is temporarily unavailable while another Bulk Import action is in progress.';
-
     public function unavailable(): bool
     {
         return $this->activeRunQuery()->exists();
@@ -28,14 +24,14 @@ final class BulkImportCleanupService
                 ->block(0, function (): void {
                     DB::transaction(function (): void {
                         if ($this->activeRunQuery()->lockForUpdate()->first(['id']) !== null) {
-                            throw new RuntimeException(self::UNAVAILABLE_MESSAGE);
+                            throw new RuntimeException('bulk_import.cleanup.unavailable');
                         }
 
                         BulkImportRun::query()->delete();
                     });
                 });
         } catch (LockTimeoutException $exception) {
-            throw new RuntimeException(self::BUSY_MESSAGE, previous: $exception);
+            throw new RuntimeException('bulk_import.cleanup.busy', previous: $exception);
         }
     }
 

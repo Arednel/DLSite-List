@@ -31,7 +31,7 @@ class OptionsRefetchActions extends Component
         $this->resetErrorBag('cleanup');
 
         if ($cleanupService->unavailable()) {
-            $this->addError('cleanup', ProductImageMessage::display(RefetchCleanupService::UNAVAILABLE_MESSAGE));
+            $this->addError('cleanup', ProductImageMessage::display('refetch.cleanup.unavailable'));
 
             return;
         }

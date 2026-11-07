@@ -43,13 +43,13 @@ final class DLSiteWorkFetcher
             $failedImages = $this->failedImages($lastResult);
 
             if (! File::isFile($jsonPath)) {
-                throw new RuntimeException('DLsite work fetch did not create JSON.');
+                throw new RuntimeException('dlsite.fetch.json_missing');
             }
 
             $raw = File::json($jsonPath);
 
             if (! is_array($raw)) {
-                throw new RuntimeException('DLsite work fetch returned invalid JSON.');
+                throw new RuntimeException('dlsite.fetch.invalid_json');
             }
 
             $lastFetch = new DLSiteFetchResult(
@@ -173,7 +173,7 @@ final class DLSiteWorkFetcher
             || ! isset($manifest['failed_images'])
             || ! is_array($manifest['failed_images'])
         ) {
-            throw new RuntimeException('DLsite work fetch returned an invalid manifest.');
+            throw new RuntimeException('dlsite.fetch.invalid_manifest');
         }
 
         return array_values($manifest['failed_images']);
@@ -183,6 +183,6 @@ final class DLSiteWorkFetcher
     {
         $message = trim((string) $result?->errorOutput());
 
-        return $message === '' ? 'DLsite fetch failed.' : $message;
+        return $message === '' ? 'dlsite.fetch.failed' : $message;
     }
 }

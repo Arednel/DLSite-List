@@ -15,12 +15,6 @@ use Throwable;
 
 final class RefetchCleanupService
 {
-    public const UNAVAILABLE_MESSAGE = 'Refetch cleanup is unavailable while a refetch run is running or cancelling.';
-
-    public const BUSY_MESSAGE = 'Refetch cleanup is temporarily unavailable while another refetch action is in progress.';
-
-    public const FAILED_MESSAGE = 'Refetch cleanup failed while removing staged files.';
-
     private const DIRECTORY = 'Refetch';
 
     private const DISKS = [
@@ -45,7 +39,7 @@ final class RefetchCleanupService
                 $this->promotion->recover();
                 DB::transaction(function (): void {
                     if ($this->activeRunQuery()->lockForUpdate()->first(['id']) !== null) {
-                        throw new RuntimeException(self::UNAVAILABLE_MESSAGE);
+                        throw new RuntimeException('refetch.cleanup.unavailable');
                     }
 
                     RefetchRun::query()->delete();
@@ -56,7 +50,7 @@ final class RefetchCleanupService
                 }
             });
         } catch (LockTimeoutException) {
-            throw new RuntimeException(self::BUSY_MESSAGE);
+            throw new RuntimeException('refetch.cleanup.busy');
         }
     }
 
@@ -74,11 +68,11 @@ final class RefetchCleanupService
             $cleared = $disk->deleteDirectory(self::DIRECTORY)
                 && $disk->makeDirectory(self::DIRECTORY);
         } catch (Throwable $exception) {
-            throw new RuntimeException(self::FAILED_MESSAGE, previous: $exception);
+            throw new RuntimeException('refetch.cleanup.failed', previous: $exception);
         }
 
         if (! $cleared) {
-            throw new RuntimeException(self::FAILED_MESSAGE);
+            throw new RuntimeException('refetch.cleanup.failed');
         }
     }
 }

@@ -2,7 +2,7 @@
 
 namespace App\Support;
 
-use App\Support\Localization\ErrorMessage;
+use Illuminate\Support\Facades\Lang;
 
 final class ProductImageMessage
 {
@@ -12,14 +12,21 @@ final class ProductImageMessage
             return $message;
         }
 
-        $prefix = 'Image recovery failed; backups were retained. ';
+        $recoveryError = 'image.recovery.failed_with_detail|';
 
-        if (str_starts_with($message, $prefix)) {
-            return ErrorMessage::format($prefix . ':detail', [
-                'detail' => ErrorMessage::display(substr($message, strlen($prefix))),
+        if (str_starts_with($message, $recoveryError)) {
+            $detail = trim(substr($message, strlen($recoveryError)));
+            if ($detail === '') {
+                return __('errors.image.recovery.failed');
+            }
+
+            $detailKey = 'errors.' . $detail;
+
+            return __('errors.image.recovery.failed_with_detail', [
+                'detail' => Lang::has($detailKey) ? __($detailKey) : $detail,
             ]);
         }
 
-        return ErrorMessage::display($message);
+        return __('errors.' . $message);
     }
 }

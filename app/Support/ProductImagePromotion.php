@@ -97,11 +97,18 @@ final class ProductImagePromotion
                     $local->delete(self::JOURNAL . '.next');
                     $backupDirectory = 'ImagePromotions/' . $token;
                     if ($local->exists($backupDirectory) && ! $local->deleteDirectory($backupDirectory)) {
-                        throw new RuntimeException('Unable to remove unpublished image backups.');
+                        throw new RuntimeException('image.recovery.remove_backups_failed');
                     }
                 }
             } catch (Throwable $recovery) {
-                throw new RuntimeException('Image recovery failed; backups were retained. ' . $recovery->getMessage(), previous: $exception);
+                $detail = trim($recovery->getMessage());
+
+                throw new RuntimeException(
+                    $detail === ''
+                        ? 'image.recovery.failed'
+                        : 'image.recovery.failed_with_detail|' . $detail,
+                    previous: $exception,
+                );
             }
             throw $exception;
         } finally {
@@ -161,7 +168,7 @@ final class ProductImagePromotion
             || ! preg_match('/\A[a-f0-9]{32}\z/', $journal['token'] ?? '')
             || ! isset($journal['entries'], $journal['products'])
         ) {
-            throw new RuntimeException('Invalid image recovery journal. Retain backups for manual recovery.');
+            throw new RuntimeException('image.recovery.invalid_journal');
         }
 
         return $journal;
@@ -179,7 +186,7 @@ final class ProductImagePromotion
         $owner = match ($journal['owner'] ?? null) {
             'import' => LibraryImportItem::find($journal['id']),
             'refetch' => RefetchWorkResult::find($journal['id']),
-            default => throw new RuntimeException('Invalid image recovery owner.'),
+            default => throw new RuntimeException('image.recovery.invalid_owner'),
         };
         $column = $journal['owner'] === 'import' ? 'result' : 'decisions';
 
@@ -193,12 +200,12 @@ final class ProductImagePromotion
             $this->validateDestination($entry['destination']);
             if ($entry['backup'] === null) {
                 if ($disk->exists($entry['destination']) && ! $disk->delete($entry['destination'])) {
-                    throw new RuntimeException('Unable to remove an uncommitted image.');
+                    throw new RuntimeException('image.recovery.remove_uncommitted_failed');
                 }
             } else {
                 $expected = 'ImagePromotions/' . $journal['token'] . '/' . $entry['destination'];
                 if ($entry['backup'] !== $expected) {
-                    throw new RuntimeException('Invalid image recovery backup path.');
+                    throw new RuntimeException('image.recovery.invalid_backup_path');
                 }
                 $this->publish('local', $entry['backup'], $entry['destination']);
             }
@@ -211,7 +218,7 @@ final class ProductImagePromotion
 
         // Delete the pointer first: an interrupted backup cleanup cannot replay a finished undo.
         if (! $local->delete(self::JOURNAL)) {
-            throw new RuntimeException('Unable to finish image recovery.');
+            throw new RuntimeException('image.recovery.finish_failed');
         }
         if (! $local->deleteDirectory('ImagePromotions/' . $journal['token'])) {
             report(new RuntimeException('Unused image backups remain in private storage.'));
@@ -259,7 +266,7 @@ final class ProductImagePromotion
     private function promoteUsing(Product $product, array $promotions, array $attributes, Closure $publish): bool
     {
         if ($this->journal === null) {
-            throw new RuntimeException('Image promotion must run inside an image transaction.');
+            throw new RuntimeException('image.promotion.transaction_required');
         }
 
         foreach ($promotions as $promotion) {
@@ -292,11 +299,11 @@ final class ProductImagePromotion
             $backup = 'ImagePromotions/' . $this->journal['token'] . '/' . $destination;
             $stream = $disk->readStream($destination);
             if (! is_resource($stream)) {
-                throw new RuntimeException('Unable to back up current image.');
+                throw new RuntimeException('image.promotion.backup_failed');
             }
             try {
                 if (! Storage::disk('local')->put($backup, $stream)) {
-                    throw new RuntimeException('Unable to back up current image.');
+                    throw new RuntimeException('image.promotion.backup_failed');
                 }
             } finally {
                 fclose($stream);
@@ -312,14 +319,14 @@ final class ProductImagePromotion
             ! $local->put(self::JOURNAL . '.next', json_encode($this->journal, JSON_THROW_ON_ERROR))
             || ! rename($local->path(self::JOURNAL . '.next'), $local->path(self::JOURNAL))
         ) {
-            throw new RuntimeException('Unable to persist image recovery journal.');
+            throw new RuntimeException('image.recovery.persist_journal_failed');
         }
     }
 
     private function validateDestination(string $path): void
     {
         if (! preg_match('/\\AWorks\\/(?:RJ|BJ|VJ)\\d+\\/(cover|sample_[1-9]\\d*)\\.(jpe?g|png|gif|webp|avif|bmp)\\z/', $path)) {
-            throw new RuntimeException('Unsafe image replacement path.');
+            throw new RuntimeException('image.promotion.unsafe_path');
         }
     }
 
@@ -327,7 +334,7 @@ final class ProductImagePromotion
     {
         $stream = fopen($file->getPathname(), 'rb');
         if (! is_resource($stream)) {
-            throw new RuntimeException('Unable to read uploaded image.');
+            throw new RuntimeException('image.promotion.read_uploaded_failed');
         }
 
         $this->publishStream($stream, $destination);
@@ -337,7 +344,7 @@ final class ProductImagePromotion
     {
         $stream = Storage::disk($sourceDisk)->readStream($source);
         if (! is_resource($stream)) {
-            throw new RuntimeException('Unable to read staged image.');
+            throw new RuntimeException('image.promotion.read_staged_failed');
         }
 
         $this->publishStream($stream, $destination, $expectedHash);
@@ -352,22 +359,22 @@ final class ProductImagePromotion
         try {
             try {
                 if (! $disk->put($temporary, $stream)) {
-                    throw new RuntimeException('Failed to promote staged image.');
+                    throw new RuntimeException('image.promotion.stage_failed');
                 }
             } finally {
                 fclose($stream);
             }
 
             if ($expectedHash !== null && hash_file('sha256', $disk->path($temporary)) !== $expectedHash) {
-                throw new RuntimeException('Staged image changed during promotion.');
+                throw new RuntimeException('image.promotion.staged_changed');
             }
 
             // PHP cannot replace an existing file with rename() on Windows. The journal already contains a backup at this point, so deleting the destination remains recoverable.
             if ($disk->exists($destination) && ! $disk->delete($destination)) {
-                throw new RuntimeException('Failed to replace current image.');
+                throw new RuntimeException('image.promotion.replace_failed');
             }
             if (! rename($disk->path($temporary), $disk->path($destination))) {
-                throw new RuntimeException('Failed to publish staged image.');
+                throw new RuntimeException('image.promotion.publish_failed');
             }
 
             $published = true;

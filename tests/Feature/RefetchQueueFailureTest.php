@@ -88,7 +88,7 @@ class RefetchQueueFailureTest extends TestCase
         $this->assertSame($reserved->uuid(), DB::table('failed_jobs')->value('uuid'));
         $this->assertSame($cancelRun, Bus::findBatch($run->batch_id)->cancelled());
         $this->assertTrue($result->refresh()->isFailed());
-        $this->assertSame(RefetchService::QUEUE_FAILURE_MESSAGE, $result->error);
+        $this->assertSame('refetch.queue_failure', $result->error);
         $this->assertSame(
             $cancelRun ? RefetchRun::STATUS_REVIEW : RefetchRun::STATUS_APPLIED,
             $run->refresh()->status,
@@ -182,7 +182,7 @@ class RefetchQueueFailureTest extends TestCase
         $this->assertSame($resultBefore, $result->refresh()->getAttributes());
         $this->assertSame($runBefore, $run->refresh()->getAttributes());
         $this->assertTrue($run->isReview());
-        $this->assertSame(RefetchService::QUEUE_FAILURE_MESSAGE, $result->error);
+        $this->assertSame('refetch.queue_failure', $result->error);
 
         $run->delete();
         $job->failed(null);
@@ -222,7 +222,7 @@ class RefetchQueueFailureTest extends TestCase
         $this->assertSame(2, $run->processed_count);
         $this->assertSame(1, $run->fetched_count);
         $this->assertSame(1, $run->failed_count);
-        $this->assertSame(RefetchService::CANCELLED_BEFORE_FETCH_MESSAGE, $pending->refresh()->error);
+        $this->assertSame('refetch.cancelled_before_fetch', $pending->refresh()->error);
         $this->assertSame($fetchedBefore, $fetched->refresh()->getAttributes());
         $this->assertDatabaseCount('failed_jobs', 0);
         $this->assertDatabaseCount('jobs', 0);

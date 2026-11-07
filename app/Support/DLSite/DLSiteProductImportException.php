@@ -2,7 +2,6 @@
 
 namespace App\Support\DLSite;
 
-use App\Support\Localization\ErrorMessage;
 use RuntimeException;
 
 class DLSiteProductImportException extends RuntimeException
@@ -22,9 +21,9 @@ class DLSiteProductImportException extends RuntimeException
         $message = trim($this->getMessage());
 
         if ($message === '') {
-            $message = 'DLsite import failed.';
+            $message = 'dlsite.import.failed';
         }
 
-        return ErrorMessage::display($message);
+        return __('errors.' . $message);
     }
 }

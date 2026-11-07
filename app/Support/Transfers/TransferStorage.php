@@ -27,7 +27,7 @@ final class TransferStorage
         }
 
         if (! is_string($path) || $path === '') {
-            throw new RuntimeException('Unable to save uploaded archive.');
+            throw new RuntimeException('transfer.upload.save_archive_failed');
         }
 
         return $path;
@@ -77,7 +77,7 @@ final class TransferStorage
     {
         $disk = Storage::disk('local');
         if ($disk->exists($run->directory()) && ! $disk->deleteDirectory($run->directory())) {
-            throw new RuntimeException('Unable to clean up staged transfer files.');
+            throw new RuntimeException('transfer.storage.cleanup_staged_failed');
         }
     }
 
@@ -128,7 +128,7 @@ final class TransferStorage
         $source = Storage::disk('local')->path($temporary);
         $destination = Storage::disk('local')->path($final);
         if (! @rename($source, $destination)) {
-            throw new RuntimeException('Unable to publish ZIP.');
+            throw new RuntimeException('transfer.storage.publish_zip_failed');
         }
     }
 
@@ -136,7 +136,7 @@ final class TransferStorage
     {
         $prefix = $run->directory() . '/';
         if (! str_starts_with(str_replace('\\', '/', $path), $prefix) || str_contains($path, '..')) {
-            throw new RuntimeException('Unsafe transfer storage path.');
+            throw new RuntimeException('transfer.storage.unsafe_path');
         }
     }
 }

@@ -170,7 +170,7 @@ class DLSiteWorkDataTest extends TestCase
     public function test_it_throws_when_product_id_and_fallback_are_missing(): void
     {
         $this->expectException(\InvalidArgumentException::class);
-        $this->expectExceptionMessage('DLsite work data is missing a product id.');
+        $this->expectExceptionMessage('dlsite.work.missing_product_id');
 
         DLSiteWorkData::fromArray([
             'japanese' => [

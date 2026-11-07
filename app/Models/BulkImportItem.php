@@ -4,7 +4,6 @@ namespace App\Models;
 
 use App\Enums\BulkImportItemStatus;
 use App\Support\DLSite\DLSiteFetchResult;
-use App\Support\Localization\ErrorMessage;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
@@ -42,7 +41,9 @@ class BulkImportItem extends Model
 
     public function displayError(): ?string
     {
-        return ErrorMessage::display($this->error);
+        return $this->error === null || $this->error === ''
+            ? $this->error
+            : __('errors.' . $this->error);
     }
 
     public function displayWarning(): ?string

@@ -22,7 +22,7 @@ class RefetchController extends Controller
             return redirect()
                 ->route('options.index', ['tab' => 'refetch'])
                 ->withInput()
-                ->withErrors(['product_ids' => __('errors.Select at least one work to refetch.')]);
+                ->withErrors(['product_ids' => __('errors.refetch.select_work')]);
         }
 
         try {
@@ -32,7 +32,7 @@ class RefetchController extends Controller
                 ->route('options.index', ['tab' => 'refetch'])
                 ->withInput()
                 ->withErrors([
-                    'product_ids' => __('errors.Refetch cannot start while another refetch action is in progress.'),
+                    'product_ids' => __('errors.refetch.busy'),
                 ]);
         }
 
@@ -55,7 +55,7 @@ class RefetchController extends Controller
         if (! $service->cancelRun($run)) {
             return redirect()
                 ->route('options.refetch.show', $run)
-                ->withErrors(['run' => __('errors.Only running refetch runs can be cancelled.')]);
+                ->withErrors(['run' => __('errors.refetch.cancel.not_running')]);
         }
 
         return redirect()->route('options.refetch.show', $run);

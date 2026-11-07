@@ -4,7 +4,6 @@ namespace App\Livewire;
 
 use App\Models\BulkImportRun;
 use App\Support\BulkImport\BulkImportCleanupService;
-use App\Support\Localization\ErrorMessage;
 use Illuminate\View\View;
 use Livewire\Attributes\Isolate;
 use Livewire\Attributes\Locked;
@@ -61,7 +60,7 @@ class OptionsBulkImports extends Component
         $this->resetErrorBag('cleanup');
 
         if ($cleanupService->unavailable()) {
-            $this->addError('cleanup', ErrorMessage::display(BulkImportCleanupService::UNAVAILABLE_MESSAGE));
+            $this->addError('cleanup', __('errors.bulk_import.cleanup.unavailable'));
 
             return;
         }
@@ -84,7 +83,7 @@ class OptionsBulkImports extends Component
             $cleanupService->cleanup();
         } catch (RuntimeException $exception) {
             $this->confirmingCleanup = false;
-            $this->addError('cleanup', ErrorMessage::display($exception->getMessage()));
+            $this->addError('cleanup', __('errors.' . $exception->getMessage()));
 
             return;
         }

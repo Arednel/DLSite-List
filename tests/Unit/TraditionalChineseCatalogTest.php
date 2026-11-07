@@ -3,7 +3,6 @@
 namespace Tests\Unit;
 
 use App\Enums\UiLanguage;
-use App\Support\Localization\ErrorMessage;
 use Illuminate\Support\Arr;
 use Tests\TestCase;
 
@@ -14,6 +13,11 @@ class TraditionalChineseCatalogTest extends TestCase
         foreach (['.json', '/errors.php'] as $suffix) {
             $english = $this->catalog('en', $suffix);
             $chinese = $this->catalog(UiLanguage::TraditionalChinese->value, $suffix);
+
+            if ($suffix === '/errors.php') {
+                $english = Arr::dot($english);
+                $chinese = Arr::dot($chinese);
+            }
 
             $this->assertEqualsCanonicalizing(array_keys($english), array_keys($chinese));
 
@@ -26,15 +30,19 @@ class TraditionalChineseCatalogTest extends TestCase
         }
     }
 
-    public function test_operational_errors_and_counted_messages_translate_without_touching_raw_diagnostics(): void
+    public function test_operational_errors_and_counted_messages_translate_with_missing_key_output_for_unknown_errors(): void
     {
+        $englishErrors = $this->catalog(UiLanguage::English->value, '/errors.php');
         app()->setLocale(UiLanguage::TraditionalChinese->value);
 
-        $this->assertNotSame('GeoBlocked DLsite work', ErrorMessage::display('GeoBlocked DLsite work'));
-        $this->assertSame('RAW_DIAGNOSTIC_TOKEN', ErrorMessage::display('RAW_DIAGNOSTIC_TOKEN'));
+        $this->assertNotSame(
+            Arr::get($englishErrors, 'dlsite.work.geo_blocked'),
+            __('errors.dlsite.work.geo_blocked'),
+        );
+        $this->assertSame('errors.RAW_DIAGNOSTIC_TOKEN', __('errors.RAW_DIAGNOSTIC_TOKEN'));
 
         foreach ([0, 1, 2, 500] as $count) {
-            $message = trans_choice('errors.login_throttled', $count, ['seconds' => $count]);
+            $message = trans_choice('errors.auth.login_throttled', $count, ['seconds' => $count]);
 
             $this->assertStringContainsString((string) $count, $message);
             $this->assertStringNotContainsString(':seconds', $message);

@@ -4,6 +4,7 @@ namespace App\Support;
 
 use App\Models\LibraryImportItem;
 use Closure;
+use Illuminate\Contracts\Cache\LockTimeoutException;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
@@ -53,10 +54,17 @@ final class UserStylesheetPromotion
     public function transaction(Closure $callback, LibraryImportItem $owner): mixed
     {
         if ($this->journal !== null) {
-            throw new RuntimeException('Custom CSS promotion transaction is already active.');
+            throw new RuntimeException('transfer.custom_css.promotion.transaction_active');
         }
 
-        $this->recover();
+        try {
+            $this->recover();
+        } catch (LockTimeoutException $exception) {
+            throw new RuntimeException(
+                'transfer.custom_css.busy',
+                previous: $exception,
+            );
+        }
 
         $token = bin2hex(random_bytes(16));
         $this->journal = [
@@ -91,12 +99,32 @@ final class UserStylesheetPromotion
                     $local->delete(self::JOURNAL . '.next');
                     $backupDirectory = 'UserStylesheetPromotions/' . $token;
                     if ($local->exists($backupDirectory) && ! $local->deleteDirectory($backupDirectory)) {
-                        throw new RuntimeException('Unable to remove unpublished Custom CSS backup.');
+                        throw new RuntimeException('transfer.custom_css.promotion.remove_unpublished_backup_failed');
                     }
                 }
             } catch (Throwable $recovery) {
+                if ($recovery instanceof LockTimeoutException) {
+                    $detail = 'transfer.custom_css.recovery.busy';
+                } else {
+                    $detail = trim($recovery->getMessage());
+                }
+
+                if ($detail === '') {
+                    throw new RuntimeException(
+                        'transfer.custom_css.recovery.failed',
+                        previous: $exception,
+                    );
+                }
+
                 throw new RuntimeException(
-                    'Custom CSS recovery failed; the backup was retained. ' . $recovery->getMessage(),
+                    'transfer.custom_css.recovery.failed_with_detail|' . $detail,
+                    previous: $exception,
+                );
+            }
+
+            if ($exception instanceof LockTimeoutException) {
+                throw new RuntimeException(
+                    'transfer.custom_css.busy',
                     previous: $exception,
                 );
             }
@@ -124,17 +152,17 @@ final class UserStylesheetPromotion
     public function publish(string $css): void
     {
         if ($this->journal === null) {
-            throw new RuntimeException('Custom CSS promotion must run inside a promotion transaction.');
+            throw new RuntimeException('transfer.custom_css.promotion.transaction_required');
         }
         if ($this->journal['published']) {
-            throw new RuntimeException('Custom CSS has already been published in this transaction.');
+            throw new RuntimeException('transfer.custom_css.promotion.already_published');
         }
 
         $this->withMutationLock(function () use ($css): void {
             $this->stylesheet->ensureExists();
             $local = Storage::disk('local');
             if (! $local->put($this->journal['backup'], $this->stylesheet->contents())) {
-                throw new RuntimeException('Unable to back up current Custom CSS.');
+                throw new RuntimeException('transfer.custom_css.promotion.backup_failed');
             }
 
             $this->journal['published'] = true;
@@ -199,10 +227,10 @@ final class UserStylesheetPromotion
             || ! is_string($journal['published_sha256'] ?? null)
             || ! preg_match('/\A[a-f0-9]{64}\z/', $journal['published_sha256'])
         ) {
-            throw new RuntimeException('Invalid Custom CSS recovery journal. Retain the backup for manual recovery.');
+            throw new RuntimeException('transfer.custom_css.recovery.invalid_journal');
         }
         if (! $local->exists($journal['backup'])) {
-            throw new RuntimeException('Custom CSS recovery backup is missing. Retain the journal for manual recovery.');
+            throw new RuntimeException('transfer.custom_css.recovery.backup_missing');
         }
 
         return $journal;
@@ -222,7 +250,7 @@ final class UserStylesheetPromotion
             ! $local->put(self::JOURNAL . '.next', json_encode($this->journal, JSON_THROW_ON_ERROR))
             || ! rename($local->path(self::JOURNAL . '.next'), $local->path(self::JOURNAL))
         ) {
-            throw new RuntimeException('Unable to persist Custom CSS recovery journal.');
+            throw new RuntimeException('transfer.custom_css.recovery.persist_journal_failed');
         }
     }
 
@@ -232,7 +260,7 @@ final class UserStylesheetPromotion
 
         // Delete the pointer first so interrupted backup cleanup cannot replay a finished undo.
         if (! $local->delete(self::JOURNAL)) {
-            throw new RuntimeException('Unable to finish Custom CSS recovery.');
+            throw new RuntimeException('transfer.custom_css.recovery.finish_failed');
         }
         if (! $local->deleteDirectory('UserStylesheetPromotions/' . $journal['token'])) {
             report(new RuntimeException('Unused Custom CSS backup remains in private storage.'));

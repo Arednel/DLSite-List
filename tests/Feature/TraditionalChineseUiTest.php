@@ -121,7 +121,7 @@ class TraditionalChineseUiTest extends TestCase
 
         $this->post(route('login.authenticate'), ['username' => 'invalid', 'password' => 'invalid'])
             ->assertSessionHasErrors([
-                'username' => __('errors.The provided credentials are incorrect.'),
+                'username' => __('errors.auth.invalid_credentials'),
             ]);
     }
 
@@ -140,7 +140,7 @@ class TraditionalChineseUiTest extends TestCase
             'position' => 1,
             'product_id' => 'RJ99999004',
             'status' => BulkImportItemStatus::Failed,
-            'error' => 'GeoBlocked DLsite work',
+            'error' => 'dlsite.work.geo_blocked',
             'completed_at' => now(),
         ]);
 
@@ -159,8 +159,8 @@ class TraditionalChineseUiTest extends TestCase
         $this->get(route('options.index', ['tab' => 'bulk-imports']))
             ->assertSee('RJ99999004')
             ->assertSee('DLsite 作品受到地區限制')
-            ->assertDontSee('GeoBlocked DLsite work');
-        $this->assertSame('GeoBlocked DLsite work', $item->fresh()->error);
+            ->assertDontSee('dlsite.work.geo_blocked');
+        $this->assertSame('dlsite.work.geo_blocked', $item->fresh()->error);
         $this->assertSame(BulkImportItemStatus::Failed, $item->fresh()->status);
 
         $product = Product::factory()->create(['work_name' => 'RAW_TITLE_TOKEN']);

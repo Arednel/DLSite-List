@@ -111,7 +111,7 @@ class LibraryTransferJob implements ShouldQueue
                 }
                 if ($part->status === LibraryTransferPartStatus::Valid) {
                     if ($this->uploadPath !== null && ($part->candidate['path'] ?? null) === $this->uploadPath) {
-                        $part->update(['candidate' => null, 'error' => 'Duplicate validation failed. The accepted part is retained; upload the duplicate again to retry.']);
+                        $part->update(['candidate' => null, 'error' => 'transfer.upload.duplicate_validation_failed']);
                     }
 
                     return;
@@ -125,11 +125,11 @@ class LibraryTransferJob implements ShouldQueue
             }
             $imageFailure = $this->operation === LibraryTransferOperation::Inspect && $part?->kind === 'images';
             if ($imageFailure) {
-                $run->parts()->whereKey($this->partId)->update(['status' => LibraryTransferPartStatus::Invalid, 'error' => mb_substr($exception?->getMessage() ?? 'Image validation worker stopped.', 0, 2000)]);
+                $run->parts()->whereKey($this->partId)->update(['status' => LibraryTransferPartStatus::Invalid, 'error' => mb_substr($exception?->getMessage() ?: 'transfer.image_validation.worker_stopped', 0, 2000)]);
             }
             $run->update([
                 'status' => $imageFailure ? LibraryTransferRunStatus::WaitingForParts : LibraryTransferRunStatus::Failed,
-                'error' => mb_substr($exception?->getMessage() ?? 'Transfer worker stopped.', 0, 2000),
+                'error' => mb_substr($exception?->getMessage() ?: 'transfer.worker_stopped', 0, 2000),
                 'settings' => [
                     ...$run->settings,
                     'retry_operation' => $exception instanceof InvalidArchive ? null : ($exception instanceof SourceChanged ? LibraryTransferOperation::Plan->value : $this->operation->value),

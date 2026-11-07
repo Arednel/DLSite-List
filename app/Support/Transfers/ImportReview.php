@@ -134,7 +134,7 @@ final class ImportReview
     ): void {
         $all = $section === null && $category === null;
         if (! $all && ($section === null || $category === null || ! in_array($category, self::CATEGORIES[$section] ?? [], true))) {
-            throw new RuntimeException('Invalid review category.');
+            throw new RuntimeException('transfer.review.invalid_category');
         }
 
         $this->withReviewableRun($runId, function (LibraryTransferRun $run) use ($decision, $section, $category, $all): void {
@@ -182,7 +182,7 @@ final class ImportReview
             ->block(0, fn() => DB::transaction(function () use ($runId, $callback): mixed {
                 $run = LibraryTransferRun::whereKey($runId)->lockForUpdate()->firstOrFail();
                 if (! $run->reviewable()) {
-                    throw new RuntimeException('Review choices can only be changed while the import is awaiting approval.');
+                    throw new RuntimeException('transfer.review.not_awaiting_approval');
                 }
 
                 return $callback($run);
@@ -211,7 +211,7 @@ final class ImportReview
                     continue;
                 }
                 if (! in_array('images', $run->settings['scopes'], true)) {
-                    throw new InvalidArgumentException('Image scope was not declared.');
+                    throw new InvalidArgumentException('transfer.review.image_scope_missing');
                 }
                 foreach ($record[$category]['files'] as $index => $file) {
                     $known = $imageEntries[$file['path'] ?? ''] ?? null;
@@ -224,7 +224,7 @@ final class ImportReview
                         && $known['bytes'] === ($file['bytes'] ?? null)
                         && $known['media_type'] === ($file['media_type'] ?? '');
                     if (! $validPath || ! $matchesInventory) {
-                        throw new InvalidArgumentException('Work image reference does not match the validated image inventory.');
+                        throw new InvalidArgumentException('transfer.review.image_inventory_mismatch');
                     }
                     $record[$category]['files'][$index]['entry_id'] = $known['id'];
                 }
@@ -233,7 +233,7 @@ final class ImportReview
             $metadata = [...$source, 'title' => $record['titles']['work_name'], ...Arr::only($record, ['created_at', 'updated_at'])];
             if (! $product) {
                 if ((isset($record['cover']) && ! $record['cover']['complete']) || (isset($record['sample_images']) && ! $record['sample_images']['complete'])) {
-                    $metadata['warning'] = 'Archive images are incomplete. You can import only available images.';
+                    $metadata['warning'] = 'transfer.import.images_incomplete';
                 }
                 $this->item($run, $section, 'new_works', $record['product_code'], null, $record, $metadata);
 
@@ -281,7 +281,7 @@ final class ImportReview
                 }
                 $imageMetadata = $metadata;
                 if (! $record[$category]['complete']) {
-                    $imageMetadata['warning'] = 'Archive images are incomplete. You can import only available images.';
+                    $imageMetadata['warning'] = 'transfer.import.images_incomplete';
                 }
                 $this->item(
                     $run,
@@ -295,13 +295,13 @@ final class ImportReview
             }
         } elseif ($section === 'options') {
             if (! is_string($record['key'] ?? null) || ! array_key_exists('value', $record)) {
-                throw new InvalidArgumentException('Invalid option record.');
+                throw new InvalidArgumentException('transfer.review.invalid_option_record');
             }
             $this->options->validate($record['key'], $record['value']);
             $this->item($run, $section, 'options', $record['key'], $this->options->current($record['key']), $record['value'], $source);
         } elseif ($section === 'user_css') {
             if (! is_string($record['css'] ?? null)) {
-                throw new InvalidArgumentException('Invalid Custom CSS record.');
+                throw new InvalidArgumentException('transfer.custom_css.invalid_record');
             }
             $this->item(
                 $run,
@@ -513,7 +513,7 @@ final class ImportReview
                 $scope = $run->settings['relationship_scope'];
                 $current = $this->relationships($scope['keys'], true);
                 if (LibraryData::hash($current) !== $scope['hash']) {
-                    (clone $query)->where('decision', '<>', LibraryImportDecision::Ignore)->update(['status' => LibraryImportItemStatus::Conflict, 'error' => 'Tag relationships changed after review. Refresh conflicts before applying these choices.']);
+                    (clone $query)->where('decision', '<>', LibraryImportDecision::Ignore)->update(['status' => LibraryImportItemStatus::Conflict, 'error' => 'transfer.review.relationships_changed']);
                     (clone $query)->where('decision', LibraryImportDecision::Ignore)->update(['status' => LibraryImportItemStatus::Ignored]);
 
                     return;
@@ -547,7 +547,7 @@ final class ImportReview
     public function guardGraphSize(array $data): void
     {
         if (count($data, COUNT_RECURSIVE) > config('transfers.max_entries') || strlen(json_encode($data, JSON_THROW_ON_ERROR)) > config('transfers.max_json_bytes')) {
-            throw new InvalidArchive('Tag relationships exceed the configured graph safety limit.');
+            throw new InvalidArchive('transfer.import.relationship_graph_limit');
         }
     }
 
@@ -666,7 +666,7 @@ final class ImportReview
                 }
                 $current = $this->current($item);
                 if (LibraryData::hash($current) !== LibraryData::hash($item->baseline)) {
-                    $item->update(['status' => LibraryImportItemStatus::Conflict, 'error' => 'Local data changed after review. Click `Refresh conflicts` to review the latest changes.']);
+                    $item->update(['status' => LibraryImportItemStatus::Conflict, 'error' => 'transfer.review.local_data_changed']);
 
                     return;
                 }
@@ -700,7 +700,7 @@ final class ImportReview
             if (LibraryData::hash($current) !== LibraryData::hash($item->baseline)) {
                 $item->update([
                     'status' => LibraryImportItemStatus::Conflict,
-                    'error' => 'Local data changed after review. Click `Refresh conflicts` to review the latest changes.',
+                    'error' => 'transfer.review.local_data_changed',
                 ]);
 
                 return;
@@ -715,7 +715,7 @@ final class ImportReview
     {
         $entryId = $item->metadata['entry_id'] ?? null;
         if (! is_int($entryId)) {
-            throw new RuntimeException('Staged Custom CSS is unavailable.');
+            throw new RuntimeException('transfer.custom_css.staged_unavailable');
         }
 
         $entry = LibraryTransferEntry::query()
@@ -726,24 +726,24 @@ final class ImportReview
             ->whereRelation('part', 'status', LibraryTransferPartStatus::Valid)
             ->first();
         if (! $entry) {
-            throw new RuntimeException('Staged Custom CSS is unavailable.');
+            throw new RuntimeException('transfer.custom_css.staged_unavailable');
         }
 
         $disk = Storage::disk($entry->source_disk);
         if (! $disk->exists($entry->source_path)) {
-            throw new RuntimeException('Staged Custom CSS is missing or changed.');
+            throw new RuntimeException('transfer.custom_css.staged_changed');
         }
         $path = $disk->path($entry->source_path);
         if (filesize($path) !== $entry->bytes || hash_file('sha256', $path) !== $entry->sha256) {
-            throw new RuntimeException('Staged Custom CSS is missing or changed.');
+            throw new RuntimeException('transfer.custom_css.staged_changed');
         }
 
         $css = file_get_contents($path);
         if ($css === false || ! mb_check_encoding($css, 'UTF-8')) {
-            throw new RuntimeException('Staged Custom CSS is missing or changed.');
+            throw new RuntimeException('transfer.custom_css.staged_changed');
         }
         if ((string) ($item->incoming['css'] ?? '') !== $css) {
-            throw new RuntimeException('Staged Custom CSS no longer matches the reviewed content.');
+            throw new RuntimeException('transfer.custom_css.review_mismatch');
         }
 
         return $css;
@@ -786,7 +786,7 @@ final class ImportReview
                 if ($stale->isNotEmpty()) {
                     LibraryImportItem::whereIn('id', $selected->pluck('id'))->update([
                         'status' => LibraryImportItemStatus::Conflict,
-                        'error' => 'Another selected change for this work became stale. Refresh this work before applying it.',
+                        'error' => 'transfer.review.stale_work_change',
                     ]);
                     LibraryImportItem::whereIn('id', $ignored->pluck('id'))->update(['status' => LibraryImportItemStatus::Ignored]);
 
@@ -1016,7 +1016,7 @@ final class ImportReview
                 ! $entry || ! Storage::disk($entry->source_disk)->exists($entry->source_path)
                 || hash_file('sha256', Storage::disk($entry->source_disk)->path($entry->source_path)) !== $file['sha256']
             ) {
-                throw new RuntimeException('Staged image is missing or changed.');
+                throw new RuntimeException('transfer.review.staged_image_changed');
             }
             $destination = 'Works/' . $product->id . '/' . ($category === 'cover' ? 'cover' : 'sample_' . (++$number)) . '.' . pathinfo($file['path'], PATHINFO_EXTENSION);
             $paths[] = 'storage/' . $destination;
@@ -1052,7 +1052,7 @@ final class ImportReview
         if ($item->category === 'memberships') {
             $group = $this->groupForItem($item);
             if (! $group) {
-                throw new InvalidArgumentException('Approve the group addition before importing its memberships.');
+                throw new InvalidArgumentException('transfer.review.approve_group');
             }
             $titles = $overwrite ? $value : $this->union($group->genres->pluck('title')->all(), $value);
             $ids = $this->resolveTags($titles, $item);
@@ -1094,7 +1094,7 @@ final class ImportReview
         $oldEdges = $edges;
         foreach ($value['edges'] as [$parent, $child]) {
             if (! isset($tags[$parent], $tags[$child])) {
-                throw new InvalidArgumentException('Approve referenced tag additions before importing relationships.');
+                throw new InvalidArgumentException('transfer.review.approve_referenced_tags');
             }
         }
         $includedIds = collect($included)->map(fn(string $key): int => (int) $tags[$key]->id)->all();
@@ -1131,7 +1131,7 @@ final class ImportReview
     public function validateGraph(array $edges): void
     {
         if (! GraphCycleValidator::isAcyclic($edges)) {
-            throw new InvalidArgumentException('Parent/child tag relationships cannot contain a cycle.');
+            throw new InvalidArgumentException('tag.relationship_cycle');
         }
     }
 

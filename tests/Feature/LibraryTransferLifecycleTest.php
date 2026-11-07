@@ -14,7 +14,6 @@ use App\Models\LibraryTransferRun;
 use App\Models\Option;
 use App\Models\Product;
 use App\Support\Transfers\InvalidArchive;
-use App\Support\Transfers\LibraryTransferCleanupService;
 use App\Support\Transfers\TransferArchive;
 use App\Support\Transfers\TransferJobDispatcher;
 use App\Support\Transfers\TransferStorage;
@@ -166,7 +165,7 @@ class LibraryTransferLifecycleTest extends TestCase
             $this->service()->startImport();
             $this->fail('A non-cancellable Apply operation must block a replacement import.');
         } catch (RuntimeException $exception) {
-            $this->assertSame('Wait for the current import to finish applying before starting another import.', $exception->getMessage());
+            $this->assertSame('transfer.import.apply_in_progress', $exception->getMessage());
         }
 
         $this->assertDatabaseCount('library_transfer_runs', 1);
@@ -373,7 +372,7 @@ class LibraryTransferLifecycleTest extends TestCase
             ->call('askCleanup')
             ->assertSet('confirmingCleanup', false)
             ->assertHasErrors('cleanup')
-            ->assertSee(LibraryTransferCleanupService::UNAVAILABLE_MESSAGE);
+            ->assertSee(__('errors.transfer.cleanup.unavailable'));
     }
 
     public static function activeTransferStatusProvider(): iterable
@@ -413,7 +412,7 @@ class LibraryTransferLifecycleTest extends TestCase
         $this->assertTrue($lock->get());
 
         try {
-            $this->expectExceptionMessage(LibraryTransferCleanupService::BUSY_MESSAGE);
+            $this->expectExceptionMessage('transfer.cleanup.busy');
             $this->service()->startImport();
         } finally {
             $lock->release();
@@ -432,7 +431,7 @@ class LibraryTransferLifecycleTest extends TestCase
         $component->call('cleanup')
             ->assertSet('confirmingCleanup', false)
             ->assertHasErrors('cleanup')
-            ->assertSee(LibraryTransferCleanupService::UNAVAILABLE_MESSAGE);
+            ->assertSee(__('errors.transfer.cleanup.unavailable'));
 
         $this->assertDatabaseCount('library_transfer_runs', 1);
     }
@@ -477,7 +476,7 @@ class LibraryTransferLifecycleTest extends TestCase
         app()->setLocale('ja');
         $view->call('$refresh')->assertRedirect(route('options.transfers.show', $run));
         config(['queue.default' => 'sync']);
-        $this->expectExceptionMessage('database queue');
+        $this->expectExceptionMessage('transfer.queue.database_required');
         $this->service()->startImport();
     }
 
@@ -555,6 +554,25 @@ class LibraryTransferLifecycleTest extends TestCase
         $this->assertSame(LibraryTransferRunStatus::Ready, $run->fresh()->status);
     }
 
+    public function test_worker_failure_with_empty_exception_message_uses_semantic_fallback(): void
+    {
+        $run = $this->exported(['options']);
+        $part = $run->parts()->firstOrFail();
+        $run->update(['status' => LibraryTransferRunStatus::Building]);
+        $part->update(['status' => LibraryTransferPartStatus::Pending]);
+
+        (new LibraryTransferJob(
+            $run->id,
+            LibraryTransferOperation::Build,
+            $part->id,
+            $run->generation,
+            token: $run->job_token,
+        ))->failed(new RuntimeException(''));
+
+        $this->assertSame(LibraryTransferRunStatus::Failed, $run->fresh()->status);
+        $this->assertSame('transfer.worker_stopped', $run->fresh()->error);
+    }
+
     public function test_export_creation_rolls_back_if_database_queue_insertion_fails(): void
     {
         $before = LibraryTransferRun::count();
@@ -576,24 +594,44 @@ class LibraryTransferLifecycleTest extends TestCase
         $zip->open(Storage::disk('local')->path($part->path));
         $manifest = json_decode($zip->getFromName('manifest.json'), true);
         $manifest['schema_version'] = '1';
+        $manifest['work_selection']['count'] = (string) $manifest['work_selection']['count'];
         $zip->addFromString('manifest.json', json_encode($manifest, JSON_THROW_ON_ERROR));
         $zip->close();
         try {
             $this->archive()->inspect(Storage::disk('local')->path($part->path));
             $this->fail('Numeric strings are not schema-v1 JSON integers.');
         } catch (InvalidArchive $exception) {
-            $this->assertStringContainsString('JSON integers', $exception->getMessage());
+            $this->assertSame('transfer.archive.invalid_manifest_types', $exception->getMessage());
         }
         config(['transfers.job_timeout' => config('transfers.lock_seconds')]);
         try {
             $this->service()->startImport();
             $this->fail('Worker timeout must expire before locks.');
         } catch (RuntimeException $exception) {
-            $this->assertStringContainsString('worker timeout < lock lifetime', $exception->getMessage());
+            $this->assertSame('transfer.queue.invalid_timing', $exception->getMessage());
         }
         config(['transfers.disk_reserve_bytes' => PHP_INT_MAX]);
-        $this->expectExceptionMessage('Not enough free disk space');
+        $this->expectExceptionMessage('transfer.archive.insufficient_disk_space');
         TransferArchive::space(0, Storage::disk('local')->path(''));
+    }
+
+    public function test_invalid_manifest_shape_uses_a_stable_generic_error_code(): void
+    {
+        $export = $this->exported(['options']);
+        $part = $export->parts()->firstOrFail();
+        $zip = new ZipArchive;
+        $zip->open(Storage::disk('local')->path($part->path));
+        $manifest = json_decode($zip->getFromName('manifest.json'), true, 512, JSON_THROW_ON_ERROR);
+        unset($manifest['archive_set_id']);
+        $zip->addFromString('manifest.json', json_encode($manifest, JSON_THROW_ON_ERROR));
+        $zip->close();
+
+        try {
+            $this->archive()->inspect(Storage::disk('local')->path($part->path));
+            $this->fail('Expected an invalid archive.');
+        } catch (InvalidArchive $exception) {
+            $this->assertSame('transfer.archive.invalid_manifest', $exception->getMessage());
+        }
     }
 
     public function test_stale_run_and_part_tokens_make_jobs_and_failure_callbacks_harmless(): void

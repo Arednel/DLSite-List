@@ -14,7 +14,7 @@ from dlsite_async.work import (
     WorkOption,
     WorkType,
 )
-from DLSiteScraper import product_format_codes, run, to_serializable
+from DLSiteScraper import map_known_error, product_format_codes, run, to_serializable
 
 
 class DLSiteScraperProductFormatTest(unittest.TestCase):
@@ -113,6 +113,24 @@ class DLSiteScraperProductFormatTest(unittest.TestCase):
         self.assertNotIn("_sort_order_", str(serialized))
 
 
+class DLSiteScraperErrorCodeTest(unittest.TestCase):
+    def test_known_fetch_errors_return_semantic_error_codes(self):
+        cases = [
+            (
+                "Failed to get product info for RJ123456",
+                ("dlsite.work.geo_blocked", 2),
+            ),
+            ("Not Found", ("dlsite.work.deleted_or_missing", 2)),
+            ("Bad Request", ("dlsite.work.missing", 2)),
+        ]
+
+        for message, expected in cases:
+            with self.subTest(message=message):
+                self.assertEqual(expected, map_known_error(message, "RJ123456"))
+
+        self.assertIsNone(map_known_error("Unexpected upstream error", "RJ123456"))
+
+
 class DLSiteScraperOutputTest(unittest.TestCase):
     def test_language_editions_keep_original_work_reference(self):
         work = SimpleNamespace(
@@ -128,9 +146,7 @@ class DLSiteScraperOutputTest(unittest.TestCase):
             ]
         )
         serialized = to_serializable(work)
-        self.assertEqual(
-            "RJ01463781", serialized["language_editions"][0]["workno"]
-        )
+        self.assertEqual("RJ01463781", serialized["language_editions"][0]["workno"])
         self.assertEqual(1, serialized["language_editions"][0]["display_order"])
         self.assertEqual("JPN", serialized["language_editions"][0]["lang"])
 

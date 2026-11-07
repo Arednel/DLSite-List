@@ -180,7 +180,7 @@ class LibraryTransferReviewTest extends TestCase
         $this->assertNull($product->fresh()->notes);
         $conflicts = $run->items()->where('status', 'conflict')->count();
         $this->assertGreaterThan(1, $conflicts);
-        $staleError = 'Another selected change for this work became stale. Refresh this work before applying it.';
+        $staleError = 'transfer.review.stale_work_change';
         $this->assertSame(
             $staleError,
             $run->items()->where('status', 'conflict')->firstOrFail()->error,
@@ -231,7 +231,7 @@ class LibraryTransferReviewTest extends TestCase
         $this->assertFalse($item->incoming['complete']);
         $this->assertSame([], $item->incoming['files']);
         $this->assertSame(
-            'Archive images are incomplete. You can import only available images.',
+            'transfer.import.images_incomplete',
             $item->metadata['warning'] ?? null,
         );
         $this->apply($run);
@@ -269,7 +269,7 @@ class LibraryTransferReviewTest extends TestCase
         $item = $run->items()->where('category', 'groups')->where('collection', true)->firstOrFail();
         $this->assertSame(LibraryImportItemStatus::Conflict, $item->status);
         $this->assertSame(
-            'Local data changed after review. Click `Refresh conflicts` to review the latest changes.',
+            'transfer.review.local_data_changed',
             $item->error,
         );
         Option::setUiLanguage('ja');
@@ -743,7 +743,7 @@ class LibraryTransferReviewTest extends TestCase
             });
             $this->fail('Recovery must block unsafe mutation.');
         } catch (RuntimeException $exception) {
-            $this->assertStringContainsString('image', $exception->getMessage());
+            $this->assertSame('image.promotion.read_staged_failed', $exception->getMessage());
         }
         $this->assertFalse($mutated);
         $this->assertTrue(Storage::disk('local')->exists('ImagePromotions/active.json'));
@@ -829,7 +829,7 @@ class LibraryTransferReviewTest extends TestCase
             ->assertHasErrors('transfer');
 
         $this->assertSame(LibraryImportDecision::Overwrite, $item->fresh()->decision);
-        $this->expectExceptionMessage('unavailable in the current transfer state');
+        $this->expectExceptionMessage('transfer.state.action_unavailable');
         $this->service()->action($run->fresh(), LibraryTransferAction::Apply);
     }
 

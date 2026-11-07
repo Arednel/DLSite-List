@@ -104,7 +104,7 @@ class OptionsTransfers extends Component
     {
         if ($fileCount < 1) {
             throw ValidationException::withMessages([
-                'transfer' => __('errors.Choose at least one ZIP file before starting the import.'),
+                'transfer' => __('errors.transfer.upload.select_files_before_start'),
             ]);
         }
 
@@ -127,7 +127,7 @@ class OptionsTransfers extends Component
         $this->resetErrorBag('cleanup');
 
         if ($cleanupService->unavailable()) {
-            $this->addError('cleanup', TransferMessage::diagnostic(LibraryTransferCleanupService::UNAVAILABLE_MESSAGE));
+            $this->addError('cleanup', TransferMessage::diagnostic('transfer.cleanup.unavailable'));
 
             return;
         }

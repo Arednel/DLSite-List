@@ -119,8 +119,8 @@
             <div class="option-actions" data-transfer-downloads
                 data-started="{{ __('Choose a folder for the archive files.') }}"
                 data-complete="{{ trans_choice(':count archive file saved.|:count archive files saved.', $downloadParts->count(), ['count' => $downloadParts->count()]) }}"
-                data-cancelled="{{ __('errors.Download cancelled.') }}"
-                data-failed="{{ __('errors.Unable to save every archive file.') }}">
+                data-cancelled="{{ __('errors.transfer.download.cancelled') }}"
+                data-failed="{{ __('errors.transfer.download.save_failed') }}">
                 <button class="tag tag--gradient tag--lg is-clickable" type="button" data-download-all>
                     {{ __('Download all') }}
                 </button>

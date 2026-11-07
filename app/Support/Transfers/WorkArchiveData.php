@@ -141,7 +141,7 @@ final class WorkArchiveData
             || ! is_array($document['english'] ?? null) || ($document['english'] !== [] && array_is_list($document['english']))
             || (array_key_exists('dlsite_list', $document) && (! is_array($document['dlsite_list']) || ($document['dlsite_list'] !== [] && array_is_list($document['dlsite_list']))))
         ) {
-            throw new InvalidArchive('Unsupported or invalid archive layout: invalid work JSON.');
+            throw new InvalidArchive('transfer.archive.invalid_work_json');
         }
 
         $codes = [];
@@ -150,12 +150,12 @@ final class WorkArchiveData
                 continue;
             }
             if (! is_string($document[$locale]['product_id'])) {
-                throw new InvalidArchive('Unsupported or invalid archive layout: invalid work product ID.');
+                throw new InvalidArchive('transfer.archive.invalid_work_product_id');
             }
             $codes[] = strtoupper(trim($document[$locale]['product_id']));
         }
         if ($codes === [] || collect($codes)->contains(fn(string $code): bool => $code !== $expectedCode)) {
-            throw new InvalidArchive('Unsupported or invalid archive layout: work path and product ID do not match.');
+            throw new InvalidArchive('transfer.archive.work_path_product_id_mismatch');
         }
     }
 
@@ -166,7 +166,7 @@ final class WorkArchiveData
         if (Validator::make(['dlsite_list' => $custom], [
             'dlsite_list' => ['array:' . implode(',', self::CUSTOM_FIELDS)],
         ])->fails()) {
-            throw new InvalidArgumentException('Unknown dlsite_list work fields.');
+            throw new InvalidArgumentException('transfer.archive.unknown_work_fields');
         }
 
         // Validate raw values before normalization; accept plain dates and the scraper's Japan offset.
@@ -183,7 +183,7 @@ final class WorkArchiveData
         $work = DLSiteWorkData::fromArray($document, $expectedCode);
         $title = $this->localeText($document['japanese'], 'work_name') ?? $work->workName ?? $work->englishWorkName;
         if ($title === null) {
-            throw new InvalidArgumentException('DLsite work data is missing a work name.');
+            throw new InvalidArgumentException('dlsite.work.missing_name');
         }
 
         $record = ['product_code' => $expectedCode];

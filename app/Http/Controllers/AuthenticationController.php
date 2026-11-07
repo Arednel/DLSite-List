@@ -59,7 +59,7 @@ class AuthenticationController extends Controller
             return back()
                 ->withErrors([
                     'username' => trans_choice(
-                        'errors.login_throttled',
+                        'errors.auth.login_throttled',
                         $seconds,
                         ['seconds' => $seconds],
                     ),
@@ -78,7 +78,7 @@ class AuthenticationController extends Controller
             RateLimiter::hit($limiterKey, self::LOGIN_DECAY_SECONDS);
 
             return back()
-                ->withErrors(['username' => __('errors.The provided credentials are incorrect.')])
+                ->withErrors(['username' => __('errors.auth.invalid_credentials')])
                 ->onlyInput('username');
         }
 
@@ -184,7 +184,7 @@ class AuthenticationController extends Controller
 
         if (User::query()->count() !== 1) {
             return back()->withErrors([
-                'password' => __('errors.Password recovery requires exactly one administrator account.'),
+                'password' => __('errors.auth.recovery.single_admin_required'),
             ]);
         }
 

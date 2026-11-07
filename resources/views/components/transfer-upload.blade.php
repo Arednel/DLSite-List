@@ -8,19 +8,19 @@
     @if (!$initial) wire:key="transfer-upload-{{ $run->id }}" @endif wire:ignore
     data-transfer-upload @if ($initial) data-start-import @else data-run="{{ $run->id }}" @endif
     data-upload-max-bytes="{{ $uploadMaxBytes }}"
-    data-file-too-large="{{ __('errors.Exceeds the :size MiB upload limit.', ['size' => '__SIZE__']) }}"
+    data-file-too-large="{{ __('errors.transfer.upload.size_limit', ['size' => '__SIZE__']) }}"
     data-waiting="{{ __('Waiting') }}"
     @if ($initial) data-starting="{{ __('Starting import...') }}"
-        data-start-failed="{{ __('errors.Unable to start the import.') }}"
-        data-no-files="{{ __('errors.Choose at least one ZIP file before starting the import.') }}"
+        data-start-failed="{{ __('errors.transfer.upload.start_failed') }}"
+        data-no-files="{{ __('errors.transfer.upload.select_files_before_start') }}"
     @else
-        data-no-files="{{ __('errors.Choose at least one ZIP file.') }}"
-        data-cancelled="{{ __('errors.Transfer cancelled.') }}"
+        data-no-files="{{ __('errors.transfer.upload.select_files') }}"
+        data-cancelled="{{ __('errors.transfer.cancelled') }}"
         data-url="{{ route('options.transfers.upload', $run) }}" @endif
     data-processing="{{ __('Upload complete. Waiting for server.') }}"
-    data-interrupted="{{ __('errors.Upload interrupted or inactive. Retry this file.') }}"
-    data-uploaded="{{ __('Uploaded') }}" data-complete="{{ __('Uploaded. Background validation is running.') }}"
-    data-failed="{{ __('errors.Some files could not be uploaded.') }}"
+    data-interrupted="{{ __('errors.transfer.upload.interrupted') }}" data-uploaded="{{ __('Uploaded') }}"
+    data-complete="{{ __('Uploaded. Background validation is running.') }}"
+    data-failed="{{ __('errors.transfer.upload.some_files_failed') }}"
     @if ($initial) data-opening="{{ __('Opening import...') }}" @endif
     data-token="{{ csrf_token() }}">
     <label class="option-field">{{ $initial ? __('ZIP parts') : __('Attach ZIP files from Archive parts list below') }}

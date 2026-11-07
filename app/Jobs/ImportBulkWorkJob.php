@@ -58,7 +58,7 @@ class ImportBulkWorkJob implements ShouldQueue
         if (Product::query()->whereKey($item->product_id)->exists()) {
             $this->finish(
                 BulkImportItemStatus::Skipped,
-                error: 'Already in library.',
+                error: 'bulk_import.already_in_library',
             );
 
             return;
@@ -76,7 +76,7 @@ class ImportBulkWorkJob implements ShouldQueue
         } catch (DLSiteProductAlreadyExistsException) {
             $this->finish(
                 BulkImportItemStatus::Skipped,
-                error: 'Already in library.',
+                error: 'bulk_import.already_in_library',
             );
 
             return;
@@ -87,7 +87,7 @@ class ImportBulkWorkJob implements ShouldQueue
 
             $this->finish(
                 BulkImportItemStatus::Failed,
-                error: $exception->getMessage() ?: 'DLsite import failed.',
+                error: $exception->getMessage() ?: 'dlsite.import.failed',
             );
 
             return;
@@ -112,7 +112,7 @@ class ImportBulkWorkJob implements ShouldQueue
             if (! $item->status->isTerminal()) {
                 $item->forceFill([
                     'status' => BulkImportItemStatus::Failed,
-                    'error' => mb_substr($exception?->getMessage() ?: 'Unexpected queue failure.', 0, 2000),
+                    'error' => mb_substr($exception?->getMessage() ?: 'bulk_import.queue_failure', 0, 2000),
                     'completed_at' => now(),
                 ])->save();
 
@@ -125,7 +125,7 @@ class ImportBulkWorkJob implements ShouldQueue
             $run->forceFill([
                 'status' => BulkImportRunStatus::Failed,
                 'failed_at' => now(),
-                'error' => mb_substr($exception?->getMessage() ?: 'Bulk import worker stopped.', 0, 2000),
+                'error' => mb_substr($exception?->getMessage() ?: 'bulk_import.worker_stopped', 0, 2000),
             ])->save();
         });
 
@@ -176,7 +176,7 @@ class ImportBulkWorkJob implements ShouldQueue
 
             if (! $item || $item->status->isTerminal()) {
                 if ($status === BulkImportItemStatus::Imported) {
-                    throw new RuntimeException('Bulk Import item is no longer importing.');
+                    throw new RuntimeException('bulk_import.item_not_importing');
                 }
 
                 return;
@@ -187,7 +187,7 @@ class ImportBulkWorkJob implements ShouldQueue
             if ($status === BulkImportItemStatus::Imported && (
                 $item->status !== BulkImportItemStatus::Importing || ! $run->status->isActive()
             )) {
-                throw new RuntimeException('Bulk Import item or run is no longer active.');
+                throw new RuntimeException('bulk_import.item_or_run_inactive');
             }
 
             $item->forceFill([

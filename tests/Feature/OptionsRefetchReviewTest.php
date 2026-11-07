@@ -45,14 +45,14 @@ class OptionsRefetchReviewTest extends TestCase
             'status' => RefetchWorkResult::STATUS_FAILED,
             'error' => 'Refetch failed.',
             'warnings' => [[
-                'key' => 'Sample image download failed after five attempts: :images',
+                'key' => 'refetch.image.sample_download_failed',
                 'replace' => ['images' => 'sample_8.jpg'],
             ]],
         ])->save();
 
         Livewire::test(OptionsRefetchReview::class, ['run' => $run->fresh()])
             ->assertSee('Errors (2)')
-            ->assertSee("{$result->product_id}: Refetch failed.")
+            ->assertSee("{$result->product_id}: errors.Refetch failed.")
             ->assertSee("{$result->product_id}: Sample image download failed after five attempts: sample_8.jpg")
             ->assertSee('<details class="review-errors">', false)
             ->assertHasNoErrors();
@@ -68,13 +68,13 @@ class OptionsRefetchReviewTest extends TestCase
             'status' => RefetchWorkResult::STATUS_FAILED,
             'error' => 'Refetch failed.',
             'warnings' => [[
-                'key' => 'Sample image download failed after five attempts: :images',
+                'key' => 'refetch.image.sample_download_failed',
                 'replace' => ['images' => 'sample_8.jpg'],
             ]],
         ])->save();
 
         Livewire::test(OptionsRefetchReview::class, ['run' => $run->fresh()])
-            ->assertSee("{$result->product_id}: Refetch failed.")
+            ->assertSee("{$result->product_id}: errors.Refetch failed.")
             ->assertSee("{$result->product_id}: 5回試行してもサンプル画像をダウンロードできませんでした: sample_8.jpg")
             ->assertHasNoErrors();
     }
@@ -87,7 +87,7 @@ class OptionsRefetchReviewTest extends TestCase
 
         Storage::shouldReceive('disk')->once()->with('local')
             ->andThrow(new RuntimeException(
-                'Image recovery failed; backups were retained. Unable to finish image recovery.',
+                'image.recovery.failed_with_detail|image.recovery.finish_failed',
             ));
 
         Livewire::test(OptionsRefetchReview::class, ['run' => $run])

@@ -21,14 +21,14 @@ final class TransferJobDispatcher
             $connection !== 'database' || ($queue['driver'] ?? null) !== 'database'
             || ($queue['connection'] ?? config('database.default')) !== config('database.default')
         ) {
-            throw new RuntimeException('Library transfers require the database queue on the application database connection.');
+            throw new RuntimeException('transfer.queue.database_required');
         }
         if (
             config('transfers.job_timeout') < 1
             || config('transfers.job_timeout') >= config('transfers.lock_seconds')
             || max(config('transfers.lock_seconds'), $this->mutationLock->ttl()) >= ($queue['retry_after'] ?? 0)
         ) {
-            throw new RuntimeException('Transfer timing must satisfy: worker timeout < lock lifetime < database queue retry_after.');
+            throw new RuntimeException('transfer.queue.invalid_timing');
         }
     }
 

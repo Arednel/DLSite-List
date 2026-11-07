@@ -10,7 +10,6 @@ use App\Http\Requests\StartBulkImportRequest;
 use App\Models\Option;
 use App\Support\BulkImport\BulkImportService;
 use App\Support\DLSite\DLSiteProductImportInput;
-use App\Support\Localization\ErrorMessage;
 use App\Support\ProductFieldLayout;
 use App\Support\ReturnTarget;
 use App\Support\ReturnUrl;
@@ -85,7 +84,7 @@ class BulkImportController extends Controller
             }
 
             throw ValidationException::withMessages([
-                'product_code_list' => ErrorMessage::display($exception->getMessage()),
+                'product_code_list' => __('errors.' . $exception->getMessage()),
             ]);
         }
         $redirectUrl = route('options.index', [

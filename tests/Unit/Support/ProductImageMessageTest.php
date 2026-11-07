@@ -18,33 +18,33 @@ class ProductImageMessageTest extends TestCase
         parent::tearDown();
     }
 
-    public function test_image_promotion_errors_are_localized_at_transfer_and_refetch_boundaries(): void
+    public function test_image_promotion_error_codes_are_localized_at_transfer_and_refetch_boundaries(): void
     {
-        $messages = [
-            'Failed to promote staged image.' => '一時保存された画像を保存先へ反映できませんでした。',
-            'Unable to read staged image.' => '一時保存された画像を読み取れませんでした。',
-            'Failed to replace current image.' => '現在の画像を置き換えられませんでした。',
-            'Invalid image recovery journal. Retain backups for manual recovery.' => '画像の復元記録が無効です。手動で復元できるよう、バックアップを保持してください。',
+        $errors = [
+            'image.promotion.stage_failed' => ['一時保存された画像を保存先へ反映できませんでした。', 'Failed to promote staged image.'],
+            'image.promotion.read_staged_failed' => ['一時保存された画像を読み取れませんでした。', 'Unable to read staged image.'],
+            'image.promotion.replace_failed' => ['現在の画像を置き換えられませんでした。', 'Failed to replace current image.'],
+            'image.recovery.invalid_journal' => ['画像の復元記録が無効です。手動で復元できるよう、バックアップを保持してください。', 'Invalid image recovery journal. Retain backups for manual recovery.'],
         ];
 
-        foreach ($messages as $message => $translation) {
-            $result = new RefetchWorkResult(['error' => $message]);
+        foreach ($errors as $error => [$japanese, $english]) {
+            $result = new RefetchWorkResult(['error' => $error]);
             App::setLocale(UiLanguage::Japanese->value);
-            $this->assertSame($translation, TransferMessage::diagnostic($message));
-            $this->assertSame($translation, $result->displayError());
-            $this->assertSame($message, $result->error);
+            $this->assertSame($japanese, TransferMessage::diagnostic($error));
+            $this->assertSame($japanese, $result->displayError());
+            $this->assertSame($error, $result->error);
 
             App::setLocale(UiLanguage::English->value);
-            $this->assertSame($message, TransferMessage::diagnostic($message));
-            $this->assertSame($message, $result->displayError());
+            $this->assertSame($english, TransferMessage::diagnostic($error));
+            $this->assertSame($english, $result->displayError());
         }
     }
 
-    public function test_image_recovery_wrapper_localizes_known_causes_and_preserves_unknown_causes(): void
+    public function test_image_recovery_wrapper_localizes_known_details_and_preserves_unknown_details(): void
     {
-        $prefix = 'Image recovery failed; backups were retained. ';
+        $prefix = 'image.recovery.failed_with_detail|';
         $details = [
-            'Unable to finish image recovery.' => '画像の復元処理を完了できませんでした。',
+            'image.recovery.finish_failed' => '画像の復元処理を完了できませんでした。',
             'Options' => 'Options',
             "Permission denied: Works/RJ123456/:detail.jpg\n<upstream detail>" => "Permission denied: Works/RJ123456/:detail.jpg\n<upstream detail>",
         ];
@@ -59,18 +59,25 @@ class ProductImageMessageTest extends TestCase
             $this->assertSame($translation, TransferMessage::diagnostic($message));
             $this->assertSame($translation, $result->displayError());
             $this->assertSame($message, $result->error);
-
-            App::setLocale(UiLanguage::English->value);
-            $this->assertSame($message, ProductImageMessage::display($message));
         }
     }
 
-    public function test_empty_messages_and_unknown_messages_are_preserved(): void
+    public function test_image_recovery_wrapper_without_detail_uses_generic_recovery_error(): void
+    {
+        App::setLocale(UiLanguage::English->value);
+
+        $this->assertSame(
+            'Image recovery failed; backups were retained.',
+            ProductImageMessage::display('image.recovery.failed_with_detail|'),
+        );
+    }
+
+    public function test_empty_messages_are_preserved_and_unknown_messages_use_laravel_missing_keys(): void
     {
         App::setLocale(UiLanguage::Japanese->value);
 
         $this->assertNull(ProductImageMessage::display(null));
         $this->assertSame('', ProductImageMessage::display(''));
-        $this->assertSame('Options', ProductImageMessage::display('Options'));
+        $this->assertSame('errors.Options', ProductImageMessage::display('Options'));
     }
 }

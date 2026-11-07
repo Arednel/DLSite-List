@@ -21,8 +21,11 @@ use App\Support\Transfers\PortableOptions;
 use App\Support\UserStylesheet;
 use App\Support\UserStylesheetPromotion;
 use Exception;
+use Illuminate\Contracts\Cache\Lock as LockContract;
+use Illuminate\Contracts\Cache\LockTimeoutException;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Bus;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 use Livewire\Livewire;
@@ -260,7 +263,7 @@ class LibraryTransferImportTest extends TestCase
         $this->assertFalse($item->incoming['complete']);
         $this->assertCount(1, $item->incoming['files']);
         $this->assertSame(
-            'Archive images are incomplete. You can import only available images.',
+            'transfer.import.images_incomplete',
             $item->metadata['warning'] ?? null,
         );
         Option::setUiLanguage(\App\Enums\UiLanguage::Japanese);
@@ -352,7 +355,7 @@ class LibraryTransferImportTest extends TestCase
         $item = $run->items()->where('section', 'works')->where('category', 'new_works')->firstOrFail();
 
         $this->assertSame(
-            'Archive images are incomplete. You can import only available images.',
+            'transfer.import.images_incomplete',
             $item->metadata['warning'] ?? null,
         );
         $this->assertFalse($item->incoming['cover']['complete']);
@@ -613,6 +616,113 @@ class LibraryTransferImportTest extends TestCase
         }
     }
 
+    #[DataProvider('customCssLockTimeoutPhases')]
+    public function test_custom_css_transaction_lock_timeout_uses_semantic_busy_error(int $timeoutCall): void
+    {
+        $stylesheet = app(UserStylesheet::class);
+        $original = $stylesheet->contents();
+
+        try {
+            $stylesheet->save("body { color: green; }\n");
+            $export = $this->exported(['user_css']);
+            $run = $this->imported($export);
+            $item = $run->items()->where('section', 'user_css')->where('category', 'user_css')->firstOrFail();
+            $promotion = app(UserStylesheetPromotion::class);
+            $lock = \Mockery::mock(LockContract::class);
+            $blockCalls = 0;
+
+            $lock->shouldReceive('block')
+                ->times($timeoutCall)
+                ->andReturnUsing(function (int $seconds, callable $callback) use (&$blockCalls, $timeoutCall): mixed {
+                    $blockCalls++;
+                    if ($blockCalls === $timeoutCall) {
+                        throw new LockTimeoutException;
+                    }
+
+                    return $callback();
+                });
+            Cache::shouldReceive('lock')
+                ->times($timeoutCall)
+                ->with('user-stylesheet-mutation', 10)
+                ->andReturn($lock);
+
+            try {
+                $promotion->transaction(
+                    fn() => $promotion->publish("body { color: blue; }\n"),
+                    $item,
+                );
+                $this->fail('Expected stylesheet lock timeout to abort the transaction.');
+            } catch (RuntimeException $exception) {
+                $this->assertSame('transfer.custom_css.busy', $exception->getMessage());
+                $this->assertInstanceOf(LockTimeoutException::class, $exception->getPrevious());
+            }
+        } finally {
+            Storage::disk('local')->delete('UserStylesheetPromotions/active.json');
+            Storage::disk('local')->delete('UserStylesheetPromotions/active.json.next');
+            Storage::disk('local')->deleteDirectory('UserStylesheetPromotions');
+            $stylesheet->save($original);
+        }
+    }
+
+    public static function customCssLockTimeoutPhases(): array
+    {
+        return [
+            'initial recovery' => [1],
+            'publication' => [2],
+        ];
+    }
+
+    public function test_custom_css_recovery_lock_timeout_uses_semantic_busy_error(): void
+    {
+        $stylesheet = app(UserStylesheet::class);
+        $original = $stylesheet->contents();
+
+        try {
+            $stylesheet->save("body { color: green; }\n");
+            $export = $this->exported(['user_css']);
+            $run = $this->imported($export);
+            $item = $run->items()->where('section', 'user_css')->where('category', 'user_css')->firstOrFail();
+            $promotion = app(UserStylesheetPromotion::class);
+            $lock = \Mockery::mock(LockContract::class);
+            $blockCalls = 0;
+
+            $lock->shouldReceive('block')
+                ->times(3)
+                ->andReturnUsing(function (int $seconds, callable $callback) use (&$blockCalls): mixed {
+                    $blockCalls++;
+                    if ($blockCalls === 3) {
+                        throw new LockTimeoutException;
+                    }
+
+                    return $callback();
+                });
+            Cache::shouldReceive('lock')
+                ->times(3)
+                ->with('user-stylesheet-mutation', 10)
+                ->andReturn($lock);
+
+            try {
+                $promotion->transaction(function () use ($promotion): never {
+                    $promotion->publish("body { color: blue; }\n");
+
+                    throw new RuntimeException('Simulated import failure.');
+                }, $item);
+                $this->fail('Expected recovery lock timeout to abort the transaction.');
+            } catch (RuntimeException $exception) {
+                $this->assertSame(
+                    'transfer.custom_css.recovery.failed_with_detail|transfer.custom_css.recovery.busy',
+                    $exception->getMessage(),
+                );
+                $this->assertSame('Simulated import failure.', $exception->getPrevious()?->getMessage());
+            }
+        } finally {
+            Storage::disk('local')->delete('UserStylesheetPromotions/active.json');
+            Storage::disk('local')->delete('UserStylesheetPromotions/active.json.next');
+            Storage::disk('local')->deleteDirectory('UserStylesheetPromotions');
+            $stylesheet->save($original);
+        }
+    }
+
     public function test_custom_css_promotion_rejects_nested_transactions(): void
     {
         $stylesheet = app(UserStylesheet::class);
@@ -626,7 +736,7 @@ class LibraryTransferImportTest extends TestCase
             $promotion = app(UserStylesheetPromotion::class);
 
             $this->expectException(RuntimeException::class);
-            $this->expectExceptionMessage('Custom CSS promotion transaction is already active.');
+            $this->expectExceptionMessage('transfer.custom_css.promotion.transaction_active');
 
             $promotion->transaction(
                 fn() => $promotion->transaction(fn() => null, $item),
@@ -1128,7 +1238,7 @@ class LibraryTransferImportTest extends TestCase
 
             return $work;
         });
-        $this->expectExceptionMessage('work path and product ID do not match');
+        $this->expectExceptionMessage('transfer.archive.work_path_product_id_mismatch');
         $this->imported($export);
     }
 
@@ -1201,7 +1311,7 @@ class LibraryTransferImportTest extends TestCase
             $this->service()->action($run->fresh(), LibraryTransferAction::WithoutImages);
             $this->fail('Incomplete data must not be bypassed.');
         } catch (RuntimeException $exception) {
-            $this->assertStringContainsString('unavailable', $exception->getMessage());
+            $this->assertSame('transfer.state.action_unavailable', $exception->getMessage());
         }
         $this->assertFalse($run->fresh()->settings['without_images']);
         foreach ($export->parts()->where('id', '<>', $last->id)->orderByDesc('id')->get() as $part) {
@@ -1227,13 +1337,13 @@ class LibraryTransferImportTest extends TestCase
             $this->service()->upload($run->fresh(), new UploadedFile(Storage::disk('local')->path($other->path), $other->filename, null, null, true));
             $this->fail('Mixed sets must be rejected.');
         } catch (RuntimeException $exception) {
-            $this->assertStringContainsString('archive set', $exception->getMessage());
+            $this->assertSame('transfer.upload.inconsistent_archive_set', $exception->getMessage());
         }
         $this->service()->inspect($run->fresh(), $part->id);
         $originalHash = $part->fresh()->sha256;
         $candidate = $this->service()->upload($run->fresh(), new UploadedFile(Storage::disk('local')->path($conflictingPath), $data->filename, null, null, true));
         $this->service()->inspect($run->fresh(), $candidate->id);
-        $this->assertStringContainsString('Different content', $part->fresh()->error);
+        $this->assertSame('transfer.upload.different_content_rejected', $part->fresh()->error);
         $this->assertSame(1, $run->parts()->count());
         $this->assertSame($originalHash, $run->parts()->first()->sha256);
     }
@@ -1412,7 +1522,7 @@ class LibraryTransferImportTest extends TestCase
         $manifest['entries'][0]['path'] = $wrongPath;
         $zip->addFromString('manifest.json', json_encode($manifest, JSON_THROW_ON_ERROR));
         $zip->close();
-        $this->expectExceptionMessage('Unsupported or invalid archive layout: invalid image entry.');
+        $this->expectExceptionMessage('transfer.archive.invalid_image_entry');
         $this->archive()->inspect(Storage::disk('local')->path($part->path));
     }
 
@@ -1451,7 +1561,7 @@ class LibraryTransferImportTest extends TestCase
         $this->assertSame(LibraryTransferRunStatus::Review, $run->fresh()->status);
         $this->assertSame(LibraryTransferPartStatus::Valid, $part->fresh()->status);
         $this->assertNull($part->fresh()->candidate);
-        $this->assertStringContainsString('accepted part is retained', $part->fresh()->error);
+        $this->assertSame('transfer.upload.duplicate_validation_failed', $part->fresh()->error);
         $second = $upload();
         $job->failed(new RuntimeException('Delayed previous failure'));
         $this->assertSame($second->candidate, $part->fresh()->candidate);

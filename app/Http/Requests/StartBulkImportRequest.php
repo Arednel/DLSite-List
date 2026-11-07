@@ -28,9 +28,9 @@ class StartBulkImportRequest extends BaseProductRequest
     public function messages(): array
     {
         return [
-            'product_code_list.required' => __('errors.Enter text containing at least one product code.'),
-            'product_codes.max' => __('errors.You can import up to 500 product codes at once.'),
-            'product_codes.*.max' => __('errors.Product code #:position must not exceed :max characters.'),
+            'product_code_list.required' => __('errors.bulk_import.input.required'),
+            'product_codes.max' => __('errors.bulk_import.input.max_codes'),
+            'product_codes.*.max' => __('errors.bulk_import.input.code_max'),
         ];
     }
 
@@ -45,7 +45,7 @@ class StartBulkImportRequest extends BaseProductRequest
 
                 $validator->errors()->add(
                     'product_code_list',
-                    __('errors.Could not find a product code (RJ, BJ or VJ followed by numbers) in your input.'),
+                    __('errors.product.code.invalid'),
                 );
             },
         ];

@@ -106,7 +106,7 @@ final class GenreHierarchy
 
         if (! GraphCycleValidator::isAcyclic($relations)) {
             throw ValidationException::withMessages([
-                'editingTagRelationships' => __('errors.Parent/child tag relationships cannot contain a cycle.'),
+                'editingTagRelationships' => __('errors.tag.relationship_cycle'),
             ]);
         }
     }

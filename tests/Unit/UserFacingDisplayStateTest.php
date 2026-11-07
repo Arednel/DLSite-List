@@ -8,7 +8,6 @@ use App\Models\BulkImportRun;
 use App\Models\LibraryImportItem;
 use App\Models\RefetchRun;
 use App\Models\RefetchWorkResult;
-use App\Support\Refetch\RefetchService;
 use Illuminate\Support\Facades\App;
 use Tests\TestCase;
 
@@ -25,10 +24,10 @@ class UserFacingDisplayStateTest extends TestCase
         }
     }
 
-    public function test_import_review_warnings_use_current_locale_and_preserve_unknown_messages(): void
+    public function test_import_review_warnings_use_current_locale_and_laravel_missing_key_output(): void
     {
         $item = new LibraryImportItem(['metadata' => [
-            'warning' => 'Archive images are incomplete. You can import only available images.',
+            'warning' => 'transfer.import.images_incomplete',
         ]]);
 
         App::setLocale(UiLanguage::Japanese->value);
@@ -39,7 +38,7 @@ class UserFacingDisplayStateTest extends TestCase
 
         $item->metadata = ['warning' => 'External warning: Options'];
         App::setLocale(UiLanguage::Japanese->value);
-        $this->assertSame('External warning: Options', $item->displayWarning());
+        $this->assertSame('errors.External warning: Options', $item->displayWarning());
 
         foreach ([[], ['warning' => ''], ['warning' => ['not a string']]] as $metadata) {
             $item->metadata = $metadata;
@@ -87,22 +86,18 @@ class UserFacingDisplayStateTest extends TestCase
         }
     }
 
-    public function test_known_errors_are_localized_while_scraper_details_stay_verbatim(): void
+    public function test_known_error_codes_are_localized_and_unknown_errors_use_laravel_missing_key_output(): void
     {
         App::setLocale(UiLanguage::Japanese->value);
 
-        $this->assertSame(
-            'Refetch was cancelled before this work was fetched.',
-            RefetchService::CANCELLED_BEFORE_FETCH_MESSAGE,
-        );
         foreach (
             [
-                'Refetch was cancelled before this work was fetched.' => 'この作品を取得する前に再取得がキャンセルされました。',
-                'This work was removed from your library before it could be refetched.' => 'この作品は再取得される前にライブラリから削除されました。',
-                'DLsite fetch failed.' => 'DLsite情報の取得に失敗しました。',
-                'GeoBlocked DLsite work' => '地域制限によりアクセスできないDLsite作品',
-                'This work was deleted or could not be found on DLsite' => 'この作品は削除されたか、DLsiteで見つかりませんでした。',
-                'This work could not be found on DLsite' => 'この作品はDLsiteで見つかりませんでした。',
+                'refetch.cancelled_before_fetch' => 'この作品を取得する前に再取得がキャンセルされました。',
+                'refetch.work_removed' => 'この作品は再取得される前にライブラリから削除されました。',
+                'dlsite.fetch.failed' => 'DLsite情報の取得に失敗しました。',
+                'dlsite.work.geo_blocked' => '地域制限によりアクセスできないDLsite作品',
+                'dlsite.work.deleted_or_missing' => 'この作品は削除されたか、DLsiteで見つかりませんでした。',
+                'dlsite.work.missing' => 'この作品はDLsiteで見つかりませんでした。',
             ] as $message => $localized
         ) {
             $result = new RefetchWorkResult(['error' => $message]);
@@ -114,7 +109,7 @@ class UserFacingDisplayStateTest extends TestCase
         foreach (['validation', 'Unexpected scraper detail', 'Errors'] as $message) {
             $result = new RefetchWorkResult(['error' => $message]);
 
-            $this->assertSame($message, $result->displayError());
+            $this->assertSame('errors.' . $message, $result->displayError());
         }
 
         $emptyResult = new RefetchWorkResult(['error' => null]);

@@ -498,8 +498,8 @@ class FullRefetchTest extends TestCase
         $this->assertArrayNotHasKey('cover', $result->changes);
         $this->assertArrayNotHasKey('sample_images', $result->changes);
         $this->assertSame([
-            'Cover image download failed after five attempts.',
-            'Sample image download failed after five attempts: :images',
+            'refetch.image.cover_download_failed',
+            'refetch.image.sample_download_failed',
         ], collect($result->warnings)->pluck('key')->all());
         Process::assertRanTimes(fn(): bool => true, 5);
     }
@@ -810,7 +810,7 @@ class FullRefetchTest extends TestCase
 
         app(RefetchService::class)->recordFailedResult(
             $result,
-            RefetchService::CANCELLED_BEFORE_FETCH_MESSAGE,
+            'refetch.cancelled_before_fetch',
         );
 
         $run->refresh();
@@ -823,7 +823,7 @@ class FullRefetchTest extends TestCase
 
         $this->get(route('options.refetch.show', $run))
             ->assertOk()
-            ->assertSee(RefetchService::CANCELLED_BEFORE_FETCH_MESSAGE);
+            ->assertSee(__('errors.refetch.cancelled_before_fetch'));
     }
 
     public function test_starting_a_newer_run_makes_an_older_review_read_only(): void

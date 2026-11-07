@@ -113,7 +113,7 @@ class OptionsRefetchCleanupTest extends TestCase
             ->call('askCleanup')
             ->assertSet('confirmingCleanup', false)
             ->assertHasErrors(['cleanup'])
-            ->assertSee(RefetchCleanupService::UNAVAILABLE_MESSAGE);
+            ->assertSee(__('errors.refetch.cleanup.unavailable'));
 
         $this->assertDatabaseCount('refetch_runs', 1);
         $this->assertDatabaseCount('refetch_work_results', 1);
@@ -142,7 +142,7 @@ class OptionsRefetchCleanupTest extends TestCase
             ->call('cleanup')
             ->assertSet('confirmingCleanup', false)
             ->assertHasErrors(['cleanup'])
-            ->assertSee(RefetchCleanupService::UNAVAILABLE_MESSAGE);
+            ->assertSee(__('errors.refetch.cleanup.unavailable'));
 
         $this->assertDatabaseCount('refetch_runs', 1);
         $this->assertDatabaseCount('refetch_work_results', 1);
@@ -168,7 +168,7 @@ class OptionsRefetchCleanupTest extends TestCase
                 ->call('cleanup')
                 ->assertSet('confirmingCleanup', false)
                 ->assertHasErrors('cleanup')
-                ->assertSee(RefetchCleanupService::BUSY_MESSAGE);
+                ->assertSee(__('errors.refetch.cleanup.busy'));
         } finally {
             $lock->release();
         }
@@ -192,7 +192,7 @@ class OptionsRefetchCleanupTest extends TestCase
             app(RefetchCleanupService::class)->cleanup();
             $this->fail('Expected refetch filesystem cleanup to fail.');
         } catch (RuntimeException $exception) {
-            $this->assertSame(RefetchCleanupService::FAILED_MESSAGE, $exception->getMessage());
+            $this->assertSame('refetch.cleanup.failed', $exception->getMessage());
         }
 
         $this->assertDatabaseCount('refetch_runs', 0);

@@ -115,7 +115,7 @@ class ProductController extends Controller
             );
         } catch (DLSiteProductAlreadyExistsException) {
             throw ValidationException::withMessages([
-                'id' => __('errors.Work with this product code is already in your library'),
+                'id' => __('errors.product.code.duplicate'),
             ]);
         } catch (DLSiteProductImportException $exception) {
             throw ValidationException::withMessages([

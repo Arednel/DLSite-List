@@ -4,7 +4,6 @@ namespace App\Models;
 
 use App\Enums\LibraryImportDecision;
 use App\Enums\LibraryImportItemStatus;
-use App\Support\Localization\ErrorMessage;
 use Illuminate\Database\Eloquent\Attributes\Scope;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
@@ -34,7 +33,7 @@ class LibraryImportItem extends Model
         $warning = $this->metadata['warning'] ?? null;
 
         return is_string($warning) && $warning !== ''
-            ? ErrorMessage::display($warning)
+            ? __('errors.' . $warning)
             : null;
     }
 

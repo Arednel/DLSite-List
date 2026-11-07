@@ -103,13 +103,13 @@ class RefetchRun extends Model
             && $this->getKey() === self::query()->max($this->getKeyName());
     }
 
-    public function applyUnavailableMessage(): string
+    public function applyUnavailableErrorCode(): string
     {
         if (! $this->isReview()) {
-            return 'This refetch run is not ready to apply.';
+            return 'refetch.apply.not_ready';
         }
 
-        return 'Only the newest refetch run can be applied.';
+        return 'refetch.apply.not_newest';
     }
 
     public function statusLabel(): string

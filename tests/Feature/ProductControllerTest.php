@@ -962,7 +962,7 @@ class ProductControllerTest extends TestCase
     {
         Process::fake([
             '*' => Process::result(
-                errorOutput: 'This work was deleted or could not be found on DLsite',
+                errorOutput: 'dlsite.work.deleted_or_missing',
                 exitCode: 2,
             ),
         ])->preventStrayProcesses();
@@ -1001,6 +1001,7 @@ class ProductControllerTest extends TestCase
         $message = $invalidManifest
             ? 'DLsite work fetch returned an invalid manifest.'
             : 'Temporary network failure';
+        $displayMessage = $invalidManifest ? $message : 'errors.' . $message;
         Process::fake([
             '*' => $invalidManifest
                 ? Process::result(output: 'invalid manifest')
@@ -1016,14 +1017,14 @@ class ProductControllerTest extends TestCase
                 'return_url' => 'http://localhost/tags',
             ])
             ->assertRedirect($createUrl)
-            ->assertSessionHasErrors(['id' => $message])
+            ->assertSessionHasErrors(['id' => $displayMessage])
             ->assertSessionHasInput('id', 'RJ000000406')
             ->assertSessionHasInput('notes', 'Keep my entered notes')
             ->assertSessionHasInput('return_url', 'http://localhost/tags');
 
         $this->get($createUrl)
             ->assertOk()
-            ->assertSee($message)
+            ->assertSee($displayMessage)
             ->assertSee('Keep my entered notes')
             ->assertSee('name="return_url" value="http://localhost/tags"', false);
 
@@ -1041,21 +1042,21 @@ class ProductControllerTest extends TestCase
         ];
     }
 
-    public function test_create_translates_only_recognized_scraper_errors_using_the_current_locale(): void
+    public function test_create_translates_error_codes_and_uses_laravel_missing_keys_for_unknown_scraper_errors(): void
     {
         Option::setUiLanguage(UiLanguage::Japanese);
 
         foreach (
             [
-                'GeoBlocked DLsite work' => '地域制限によりアクセスできないDLsite作品',
-                'This work was deleted or could not be found on DLsite' => 'この作品は削除されたか、DLsiteで見つかりませんでした。',
-                'This work could not be found on DLsite' => 'この作品はDLsiteで見つかりませんでした。',
-                'DLsite work fetch did not create JSON.' => 'DLsite作品データの取得でJSONファイルが作成されませんでした。',
-                'DLsite work fetch returned invalid JSON.' => 'DLsite作品データの取得で無効なJSONが返されました。',
-                'DLsite work fetch returned an invalid manifest.' => 'DLsite作品データの取得で無効なマニフェストが返されました。',
-                'DLsite work data is missing a product id.' => 'DLsite作品データに作品IDがありません。',
-                'DLsite fetch failed.' => 'DLsite情報の取得に失敗しました。',
-                'DLsite import failed.' => 'DLsiteからのインポートに失敗しました。',
+                'dlsite.work.geo_blocked' => '地域制限によりアクセスできないDLsite作品',
+                'dlsite.work.deleted_or_missing' => 'この作品は削除されたか、DLsiteで見つかりませんでした。',
+                'dlsite.work.missing' => 'この作品はDLsiteで見つかりませんでした。',
+                'dlsite.fetch.json_missing' => 'DLsite作品データの取得でJSONファイルが作成されませんでした。',
+                'dlsite.fetch.invalid_json' => 'DLsite作品データの取得で無効なJSONが返されました。',
+                'dlsite.fetch.invalid_manifest' => 'DLsite作品データの取得で無効なマニフェストが返されました。',
+                'dlsite.work.missing_product_id' => 'DLsite作品データに作品IDがありません。',
+                'dlsite.fetch.failed' => 'DLsite情報の取得に失敗しました。',
+                'dlsite.import.failed' => 'DLsiteからのインポートに失敗しました。',
             ] as $stderr => $localized
         ) {
             Process::fake([
@@ -1074,7 +1075,7 @@ class ProductControllerTest extends TestCase
 
             $this->from('/create')
                 ->post('/store', ['id' => 'RJ000000405'])
-                ->assertSessionHasErrors(['id' => $stderr]);
+                ->assertSessionHasErrors(['id' => 'errors.' . $stderr]);
         }
     }
 

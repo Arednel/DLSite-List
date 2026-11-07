@@ -44,7 +44,7 @@ class FetchProductWorkJob implements ShouldQueue
         }
 
         if ($this->batch()?->cancelled() || $result->run?->isCancelling()) {
-            $service->recordFailedResult($result, RefetchService::CANCELLED_BEFORE_FETCH_MESSAGE);
+            $service->recordFailedResult($result, 'refetch.cancelled_before_fetch');
 
             return;
         }
@@ -63,6 +63,6 @@ class FetchProductWorkJob implements ShouldQueue
             return;
         }
 
-        app(RefetchService::class)->recordFailedResult($result, RefetchService::QUEUE_FAILURE_MESSAGE);
+        app(RefetchService::class)->recordFailedResult($result, 'refetch.queue_failure');
     }
 }

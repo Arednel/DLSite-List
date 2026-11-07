@@ -53,10 +53,6 @@ final class RefetchService
 
     public const TAG_CUSTOM_KEEP = 'keep_custom';
 
-    public const CANCELLED_BEFORE_FETCH_MESSAGE = 'Refetch was cancelled before this work was fetched.';
-
-    public const QUEUE_FAILURE_MESSAGE = 'Refetch could not finish this work because its background job failed.';
-
     public function __construct(
         private readonly DLSiteWorkFetcher $fetcher,
         private readonly RefetchDiffBuilder $diffBuilder,
@@ -134,7 +130,7 @@ final class RefetchService
         $product = Product::query()->find($result->product_id);
 
         if (! $product) {
-            $this->recordFailedResult($result, 'This work was removed from your library before it could be refetched.');
+            $this->recordFailedResult($result, 'refetch.work_removed');
 
             return;
         }
@@ -158,7 +154,7 @@ final class RefetchService
 
             if (in_array('cover.jpg', $fetch->failedImages, true)) {
                 $warnings[] = [
-                    'key' => 'Cover image download failed after five attempts.',
+                    'key' => 'refetch.image.cover_download_failed',
                     'replace' => [],
                 ];
             }
@@ -170,7 +166,7 @@ final class RefetchService
 
             if ($failedSamples !== []) {
                 $warnings[] = [
-                    'key' => 'Sample image download failed after five attempts: :images',
+                    'key' => 'refetch.image.sample_download_failed',
                     'replace' => ['images' => implode(', ', $failedSamples)],
                 ];
             }
@@ -294,7 +290,7 @@ final class RefetchService
             $this->ensureApplicable($run);
 
             if ($run->tabResolved($category)) {
-                throw new RuntimeException('This refetch tab was already resolved.');
+                throw new RuntimeException('refetch.tab_resolved');
             }
 
             $resolvedTabs = $run->resolved_tabs ?? [];
@@ -678,7 +674,7 @@ final class RefetchService
                 $jsonPath = $this->stagedWorkPath($run, $result->product_id) . '.json';
 
                 if (! Storage::disk('local')->exists($jsonPath)) {
-                    throw new RuntimeException('Failed to promote staged refetch file.');
+                    throw new RuntimeException('refetch.promotion_failed');
                 }
 
                 $this->copyFile(
@@ -760,7 +756,7 @@ final class RefetchService
     private function copyFile(string $disk, string $source, string $destination): void
     {
         if (! Storage::disk($disk)->copy($source, $destination)) {
-            throw new RuntimeException('Failed to promote staged refetch file.');
+            throw new RuntimeException('refetch.promotion_failed');
         }
     }
 
@@ -774,7 +770,7 @@ final class RefetchService
             });
         } catch (LockTimeoutException $exception) {
             throw new RuntimeException(
-                'Refetch changes cannot be applied while another refetch action is in progress.',
+                'refetch.apply.busy',
                 previous: $exception,
             );
         }
@@ -785,7 +781,7 @@ final class RefetchService
         $run->refresh();
 
         if (! $run->canBeApplied()) {
-            throw new RuntimeException($run->applyUnavailableMessage());
+            throw new RuntimeException($run->applyUnavailableErrorCode());
         }
     }
 
@@ -793,7 +789,7 @@ final class RefetchService
     {
         $message = trim($exception->getMessage());
 
-        return $message === '' ? 'DLsite fetch failed.' : mb_strimwidth($message, 0, 1000);
+        return $message === '' ? 'dlsite.fetch.failed' : mb_strimwidth($message, 0, 1000);
     }
 
     /**

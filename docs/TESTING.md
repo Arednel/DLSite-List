@@ -207,7 +207,7 @@ Busy-start coverage checks the wrapped cache lock timeout and ensures unrelated 
 
 #### `tests/Feature/OptionsBulkImportsTest.php`
 
-Covers Bulk Import history, progress/errors, imported-work titles and fallback product codes, 10-run pagination, cleanup availability, and active-run-only polling through the refresh handler. Error/warning coverage verifies known canonical operational messages use the dedicated error catalog in the current UI locale while unknown/raw diagnostics remain unchanged.
+Covers Bulk Import history, progress/errors, imported-work titles and fallback product codes, 10-run pagination, cleanup availability, and active-run-only polling through the refresh handler. Error/warning coverage verifies known semantic operational errors use the dedicated error catalog in the current UI locale, unknown/raw errors exercise Laravel's missing-key behavior, and specialized raw warnings remain unchanged.
 
 #### `tests/Feature/LibraryTransferTest.php`
 
@@ -221,7 +221,7 @@ Regression coverage injects failures after successor-job insertion in every plan
 
 #### `tests/Feature/LibraryTransferImportTest.php`
 
-Covers multipart upload/validation, missing or replacement parts, archive/path/checksum safety, bounded analysis/checkpoint retries, image validation, existing/new work analysis, incomplete-image imports for existing and new works, and data-only continuation. Incomplete-image warnings remain canonical in staged metadata and are rendered from the operational error catalog in the current UI locale. Product Format coverage includes custom/empty values, invalid-value quarantine, locale fallback, and compatibility with archives created before the field existed. `announce_date` tests cover round trips, omitted fields, and invalid-date quarantine. Site ID tests cover round trips and locale metadata fallback when importing older archives without an explicit stored site. Archive compatibility tests cover v3 output, continued v2 imports, released v1 manifests, legacy `rj_code`/Index sort Options layouts, and the v3-only `user_css` scope. Custom CSS import coverage checks plain-text Current/Imported review values, empty-file clearing, staged-file Overwrite replacement, cleanup of the durable promotion journal/backups after a successful apply, restoration/retry behavior after a failed apply, durable recovery of interrupted committed/uncommitted stylesheet publication, preservation of a newer stylesheet write during recovery, last-write-wins handling when a later reset writes the same CSS bytes as an interrupted import, and rejection of nested stylesheet-promotion transactions.
+Covers multipart upload/validation, missing or replacement parts, archive/path/checksum safety, bounded analysis/checkpoint retries, image validation, existing/new work analysis, incomplete-image imports for existing and new works, and data-only continuation. Incomplete-image warnings remain canonical in staged metadata and are rendered from the operational error catalog in the current UI locale. Product Format coverage includes custom/empty values, invalid-value quarantine, locale fallback, and compatibility with archives created before the field existed. `announce_date` tests cover round trips, omitted fields, and invalid-date quarantine. Site ID tests cover round trips and locale metadata fallback when importing older archives without an explicit stored site. Archive compatibility tests cover v3 output, continued v2 imports, released v1 manifests, legacy `rj_code`/Index sort Options layouts, and the v3-only `user_css` scope. Custom CSS import coverage checks plain-text Current/Imported review values, empty-file clearing, staged-file Overwrite replacement, cleanup of the durable promotion journal/backups after a successful apply, restoration/retry behavior after a failed apply, durable recovery of interrupted committed/uncommitted stylesheet publication, preservation of a newer stylesheet write during recovery, last-write-wins handling when a later reset writes the same CSS bytes as an interrupted import, rejection of nested stylesheet-promotion transactions, and distinct semantic handling for normal mutation-lock versus rollback-recovery lock timeouts.
 
 DLsite work-data compatibility coverage includes Circle, Publisher, Brand, Description, and Author aliases, plus announcement dates ending in `+09:00`. Tests check that archive Series values take precedence, personal notes are preserved, omitted fields are handled separately from explicitly cleared values, explicit `null` dates clear stored values, malformed string or non-string dates are quarantined before normalization, and imported cached 5-point/10-point DLsite ratings cannot be half-populated. DLsite Rating Overwrite coverage verifies that omitted rating keys preserve local values, explicit nulls clear them, and a zero vote count remains zero.
 
@@ -237,7 +237,7 @@ Partial contributor document coverage verifies that omitted roles survive Overwr
 
 #### `tests/Feature/LibraryTransferLifecycleTest.php`
 
-Covers supersession/cancellation, active-transfer guards, history cleanup, queued checkpoints/retries, generation and operation tokens, late callbacks, publication recovery, browser-started imports, and transfer-storage cleanup.
+Covers supersession/cancellation, active-transfer guards, history cleanup, queued checkpoints/retries, generation and operation tokens, late callbacks, publication recovery, browser-started imports, transfer-storage cleanup, and semantic fallback errors when queue failures have empty exception messages.
 
 Storage cleanup coverage holds the upload lock before database registration to verify that a sweep skips active uploads and later removes only unreferenced files.
 
@@ -500,19 +500,19 @@ Covers server-rendered Add/Edit modal completion fallback output and conditional
 - Covers localized enum/Option display values, ContentTerminology score fallback/preview ordering, locale-independent stored field-layout data, and localized partial-date formatting while keeping stable underlying values.
 
 `tests/Unit/UserFacingDisplayStateTest.php`
-- Covers localized Refetch status/error presentation and Import Review warnings, while stable status values remain unchanged and unknown scraper errors/warnings remain verbatim.
+- Covers localized Refetch status/error presentation and Import Review warnings, while stable status/error codes remain unchanged and unknown error values exercise Laravel's missing-key behavior.
 
-`tests/Unit/Support/Localization/ErrorMessageTest.php`
-- Covers exact known error/warning lookup through the grouped `errors.php` catalogs, verbatim fallback for unknown diagnostics (including strings that match normal UI labels), parameter substitution that preserves external values, and current-locale rendering of known DLsite image warnings.
+`tests/Unit/Localization/ErrorLocalizationTest.php`
+- Covers direct Laravel translation of semantic `errors.php` codes, replacement parameters, Laravel missing-key output for legacy/unknown values, cleanup-service error codes, and current-locale rendering of the specialized DLsite image warning format.
 
 `tests/Unit/Support/ProductImageMessageTest.php`
-- Covers image-promotion errors at Transfer and Refetch display boundaries; combined recovery failures translate known causes and use Laravel's key fallback for unknown causes, while preserving canonical stored messages.
+- Covers image-promotion error codes at Transfer and Refetch display boundaries; combined recovery failures translate coded causes and use Laravel missing-key output for unknown causes while preserving the stored diagnostic string.
 
 `tests/Unit/Support/Transfers/TransferMessageTest.php`
-- Covers localized Transfer progress stages, shared `ImportValue` section/field labels (including Site ID), upload failure messages rendered directly by the Blade component, bounded dynamic diagnostic templates, canonical static error lookup, verbatim fallback for unknown diagnostics, and verbatim entity values, including tag/group names ending in `for export`.
+- Covers localized Transfer progress stages, shared `ImportValue` section/field labels (including Site ID), upload failure messages rendered directly by the Blade component, bounded dynamic diagnostic templates, semantic static error codes, Laravel missing-key output for unknown diagnostics, and verbatim entity values, including tag/group names ending in `for export`.
 
 `tests/Unit/TraditionalChineseCatalogTest.php`
-- Covers full Traditional Chinese UI/error key coverage, parameter preservation, plural rendering, verbatim fallback for unknown diagnostics, and framework validation-message coverage.
+- Covers full Traditional Chinese UI/error key coverage, parameter preservation, plural rendering, Laravel missing-key output for unknown diagnostics, and framework validation-message coverage.
 
 #### Enums
 
@@ -654,6 +654,7 @@ Covers Python scraper Product Format handling and serialized work metadata:
 - age-category serialization with the current `dlsite-async` model
 - serialization of `language_editions`, including the order-1 original work ID
 - serialization of `translation_info`, including the fallback original work ID
+- known DLsite fetch failures map to stable semantic application error codes
 
 #### `python/tests/test_weekly_logging.py`
 

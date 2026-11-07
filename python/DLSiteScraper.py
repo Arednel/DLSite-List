@@ -216,9 +216,9 @@ def map_known_error(error_message: str, work_id: str):
     msg = (error_message or "").strip()
 
     patterns = [
-        (f"Failed to get product info for {work_id}", "GeoBlocked DLsite work", 2),
-        (f"Not Found", "This work was deleted or could not be found on DLsite", 2),
-        (f"Bad Request", "This work could not be found on DLsite", 2),
+        (f"Failed to get product info for {work_id}", "dlsite.work.geo_blocked", 2),
+        (f"Not Found", "dlsite.work.deleted_or_missing", 2),
+        (f"Bad Request", "dlsite.work.missing", 2),
     ]
 
     for pattern, user_message, exit_code in patterns:

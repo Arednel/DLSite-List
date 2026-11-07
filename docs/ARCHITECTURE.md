@@ -655,7 +655,9 @@ Application-owned UI text is stored in:
 - `lang/ja.json`
 - `lang/zh_TW.json`
 
-Application error messages are translated in `lang/{locale}/errors.php`. Laravel’s built-in validation messages use `lang/{locale}/validation.php`.
+Application-owned errors use stable semantic codes (for example, `transfer.archive.invalid_zip`) defined in `lang/{locale}/errors.php` and translated with Laravel's translator. Parameterized errors pass replacement values to the translator.
+
+Laravel’s built-in validation messages use `lang/{locale}/validation.php`.
 
 Blade uses `str_replace('_', '-', app()->getLocale())` because HTML language tags use hyphens (`zh-TW`), while the application's locale uses an underscore (`zh_TW`). This only formats the HTML `lang` attribute; it does not change which translations Laravel loads.
 

@@ -60,7 +60,7 @@ final class LibraryTransferService
     {
         $this->dispatcher->assertReady();
         if (! class_exists(ZipArchive::class)) {
-            throw new RuntimeException('Enable the PHP zip extension before exporting.');
+            throw new RuntimeException('transfer.export.zip_extension_required');
         }
         $ids = in_array('works', $scopes, true) && $mode === 'selected' ? $ids : [];
         $ids = array_map(fn($id) => is_string($id) ? strtoupper(trim($id)) : $id, $ids);
@@ -72,7 +72,7 @@ final class LibraryTransferService
             'ids.*' => ['string', 'regex:/\A(?:RJ|BJ|VJ)\d+\z/'],
         ])->validate();
         if (in_array('images', $scopes, true) && ! in_array('works', $scopes, true)) {
-            throw new RuntimeException('Images require Works.');
+            throw new RuntimeException('transfer.export.images_require_works');
         }
         $ids = ! in_array('works', $scopes, true)
             ? []
@@ -80,7 +80,7 @@ final class LibraryTransferService
             ->orderByNumericCode()->pluck('id')->all();
         $ids = array_values(array_unique(array_map(fn($id) => strtoupper(trim($id)), $ids)));
         if (in_array('works', $scopes, true) && $ids === []) {
-            throw new RuntimeException($mode === 'selected' ? 'Select at least one work.' : 'There are no works to export.');
+            throw new RuntimeException($mode === 'selected' ? 'transfer.export.select_work' : 'transfer.export.no_works');
         }
         $size = Option::exportPartMib();
 
@@ -128,7 +128,7 @@ final class LibraryTransferService
             $lockedPart->update(['status' => LibraryTransferPartStatus::Pending]);
             $lockedRun->update([
                 'status' => LibraryTransferRunStatus::Failed,
-                'error' => 'A published archive is missing or corrupt. Retry to rebuild it.',
+                'error' => 'transfer.export.published_archive_invalid',
                 'settings' => [
                     ...$lockedRun->settings,
                     'retry_operation' => LibraryTransferOperation::Build->value,
@@ -157,7 +157,7 @@ final class LibraryTransferService
                         ->get(['id', 'status']);
 
                     if ($previous->contains('status', LibraryTransferRunStatus::Applying)) {
-                        throw new RuntimeException('Wait for the current import to finish applying before starting another import.');
+                        throw new RuntimeException('transfer.import.apply_in_progress');
                     }
 
                     $supersededIds = $previous
@@ -172,7 +172,7 @@ final class LibraryTransferService
                     return $callback();
                 }));
         } catch (LockTimeoutException $exception) {
-            throw new RuntimeException(LibraryTransferCleanupService::BUSY_MESSAGE, previous: $exception);
+            throw new RuntimeException('transfer.cleanup.busy', previous: $exception);
         }
     }
 
@@ -183,25 +183,25 @@ final class LibraryTransferService
         return Cache::lock('transfer-upload-' . $run->id, config('transfers.lock_seconds'))->block(self::UPLOAD_LOCK_WAIT_SECONDS, function () use ($run, $file) {
             $run->refresh();
             if (! $run->acceptsReplacementParts()) {
-                throw new RuntimeException('This import is no longer accepting parts.');
+                throw new RuntimeException('transfer.upload.not_accepting_parts');
             }
             $manifest = $this->archive->inspect($file->getRealPath());
             $common = Arr::only($manifest, ['format', 'schema_version', 'archive_set_id', 'exported_at', 'scopes', 'parts', 'work_selection', 'work_entry_format']);
             if (isset($run->settings['manifest']) && LibraryData::hash($run->settings['manifest']) !== LibraryData::hash($common)) {
-                throw new InvalidArchive('This file belongs to a different or inconsistent archive set.');
+                throw new InvalidArchive('transfer.upload.inconsistent_archive_set');
             }
             $existing = $run->parts()->where('kind', $manifest['part']['kind'])->where('number', $manifest['part']['number'])->first();
             if ($existing?->candidate) {
-                throw new RuntimeException('This part already has an upload awaiting validation. Retry shortly.');
+                throw new RuntimeException('transfer.upload.validation_pending');
             }
             if (! $existing && ! $run->acceptsNewParts()) {
-                throw new RuntimeException('This import is no longer accepting new parts.');
+                throw new RuntimeException('transfer.upload.not_accepting_new_parts');
             }
             $otherEntryCount = $run->parts()
                 ->when($existing, fn($query) => $query->whereKeyNot($existing->id))
                 ->sum('entry_count');
             if ($otherEntryCount + count($manifest['entries']) > config('transfers.max_entries')) {
-                throw new InvalidArchive('Archive set exceeds the entry-count safety limit.');
+                throw new InvalidArchive('transfer.archive.entry_count_safety_limit');
             }
             $bytes = $file->getSize();
             TransferArchive::space($bytes, Storage::disk('local')->path($run->directory()));
@@ -211,7 +211,7 @@ final class LibraryTransferService
                 return DB::transaction(function () use ($run, $manifest, $path, $bytes, $common, $existing) {
                     $run = LibraryTransferRun::whereKey($run->id)->lockForUpdate()->firstOrFail();
                     if (! $run->acceptsReplacementParts()) {
-                        throw new RuntimeException('This import stopped accepting parts during upload.');
+                        throw new RuntimeException('transfer.upload.stopped_accepting_parts');
                     }
                     if ($existing) {
                         $part = $run->parts()->whereKey($existing->id)->lockForUpdate()->firstOrFail();
@@ -226,7 +226,7 @@ final class LibraryTransferService
                         return $part;
                     }
                     if (! $run->acceptsNewParts()) {
-                        throw new RuntimeException('This import stopped accepting new parts during upload.');
+                        throw new RuntimeException('transfer.upload.stopped_accepting_new_parts');
                     }
                     $part = $run->parts()->create([
                         'kind' => $manifest['part']['kind'],
@@ -270,11 +270,11 @@ final class LibraryTransferService
             $this->dispatcher->checkpoint($run, ['stage' => "Validating {$part->kind} part {$part->number}"]);
             $uploadPath = $part->upload_path;
             if (! is_string($uploadPath)) {
-                throw new RuntimeException('The uploaded archive is unavailable. Upload this part again.');
+                throw new RuntimeException('transfer.upload.archive_unavailable');
             }
             $hash = hash_file('sha256', Storage::disk('local')->path($uploadPath));
             if ($hash === false) {
-                throw new RuntimeException('Unable to read uploaded archive.');
+                throw new RuntimeException('transfer.upload.read_archive_failed');
             }
             $part->update(['sha256' => $hash]);
             try {
@@ -301,7 +301,7 @@ final class LibraryTransferService
             $candidatePath = Storage::disk('local')->path($candidate['path']);
             $hash = hash_file('sha256', $candidatePath);
             if ($hash === false) {
-                throw new RuntimeException('Unable to read duplicate upload.');
+                throw new RuntimeException('transfer.upload.read_duplicate_failed');
             }
             if ($part->status === LibraryTransferPartStatus::Invalid) {
                 try {
@@ -330,7 +330,7 @@ final class LibraryTransferService
                     }
                 }
             } else {
-                $part->update(['candidate' => null, 'error' => $hash === $part->sha256 ? ($part->status === LibraryTransferPartStatus::Valid ? null : $part->error) : 'Different content was rejected for this part. The previously uploaded part is retained.']);
+                $part->update(['candidate' => null, 'error' => $hash === $part->sha256 ? ($part->status === LibraryTransferPartStatus::Valid ? null : $part->error) : 'transfer.upload.different_content_rejected']);
                 $this->storage->delete($candidate['path']);
             }
         }
@@ -420,16 +420,16 @@ final class LibraryTransferService
         foreach ($this->analysisEntries($run, $offset) as $fragmentIndex => $entry) {
             $path = Storage::disk($entry->source_disk)->path($entry->source_path);
             if (! is_file($path) || filesize($path) !== $entry->bytes || hash_file('sha256', $path) !== $entry->sha256) {
-                throw new InvalidArchive('Staged data is missing or changed.');
+                throw new InvalidArchive('transfer.import.staged_data_changed');
             }
             $section = $entry->section;
             if ($section === 'user_css') {
                 $css = file_get_contents($path);
                 if ($css === false) {
-                    throw new InvalidArchive('Cannot read staged Custom CSS.');
+                    throw new InvalidArchive('transfer.custom_css.read_staged_failed');
                 }
                 if (! mb_check_encoding($css, 'UTF-8')) {
-                    throw new InvalidArchive('Custom CSS must be valid UTF-8 text.');
+                    throw new InvalidArchive('transfer.custom_css.invalid_utf8');
                 }
                 $records = [['css' => $css]];
             } else {
@@ -440,15 +440,15 @@ final class LibraryTransferService
                     $records = [$json];
                 } else {
                     if (($json['section'] ?? '') !== $section) {
-                        throw new InvalidArchive('Unsupported or invalid archive layout: invalid JSON fragment envelope.');
+                        throw new InvalidArchive('transfer.archive.invalid_fragment_envelope');
                     }
                     $validator = Validator::make($json, [
                         'records' => ['present', 'array', 'list', 'max:' . config('transfers.max_fragment_records')],
                     ]);
                     if ($validator->fails()) {
                         throw new InvalidArchive($validator->errors()->has('records.max')
-                            ? 'JSON fragment exceeds the configured record-count limit.'
-                            : 'Unsupported or invalid archive layout: invalid JSON fragment envelope.');
+                            ? 'transfer.archive.fragment_record_count_limit'
+                            : 'transfer.archive.invalid_fragment_envelope');
                     }
                     $records = $validator->validated()['records'];
                 }
@@ -550,7 +550,7 @@ final class LibraryTransferService
                     $tagKeys[] = $tag->entity_key;
                     $graphBytes += strlen($tag->entity_key) + strlen(json_encode($tag->metadata['parents'] ?? [], JSON_THROW_ON_ERROR));
                     if ($graphBytes > config('transfers.max_json_bytes') || count($tagKeys) + count($edges) > config('transfers.max_entries')) {
-                        throw new InvalidArchive('Tag relationships exceed the configured graph safety limit.');
+                        throw new InvalidArchive('transfer.import.relationship_graph_limit');
                     }
                     foreach ($tag->metadata['parents'] ?? [] as $parent) {
                         $edges[] = [Genre::titleKey($parent), $tag->entity_key];
@@ -559,12 +559,12 @@ final class LibraryTransferService
                 $tagKeyLookup = array_fill_keys($tagKeys, true);
                 $badTags = $run->items()->forSectionCategory('tag-library', 'tags')->where('status', LibraryImportItemStatus::Unavailable)->exists();
                 $badGroups = $run->items()->forSectionCategory('tag-library', 'groups')->where('status', LibraryImportItemStatus::Unavailable)->exists();
-                $this->review->item($run, 'tag-library', 'groups', 'Group order and missing groups', $this->review->groupBaseline(), $groupKeys, ['collection' => true], $badGroups ? 'Invalid group records prevent complete group replacement.' : null);
-                $graphError = $badTags ? 'Invalid tags prevent complete relationship replacement.' : null;
+                $this->review->item($run, 'tag-library', 'groups', 'Group order and missing groups', $this->review->groupBaseline(), $groupKeys, ['collection' => true], $badGroups ? 'transfer.import.invalid_group_records' : null);
+                $graphError = $badTags ? 'transfer.import.invalid_tags' : null;
                 try {
                     foreach ($edges as [$parent, $child]) {
                         if (! isset($tagKeyLookup[$parent])) {
-                            throw new InvalidArgumentException('A relationship refers to a tag absent from the archive.');
+                            throw new InvalidArgumentException('transfer.import.relationship_missing_tag');
                         }
                     }
                 } catch (InvalidArgumentException $exception) {
@@ -584,14 +584,14 @@ final class LibraryTransferService
             $fragments = (clone $dataEntries)->where('section', $section);
             if ($section === 'works') {
                 if ($fragments->count() !== $run->settings['manifest']['work_selection']['count']) {
-                    throw new InvalidArchive('Unsupported or invalid archive layout: work entry count does not match the manifest.');
+                    throw new InvalidArchive('transfer.archive.work_count_mismatch');
                 }
 
                 continue;
             }
             if ($section === 'user_css') {
                 if ($fragments->count() !== 1) {
-                    throw new InvalidArchive('Unsupported or invalid archive layout: Custom CSS must contain exactly one user.css entry.');
+                    throw new InvalidArchive('transfer.custom_css.archive_layout_invalid');
                 }
 
                 continue;
@@ -604,11 +604,11 @@ final class LibraryTransferService
             foreach ($fragments->orderBy('fragment_number')->cursor() as $fragment) {
                 $expected ??= $fragment->fragment_count ?? 1;
                 if (($fragment->fragment_count ?? 1) !== $expected || ($fragment->fragment_number ?? 1) !== ++$number) {
-                    throw new InvalidArchive('Missing, duplicate or inconsistent JSON fragments.');
+                    throw new InvalidArchive('transfer.archive.fragments_missing_or_inconsistent');
                 }
             }
             if ($number !== $expected) {
-                throw new InvalidArchive('Missing, duplicate or inconsistent JSON fragments.');
+                throw new InvalidArchive('transfer.archive.fragments_missing_or_inconsistent');
             }
         }
 
@@ -673,7 +673,7 @@ final class LibraryTransferService
         if (! LibraryTransferRun::whereKey($run->id)
             ->whereIn('status', LibraryTransferRun::supersedableStatuses($run->direction))
             ->increment('generation', 1, ['status' => LibraryTransferRunStatus::Cancelled])) {
-            throw new RuntimeException('This transfer cannot be cancelled.');
+            throw new RuntimeException('transfer.cancel.unavailable');
         }
     }
 
@@ -756,7 +756,7 @@ final class LibraryTransferService
 
         $this->dispatcher->assertReady();
         if ($section !== null && (! isset(ImportReview::CATEGORIES[$section]) || ($category !== null && ! in_array($category, ImportReview::CATEGORIES[$section], true)))) {
-            throw new RuntimeException('Invalid review category.');
+            throw new RuntimeException('transfer.review.invalid_category');
         }
         $total = $run->items()->pending()->forSectionCategory($section, $category)->count();
         if ($total !== 0) {
@@ -796,7 +796,7 @@ final class LibraryTransferService
 
     private function unavailableAction(): never
     {
-        throw new RuntimeException('This action is unavailable in the current transfer state.');
+        throw new RuntimeException('transfer.state.action_unavailable');
     }
 
     public function nextBuild(LibraryTransferRun $run): void

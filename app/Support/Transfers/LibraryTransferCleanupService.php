@@ -17,12 +17,6 @@ use Throwable;
 
 final class LibraryTransferCleanupService
 {
-    public const UNAVAILABLE_MESSAGE = 'Transfer history cleanup is unavailable while an import or export is in progress.';
-
-    public const BUSY_MESSAGE = 'Transfer history cleanup is temporarily unavailable while another transfer action is in progress.';
-
-    public const FAILED_MESSAGE = 'Transfer history cleanup failed while removing staged files.';
-
     private const DIRECTORY = 'Transfers';
 
     public function __construct(
@@ -49,7 +43,7 @@ final class LibraryTransferCleanupService
                             $this->userStylesheetPromotion->recover();
                             DB::transaction(function (): void {
                                 if ($this->activeRunQuery()->lockForUpdate()->first(['id']) !== null) {
-                                    throw new RuntimeException(self::UNAVAILABLE_MESSAGE);
+                                    throw new RuntimeException('transfer.cleanup.unavailable');
                                 }
 
                                 $this->deleteFiles();
@@ -63,7 +57,7 @@ final class LibraryTransferCleanupService
                     }
                 });
         } catch (LockTimeoutException) {
-            throw new RuntimeException(self::BUSY_MESSAGE);
+            throw new RuntimeException('transfer.cleanup.busy');
         }
     }
 
@@ -82,7 +76,7 @@ final class LibraryTransferCleanupService
                 foreach ($this->lockNames((int) $runId) as $name) {
                     $lock = Cache::lock($name, config('transfers.lock_seconds'));
                     if (! $lock->get()) {
-                        throw new RuntimeException(self::BUSY_MESSAGE);
+                        throw new RuntimeException('transfer.cleanup.busy');
                     }
                     $locks[] = $lock;
                 }
@@ -109,10 +103,10 @@ final class LibraryTransferCleanupService
         try {
             $disk = Storage::disk('local');
             if ($disk->exists(self::DIRECTORY) && ! $disk->deleteDirectory(self::DIRECTORY)) {
-                throw new RuntimeException(self::FAILED_MESSAGE);
+                throw new RuntimeException('transfer.cleanup.failed');
             }
         } catch (Throwable $exception) {
-            throw new RuntimeException(self::FAILED_MESSAGE, previous: $exception);
+            throw new RuntimeException('transfer.cleanup.failed', previous: $exception);
         }
     }
 }

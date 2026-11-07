@@ -65,7 +65,7 @@ class OptionsBulkImportsTest extends TestCase
             'position' => 2,
             'product_id' => 'RJ000000502',
             'status' => BulkImportItemStatus::Failed,
-            'error' => 'GeoBlocked DLsite work',
+            'error' => 'dlsite.work.geo_blocked',
             'completed_at' => now(),
         ]);
         $run->items()->create([
@@ -110,7 +110,7 @@ class OptionsBulkImportsTest extends TestCase
                 'position' => 2,
                 'product_id' => 'RJ000000802',
                 'status' => BulkImportItemStatus::Failed,
-                'error' => 'DLsite import failed.',
+                'error' => 'dlsite.import.failed',
                 'completed_at' => now(),
             ],
             [
@@ -179,20 +179,20 @@ class OptionsBulkImportsTest extends TestCase
             'status' => BulkImportRunStatus::Failed,
             'input_snapshot' => [],
             'total_count' => 4,
-            'error' => 'Bulk import finalization failed.',
+            'error' => 'bulk_import.finalization_failed',
         ]);
         $run->items()->createMany([
             [
                 'position' => 1,
                 'product_id' => 'RJ000000701',
                 'status' => BulkImportItemStatus::Skipped,
-                'error' => 'Already in library.',
+                'error' => 'bulk_import.already_in_library',
             ],
             [
                 'position' => 2,
                 'product_id' => 'RJ000000702',
                 'status' => BulkImportItemStatus::Failed,
-                'error' => 'GeoBlocked DLsite work',
+                'error' => 'dlsite.work.geo_blocked',
             ],
             [
                 'position' => 3,
@@ -214,11 +214,11 @@ class OptionsBulkImportsTest extends TestCase
             ->assertOk()
             ->assertSee('一括インポートの完了処理に失敗しました。')
             ->assertSee('エラー (5)')
-            ->assertSee(__('errors.Already in library.'))
+            ->assertSee(__('errors.bulk_import.already_in_library'))
             ->assertSee('地域制限によりアクセスできないDLsite作品')
             ->assertSee('DLsite情報は取得できましたが、次の画像をダウンロードできませんでした: cover.jpg, sample_1.jpg')
             ->assertSee('RJ000000704 -')
-            ->assertSee('Unexpected scraper detail')
+            ->assertSee('errors.Unexpected scraper detail')
             ->assertSee('Unknown warning: <upstream detail>')
             ->assertDontSee('Unknown warning: <upstream detail>', false);
 
@@ -232,21 +232,21 @@ class OptionsBulkImportsTest extends TestCase
             ->assertSee('Unknown warning: <upstream detail>');
     }
 
-    public function test_unknown_bulk_import_errors_and_warnings_stay_verbatim(): void
+    public function test_unknown_bulk_import_errors_use_laravel_missing_keys_while_warnings_stay_verbatim(): void
     {
         Option::setUiLanguage(UiLanguage::Japanese);
         app()->setLocale(UiLanguage::Japanese->value);
 
         $run = new BulkImportRun(['error' => 'Errors']);
-        $knownRun = new BulkImportRun(['error' => 'DLsite work fetch returned invalid JSON.']);
+        $knownRun = new BulkImportRun(['error' => 'dlsite.fetch.invalid_json']);
         $item = new \App\Models\BulkImportItem([
             'error' => 'Apply All',
             'warning' => 'Site ID',
         ]);
 
-        $this->assertSame('Errors', $run->displayError());
+        $this->assertSame('errors.Errors', $run->displayError());
         $this->assertSame('DLsite作品データの取得で無効なJSONが返されました。', $knownRun->displayError());
-        $this->assertSame('Apply All', $item->displayError());
+        $this->assertSame('errors.Apply All', $item->displayError());
         $this->assertSame('Site ID', $item->displayWarning());
     }
 
@@ -430,7 +430,7 @@ class OptionsBulkImportsTest extends TestCase
                 app(BulkImportCleanupService::class)->cleanup();
                 $this->fail('Expected the shared Bulk Import lifecycle lock to block cleanup.');
             } catch (RuntimeException $exception) {
-                $this->assertSame(BulkImportCleanupService::BUSY_MESSAGE, $exception->getMessage());
+                $this->assertSame('bulk_import.cleanup.busy', $exception->getMessage());
             }
         } finally {
             $lock->release();

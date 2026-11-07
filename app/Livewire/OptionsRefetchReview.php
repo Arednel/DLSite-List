@@ -9,7 +9,6 @@ use App\Models\Option;
 use App\Models\RefetchRun;
 use App\Models\RefetchWorkResult;
 use App\Support\DLSite\DLSiteRating;
-use App\Support\Localization\ErrorMessage;
 use App\Support\ProductImageMessage;
 use App\Support\Refetch\RefetchService;
 use App\Support\TagColor;
@@ -117,7 +116,7 @@ class OptionsRefetchReview extends Component
         $category = RefetchCategory::tryFrom($value);
 
         if ($category === null) {
-            $this->addError('category', __('errors.The selected category is invalid.'));
+            $this->addError('category', __('errors.refetch.review.invalid_category'));
 
             return;
         }
@@ -264,7 +263,7 @@ class OptionsRefetchReview extends Component
             foreach ($result->warnings ?? [] as $warning) {
                 $key = (string) ($warning['key'] ?? '');
                 $replace = is_array($warning['replace'] ?? null) ? $warning['replace'] : [];
-                $message = $key !== '' ? ErrorMessage::format($key, $replace) : '';
+                $message = $key !== '' ? __('errors.' . $key, $replace) : '';
 
                 if (is_string($message) && $message !== '') {
                     $errors['review'][] = "{$result->product_id}: {$message}";

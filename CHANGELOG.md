@@ -4,6 +4,14 @@ All notable changes to this project are documented in this file.
 
 ## Unreleased
 
+### Changed
+
+* Reworked application error localization so user-facing errors are translated more consistently across the application.
+
+### Fixed
+
+* Improved Custom CSS error handling.
+
 ## 2.3.0 - 2026-11-07
 
 *Rating Metadata & Display Options*

@@ -2,11 +2,9 @@
 
 namespace App\Support\DLSite;
 
-use App\Support\Localization\ErrorMessage;
-
 final readonly class DLSiteFetchResult
 {
-    public const IMAGE_FAILURE_MESSAGE = 'DLsite data was fetched, but these images could not be downloaded: :images';
+    public const IMAGE_FAILURE_TEMPLATE = 'DLsite data was fetched, but these images could not be downloaded: :images';
 
     /**
      * @param  list<string>  $failedImages
@@ -22,13 +20,13 @@ final readonly class DLSiteFetchResult
             return $message;
         }
 
-        $prefix = str_replace(':images', '', self::IMAGE_FAILURE_MESSAGE);
+        $prefix = str_replace(':images', '', self::IMAGE_FAILURE_TEMPLATE);
 
         if (! str_starts_with($message, $prefix)) {
             return $message;
         }
 
-        return ErrorMessage::format(self::IMAGE_FAILURE_MESSAGE, [
+        return __('errors.dlsite.image.download_failed', [
             'images' => substr($message, strlen($prefix)),
         ]);
     }
@@ -44,6 +42,6 @@ final readonly class DLSiteFetchResult
             return null;
         }
 
-        return str_replace(':images', implode(', ', $this->failedImages), self::IMAGE_FAILURE_MESSAGE);
+        return str_replace(':images', implode(', ', $this->failedImages), self::IMAGE_FAILURE_TEMPLATE);
     }
 }
