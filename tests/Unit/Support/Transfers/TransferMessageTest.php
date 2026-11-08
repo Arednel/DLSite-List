@@ -93,7 +93,7 @@ class TransferMessageTest extends TestCase
             ->assertSee('data-cancelled="転送をキャンセルしました。"', false);
     }
 
-    public function test_known_transfer_diagnostics_are_localized_and_unknown_diagnostics_use_laravel_missing_keys(): void
+    public function test_known_transfer_diagnostics_are_localized_and_unknown_diagnostics_are_preserved(): void
     {
         App::setLocale(UiLanguage::Japanese->value);
 
@@ -166,12 +166,18 @@ class TransferMessageTest extends TestCase
             ),
         );
         $this->assertSame(
+            'カスタムCSSの復元に失敗しました。バックアップは保持されています。 transfer',
+            TransferMessage::diagnostic(
+                'transfer.custom_css.recovery.failed_with_detail|transfer',
+            ),
+        );
+        $this->assertSame(
             'カスタムCSSの復元に失敗しました。バックアップは保持されています。',
             TransferMessage::diagnostic('transfer.custom_css.recovery.failed_with_detail|'),
         );
 
-        $this->assertSame('errors.Unexpected upstream detail', TransferMessage::diagnostic('Unexpected upstream detail'));
-        $this->assertSame('errors.Options', TransferMessage::diagnostic('Options'));
-        $this->assertSame('errors.Errors', TransferMessage::diagnostic('Errors'));
+        $this->assertSame('Unexpected upstream detail', TransferMessage::diagnostic('Unexpected upstream detail'));
+        $this->assertSame('Options', TransferMessage::diagnostic('Options'));
+        $this->assertSame('Errors', TransferMessage::diagnostic('Errors'));
     }
 }

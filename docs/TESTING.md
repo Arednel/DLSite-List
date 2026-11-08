@@ -207,7 +207,7 @@ Busy-start coverage checks the wrapped cache lock timeout and ensures unrelated 
 
 #### `tests/Feature/OptionsBulkImportsTest.php`
 
-Covers Bulk Import history, progress/errors, imported-work titles and fallback product codes, 10-run pagination, cleanup availability, and active-run-only polling through the refresh handler. Error/warning coverage verifies known semantic operational errors use the dedicated error catalog in the current UI locale, unknown/raw errors exercise Laravel's missing-key behavior, and specialized raw warnings remain unchanged.
+Covers Bulk Import history, progress/errors, imported-work titles and fallback product codes, 10-run pagination, cleanup availability, and active-run-only polling through the refresh handler. Error/warning coverage verifies known semantic operational errors use the dedicated error catalog in the current UI locale, while unknown/raw errors and specialized raw warnings remain unchanged.
 
 #### `tests/Feature/LibraryTransferTest.php`
 
@@ -500,16 +500,16 @@ Covers server-rendered Add/Edit modal completion fallback output and conditional
 - Covers localized enum/Option display values, ContentTerminology score fallback/preview ordering, locale-independent stored field-layout data, and localized partial-date formatting while keeping stable underlying values.
 
 `tests/Unit/UserFacingDisplayStateTest.php`
-- Covers localized Refetch status/error presentation and Import Review warnings, while stable status/error codes remain unchanged and unknown error values exercise Laravel's missing-key behavior.
+- Covers localized Refetch status/error presentation and Import Review warnings, while stable status/error codes remain unchanged and unknown/raw error and warning values are preserved verbatim.
 
 `tests/Unit/Localization/ErrorLocalizationTest.php`
-- Covers direct Laravel translation of semantic `errors.php` codes, replacement parameters, Laravel missing-key output for legacy/unknown values, cleanup-service error codes, and current-locale rendering of the specialized DLsite image warning format.
+- Covers direct Laravel translation of semantic `errors.php` codes, replacement parameters, `ErrorMessage` localization of known semantic codes with verbatim fallback for unknown/raw values, cleanup-service error codes, and current-locale rendering of the specialized DLsite image warning format.
 
 `tests/Unit/Support/ProductImageMessageTest.php`
-- Covers image-promotion error codes at Transfer and Refetch display boundaries; combined recovery failures translate coded causes and use Laravel missing-key output for unknown causes while preserving the stored diagnostic string.
+- Covers image-promotion error codes at Transfer and Refetch display boundaries; combined recovery failures translate known coded causes and preserve unknown/raw causes verbatim while leaving the stored diagnostic string unchanged.
 
 `tests/Unit/Support/Transfers/TransferMessageTest.php`
-- Covers localized Transfer progress stages, shared `ImportValue` section/field labels (including Site ID), upload failure messages rendered directly by the Blade component, bounded dynamic diagnostic templates, semantic static error codes, Laravel missing-key output for unknown diagnostics, and verbatim entity values, including tag/group names ending in `for export`.
+- Covers localized Transfer progress stages, shared `ImportValue` section/field labels (including Site ID), upload failure messages rendered directly by the Blade component, bounded dynamic diagnostic templates, semantic static error codes, verbatim fallback for unknown/raw diagnostics, and verbatim entity values, including tag/group names ending in `for export`.
 
 `tests/Unit/TraditionalChineseCatalogTest.php`
 - Covers full Traditional Chinese UI/error key coverage, parameter preservation, plural rendering, Laravel missing-key output for unknown diagnostics, and framework validation-message coverage.

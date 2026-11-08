@@ -2,8 +2,8 @@
 
 namespace App\Support\Transfers;
 
+use App\Support\Localization\ErrorMessage;
 use App\Support\ProductImageMessage;
-use Illuminate\Support\Facades\Lang;
 
 final class TransferMessage
 {
@@ -114,10 +114,8 @@ final class TransferMessage
                 return __('errors.transfer.custom_css.recovery.failed');
             }
 
-            $detailKey = 'errors.' . $detail;
-
             return __('errors.transfer.custom_css.recovery.failed_with_detail', [
-                'detail' => Lang::has($detailKey) ? __($detailKey) : $detail,
+                'detail' => ErrorMessage::display($detail),
             ]);
         }
 

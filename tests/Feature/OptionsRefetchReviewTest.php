@@ -52,7 +52,7 @@ class OptionsRefetchReviewTest extends TestCase
 
         Livewire::test(OptionsRefetchReview::class, ['run' => $run->fresh()])
             ->assertSee('Errors (2)')
-            ->assertSee("{$result->product_id}: errors.Refetch failed.")
+            ->assertSee("{$result->product_id}: Refetch failed.")
             ->assertSee("{$result->product_id}: Sample image download failed after five attempts: sample_8.jpg")
             ->assertSee('<details class="review-errors">', false)
             ->assertHasNoErrors();
@@ -74,7 +74,7 @@ class OptionsRefetchReviewTest extends TestCase
         ])->save();
 
         Livewire::test(OptionsRefetchReview::class, ['run' => $run->fresh()])
-            ->assertSee("{$result->product_id}: errors.Refetch failed.")
+            ->assertSee("{$result->product_id}: Refetch failed.")
             ->assertSee("{$result->product_id}: 5回試行してもサンプル画像をダウンロードできませんでした: sample_8.jpg")
             ->assertHasNoErrors();
     }

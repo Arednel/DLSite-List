@@ -1001,7 +1001,6 @@ class ProductControllerTest extends TestCase
         $message = $invalidManifest
             ? 'DLsite work fetch returned an invalid manifest.'
             : 'Temporary network failure';
-        $displayMessage = $invalidManifest ? $message : 'errors.' . $message;
         Process::fake([
             '*' => $invalidManifest
                 ? Process::result(output: 'invalid manifest')
@@ -1017,14 +1016,14 @@ class ProductControllerTest extends TestCase
                 'return_url' => 'http://localhost/tags',
             ])
             ->assertRedirect($createUrl)
-            ->assertSessionHasErrors(['id' => $displayMessage])
+            ->assertSessionHasErrors(['id' => $message])
             ->assertSessionHasInput('id', 'RJ000000406')
             ->assertSessionHasInput('notes', 'Keep my entered notes')
             ->assertSessionHasInput('return_url', 'http://localhost/tags');
 
         $this->get($createUrl)
             ->assertOk()
-            ->assertSee($displayMessage)
+            ->assertSee($message)
             ->assertSee('Keep my entered notes')
             ->assertSee('name="return_url" value="http://localhost/tags"', false);
 
@@ -1042,7 +1041,7 @@ class ProductControllerTest extends TestCase
         ];
     }
 
-    public function test_create_translates_error_codes_and_uses_laravel_missing_keys_for_unknown_scraper_errors(): void
+    public function test_create_translates_error_codes_and_preserves_unknown_scraper_errors(): void
     {
         Option::setUiLanguage(UiLanguage::Japanese);
 
@@ -1075,7 +1074,7 @@ class ProductControllerTest extends TestCase
 
             $this->from('/create')
                 ->post('/store', ['id' => 'RJ000000405'])
-                ->assertSessionHasErrors(['id' => 'errors.' . $stderr]);
+                ->assertSessionHasErrors(['id' => $stderr]);
         }
     }
 

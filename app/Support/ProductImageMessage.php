@@ -2,7 +2,7 @@
 
 namespace App\Support;
 
-use Illuminate\Support\Facades\Lang;
+use App\Support\Localization\ErrorMessage;
 
 final class ProductImageMessage
 {
@@ -12,21 +12,20 @@ final class ProductImageMessage
             return $message;
         }
 
-        $recoveryError = 'image.recovery.failed_with_detail|';
+        $prefix = 'image.recovery.failed_with_detail|';
 
-        if (str_starts_with($message, $recoveryError)) {
-            $detail = trim(substr($message, strlen($recoveryError)));
-            if ($detail === '') {
-                return __('errors.image.recovery.failed');
-            }
-
-            $detailKey = 'errors.' . $detail;
-
-            return __('errors.image.recovery.failed_with_detail', [
-                'detail' => Lang::has($detailKey) ? __($detailKey) : $detail,
-            ]);
+        if (! str_starts_with($message, $prefix)) {
+            return ErrorMessage::display($message);
         }
 
-        return __('errors.' . $message);
+        $detail = trim(substr($message, strlen($prefix)));
+
+        if ($detail === '') {
+            return __('errors.image.recovery.failed');
+        }
+
+        return __('errors.image.recovery.failed_with_detail', [
+            'detail' => ErrorMessage::display($detail),
+        ]);
     }
 }

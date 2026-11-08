@@ -72,12 +72,12 @@ class ProductImageMessageTest extends TestCase
         );
     }
 
-    public function test_empty_messages_are_preserved_and_unknown_messages_use_laravel_missing_keys(): void
+    public function test_empty_and_unknown_messages_are_preserved(): void
     {
         App::setLocale(UiLanguage::Japanese->value);
 
         $this->assertNull(ProductImageMessage::display(null));
         $this->assertSame('', ProductImageMessage::display(''));
-        $this->assertSame('errors.Options', ProductImageMessage::display('Options'));
+        $this->assertSame('Options', ProductImageMessage::display('Options'));
     }
 }

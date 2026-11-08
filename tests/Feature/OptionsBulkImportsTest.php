@@ -218,7 +218,7 @@ class OptionsBulkImportsTest extends TestCase
             ->assertSee('地域制限によりアクセスできないDLsite作品')
             ->assertSee('DLsite情報は取得できましたが、次の画像をダウンロードできませんでした: cover.jpg, sample_1.jpg')
             ->assertSee('RJ000000704 -')
-            ->assertSee('errors.Unexpected scraper detail')
+            ->assertSee('Unexpected scraper detail')
             ->assertSee('Unknown warning: <upstream detail>')
             ->assertDontSee('Unknown warning: <upstream detail>', false);
 
@@ -232,7 +232,7 @@ class OptionsBulkImportsTest extends TestCase
             ->assertSee('Unknown warning: <upstream detail>');
     }
 
-    public function test_unknown_bulk_import_errors_use_laravel_missing_keys_while_warnings_stay_verbatim(): void
+    public function test_unknown_bulk_import_errors_and_warnings_stay_verbatim(): void
     {
         Option::setUiLanguage(UiLanguage::Japanese);
         app()->setLocale(UiLanguage::Japanese->value);
@@ -244,9 +244,9 @@ class OptionsBulkImportsTest extends TestCase
             'warning' => 'Site ID',
         ]);
 
-        $this->assertSame('errors.Errors', $run->displayError());
+        $this->assertSame('Errors', $run->displayError());
         $this->assertSame('DLsite作品データの取得で無効なJSONが返されました。', $knownRun->displayError());
-        $this->assertSame('errors.Apply All', $item->displayError());
+        $this->assertSame('Apply All', $item->displayError());
         $this->assertSame('Site ID', $item->displayWarning());
     }
 

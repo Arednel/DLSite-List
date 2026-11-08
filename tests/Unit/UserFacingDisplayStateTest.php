@@ -24,7 +24,7 @@ class UserFacingDisplayStateTest extends TestCase
         }
     }
 
-    public function test_import_review_warnings_use_current_locale_and_laravel_missing_key_output(): void
+    public function test_import_review_warnings_use_current_locale_and_preserve_unknown_messages(): void
     {
         $item = new LibraryImportItem(['metadata' => [
             'warning' => 'transfer.import.images_incomplete',
@@ -38,7 +38,7 @@ class UserFacingDisplayStateTest extends TestCase
 
         $item->metadata = ['warning' => 'External warning: Options'];
         App::setLocale(UiLanguage::Japanese->value);
-        $this->assertSame('errors.External warning: Options', $item->displayWarning());
+        $this->assertSame('External warning: Options', $item->displayWarning());
 
         foreach ([[], ['warning' => ''], ['warning' => ['not a string']]] as $metadata) {
             $item->metadata = $metadata;
@@ -86,7 +86,7 @@ class UserFacingDisplayStateTest extends TestCase
         }
     }
 
-    public function test_known_error_codes_are_localized_and_unknown_errors_use_laravel_missing_key_output(): void
+    public function test_known_error_codes_are_localized_and_unknown_errors_are_preserved(): void
     {
         App::setLocale(UiLanguage::Japanese->value);
 
@@ -109,7 +109,7 @@ class UserFacingDisplayStateTest extends TestCase
         foreach (['validation', 'Unexpected scraper detail', 'Errors'] as $message) {
             $result = new RefetchWorkResult(['error' => $message]);
 
-            $this->assertSame('errors.' . $message, $result->displayError());
+            $this->assertSame($message, $result->displayError());
         }
 
         $emptyResult = new RefetchWorkResult(['error' => null]);

@@ -3,6 +3,7 @@
 namespace Tests\Unit\Localization;
 
 use App\Enums\UiLanguage;
+use App\Support\Localization\ErrorMessage;
 use App\Support\DLSite\DLSiteFetchResult;
 use Illuminate\Support\Facades\App;
 use Tests\TestCase;
@@ -63,11 +64,15 @@ class ErrorLocalizationTest extends TestCase
         );
     }
 
-    public function test_missing_error_codes_use_laravel_missing_key_output(): void
+    public function test_error_display_localizes_known_codes_and_preserves_unknown_messages(): void
     {
         App::setLocale(UiLanguage::Japanese->value);
 
-        $this->assertSame('errors.Legacy stored error.', __('errors.Legacy stored error.'));
-        $this->assertSame('errors.RAW_DIAGNOSTIC_TOKEN', __('errors.RAW_DIAGNOSTIC_TOKEN'));
+        $this->assertSame('転送ワーカーが停止しました。', ErrorMessage::display('transfer.worker_stopped'));
+        $this->assertSame('Legacy stored error.', ErrorMessage::display('Legacy stored error.'));
+        $this->assertSame('RAW_DIAGNOSTIC_TOKEN', ErrorMessage::display('RAW_DIAGNOSTIC_TOKEN'));
+        $this->assertSame('transfer', ErrorMessage::display('transfer'));
+        $this->assertNull(ErrorMessage::display(null));
+        $this->assertSame('', ErrorMessage::display(''));
     }
 }
