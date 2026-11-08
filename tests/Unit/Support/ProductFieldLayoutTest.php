@@ -67,6 +67,7 @@ class ProductFieldLayoutTest extends TestCase
                 ProductField::Priority,
                 ProductField::CreatedAt,
                 ProductField::UpdatedAt,
+                ProductField::Edit,
             ],
             ProductFieldLayout::SURFACE_EDIT => [
                 ProductField::Progress,
@@ -206,6 +207,20 @@ class ProductFieldLayoutTest extends TestCase
         $this->assertTrue(ProductField::Rating->isAvailableOn(ProductFieldLayout::SURFACE_INDEX));
         $this->assertFalse(ProductField::Rating->isAvailableOn(ProductFieldLayout::SURFACE_EDIT));
         $this->assertTrue(ProductField::Rating->isHiddenByDefault(ProductFieldLayout::SURFACE_INDEX));
+        $this->assertTrue(ProductField::Edit->isAvailableOn(ProductFieldLayout::SURFACE_INDEX));
+        $this->assertFalse(ProductField::Edit->isHiddenByDefault(ProductFieldLayout::SURFACE_INDEX));
+        $this->assertFalse(ProductField::Edit->isVisibilityLocked(ProductFieldLayout::SURFACE_INDEX));
+        foreach (
+            [
+                ProductFieldLayout::SURFACE_EDIT,
+                ProductFieldLayout::SURFACE_FILTER,
+                ProductFieldLayout::SURFACE_QUICK_ADD,
+                ProductFieldLayout::SURFACE_BULK_IMPORT,
+                ProductFieldLayout::SURFACE_CUSTOM_QUICK_ADD,
+            ] as $surface
+        ) {
+            $this->assertFalse(ProductField::Edit->isAvailableOn($surface));
+        }
         foreach (
             [
                 ProductFieldLayout::SURFACE_INDEX,
@@ -310,6 +325,7 @@ class ProductFieldLayoutTest extends TestCase
             ProductField::Priority->value,
             ProductField::CreatedAt->value,
             ProductField::UpdatedAt->value,
+            ProductField::Edit->value,
         ], collect($layout)->pluck('field')->all());
 
         $this->assertSame([
@@ -320,6 +336,7 @@ class ProductFieldLayoutTest extends TestCase
             ProductField::AgeCategory->value,
             ProductField::Progress->value,
             ProductField::Tags->value,
+            ProductField::Edit->value,
         ], ProductFieldLayout::visibleFields($layout));
 
         $this->assertTrue($layout[1]['visibility_locked']);
@@ -327,6 +344,19 @@ class ProductFieldLayoutTest extends TestCase
         $this->assertTrue(ProductFieldLayout::indexTitleNotesVisible($layout));
         $this->assertArrayNotHasKey('note', collect($layout)->firstWhere('field', ProductField::Notes->value));
         $this->assertArrayNotHasKey('note', collect($layout)->firstWhere('field', ProductField::MakerNames->value));
+        $this->assertSame(ProductField::Edit->value, $layout[array_key_last($layout)]['field']);
+        $this->assertTrue($layout[array_key_last($layout)]['visible']);
+    }
+
+    public function test_index_layout_appends_missing_edit_column_visible_at_the_end(): void
+    {
+        $layout = ProductFieldLayout::normalize([
+            ['field' => ProductField::Title->value, 'visible' => true],
+            ['field' => ProductField::Score->value, 'visible' => false],
+        ], ProductFieldLayout::SURFACE_INDEX);
+
+        $this->assertSame(ProductField::Edit->value, $layout[array_key_last($layout)]['field']);
+        $this->assertTrue($layout[array_key_last($layout)]['visible']);
     }
 
     public function test_index_title_notes_visibility_is_normalized_and_only_applies_to_index_title(): void
@@ -681,6 +711,7 @@ class ProductFieldLayoutTest extends TestCase
             ['field' => ProductField::StartDate->value, 'label' => 'Start Date', 'visible' => true],
             ['field' => ProductField::CreatedAt->value, 'label' => 'Added to the site Date', 'visible' => true],
             ['field' => ProductField::UpdatedAt->value, 'label' => 'Updated Date', 'visible' => true],
+            ['field' => ProductField::Edit->value, 'label' => 'Edit', 'visible' => true],
             ['field' => 'not_real', 'label' => 'Broken', 'visible' => true],
         ]);
 
@@ -725,6 +756,13 @@ class ProductFieldLayoutTest extends TestCase
                 'label' => 'Updated Date',
                 'class' => 'updated-at',
                 'sort_field' => 'updated_at',
+                'contributor_role' => null,
+            ],
+            [
+                'field' => ProductField::Edit->value,
+                'label' => 'Edit',
+                'class' => 'edit',
+                'sort_field' => null,
                 'contributor_role' => null,
             ],
         ], $columns);

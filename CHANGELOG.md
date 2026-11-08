@@ -4,9 +4,15 @@ All notable changes to this project are documented in this file.
 
 ## Unreleased
 
+### Added
+
+* Added the Edit action to Field Layouts so it can be reordered or hidden.
+
 ### Changed
 
 * Reworked application error localization so user-facing errors are translated more consistently across the application.
+* Changed the mobile Edit column to use only half of the row instead of the full row.
+* Simplified Index column rendering and styling by relying on existing field classes.
 
 ### Fixed
 

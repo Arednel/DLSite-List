@@ -565,7 +565,9 @@ class OptionMetadataSettingsTest extends TestCase
         $this->assertFalse(collect($defaults->indexSortFieldLayout)->firstWhere('field', ProductIndexSortField::Brand->value)['visible']);
         $this->assertFalse(collect($defaults->indexSortFieldLayout)->firstWhere('field', ProductIndexSortField::MakerNames->value)['visible']);
         $this->assertSame(ProductField::Image->value, $defaults->indexColumns[0]['field']);
+        $this->assertSame(ProductField::Edit->value, $defaults->indexColumns[array_key_last($defaults->indexColumns)]['field']);
         $this->assertContains(ProductField::Title->value, $defaults->visibleIndexFields);
+        $this->assertContains(ProductField::Edit->value, $defaults->visibleIndexFields);
         $this->assertTrue($defaults->titleNotesVisible);
         $this->assertSame(ProductField::Title->value, $defaults->filterFields[0]['field']);
         $this->assertFalse($defaults->indexGroupOrderingEnabled);

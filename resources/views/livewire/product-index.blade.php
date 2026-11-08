@@ -81,23 +81,22 @@
                             <th class="header-title status"></th>
                             <th class="header-title number"></th>
                             @foreach ($indexColumns as $column)
-                                <th @class([
-                                    'header-title',
-                                    'configurable' => !in_array($column['field'], ['title', 'image'], true),
-                                    $column['class'],
-                                ]) data-column="{{ $column['label'] }}">
-                                    @if ($column['sort_field'])
-                                        <button type="button" class="table-sort-button"
-                                            wire:click="sortByHeader('{{ $column['sort_field'] }}')">
+                                <th class="header-title {{ $column['class'] }}" data-column="{{ $column['label'] }}"
+                                    scope="col"
+                                    @if ($column['field'] === 'edit') aria-label="{{ $column['label'] }}" @endif>
+                                    @if ($column['field'] !== 'edit')
+                                        @if ($column['sort_field'])
+                                            <button type="button" class="table-sort-button"
+                                                wire:click="sortByHeader('{{ $column['sort_field'] }}')">
+                                                {{ $column['label'] }}
+                                                <span class="sort-icon">{{ $sortIcons[$column['sort_field']] }}</span>
+                                            </button>
+                                        @else
                                             {{ $column['label'] }}
-                                            <span class="sort-icon">{{ $sortIcons[$column['sort_field']] }}</span>
-                                        </button>
-                                    @else
-                                        {{ $column['label'] }}
+                                        @endif
                                     @endif
                                 </th>
                             @endforeach
-                            <th class="header-title actions"></th>
                         </tr>
                     </tbody>
 
@@ -120,7 +119,6 @@
                                 @foreach ($indexColumns as $column)
                                     <td @class([
                                         'data',
-                                        'configurable' => !in_array($column['field'], ['title', 'image'], true),
                                         'clearfix' => $column['field'] === 'title',
                                         $column['class'],
                                     ]) data-label="{{ $column['label'] }}">
@@ -460,21 +458,22 @@
             @endif
             </div>
         @break
+
+        @case('edit')
+            <div class="row-actions">
+                <span class="edit-action">
+                    <a href="{{ $product->editUrl }}" class="product-edit-link" data-work-form-modal-link
+                        data-work-form-modal-title="{{ __('Edit Details') }}">{{ __('Edit') }}</a>
+                </span>
+            </div>
+        @break
     @endswitch
     </td>
     @endforeach
-    <td class="data actions" data-label="{{ __('Actions') }}">
-        <div class="row-actions">
-            <span class="edit-action">
-                <a href="{{ $product->editUrl }}" class="product-edit-link" data-work-form-modal-link
-                    data-work-form-modal-title="{{ __('Edit Details') }}">{{ __('Edit') }}</a>
-            </span>
-        </div>
-    </td>
     </tr>
     @empty
         <tr class="list-table-empty-row">
-            <td class="list-table-empty" colspan="{{ 3 + count($indexColumns) }}">
+            <td class="list-table-empty" colspan="{{ 2 + count($indexColumns) }}">
                 {{ __('Nothing found for the current filters.') }}
             </td>
         </tr>

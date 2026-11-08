@@ -160,6 +160,7 @@ class ProductFieldLayoutSettings extends Component
             ['index', 'notes_below_title'] => __('Shows each work\'s Notes beneath its title on the Index.'),
             ['index', ProductField::Notes->value] => __('Notes are already shown inside Title; enable this for a separate column.'),
             ['index', ProductField::MakerNames->value] => __('Combines the separate Circle, Publisher, and Brand fields into one Index column.'),
+            ['index', ProductField::Edit->value] => __('Shows the Edit action for each work.'),
             ['filter', ProductField::MakerNames->value] => __('Searches Circle, Publisher, and Brand together.'),
             ['sort', ProductIndexSortField::MakerNames->value] => __('Sorts by the first available name: Circle, then Publisher, then Brand.'),
             ['index', ProductField::UpdatedAt->value] => __('Shows when the work was last updated in your library.'),

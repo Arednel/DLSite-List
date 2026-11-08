@@ -399,7 +399,7 @@ Covers metadata-backfill behavior when canonical work JSON is missing or invalid
 #### `tests/Feature/ProductMetadataSettingsTest.php`
 
 Covers metadata-related UI settings:
-- field layouts, including Index column-width modes, localized width and width-mode validation errors from Laravel's validation catalogs in English, Japanese, and Traditional Chinese, combined validation errors and correction, collapsed section rendering, and sortable-control interaction isolation
+- field layouts, including the reorderable/hideable Index Edit action column, Index column-width modes, localized width and width-mode validation errors from Laravel's validation catalogs in English, Japanese, and Traditional Chinese, combined validation errors and correction, collapsed section rendering, and sortable-control interaction isolation
 - Series Metadata
 - DLsite Links, including the age-based fallback, default-on announcement toggle, save/reset behavior, and tooltip
 - Display tab composition and manual section order, including Tag Library
@@ -565,7 +565,7 @@ Covers server-rendered Add/Edit modal completion fallback output and conditional
 - Covers normalized contributor identity, maker id, role-specific sync, cross-role isolation, and Updated Date touching only on effective change.
 
 `tests/Unit/Support/ProductFieldLayoutTest.php`
-- Covers surface defaults/availability (including combined Rating, separate DLsite Rating, independent Publisher/Brand fields, and virtual Index-only combined fields), localized fetched-tag labels, row normalization without stored help notes, required locks, editability, and prepared layout metadata.
+- Covers surface defaults/availability (including combined Rating, separate DLsite Rating, independent Publisher/Brand fields, virtual Index-only combined fields, and the Index-only Edit action), localized fetched-tag labels, row normalization without stored help notes, required locks, editability, and prepared layout metadata.
 
 `tests/Unit/Support/ProductGenreSyncTest.php`
 - Covers fetched language buckets, custom/fetched preservation/precedence, recursive ancestor expansion, and Updated Date touching only on effective change.

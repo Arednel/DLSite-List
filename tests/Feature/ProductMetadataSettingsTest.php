@@ -683,6 +683,7 @@ class ProductMetadataSettingsTest extends TestCase
             ->assertSet('indexFields.created_at.visible', false)
             ->assertSet('indexFields.updated_at.visible', false)
             ->assertSet('indexFields.product_format.visible', false)
+            ->assertSet('indexFields.edit.visible', true)
             ->assertSet('filterFields.product_format.visible', false)
             ->assertSet('sortFields.product_format.visible', false)
             ->assertSet('editFields.product_format.visible', false)
@@ -713,6 +714,7 @@ class ProductMetadataSettingsTest extends TestCase
             ['index', ProductField::Score->value, 'Shows your score/rating. Your Score is always entered and stored from 1 to 10.'],
             ['index', ProductField::DLSiteRating->value, 'Shows the DLsite work rating.'],
             ['index', ProductField::MakerNames->value, 'Combines the separate Circle, Publisher, and Brand fields into one Index column.'],
+            ['index', ProductField::Edit->value, 'Shows the Edit action for each work.'],
             ['filter', ProductField::MakerNames->value, 'Searches Circle, Publisher, and Brand together.'],
             ['sort', ProductField::MakerNames->value, 'Sorts by the first available name: Circle, then Publisher, then Brand.'],
             ['index', ProductField::UpdatedAt->value, 'Shows when the work was last updated in your library.'],
@@ -727,6 +729,34 @@ class ProductMetadataSettingsTest extends TestCase
         $this->assertNull($component->fieldLayoutHelp('edit', ProductField::MakerNames->value));
         $this->assertNull($component->fieldLayoutHelp('filter', ProductField::Notes->value));
         $this->assertNull($component->fieldLayoutHelp('index', 'unknown'));
+
+        $this->assertStringContainsString(
+            'title="Shows the Edit action for each work."',
+            Livewire::test(ProductFieldLayoutSettings::class)->html(),
+        );
+    }
+
+    public function test_index_edit_column_defaults_visible_last_and_can_be_hidden_and_reordered(): void
+    {
+        $component = Livewire::test(ProductFieldLayoutSettings::class);
+        $order = $component->get('indexOrder');
+        $editIndex = array_search(ProductField::Edit->value, $order, true);
+
+        $this->assertSame(count($order) - 1, $editIndex);
+
+        $component
+            ->assertSet('indexFields.edit.visible', true)
+            ->set('indexFields.edit.visible', false)
+            ->call('move', 'indexOrder', $editIndex, -1)
+            ->call('saveLayout', 'index')
+            ->assertHasNoErrors()
+            ->assertSet('savedLayout', 'index');
+
+        $layout = Option::indexFieldLayout();
+        $storedEditIndex = array_search(ProductField::Edit->value, array_column($layout, 'field'), true);
+
+        $this->assertSame($editIndex - 1, $storedEditIndex);
+        $this->assertFalse($this->layoutRow($layout, ProductField::Edit)['visible']);
     }
 
     public function test_field_layout_component_saves_notes_below_title_separately(): void

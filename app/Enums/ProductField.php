@@ -42,6 +42,7 @@ enum ProductField: string
     case Priority = 'priority';
     case CreatedAt = 'created_at';
     case UpdatedAt = 'updated_at';
+    case Edit = 'edit';
 
     public function label(): string
     {
@@ -79,6 +80,7 @@ enum ProductField: string
             self::Priority => __('Priority'),
             self::CreatedAt => __('Added to the site Date'),
             self::UpdatedAt => __('Updated Date'),
+            self::Edit => __('Edit'),
         };
     }
 
@@ -379,6 +381,7 @@ enum ProductField: string
                     self::Priority,
                     self::CreatedAt,
                     self::UpdatedAt,
+                    self::Edit,
                 ],
                 'visibility_locked' => [self::Title],
                 'hidden_by_default' => [

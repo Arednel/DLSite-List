@@ -333,7 +333,7 @@ a {
     width: 120px
 }
 
-.list-table .list-table-header .header-title.configurable {
+.list-table .list-table-header .header-title:not(.status, .number, .title, .image) {
     padding-inline: 6px;
 }
 
@@ -341,7 +341,7 @@ a {
     min-width: 220px;
 }
 
-.list-table .list-table-header .header-title.actions {
+.list-table .list-table-header .header-title.edit {
     width: 65px
 }
 
@@ -463,13 +463,9 @@ a {
     color: color-mix(in srgb, var(--tag-text-color) 75%, #FFFFFF) !important;
 }
 
-.list-table .list-table-data .data.configurable {
+.list-table .list-table-data .data:not(.status, .number, .title, .image) {
     padding-inline: 6px;
     word-wrap: break-word;
-}
-
-.list-table .list-table-data .data.actions {
-    padding-inline: 6px;
 }
 
 .list-table .list-table-data .data.description {
@@ -1308,8 +1304,7 @@ body.filter-modal-open {
             .announce-date,
             .created-at,
             .updated-at,
-            .tags,
-            .actions)) {
+            .tags)) {
         grid-column: 1 / -1;
     }
 
@@ -1325,12 +1320,12 @@ body.filter-modal-open {
         word-break: break-word;
     }
 
-    .list-table .list-table-data .data.configurable {
+    .list-table .list-table-data .data:not(.status, .number, .title, .image) {
         grid-column: span 2;
     }
 
-    .list-table .list-table-data .data.image+.data.title,
-    .list-table .list-table-data .data.image+.data.configurable:not(:is(.description,
+    .list-table .list-table-data .data.image+.data:not(:is(.image,
+            .description,
             .notes,
             .start-date,
             .end-date,
@@ -1352,18 +1347,12 @@ body.filter-modal-open {
         grid-column: 1 / -1;
     }
 
-    .list-table .list-table-data .data.actions {
-        grid-area: auto;
-        grid-column: 1 / -1;
-        order: 100;
-    }
-
-    .list-table .list-table-data .data.actions .row-actions {
+    .list-table .list-table-data .data.edit .row-actions {
         float: none;
         margin-right: 0;
     }
 
-    .list-table .list-table-data .data.actions .edit-action {
+    .list-table .list-table-data .data.edit .edit-action {
         text-align: left;
     }
 

@@ -1604,6 +1604,29 @@ class ProductIndexLivewireTest extends TestCase
             ->assertSee('REORDERED_IMAGE_TITLE');
     }
 
+    public function test_index_edit_column_can_be_reordered_and_hidden(): void
+    {
+        $this->createProduct(1, ['work_name' => 'EDIT_COLUMN_WORK']);
+
+        Option::setIndexFieldLayout([
+            ['field' => ProductField::Edit->value, 'visible' => true],
+            ['field' => ProductField::Title->value, 'visible' => true],
+        ]);
+
+        Livewire::test(ProductIndex::class)
+            ->assertSeeInOrder(['data-column="Image"', 'data-column="Edit"', 'data-column="Title"'], false)
+            ->assertSee('class="product-edit-link"', false);
+
+        Option::setIndexFieldLayout([
+            ['field' => ProductField::Title->value, 'visible' => true],
+            ['field' => ProductField::Edit->value, 'visible' => false],
+        ]);
+
+        Livewire::test(ProductIndex::class)
+            ->assertDontSee('data-column="Edit"', false)
+            ->assertDontSee('class="product-edit-link"', false);
+    }
+
     public function test_optional_index_columns_render_and_sort_from_visible_headers(): void
     {
         Option::setIndexPerPage(Option::INDEX_PER_PAGE_UNLIMITED);

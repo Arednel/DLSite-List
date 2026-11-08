@@ -666,6 +666,7 @@ Fetched Tags are readonly by default. If made editable, editing changes only the
 - `priority` - hidden
 - `created_at` - hidden
 - `updated_at` - hidden
+- `edit` - displays the Edit action
 
 Index columns also have a width mode:
 - `Default` - use the existing Index CSS
