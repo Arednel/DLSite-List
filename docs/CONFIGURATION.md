@@ -545,9 +545,7 @@ Hiding the Image field does not reset the saved Image Viewer option.
 
 `Set Series from DLsite metadata when no Series is entered in Quick Add` is enabled by default.
 
-When enabled, DLSite Quick Add fills Series only when the user did not enter one:
-1. `japanese.title_name`
-2. fallback `english.title_name`
+When enabled, DLSite Quick Add fills Series only when the user did not enter one, using `japanese.title_name`.
 
 It does not apply to Custom Quick Add or Refetch.
 

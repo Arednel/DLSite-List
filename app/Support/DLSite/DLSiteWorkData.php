@@ -37,7 +37,7 @@ final readonly class DLSiteWorkData
         $workData = self::normalizePayload($workData);
         $japanese = is_array($workData['japanese'] ?? null) ? $workData['japanese'] : [];
         $english = is_array($workData['english'] ?? null) ? $workData['english'] : [];
-        $productId = self::text($japanese['product_id'] ?? $english['product_id'] ?? $fallbackProductId);
+        $productId = self::text($japanese['product_id'] ?? null) ?? self::text($fallbackProductId);
 
         if ($productId === null) {
             throw new \InvalidArgumentException('dlsite.work.missing_product_id');
@@ -47,8 +47,8 @@ final readonly class DLSiteWorkData
         $englishWorkName = self::text($english['work_name'] ?? null);
         $description = self::text($japanese['description'] ?? null);
         $englishDescription = self::text($english['description'] ?? null);
-        $circle = self::text($japanese['circle'] ?? null) ?? self::text($english['circle'] ?? null);
-        $makerId = self::text($japanese['maker_id'] ?? $english['maker_id'] ?? null);
+        $circle = self::text($japanese['circle'] ?? null);
+        $makerId = self::text($japanese['maker_id'] ?? null);
 
         // The original maker takes precedence even when the translation has an explicit Circle.
         if ($original = self::originalMaker($originalWorkData ?? [])) {
@@ -58,25 +58,25 @@ final readonly class DLSiteWorkData
 
         return new self(
             productId: $productId,
-            siteId: self::text($japanese['site_id'] ?? null) ?? self::text($english['site_id'] ?? null),
+            siteId: self::text($japanese['site_id'] ?? null),
             makerId: $makerId,
             workName: $workName,
             englishWorkName: $englishWorkName === $workName ? null : $englishWorkName,
             ageCategory: self::text(data_get($japanese, 'age_category._name_')),
-            productFormat: self::productFormat($japanese, $english),
-            announceDate: self::text($japanese['announce_date'] ?? $english['announce_date'] ?? null),
+            productFormat: ProductFormat::normalizeStoredValues(self::list($japanese['product_format'] ?? [])),
+            announceDate: self::text($japanese['announce_date'] ?? null),
             circle: $circle,
-            publisher: self::text($japanese['publisher'] ?? null) ?? self::text($english['publisher'] ?? null),
-            brand: self::text($japanese['brand'] ?? null) ?? self::text($english['brand'] ?? null),
+            publisher: self::text($japanese['publisher'] ?? null),
+            brand: self::text($japanese['brand'] ?? null),
             description: $description,
             englishDescription: $englishDescription === $description ? null : $englishDescription,
-            titleName: self::text($japanese['title_name'] ?? $english['title_name'] ?? null),
-            workImage: self::text($japanese['work_image'] ?? $english['work_image'] ?? null),
+            titleName: self::text($japanese['title_name'] ?? null),
+            workImage: self::text($japanese['work_image'] ?? null),
             japaneseGenres: self::list($japanese['genre'] ?? []),
             englishGenres: self::list($english['genre'] ?? []),
             sampleImages: self::list($japanese['sample_images'] ?? []),
-            contributorsByRole: self::contributorsByRole($japanese, $english, $circle),
-            rating: DLSiteRating::fromDistribution($japanese['rate_count_detail'] ?? $english['rate_count_detail'] ?? null),
+            contributorsByRole: self::contributorsByRole($japanese, $circle),
+            rating: DLSiteRating::fromDistribution($japanese['rate_count_detail'] ?? null),
         );
     }
 
@@ -106,45 +106,29 @@ final readonly class DLSiteWorkData
     /** @return array{maker_id: string, maker_name: string}|null */
     public static function originalMaker(array $workData): ?array
     {
-        // Keep the ID and name from the same locale; only RG makers identify circles.
-        foreach (['japanese', 'english'] as $language) {
-            $id = self::text(data_get($workData, "{$language}.maker_id"));
-            $name = self::text(data_get($workData, "{$language}.maker_name"));
-            if ($id !== null && preg_match('/^RG[0-9]+$/D', $id) && $name !== null) {
-                return ['maker_id' => $id, 'maker_name' => $name];
-            }
+        $id = self::text(data_get($workData, 'japanese.maker_id'));
+        $name = self::text(data_get($workData, 'japanese.maker_name'));
+
+        if ($id === null || ! preg_match('/^RG[0-9]+$/D', $id) || $name === null) {
+            return null;
         }
 
-        return null;
+        return ['maker_id' => $id, 'maker_name' => $name];
     }
 
     /**
-     * Add canonical aliases without changing explicitly supplied legacy fields.
+     * Normalize localized Description aliases plus canonical Japanese legacy aliases.
      * Safe to reuse before archive field-presence checks and DTO construction.
      */
     public static function normalizePayload(array $workData): array
     {
-        // Map each locale independently, leaving missing locale data untouched.
+        // Description remains localized, so normalize its aliases in each locale.
         foreach (['japanese', 'english'] as $language) {
             if (! is_array($workData[$language] ?? null)) {
                 continue;
             }
 
             $locale = $workData[$language];
-            // The maker ID prefix determines whether the name is a Circle, Publisher, or Brand.
-            $makerRole = match (substr(self::text($locale['maker_id'] ?? null) ?? '', 0, 2)) {
-                'RG' => 'circle',
-                'BG' => 'publisher',
-                'VG' => 'brand',
-                default => null,
-            };
-
-            // Keep an explicitly supplied older field, even when its value is empty.
-            if ($makerRole !== null && array_key_exists('maker_name', $locale) && ! array_key_exists($makerRole, $locale)) {
-                $locale[$makerRole] = self::text($locale['maker_name']);
-            }
-
-            // Fill a missing description from the first nonempty introduction, in priority order.
             if (! array_key_exists('description', $locale)) {
                 foreach (['intro_masked', 'intro_s', 'intro'] as $field) {
                     if (! array_key_exists($field, $locale)) {
@@ -157,21 +141,42 @@ final readonly class DLSiteWorkData
                 }
             }
 
-            // Use creater for a missing or null Author; preserve an explicitly empty Author list.
-            if (
-                ! isset($locale['author'])
-                && self::list($locale['creater'] ?? []) !== []
-            ) {
-                $locale['author'] = $locale['creater'];
-            }
-
-            // Format supplied dates without adding a date field to partial archive data.
-            if (array_key_exists('announce_date', $locale)) {
-                $locale['announce_date'] = self::announcementDate($locale['announce_date']);
-            }
-
             $workData[$language] = $locale;
         }
+
+        if (! is_array($workData['japanese'] ?? null)) {
+            return $workData;
+        }
+
+        $japanese = $workData['japanese'];
+
+        // Canonical metadata is Japanese-only.
+        $makerRole = match (substr(self::text($japanese['maker_id'] ?? null) ?? '', 0, 2)) {
+            'RG' => 'circle',
+            'BG' => 'publisher',
+            'VG' => 'brand',
+            default => null,
+        };
+
+        // Keep an explicitly supplied older field, even when its value is empty.
+        if ($makerRole !== null && array_key_exists('maker_name', $japanese) && ! array_key_exists($makerRole, $japanese)) {
+            $japanese[$makerRole] = self::text($japanese['maker_name']);
+        }
+
+        // Use creater for a missing or null Author; preserve an explicitly empty Author list.
+        if (
+            ! isset($japanese['author'])
+            && self::list($japanese['creater'] ?? []) !== []
+        ) {
+            $japanese['author'] = $japanese['creater'];
+        }
+
+        // Format supplied dates without adding a date field to partial archive data.
+        if (array_key_exists('announce_date', $japanese)) {
+            $japanese['announce_date'] = self::announcementDate($japanese['announce_date']);
+        }
+
+        $workData['japanese'] = $japanese;
 
         return $workData;
     }
@@ -194,23 +199,9 @@ final readonly class DLSiteWorkData
     }
 
     /**
-     * @return list<string>
-     */
-    private static function productFormat(array $japanese, array $english): array
-    {
-        $japaneseFormats = self::list($japanese['product_format'] ?? []);
-
-        return ProductFormat::normalizeStoredValues(
-            $japaneseFormats !== []
-                ? $japaneseFormats
-                : self::list($english['product_format'] ?? []),
-        );
-    }
-
-    /**
      * @return array<string, list<string>>
      */
-    private static function contributorsByRole(array $japanese, array $english, ?string $circle): array
+    private static function contributorsByRole(array $japanese, ?string $circle): array
     {
         $roles = [];
 
@@ -222,7 +213,7 @@ final readonly class DLSiteWorkData
             }
 
             $key = $role->dlsiteKey();
-            $roles[$role->value] = self::list($japanese[$key] ?? $english[$key] ?? []);
+            $roles[$role->value] = self::list($japanese[$key] ?? []);
         }
 
         return $roles;

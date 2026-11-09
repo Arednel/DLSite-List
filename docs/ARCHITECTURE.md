@@ -63,17 +63,17 @@ The main DLsite `Product Format` is stored first; only SND (Voice), MS2 (Music),
 
 `python/DLSiteScraper.py` fetches work data through `dlsite-async`, serializes the returned `Work` fields, adds the calculated `product_format`, and writes the result as JSON. PHP reads this JSON without rewriting it.
 
-`DLSiteWorkData::normalizePayload()` maps the fields used by DLSite List when constructing product metadata:
+`DLSiteWorkData::normalizePayload()` maps the fields used by DLSite List when constructing product metadata. Canonical aliases are normalized only in the Japanese payload, while Description aliases remain locale-specific:
 
-- `maker_name` is used as Circle, Publisher, or Brand when `maker_id` starts with `RG`, `BG`, or `VG` respectively
-- Description uses the first nonempty value from `intro_masked`, `intro_s`, then `intro` when `description` is absent
-- `creater` is used as Author when `author` is absent or `null`; an explicitly empty Author list remains empty
-- a trailing `+09:00` is removed from `announce_date` without otherwise changing the supplied date or time
+- Japanese `maker_name` is used as Circle, Publisher, or Brand when `maker_id` starts with `RG`, `BG`, or `VG` respectively
+- each locale's Description uses the first nonempty value from `intro_masked`, `intro_s`, then `intro` when `description` is absent
+- Japanese `creater` is used as Author when `author` is absent or `null`; an explicitly empty Author list remains empty
+- a trailing `+09:00` is removed from Japanese `announce_date` without otherwise changing the supplied date or time
 - `rate_count_detail` is normalized by `DLSiteRating`; its weighted vote distribution is used once to persist independent two-decimal 5-point and 10-point ratings plus the vote count
 
-Explicit `circle`, `publisher`, `brand`, and `description` fields remain authoritative when present, including explicit empty values. Creator-role metadata that is not exposed by `dlsite-async` is not reconstructed by DLSite List.
+Explicit `circle`, `publisher`, `brand`, and `description` fields remain authoritative when present, including explicit empty values. Canonical DLsite metadata is read from the Japanese payload only; English remains separate localized data for Title, Description, and fetched Tags. Creator-role metadata that is not exposed by `dlsite-async` is not reconstructed by DLSite List.
 
-For translated works, `DLSiteWorkFetcher` identifies the original work from the Japanese `language_editions` entry with `display_order: 1`. If no usable entry is available, it uses the Japanese `translation_info.original_workno` value instead. When the resolved ID differs from the fetched work, the original work is fetched and its `RG` maker metadata is used when available. If no original reference is available, the fetched work is used normally. A missing reference is logged only when Japanese `translation_info.is_original` is explicitly `false`. The original response is validated before use, with Japanese maker metadata preferred over English.
+For translated works, `DLSiteWorkFetcher` identifies the original work from the Japanese `language_editions` entry with `display_order: 1`. If no usable entry is available, it uses the Japanese `translation_info.original_workno` value instead. When the resolved ID differs from the fetched work, the original work is fetched and its `RG` maker metadata is used when available. If no original reference is available, the fetched work is used normally. A missing reference is logged only when Japanese `translation_info.is_original` is explicitly `false`. The original response is validated before use, and only Japanese `RG` maker metadata is used for the original-work override.
 
 The original response is stored beside the translated JSON as `<translation-id> - <original-id>.json`. `DLSiteWorkData` uses the original Maker ID, Circle, and Circle contributor while retaining the remaining metadata from the translated work. If the original work cannot be resolved, the translated work's own metadata is used.
 
@@ -243,7 +243,7 @@ Transfer jobs use persisted checkpoints and operation/validation tokens so retri
 
 Each bounded export planning phase locks and rechecks the run, then commits inventory/part changes, its checkpoint, and the successor job in one database transaction. Cancellation waits for the current batch. Staged JSON paths are deterministic and can be overwritten on retry after a rollback.
 
-Partial work imports include only contributor roles explicitly present in either language document. Omitted roles are preserved; explicitly empty roles can be cleared with Overwrite.
+Portable exports duplicate language-agnostic DLsite metadata into both locale documents. Partial work imports treat the Japanese document as canonical for that metadata: omitted Japanese fields are preserved, while explicitly empty or null Japanese values can be cleared with Overwrite. Title, Description, and fetched Tags keep their locale-specific handling.
 
 `WorkArchiveData` validates raw announcement dates before normalization. It accepts the stored `Y-m-d H:i:s` form and the same value ending in `+09:00`, then applies the same DLsite field aliases used for fetched work data before import field-presence checks. Omitted fields remain omitted, while explicit `null` or empty values keep their normal clear semantics. Exports serialize the values already stored in the library and do not perform original-work lookups.
 
@@ -264,7 +264,7 @@ The portable format excludes database IDs, authentication data, internal storage
 
 For v1 archives, legacy `rj_code` fields in the three portable Add/Import Options layouts and the `rj` Index sort field are normalized to `product_code` before Import Review. 
 Schema v1/v2 archives have no `user_css` scope, so importing them never changes the local `user.css` file. 
-Site ID is imported from `dlsite_list.site_id` when present, otherwise from the Japanese/English JSON `site_id`, without age-based inference.
+Site ID is imported from `dlsite_list.site_id` when present, otherwise from the Japanese JSON `site_id`, without age-based inference.
 
 ### Authentication
 

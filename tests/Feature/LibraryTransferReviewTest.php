@@ -606,8 +606,8 @@ class LibraryTransferReviewTest extends TestCase
         foreach ([['Incoming Voice'], []] as $voices) {
             $export = $this->exported();
             $this->rewriteWorkData($export->parts()->first(), fn() => [
-                'japanese' => ['product_id' => $product->id, 'work_name' => $product->work_name, 'product_format' => null],
-                'english' => ['voice_actor' => $voices, 'product_format' => null],
+                'japanese' => ['product_id' => $product->id, 'work_name' => $product->work_name, 'voice_actor' => $voices],
+                'english' => [],
             ]);
             $run = $this->imported($export);
             $this->assertSame(['voice_actor'], $run->items()->whereIn('category', array_keys($original))->pluck('category')->all());
@@ -617,6 +617,62 @@ class LibraryTransferReviewTest extends TestCase
                 $this->assertSame($names, $saved[$role] ?? []);
             }
         }
+    }
+
+    public function test_english_only_canonical_metadata_is_ignored_in_partial_work_documents(): void
+    {
+        $product = Product::factory()->create([
+            'id' => 'RJ123456',
+            'work_name' => 'Local Title',
+            'site_id' => 'home',
+            'maker_id' => 'RG123',
+            'publisher' => 'Local Publisher',
+            'brand' => 'Local Brand',
+            'series' => 'Local Series',
+            'age_category' => 'R18',
+            'product_format' => ['SND'],
+            'announce_date' => '2026-09-01 00:00:00',
+        ]);
+        app(ProductContributorSync::class)->sync($product, [
+            'circle' => ['Local Circle'],
+            'voice_actor' => ['Local Voice'],
+        ]);
+
+        $export = $this->exported();
+        $this->rewriteWorkData($export->parts()->firstOrFail(), fn() => [
+            'japanese' => [
+                'product_id' => $product->id,
+                'work_name' => $product->work_name,
+            ],
+            'english' => [
+                'site_id' => 'maniax',
+                'maker_id' => 'RG999',
+                'publisher' => 'English Publisher',
+                'brand' => 'English Brand',
+                'title_name' => 'English Series',
+                'age_category' => ['_value_' => 1, '_name_' => 'ALL_AGES'],
+                'product_format' => ['INVALID'],
+                'announce_date' => [],
+                'circle' => 'English Circle',
+                'voice_actor' => ['English Voice'],
+            ],
+        ]);
+
+        $run = $this->imported($export);
+
+        $this->assertSame(0, $run->items()->where('status', 'unavailable')->count());
+        $this->assertSame([], $run->items()->whereIn('category', [
+            'site_id',
+            'maker',
+            'publisher',
+            'brand',
+            'series',
+            'age',
+            'product_format',
+            'announce_date',
+            'circle',
+            'voice_actor',
+        ])->pluck('category')->all());
     }
 
     public function test_relationship_choices_are_individual_but_cycle_failure_is_atomic(): void

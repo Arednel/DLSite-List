@@ -55,7 +55,7 @@ class DLSiteWorkDataTest extends TestCase
         $this->assertSame(['Circle Name'], $data->contributorsByRole[ProductContributorRole::Circle->value]);
     }
 
-    public function test_circle_publisher_and_brand_are_independent_and_use_english_fallback(): void
+    public function test_circle_publisher_and_brand_use_japanese_metadata_only(): void
     {
         $work = DLSiteWorkData::fromArray([
             'japanese' => [
@@ -72,7 +72,7 @@ class DLSiteWorkDataTest extends TestCase
         ]);
 
         $this->assertSame('Circle JP', $work->circle);
-        $this->assertSame('Publisher EN', $work->publisher);
+        $this->assertNull($work->publisher);
         $this->assertSame('Brand JP', $work->brand);
         $this->assertSame(['Circle JP'], $work->contributorsByRole[ProductContributorRole::Circle->value]);
 
@@ -85,7 +85,7 @@ class DLSiteWorkDataTest extends TestCase
         $this->assertSame([], $onlyPublisher->contributorsByRole[ProductContributorRole::Circle->value]);
     }
 
-    public function test_empty_japanese_circle_uses_english_fallback_for_property_and_contributor(): void
+    public function test_empty_japanese_circle_does_not_use_english_fallback(): void
     {
         foreach (['', null] as $japaneseCircle) {
             $work = DLSiteWorkData::fromArray([
@@ -93,66 +93,102 @@ class DLSiteWorkDataTest extends TestCase
                 'english' => ['circle' => 'English Circle'],
             ]);
 
-            $this->assertSame('English Circle', $work->circle);
-            $this->assertSame(['English Circle'], $work->contributorsByRole[ProductContributorRole::Circle->value]);
+            $this->assertNull($work->circle);
+            $this->assertSame([], $work->contributorsByRole[ProductContributorRole::Circle->value]);
         }
     }
 
-    public function test_product_format_uses_english_fallback_and_preserves_order_while_deduplicating(): void
+    public function test_product_format_uses_japanese_metadata_and_preserves_order_while_deduplicating(): void
     {
         $data = DLSiteWorkData::fromArray([
             'japanese' => [
                 'product_id' => 'RJ123456',
-                'product_format' => [],
+                'product_format' => ['MOV', 'MV2', 'SND', 'MOV', 'MS2', 'custom:Audiobook'],
             ],
             'english' => [
-                'product_format' => ['MOV', 'MV2', 'SND', 'MOV', 'MS2', 'custom:Audiobook'],
+                'product_format' => ['SND'],
             ],
         ]);
 
         $this->assertSame(['MOV', 'MV2', 'SND', 'MS2', 'custom:Audiobook'], $data->productFormat);
     }
 
-    public function test_announcement_date_uses_english_fallback(): void
+    public function test_announcement_date_does_not_use_english_fallback(): void
     {
         $data = DLSiteWorkData::fromArray([
             'japanese' => ['product_id' => 'RJ123456', 'announce_date' => null],
             'english' => ['announce_date' => '2026-09-24 00:00:00'],
         ]);
 
-        $this->assertSame('2026-09-24 00:00:00', $data->announceDate);
+        $this->assertNull($data->announceDate);
         $this->assertNull(DLSiteWorkData::fromArray([
             'japanese' => ['product_id' => 'RJ123456', 'announce_date' => null],
         ])->announceDate);
     }
 
-    public function test_site_id_uses_english_fallback_and_remains_null_when_missing(): void
+    public function test_site_id_does_not_use_english_fallback_and_remains_null_when_missing(): void
     {
         $data = DLSiteWorkData::fromArray([
             'japanese' => ['product_id' => 'BJ370220', 'site_id' => ''],
             'english' => ['site_id' => 'comic'],
         ]);
 
-        $this->assertSame('comic', $data->siteId);
+        $this->assertNull($data->siteId);
         $this->assertNull(DLSiteWorkData::fromArray([
             'japanese' => ['product_id' => 'RJ123456'],
         ])->siteId);
     }
 
-    public function test_it_keeps_distinct_english_description(): void
+    public function test_other_canonical_metadata_does_not_use_english_fallback(): void
     {
         $data = DLSiteWorkData::fromArray([
             'japanese' => [
                 'product_id' => 'RJ123456',
-                'description' => 'Japanese Description',
             ],
             'english' => [
-                'description' => 'English Description',
+                'maker_id' => 'RG999',
+                'brand' => 'English Brand',
+                'product_format' => ['MOV'],
+                'title_name' => 'English Series',
+                'work_image' => 'english-cover.jpg',
+                'scenario' => ['English Writer'],
+                'rate_count_detail' => ['5' => 1],
             ],
         ]);
 
+        $this->assertNull($data->makerId);
+        $this->assertNull($data->brand);
+        $this->assertSame([], $data->productFormat);
+        $this->assertNull($data->titleName);
+        $this->assertNull($data->workImage);
+        $this->assertSame([], $data->contributorsByRole[ProductContributorRole::Scenario->value]);
+        $this->assertNull($data->rating->rating5);
+        $this->assertNull($data->rating->rating10);
+        $this->assertNull($data->rating->count);
+    }
+
+    public function test_it_keeps_distinct_english_title_description_and_tags(): void
+    {
+        $data = DLSiteWorkData::fromArray([
+            'japanese' => [
+                'product_id' => 'RJ123456',
+                'work_name' => 'Japanese Title',
+                'description' => 'Japanese Description',
+                'genre' => ['Japanese Tag'],
+            ],
+            'english' => [
+                'work_name' => 'English Title',
+                'description' => 'English Description',
+                'genre' => ['English Tag'],
+            ],
+        ]);
+
+        $this->assertSame('Japanese Title', $data->workName);
+        $this->assertSame('English Title', $data->englishWorkName);
         $this->assertSame('Japanese Description', $data->description);
         $this->assertSame('English Description', $data->englishDescription);
+        $this->assertSame(['Japanese Tag'], $data->japaneseGenres);
+        $this->assertSame(['English Tag'], $data->englishGenres);
     }
 
     public function test_it_uses_fallback_product_id_when_json_does_not_include_one(): void
@@ -160,6 +196,9 @@ class DLSiteWorkDataTest extends TestCase
         $data = DLSiteWorkData::fromArray([
             'japanese' => [
                 'work_name' => 'Fallback Title',
+            ],
+            'english' => [
+                'product_id' => 'RJ111111',
             ],
         ], 'RJ999999');
 
@@ -206,9 +245,14 @@ class DLSiteWorkDataTest extends TestCase
                 'author' => null,
                 'creater' => ['タツタアゲ学長'],
             ],
+            'english' => [
+                'intro_s' => 'English description',
+                'creater' => ['Ignored English creator'],
+            ],
         ]);
 
         $this->assertSame('【狂気的な愛】×4を体験してみない?', $work->description);
+        $this->assertSame('English description', $work->englishDescription);
         $this->assertSame(['タツタアゲ学長'], $work->contributorsByRole['author']);
     }
 
@@ -301,13 +345,13 @@ class DLSiteWorkDataTest extends TestCase
         $this->assertSame(['Translated credit'], $work->contributorsByRole['scenario']);
     }
 
-    public function test_original_maker_uses_a_complete_pair_from_one_locale(): void
+    public function test_original_maker_uses_japanese_metadata_only(): void
     {
         $original = [
             'japanese' => ['maker_id' => 'RG111', 'maker_name' => ''],
             'english' => ['maker_id' => 'RG222', 'maker_name' => 'English circle'],
         ];
-        $this->assertSame(['maker_id' => 'RG222', 'maker_name' => 'English circle'], DLSiteWorkData::originalMaker($original));
+        $this->assertNull(DLSiteWorkData::originalMaker($original));
         $original['japanese']['maker_name'] = 'Japanese circle';
         $this->assertSame(['maker_id' => 'RG111', 'maker_name' => 'Japanese circle'], DLSiteWorkData::originalMaker($original));
 

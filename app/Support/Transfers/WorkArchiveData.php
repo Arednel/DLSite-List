@@ -172,9 +172,7 @@ final class WorkArchiveData
         // Validate raw values before normalization; accept plain dates and the scraper's Japan offset.
         Validator::make($document, [
             ...LibraryWorkValidator::productFormatRules('japanese.product_format'),
-            ...LibraryWorkValidator::productFormatRules('english.product_format'),
             'japanese.announce_date' => ['sometimes', 'nullable', 'string', 'date_format:Y-m-d H:i:s,Y-m-d H:i:s\+09:00'],
-            'english.announce_date' => ['sometimes', 'nullable', 'string', 'date_format:Y-m-d H:i:s,Y-m-d H:i:s\+09:00'],
             'dlsite_list.site_id' => ['sometimes', 'nullable', 'string', 'max:255', 'regex:/\A[a-z][a-z0-9_-]*\z/'],
         ])->validate();
 
@@ -212,30 +210,30 @@ final class WorkArchiveData
         }
 
         $details = [];
-        $details['site_id'] = array_key_exists('site_id', $custom)
-            ? $custom['site_id']
-            : ($document['japanese']['site_id'] ?? $document['english']['site_id'] ?? null);
+        if (array_key_exists('site_id', $custom)) {
+            $details['site_id'] = $custom['site_id'];
+        } elseif (array_key_exists('site_id', $document['japanese'])) {
+            $details['site_id'] = $work->siteId;
+        }
         foreach (['publisher', 'brand'] as $field) {
-            if ($this->hasEither($document, $field)) {
+            if (array_key_exists($field, $document['japanese'])) {
                 $details[$field] = $work->{$field};
             }
         }
-        if ($this->hasEither($document, 'maker_id')) {
-            $details['maker_id'] = $this->localeText($document['japanese'], 'maker_id') ?? $this->localeText($document['english'], 'maker_id');
+        if (array_key_exists('maker_id', $document['japanese'])) {
+            $details['maker_id'] = $work->makerId;
         }
-        if ($this->hasEither($document, 'title_name') || $this->hasEither($document, 'title_name_masked')) {
+        if (array_key_exists('title_name', $document['japanese']) || array_key_exists('title_name_masked', $document['japanese'])) {
             $details['series'] = $this->localeText($document['japanese'], 'title_name_masked')
-                ?? $this->localeText($document['japanese'], 'title_name')
-                ?? $this->localeText($document['english'], 'title_name_masked')
-                ?? $this->localeText($document['english'], 'title_name');
+                ?? $this->localeText($document['japanese'], 'title_name');
         }
-        if ($this->hasEither($document, 'age_category')) {
+        if (array_key_exists('age_category', $document['japanese'])) {
             $details['age_category'] = $work->ageCategory;
         }
-        if ($this->hasEither($document, 'product_format')) {
+        if (array_key_exists('product_format', $document['japanese'])) {
             $details['product_format'] = $work->productFormat === [] ? null : $work->productFormat;
         }
-        if ($this->hasEither($document, 'announce_date')) {
+        if (array_key_exists('announce_date', $document['japanese'])) {
             $details['announce_date'] = $work->announceDate;
         }
         if (array_key_exists('notes', $custom)) {
@@ -252,7 +250,7 @@ final class WorkArchiveData
         }
 
         foreach (ProductContributorRole::cases() as $role) {
-            if ($this->hasEither($document, $role->dlsiteKey())) {
+            if (array_key_exists($role->dlsiteKey(), $document['japanese'])) {
                 $record['contributors'][$role->value] = $work->contributorsByRole[$role->value];
             }
         }
@@ -329,11 +327,6 @@ final class WorkArchiveData
             ProductAgeCategory::R15 => 2,
             ProductAgeCategory::R18 => 3,
         };
-    }
-
-    private function hasEither(array $document, string $key): bool
-    {
-        return array_key_exists($key, $document['japanese']) || array_key_exists($key, $document['english']);
     }
 
     private function localeText(array $locale, string $key): ?string

@@ -40,7 +40,7 @@ class AnnouncementDateMigrationTest extends TestCase
 
         $this->assertTrue(Schema::hasColumn('products', 'announce_date'));
         $this->assertSame('2026-09-24 00:00:00', Product::findOrFail('RJ000000701')->announce_date?->format('Y-m-d H:i:s'));
-        $this->assertSame('2026-09-25 12:30:00', Product::findOrFail('RJ000000702')->announce_date?->format('Y-m-d H:i:s'));
+        $this->assertNull(Product::findOrFail('RJ000000702')->announce_date);
         $this->assertNull(Product::findOrFail('RJ000000703')->announce_date);
         $this->assertNull(Product::findOrFail('RJ000000704')->announce_date);
     }

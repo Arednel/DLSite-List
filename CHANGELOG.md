@@ -13,6 +13,7 @@ All notable changes to this project are documented in this file.
 * Reworked application error localization so user-facing errors are translated more consistently across the application.
 * Changed the mobile Edit column to use only half of the row instead of the full row.
 * Simplified Index column rendering and styling by relying on existing field classes.
+* English DLsite metadata is now used only for Title, Description, and fetched Tags. All other DLsite metadata uses the Japanese API response with no fallback..
 
 ### Fixed
 

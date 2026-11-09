@@ -169,13 +169,13 @@ class LibraryTransferImportTest extends TestCase
     }
 
     #[DataProvider('invalidProductFormats')]
-    public function test_invalid_product_format_is_quarantined_without_blocking_other_work_data(string $locale, mixed $formats): void
+    public function test_invalid_japanese_product_format_is_quarantined_without_blocking_other_work_data(mixed $formats): void
     {
         Product::factory()->create(['id' => 'RJ123456', 'product_format' => ['MOV']]);
         Product::factory()->create(['id' => 'RJ123457', 'product_format' => ['ADV']]);
         $export = $this->exported();
-        $this->rewriteWorkData($export->parts()->firstOrFail(), function (array $work) use ($locale, $formats): array {
-            $work[$locale]['product_format'] = $formats;
+        $this->rewriteWorkData($export->parts()->firstOrFail(), function (array $work) use ($formats): array {
+            $work['japanese']['product_format'] = $formats;
 
             return $work;
         });
@@ -191,21 +191,19 @@ class LibraryTransferImportTest extends TestCase
 
     public static function invalidProductFormats(): iterable
     {
-        foreach (['japanese', 'english'] as $locale) {
-            foreach (
-                [
-                    'unknown code' => ['INVALID'],
-                    'boolean' => false,
-                    'scalar' => 'SOU',
-                    'nested value' => [['unexpected' => 'SOU']],
-                    'non-list' => ['format' => 'SOU'],
-                    'null entry' => [null],
-                    'blank entry' => [' '],
-                    'too many entries' => array_fill(0, 51, 'SOU'),
-                ] as $name => $formats
-            ) {
-                yield "$locale $name" => [$locale, $formats];
-            }
+        foreach (
+            [
+                'unknown code' => ['INVALID'],
+                'boolean' => false,
+                'scalar' => 'SOU',
+                'nested value' => [['unexpected' => 'SOU']],
+                'non-list' => ['format' => 'SOU'],
+                'null entry' => [null],
+                'blank entry' => [' '],
+                'too many entries' => array_fill(0, 51, 'SOU'),
+            ] as $name => $formats
+        ) {
+            yield $name => [$formats];
         }
     }
 
@@ -1171,7 +1169,7 @@ class LibraryTransferImportTest extends TestCase
     }
 
     #[DataProvider('invalidAnnouncementDates')]
-    public function test_malformed_announcement_date_is_quarantined_and_does_not_clear_existing_value(string $locale, mixed $value): void
+    public function test_malformed_japanese_announcement_date_is_quarantined_and_does_not_clear_existing_value(mixed $value): void
     {
         $original = Product::factory()->create([
             'id' => 'RJ123456',
@@ -1179,8 +1177,8 @@ class LibraryTransferImportTest extends TestCase
         ]);
         Product::factory()->create(['id' => 'RJ123457']);
         $export = $this->exported();
-        $this->rewriteWorkData($export->parts()->firstOrFail(), function (array $work) use ($locale, $value): array {
-            $work[$locale]['announce_date'] = $value;
+        $this->rewriteWorkData($export->parts()->firstOrFail(), function (array $work) use ($value): array {
+            $work['japanese']['announce_date'] = $value;
             $work['japanese']['work_name'] = 'Corrupted archive title';
 
             return $work;
@@ -1189,7 +1187,7 @@ class LibraryTransferImportTest extends TestCase
         $run = $this->imported($export);
         $this->assertSame(1, $run->items()->where('status', 'unavailable')->count());
         $error = (string) $run->items()->where('status', 'unavailable')->firstOrFail()->error;
-        $this->assertStringContainsString($locale, $error);
+        $this->assertStringContainsString('japanese', $error);
         $this->assertStringContainsString(is_string($value) ? 'Y-m-d H:i:s' : 'string', $error);
         $this->apply($run);
 
@@ -1200,8 +1198,8 @@ class LibraryTransferImportTest extends TestCase
     public static function invalidAnnouncementDates(): array
     {
         return [
-            'Japanese malformed string' => ['japanese', 'not-a-date'],
-            'English non-string value' => ['english', []],
+            'malformed string' => ['not-a-date'],
+            'non-string value' => [[]],
         ];
     }
 
