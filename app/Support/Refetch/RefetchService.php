@@ -8,6 +8,7 @@ use App\Enums\RefetchCategory;
 use App\Jobs\FetchProductWorkJob;
 use App\Models\Genre;
 use App\Models\Product;
+use App\Models\ProductLocalization;
 use App\Models\RefetchRun;
 use App\Models\RefetchWorkResult;
 use App\Support\DLSite\DLSiteWorkData;
@@ -477,9 +478,39 @@ final class RefetchService
             );
         }
 
+        if ($category === RefetchCategory::Titles) {
+            if ($field === 'work_name') {
+                $title = $change['new'] ?? null;
+
+                if (! is_string($title)) {
+                    return false;
+                }
+
+                $product->work_name = $title;
+
+                if (! $product->isDirty('work_name')) {
+                    return false;
+                }
+
+                $product->save();
+
+                return true;
+            }
+
+            if ($field !== 'work_name_english') {
+                return false;
+            }
+
+            $title = $change['new'] ?? null;
+
+            return $product->syncLocalization(
+                ProductLocalization::LOCALE_ENGLISH,
+                ['title' => blank($title) ? null : $title],
+            );
+        }
+
         return DB::transaction(function () use ($product, $category, $field, $change): bool {
             if (in_array($category, [
-                RefetchCategory::Titles,
                 RefetchCategory::Descriptions,
                 RefetchCategory::Series,
                 RefetchCategory::Age,

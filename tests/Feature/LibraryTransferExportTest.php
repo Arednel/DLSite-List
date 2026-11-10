@@ -158,11 +158,21 @@ class LibraryTransferExportTest extends TestCase
 
     public function test_simple_work_search_preserves_hidden_selections_and_snapshots_exact_product_codes(): void
     {
-        Product::factory()->create(['id' => 'RJ111111', 'work_name' => 'Alpha']);
+        $alpha = Product::factory()->withEnglishTitle('Alpha English')->create(['id' => 'RJ111111', 'work_name' => 'Alpha']);
+        $alpha->localizations()->updateOrCreate(
+            ['locale' => 'zh_TW'],
+            ['title' => 'Future locale transfer token'],
+        );
         Product::factory()->create(['id' => 'RJ222222', 'work_name' => 'Beta']);
         Livewire::test(OptionsTransfers::class)
             ->set('mode', 'selected')
+            ->set('search', 'Future locale transfer')
+            ->assertDontSee('RJ111111')
+            ->assertDontSee('RJ222222')
             ->set('search', 'Alpha')
+            ->assertSee('RJ111111')
+            ->assertDontSee('RJ222222')
+            ->set('search', 'Alpha English')
             ->assertSee('RJ111111')
             ->assertDontSee('RJ222222')
             ->set('selectedIds', ['RJ111111'])

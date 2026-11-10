@@ -107,7 +107,7 @@ class LibraryTransferReviewTest extends TestCase
                 'dlsite_rating_10' => '9.93',
                 'dlsite_rating_count' => 1330,
             ],
-            ['title' => $product->work_name, 'domain' => 'details'],
+            ['title' => $product->titleForLocale('ja'), 'domain' => 'details'],
         );
 
         Livewire::test(OptionsTransferRun::class, ['run' => $run])
@@ -170,13 +170,14 @@ class LibraryTransferReviewTest extends TestCase
 
     public function test_stale_category_blocks_the_selected_work_batch_and_refreshes_its_choices(): void
     {
-        $product = Product::factory()->create(['id' => 'RJ123456', 'work_name' => 'Archive title', 'notes' => 'Archive notes']);
+        $product = Product::factory()->create(['work_name' => 'Archive title', 'id' => 'RJ123456', 'notes' => 'Archive notes']);
         $export = $this->exported();
-        $product->update(['work_name' => 'Local title', 'notes' => null]);
+        $product->update(['notes' => null]);
+        $product->update(['work_name' => 'Local title']);
         $run = $this->imported($export);
         $product->update(['work_name' => 'Newer local title']);
         $this->apply($run);
-        $this->assertSame('Newer local title', $product->fresh()->work_name);
+        $this->assertSame('Newer local title', $product->fresh()->titleForLocale('ja'));
         $this->assertNull($product->fresh()->notes);
         $conflicts = $run->items()->where('status', 'conflict')->count();
         $this->assertGreaterThan(1, $conflicts);
@@ -493,7 +494,7 @@ class LibraryTransferReviewTest extends TestCase
 
     public function test_tab_defaults_preserve_explicit_choices_and_refresh_forces_ignore(): void
     {
-        Product::factory()->create(['id' => 'RJ123456', 'work_name' => 'Before']);
+        Product::factory()->create(['work_name' => 'Before', 'id' => 'RJ123456']);
         $run = $this->imported($this->exported());
         $title = $run->items()->where('metadata->field', 'work_name')->first();
         $english = $run->items()->where('metadata->field', 'work_name_english')->first();
@@ -606,7 +607,7 @@ class LibraryTransferReviewTest extends TestCase
         foreach ([['Incoming Voice'], []] as $voices) {
             $export = $this->exported();
             $this->rewriteWorkData($export->parts()->first(), fn() => [
-                'japanese' => ['product_id' => $product->id, 'work_name' => $product->work_name, 'voice_actor' => $voices],
+                'japanese' => ['product_id' => $product->id, 'work_name' => $product->titleForLocale('ja'), 'voice_actor' => $voices],
                 'english' => [],
             ]);
             $run = $this->imported($export);
@@ -642,7 +643,7 @@ class LibraryTransferReviewTest extends TestCase
         $this->rewriteWorkData($export->parts()->firstOrFail(), fn() => [
             'japanese' => [
                 'product_id' => $product->id,
-                'work_name' => $product->work_name,
+                'work_name' => $product->titleForLocale('ja'),
             ],
             'english' => [
                 'site_id' => 'maniax',

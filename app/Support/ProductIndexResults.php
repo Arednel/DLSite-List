@@ -14,6 +14,7 @@ use App\Enums\RatingVisualStyle;
 use App\Models\Genre;
 use App\Models\Option;
 use App\Models\Product;
+use App\Models\ProductLocalization;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Collection as EloquentCollection;
 use Illuminate\Pagination\LengthAwarePaginator;
@@ -25,7 +26,6 @@ final class ProductIndexResults
     private const BASE_INDEX_COLUMNS = [
         'id',
         'work_name',
-        'work_name_english',
         'notes',
         'progress',
         'announce_date',
@@ -88,7 +88,13 @@ final class ProductIndexResults
             $ratingScale,
             $fetchedLanguage,
         );
-        $query = $this->applySqlSorting($query, $filters->sorts(), $ratingScale);
+        $query = $this->applySqlSorting($query, $filters->sorts(), $ratingScale)
+            ->addSelect([
+                'english_title' => ProductLocalization::query()
+                    ->select('title')
+                    ->whereColumn('product_localizations.product_id', 'products.id')
+                    ->where('locale', ProductLocalization::LOCALE_ENGLISH),
+            ]);
 
         return $perPage === Option::INDEX_PER_PAGE_UNLIMITED
             ? $query->get()

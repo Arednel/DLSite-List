@@ -123,10 +123,9 @@ class IndexImageViewerTest extends TestCase
             'storage/Works/RJ100000002/sample_2.jpg',
             'storage/Works/RJ100000002/sample_3.avif',
         ];
-        $product = Product::factory()->create([
+        $product = Product::factory()->withEnglishTitle('VIEWER_ENABLED_WORK_EN')->create([
             'id' => 'RJ100000002',
             'work_name' => 'VIEWER_ENABLED_WORK',
-            'work_name_english' => 'VIEWER_ENABLED_WORK_EN',
             'work_image' => $paths[0],
             'sample_images' => array_slice($paths, 1),
         ]);

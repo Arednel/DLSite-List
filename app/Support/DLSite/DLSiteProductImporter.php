@@ -7,6 +7,7 @@ use App\Enums\ProductField;
 use App\Enums\ProductFormat;
 use App\Models\Genre;
 use App\Models\Product;
+use App\Models\ProductLocalization;
 use App\Support\ProductContributorSync;
 use App\Support\ProductGenreSync;
 use Closure;
@@ -100,7 +101,6 @@ final class DLSiteProductImporter
                     'site_id' => $workData->siteId,
                     'maker_id' => $makerId,
                     'work_name' => $workName,
-                    'work_name_english' => $englishWorkName,
                     'product_format' => $productFormat === [] ? null : $productFormat,
                     'announce_date' => $workData->announceDate,
                     'age_category' => $this->textOverride(
@@ -149,6 +149,11 @@ final class DLSiteProductImporter
                 throw new DLSiteProductAlreadyExistsException;
             }
 
+            Product::withoutTouching(fn() => $product->syncLocalization(
+                ProductLocalization::LOCALE_ENGLISH,
+                ['title' => blank($englishWorkName) ? null : $englishWorkName],
+            ));
+
             $this->genreSync->sync($product, [
                 Genre::LANGUAGE_JAPANESE => Genre::resolveIdsFromTitles($workData->japaneseGenres),
                 Genre::LANGUAGE_ENGLISH => Genre::resolveIdsFromTitles($workData->englishGenres),
@@ -168,7 +173,7 @@ final class DLSiteProductImporter
         );
     }
 
-    /** @return array{0: string, 1: ?string} */
+    /** @return array{0: ?string, 1: ?string} */
     private function titleValues(DLSiteProductImportInput $input, DLSiteWorkData $workData): array
     {
         $workName = $this->textOverride(

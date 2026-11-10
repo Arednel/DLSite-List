@@ -10,6 +10,7 @@ use App\Livewire\OptionsRefetchReview;
 use App\Models\Genre;
 use App\Models\Option;
 use App\Models\Product;
+use App\Models\ProductLocalization;
 use App\Models\RefetchRun;
 use App\Models\RefetchWorkResult;
 use App\Support\ProductContributorSync;
@@ -676,7 +677,7 @@ class FullRefetchTest extends TestCase
         $changes = $result->changes;
         $changes['titles']['work_name_english'] = [
             'label' => 'English Title',
-            'old' => $product->work_name_english,
+            'old' => $product->titleForLocale('en'),
             'new' => 'New English Title',
         ];
         $result->forceFill(['changes' => $changes])->save();
@@ -690,7 +691,7 @@ class FullRefetchTest extends TestCase
             ->assertNoRedirect();
 
         $this->assertSame('Old Title', $product->refresh()->work_name);
-        $this->assertSame('New English Title', $product->work_name_english);
+        $this->assertSame('New English Title', $product->titleForLocale('en'));
         $result->refresh();
         $this->assertSame('ignore', data_get($result->decisions, 'titles.work_name.action'));
         $this->assertSame('overwrite', data_get($result->decisions, 'titles.work_name_english.action'));
@@ -849,10 +850,8 @@ class FullRefetchTest extends TestCase
     public function test_apply_all_overwrites_fetched_metadata_and_preserves_user_owned_fields_and_custom_tags(): void
     {
         Storage::fake('local');
-        $product = Product::factory()->create([
+        $product = Product::factory()->withTitles('Old JP', 'Old EN')->create([
             'maker_id' => 'RGOLD',
-            'work_name' => 'Old JP',
-            'work_name_english' => 'Old EN',
             'description' => 'Old Description',
             'description_english' => 'Old English Description',
             'series' => 'Old Series',
@@ -976,16 +975,16 @@ class FullRefetchTest extends TestCase
             'series' => 'New Series',
             'age_category' => 'R18',
             'circle' => 'New Circle',
-        ], $product->only([
-            'maker_id',
-            'work_name',
-            'work_name_english',
-            'description',
-            'description_english',
-            'series',
-            'age_category',
-            'circle',
-        ]));
+        ], [
+            'maker_id' => $product->maker_id,
+            'work_name' => $product->work_name,
+            'work_name_english' => $product->titleForLocale(ProductLocalization::LOCALE_ENGLISH),
+            'description' => $product->description,
+            'description_english' => $product->description_english,
+            'series' => $product->series,
+            'age_category' => $product->age_category,
+            'circle' => $product->circle,
+        ]);
         $this->assertSame($userOwnedValues, $product->only($userOwnedFields));
         $this->assertSame(['New JP Tag'], $product->japaneseGenres()->pluck('genres.title')->all());
         $this->assertSame(['New EN Tag'], $product->englishGenres()->pluck('genres.title')->all());

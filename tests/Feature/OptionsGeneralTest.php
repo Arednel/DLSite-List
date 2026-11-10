@@ -14,9 +14,8 @@ class OptionsGeneralTest extends TestCase
 
     public function test_options_page_renders_general_tab_by_default(): void
     {
-        $product = Product::factory()->create([
+        $product = Product::factory()->withEnglishTitle('OPTIONS_EN_TOKEN')->create([
             'work_name' => 'OPTIONS_WORK_TOKEN',
-            'work_name_english' => 'OPTIONS_EN_TOKEN',
         ]);
 
         $this->get('/options')

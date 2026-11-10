@@ -267,7 +267,7 @@ class ProductImageEditorTest extends TestCase
 
         $this->post(route('products.update', $product), [
             'work_name' => $product->work_name,
-            'work_name_english' => $product->work_name_english,
+            'work_name_english' => $product->titleForLocale('en'),
             'work_image' => $cover,
             'sample_images' => ['7' => $sample],
             'sample_image_order' => [
@@ -314,7 +314,7 @@ class ProductImageEditorTest extends TestCase
 
         $this->post(route('products.update', $product), [
             'work_name' => $product->work_name,
-            'work_name_english' => $product->work_name_english,
+            'work_name_english' => $product->titleForLocale('en'),
             'remove_work_image' => '1',
             'sample_image_order' => ['existing:storage/Works/RJ123459/sample_2.jpg'],
         ])->assertRedirect()->assertSessionHasNoErrors();
@@ -343,7 +343,7 @@ class ProductImageEditorTest extends TestCase
 
         $this->post(route('products.update', $product), [
             'work_name' => $product->work_name,
-            'work_name_english' => $product->work_name_english,
+            'work_name_english' => $product->titleForLocale('en'),
             'sample_images_submitted' => '1',
         ])->assertRedirect()->assertSessionHasNoErrors();
         $this->recoverCommittedImagePromotion();
@@ -404,7 +404,7 @@ class ProductImageEditorTest extends TestCase
 
         $this->post(route('products.update', $product), [
             'work_name' => $product->work_name,
-            'work_name_english' => $product->work_name_english,
+            'work_name_english' => $product->titleForLocale('en'),
             'remove_work_image' => '1',
             'work_image' => UploadedFile::fake()->create('attempt.txt', 1, 'text/plain'),
             'sample_images' => [UploadedFile::fake()->create('attempt.txt', 1, 'text/plain')],
@@ -426,7 +426,7 @@ class ProductImageEditorTest extends TestCase
 
         app(LibraryMutationLock::class)->run(fn() => $this->post(route('products.update', $product), [
             'work_name' => $product->work_name,
-            'work_name_english' => $product->work_name_english,
+            'work_name_english' => $product->titleForLocale('en'),
             'sample_image_order' => [],
         ])->assertRedirect()->assertSessionHasNoErrors());
     }
@@ -446,7 +446,7 @@ class ProductImageEditorTest extends TestCase
 
         app(LibraryMutationLock::class)->run(fn() => $this->post(route('products.update', $product), [
             'work_name' => $product->work_name,
-            'work_name_english' => $product->work_name_english,
+            'work_name_english' => $product->titleForLocale('en'),
             'sample_image_order' => [
                 'existing:storage/Works/RJ123467/sample_2.jpg',
                 'existing:storage/Works/RJ123467/sample_1.jpg',
@@ -471,7 +471,7 @@ class ProductImageEditorTest extends TestCase
 
         app(LibraryMutationLock::class)->run(fn() => $this->post(route('products.update', $product), [
             'work_name' => $product->work_name,
-            'work_name_english' => $product->work_name_english,
+            'work_name_english' => $product->titleForLocale('en'),
             'sample_images' => [UploadedFile::fake()->image('sample.jpg')],
         ])->assertSessionHasErrors(['sample_images'])
             ->assertSessionDoesntHaveErrors(['work_image']));
@@ -489,7 +489,7 @@ class ProductImageEditorTest extends TestCase
 
         app(LibraryMutationLock::class)->run(fn() => $this->post(route('products.update', $product), [
             'work_name' => $product->work_name,
-            'work_name_english' => $product->work_name_english,
+            'work_name_english' => $product->titleForLocale('en'),
             'work_image' => UploadedFile::fake()->image('replacement.jpg'),
         ])->assertSessionHasErrors(['work_image'])
             ->assertSessionDoesntHaveErrors(['sample_images']));

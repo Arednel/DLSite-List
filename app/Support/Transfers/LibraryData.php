@@ -6,6 +6,7 @@ use App\Enums\ProductContributorRole;
 use App\Models\Genre;
 use App\Models\GenreGroup;
 use App\Models\Product;
+use App\Models\ProductLocalization;
 use App\Support\DLSite\DLSiteRating;
 use finfo;
 use Illuminate\Support\Arr;
@@ -32,7 +33,9 @@ final class LibraryData
         $attributes['announce_date'] = $product->announce_date?->format('Y-m-d H:i:s');
         $data = ['product_code' => strtoupper($product->id), 'created_at' => $product->created_at?->utc()->toIso8601ZuluString(), 'updated_at' => $product->updated_at?->utc()->toIso8601ZuluString()];
         foreach (self::FIELDS as $category => $fields) {
-            $data[$category] = Arr::only($attributes, $fields);
+            $data[$category] = $category === 'titles'
+                ? $this->titles($product)
+                : Arr::only($attributes, $fields);
         }
         $data['contributors'] = $this->category($product, 'contributors');
         $data['tags'] = $this->category($product, 'tags');
@@ -135,6 +138,15 @@ final class LibraryData
         foreach (GenreGroup::query()->ordered()->with('genres')->lazy(200) as $group) {
             yield ['type' => 'group', 'key' => Genre::titleKey($group->title), 'value' => [...Arr::only($group->attributesToArray(), self::METADATA), 'members' => $group->genres->pluck('title')->all()]];
         }
+    }
+
+    /** @return array{work_name: ?string, work_name_english: ?string} */
+    private function titles(Product $product): array
+    {
+        return [
+            'work_name' => $product->work_name,
+            'work_name_english' => $product->titleForLocale(ProductLocalization::LOCALE_ENGLISH),
+        ];
     }
 
     public static function hash(mixed $value): string

@@ -7,6 +7,7 @@ use App\Enums\UiLanguage;
 use App\Livewire\OptionsRefetchReview;
 use App\Models\Option;
 use App\Models\Product;
+use App\Models\ProductLocalization;
 use App\Models\RefetchRun;
 use App\Models\RefetchWorkResult;
 use App\Support\Refetch\RefetchService;
@@ -396,12 +397,15 @@ class OptionsRefetchReviewTest extends TestCase
     {
         $products = Product::factory()->count($count)->create();
         $products->values()->each(function (Product $product) use ($includeEnglishTitle): void {
-            $product->forceFill([
-                'work_name' => "Old Title for {$product->getKey()}",
-                ...($includeEnglishTitle
-                    ? ['work_name_english' => "Old English Title for {$product->getKey()}"]
-                    : []),
-            ])->save();
+            $product->work_name = "Old Title for {$product->getKey()}";
+            $product->save();
+
+            if ($includeEnglishTitle) {
+                $product->localizations()->updateOrCreate(
+                    ['locale' => ProductLocalization::LOCALE_ENGLISH],
+                    ['title' => "Old English Title for {$product->getKey()}"],
+                );
+            }
         });
 
         $run = app(RefetchService::class)->createRun($products->modelKeys(), false);

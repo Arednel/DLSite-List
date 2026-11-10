@@ -157,23 +157,17 @@ class ProductControllerTest extends TestCase
         $noiseGenre = $this->createGenre("SEARCH_NOISE_GENRE_{$token}", Genre::TYPE_AUTO_GENERATED_ENGLISH);
         $noiseCustomGenre = $this->createGenre("SEARCH_NOISE_CUSTOM_{$token}", Genre::TYPE_CUSTOM);
 
-        $target = Product::factory()->create([
-            'work_name' => $jpToken,
-            'work_name_english' => $enToken,
+        $target = Product::factory()->withTitles($jpToken, $enToken)->create([
             'series' => $seriesToken,
         ]);
         $this->attachGenres($target, [$genre, $customGenre]);
 
-        $hiddenJapanese = Product::factory()->create([
-            'work_name' => "SEARCH_HIDDEN_PRODUCT_{$token}",
-            'work_name_english' => null,
+        $hiddenJapanese = Product::factory()->withTitles("SEARCH_HIDDEN_PRODUCT_{$token}", null)->create([
             'series' => null,
         ]);
         $this->attachGenres($hiddenJapanese, [$hiddenJapaneseGenre]);
 
-        $noise = Product::factory()->create([
-            'work_name' => $noiseToken,
-            'work_name_english' => "SEARCH_NOISE_EN_{$token}",
+        $noise = Product::factory()->withTitles($noiseToken, "SEARCH_NOISE_EN_{$token}")->create([
             'series' => "SEARCH_NOISE_SERIES_{$token}",
         ]);
         $this->attachGenres($noise, [$noiseGenre, $noiseCustomGenre]);
@@ -190,8 +184,8 @@ class ProductControllerTest extends TestCase
 
         $this->get('/?search=' . strtolower($enToken))
             ->assertOk()
-            ->assertSee($target->work_name_english)
-            ->assertDontSee($noise->work_name_english);
+            ->assertSee($target->titleForLocale('en'))
+            ->assertDontSee($noise->titleForLocale('en'));
 
         $this->get('/?search=' . strtolower($seriesToken))
             ->assertOk()
@@ -1119,9 +1113,7 @@ class ProductControllerTest extends TestCase
         $japaneseGenre = $this->createGenre('JP_ONLY_GUIDANCE_TOKEN', Genre::TYPE_AUTO_GENERATED_JAPANESE);
         $englishGenre = $this->createGenre('Sleep Guidance EN', Genre::TYPE_AUTO_GENERATED_ENGLISH);
 
-        $product = Product::factory()->create([
-            'work_name' => 'EDIT_VIEW_NAME_TOKEN',
-            'work_name_english' => 'EDIT_VIEW_EN_TOKEN',
+        $product = Product::factory()->withTitles('EDIT_VIEW_NAME_TOKEN', 'EDIT_VIEW_EN_TOKEN')->create([
             'notes' => 'EDIT_VIEW_NOTES_TOKEN',
         ]);
         $this->attachGenres($product, [$japaneseGenre, $englishGenre]);
@@ -1136,13 +1128,14 @@ class ProductControllerTest extends TestCase
         $this->get("/edit/{$product->id}?{$query}")
             ->assertOk()
             ->assertViewIs('Edit')
-            ->assertViewHas('product', fn(Product $shown): bool => $shown->is($product))
+            ->assertViewHas('product', fn(Product $shown): bool => $shown->is($product) && ! $shown->relationLoaded('localizations'))
+            ->assertViewHas('englishTitle', 'EDIT_VIEW_EN_TOKEN')
             ->assertViewHas('returnQuery', ['progress' => ProductProgress::Listening->value])
             ->assertViewHas('returnFragment', $product->id)
             ->assertSee('action="' . route('products.update', $product) . '"', false)
             ->assertSee($product->id)
             ->assertSee($product->work_name)
-            ->assertSee($product->work_name_english)
+            ->assertSee($product->titleForLocale('en'))
             ->assertDontSee('name="work_image"', false)
             ->assertDontSee('name="sample_images[]"', false)
             ->assertSee('index-image-viewer-dialog', false)
@@ -2144,7 +2137,7 @@ class ProductControllerTest extends TestCase
         $product->load(['japaneseGenres', 'englishGenres', 'customGenres']);
 
         $this->assertSame('SCRAPED_JP_TITLE_TOKEN', $product->work_name);
-        $this->assertSame('SCRAPED_EN_TITLE_TOKEN', $product->work_name_english);
+        $this->assertSame('SCRAPED_EN_TITLE_TOKEN', $product->titleForLocale('en'));
         $this->assertSame('SCRAPED_TITLE_NAME_SERIES', $product->series);
         $this->assertSame(['MOV', 'SND', 'MS2'], $product->product_format);
         $this->assertSame('Completed', $product->progress);
@@ -2609,7 +2602,7 @@ class ProductControllerTest extends TestCase
 
         $this->assertSame("storage/Works/{$workId}/cover.png", $product->work_image);
         $this->assertSame('CUSTOM_STORE_JP_TOKEN', $product->work_name);
-        $this->assertSame('CUSTOM_STORE_EN_TOKEN', $product->work_name_english);
+        $this->assertSame('CUSTOM_STORE_EN_TOKEN', $product->titleForLocale('en'));
         $this->assertSame('R18', $product->age_category);
         $this->assertNull($product->product_format);
         $this->assertSame('CUSTOM_STORE_SERIES_TOKEN', $product->series);
@@ -3120,9 +3113,7 @@ class ProductControllerTest extends TestCase
         $oldCustomGenre = $this->createGenre('OldTag', Genre::TYPE_CUSTOM);
         $existingEnglishGenre = $this->createGenre('Existing English Genre', Genre::TYPE_AUTO_GENERATED_ENGLISH);
 
-        $product = Product::factory()->create([
-            'work_name' => 'UPDATE_OLD_NAME_TOKEN',
-            'work_name_english' => 'UPDATE_OLD_EN_TOKEN',
+        $product = Product::factory()->withTitles('UPDATE_OLD_NAME_TOKEN', 'UPDATE_OLD_EN_TOKEN')->create([
             'progress' => 'Plan to Listen',
             'score' => null,
             'series' => null,
@@ -3165,7 +3156,7 @@ class ProductControllerTest extends TestCase
         $product->refresh()->load(['customGenres', 'englishGenres']);
 
         $this->assertSame('UPDATE_NEW_NAME_TOKEN', $product->work_name);
-        $this->assertSame('UPDATE_NEW_EN_TOKEN', $product->work_name_english);
+        $this->assertSame('UPDATE_NEW_EN_TOKEN', $product->titleForLocale('en'));
         $this->assertSame('Completed', $product->progress);
         $this->assertSame(9, $product->score);
         $this->assertSame('UPDATE_SERIES_TOKEN', $product->series);
@@ -3191,9 +3182,7 @@ class ProductControllerTest extends TestCase
 
     public function test_update_with_semantically_unchanged_dates_does_not_touch_product(): void
     {
-        $product = Product::factory()->create([
-            'work_name' => 'UNCHANGED_DATES_TIMESTAMP_TOKEN',
-            'work_name_english' => null,
+        $product = Product::factory()->withTitles('UNCHANGED_DATES_TIMESTAMP_TOKEN', null)->create([
             'start_date' => ['year' => '2025', 'month' => '03', 'day' => '01'],
             'end_date' => ['year' => '2025', 'month' => '03', 'day' => '07'],
         ]);
@@ -3223,9 +3212,7 @@ class ProductControllerTest extends TestCase
 
     public function test_update_with_an_actual_date_change_touches_product(): void
     {
-        $product = Product::factory()->create([
-            'work_name' => 'CHANGED_DATE_TIMESTAMP_TOKEN',
-            'work_name_english' => null,
+        $product = Product::factory()->withTitles('CHANGED_DATE_TIMESTAMP_TOKEN', null)->create([
             'start_date' => ['year' => '2025', 'month' => '03', 'day' => '01'],
             'end_date' => ['year' => '2025', 'month' => '03', 'day' => '07'],
         ]);
@@ -3493,8 +3480,7 @@ class ProductControllerTest extends TestCase
         Option::setEditFieldLayout([
             ['field' => ProductField::DLSiteRating->value, 'visible' => true, 'editable' => true],
         ]);
-        $product = Product::factory()->create([
-            'work_name_english' => null,
+        $product = Product::factory()->withEnglishTitle(null)->create([
             'dlsite_rating_5' => '4.97',
             'dlsite_rating_10' => '9.93',
             'dlsite_rating_count' => 1000,
@@ -3545,9 +3531,7 @@ class ProductControllerTest extends TestCase
             ['field' => ProductField::Progress->value, 'visible' => true, 'editable' => true],
         ]);
 
-        $product = Product::factory()->create([
-            'work_name' => 'READONLY_UPDATE_JP_TITLE_TOKEN',
-            'work_name_english' => 'READONLY_UPDATE_EN_TITLE_TOKEN',
+        $product = Product::factory()->withTitles('READONLY_UPDATE_JP_TITLE_TOKEN', 'READONLY_UPDATE_EN_TITLE_TOKEN')->create([
             'progress' => 'Plan to Listen',
         ]);
 
@@ -3560,7 +3544,7 @@ class ProductControllerTest extends TestCase
         $product->refresh();
 
         $this->assertSame('READONLY_UPDATE_JP_TITLE_TOKEN', $product->work_name);
-        $this->assertSame('READONLY_UPDATE_EN_TITLE_TOKEN', $product->work_name_english);
+        $this->assertSame('READONLY_UPDATE_EN_TITLE_TOKEN', $product->titleForLocale('en'));
         $this->assertSame('Completed', $product->progress);
     }
 
@@ -3742,17 +3726,18 @@ class ProductControllerTest extends TestCase
             ->assertViewHas('redirectUrl', "/?progress=Completed#{$product->id}")
             ->assertSee('work-form-completed', false);
 
-        $this->assertDatabaseHas('products', [
-            'id' => $product->id,
-            'work_name' => 'MODAL_UPDATE_WORK_CHANGED',
+        $this->assertSame('MODAL_UPDATE_WORK_CHANGED', $product->fresh()->work_name);
+        $this->assertDatabaseMissing('product_localizations', [
+            'product_id' => $product->id,
+            'locale' => 'ja',
         ]);
     }
 
     public function test_update_redirect_drops_search_when_it_would_hide_the_target_work(): void
     {
         $product = Product::factory()->create([
-            'progress' => 'Listening',
             'work_name' => 'REDIRECT_SEARCH_DROPPED_TOKEN',
+            'progress' => 'Listening',
         ]);
 
         $this->post("/update/{$product->id}", [
@@ -3905,14 +3890,12 @@ class ProductControllerTest extends TestCase
     public function test_update_preserves_matching_tag_filter_when_custom_tags_do_not_change(): void
     {
         $visibleTag = $this->createGenre('StableVisibleTag', Genre::TYPE_CUSTOM);
-        $product = Product::factory()->create([
-            'work_name' => 'STABLE_VISIBLE_TAG_FILTER_TOKEN',
-        ]);
+        $product = Product::factory()->create(['work_name' => 'STABLE_VISIBLE_TAG_FILTER_TOKEN']);
         $this->attachGenres($product, [$visibleTag]);
 
         $this->post("/update/{$product->id}", [
             'work_name' => $product->work_name,
-            'work_name_english' => $product->work_name_english,
+            'work_name_english' => $product->titleForLocale('en'),
             'progress' => $product->progress,
             'genre_custom' => 'StableVisibleTag',
             'return_query' => [
@@ -3958,6 +3941,35 @@ class ProductControllerTest extends TestCase
             ],
             'return_fragment' => $product->id,
         ])->assertRedirect("/#{$product->id}");
+    }
+
+    public function test_update_drops_english_title_filter_when_image_and_english_title_change_together(): void
+    {
+        Storage::fake('local');
+        Storage::fake('public');
+
+        $product = Product::factory()->withEnglishTitle('OLD_ENGLISH_RETURN_TARGET_TOKEN')->create([
+            'id' => 'RJ123456789',
+            'work_name' => 'RETURN_TARGET_IMAGE_TITLE_WORK',
+            'progress' => 'Listening',
+        ]);
+
+        $response = $this->post("/update/{$product->id}", [
+            'work_name' => $product->work_name,
+            'work_name_english' => 'NEW_ENGLISH_RETURN_TARGET_TOKEN',
+            'work_image' => UploadedFile::fake()->image('replacement.jpg'),
+            'return_query' => [
+                'title' => 'OLD_ENGLISH_RETURN_TARGET_TOKEN',
+            ],
+            'return_fragment' => $product->id,
+        ]);
+
+        $response->assertSessionHasNoErrors();
+        $response->assertRedirect("/#{$product->id}");
+        $this->assertSame(
+            'NEW_ENGLISH_RETURN_TARGET_TOKEN',
+            $product->fresh()->titleForLocale('en'),
+        );
     }
 
     public function test_update_drops_each_hiding_visibility_filter_group(): void
@@ -4148,7 +4160,7 @@ class ProductControllerTest extends TestCase
 
         $response = $this->post("/update/{$product->id}", [
             'work_name' => $product->work_name,
-            'work_name_english' => $product->work_name_english,
+            'work_name_english' => $product->titleForLocale('en'),
             'progress' => $product->progress,
             'score' => 5,
             'series' => $product->series,

@@ -167,9 +167,8 @@ class ProductSurfaceLocalizationTest extends TestCase
             ['field' => ProductField::Author->value, 'visible' => true, 'editable' => true],
         ]);
         App::setLocale(UiLanguage::Japanese->value);
-        $product = Product::factory()->create([
+        $product = Product::factory()->withEnglishTitle('Apply All')->create([
             'work_name' => 'Errors',
-            'work_name_english' => 'Apply All',
             'series' => 'Site ID',
             'circle' => 'Archive parts',
         ]);

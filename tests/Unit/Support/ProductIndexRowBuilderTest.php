@@ -20,7 +20,7 @@ class ProductIndexRowBuilderTest extends TestCase
         $product->setRawAttributes([
             'id' => 'RJ000000321',
             'work_name' => 'Typed Row',
-            'work_name_english' => 'Typed Row English',
+            'english_title' => 'Typed Row English',
             'notes' => 'Typed notes',
             'progress' => 'Listening',
             'work_image' => '/images/typed-row.jpg',
@@ -64,6 +64,7 @@ class ProductIndexRowBuilderTest extends TestCase
         $this->assertSame('RJ000000321', $row->id);
         $this->assertSame('TYPED ROW', $row->workName);
         $this->assertSame('Typed Row English', $row->workNameEnglish);
+        $this->assertFalse($product->relationLoaded('localizations'));
         $this->assertSame('9', $row->score);
         $this->assertSame('9.93', $row->dlsiteRating);
         $this->assertSame(90, $row->scoreStarFill);
@@ -171,7 +172,7 @@ class ProductIndexRowBuilderTest extends TestCase
         $product->setRawAttributes([
             'id' => 'RJ000000654',
             'work_name' => 'Narrow Row',
-            'work_name_english' => null,
+            'english_title' => null,
             'notes' => null,
             'progress' => null,
         ]);
@@ -256,6 +257,50 @@ class ProductIndexRowBuilderTest extends TestCase
             RatingScale::Ten,
             RatingVisualStyle::Simple,
         );
+    }
+
+    public function test_it_treats_an_absent_projected_english_title_as_null(): void
+    {
+        $product = new Product;
+        $product->setRawAttributes([
+            'id' => 'RJ000000985',
+            'work_name' => 'Japanese title',
+        ]);
+        $row = app(ProductIndexRowBuilder::class)->build(
+            collect([$product]),
+            collect(),
+            [],
+            false,
+            [],
+            RatingScale::Ten,
+            RatingVisualStyle::Simple,
+        )->sole();
+
+        $this->assertNull($row->workNameEnglish);
+        $this->assertFalse($product->relationLoaded('localizations'));
+    }
+
+    public function test_it_preserves_empty_projected_english_title_without_loading_localizations(): void
+    {
+        $product = new Product;
+        $product->setRawAttributes([
+            'id' => 'RJ000000986',
+            'work_name' => 'Japanese title',
+            'english_title' => '',
+        ]);
+
+        $row = app(ProductIndexRowBuilder::class)->build(
+            collect([$product]),
+            collect(),
+            [],
+            false,
+            [],
+            RatingScale::Ten,
+            RatingVisualStyle::Simple,
+        )->sole();
+
+        $this->assertSame('', $row->workNameEnglish);
+        $this->assertFalse($product->relationLoaded('localizations'));
     }
 }
 

@@ -7,6 +7,7 @@ use App\Enums\ProductFormat;
 use App\Enums\RefetchCategory;
 use App\Models\Genre;
 use App\Models\Product;
+use App\Models\ProductLocalization;
 use App\Support\DLSite\DLSiteFetchResult;
 use App\Support\DLSite\DLSiteRating;
 use App\Support\ProductContributorSync;
@@ -30,8 +31,10 @@ final class RefetchDiffBuilder
         $contributors = $this->contributorSync->namesByRole($product);
         $changes = [];
 
-        $this->add($changes, RefetchCategory::Titles, 'work_name', 'Japanese Title', $product->work_name, $work->workName);
-        $this->add($changes, RefetchCategory::Titles, 'work_name_english', 'English Title', $product->work_name_english, $work->englishWorkName);
+        if ($work->workName !== null) {
+            $this->add($changes, RefetchCategory::Titles, 'work_name', 'Japanese Title', $product->work_name, $work->workName);
+        }
+        $this->add($changes, RefetchCategory::Titles, 'work_name_english', 'English Title', $product->titleForLocale(ProductLocalization::LOCALE_ENGLISH), $work->englishWorkName);
         $this->add($changes, RefetchCategory::Descriptions, 'description', 'Japanese Description', $product->description, $work->description);
         $this->add($changes, RefetchCategory::Descriptions, 'description_english', 'English Description', $product->description_english, $work->englishDescription);
         $this->add($changes, RefetchCategory::Series, 'series', 'Series', $product->series, $work->autoSeries());

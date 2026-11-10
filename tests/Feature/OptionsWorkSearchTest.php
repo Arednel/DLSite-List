@@ -14,15 +14,15 @@ class OptionsWorkSearchTest extends TestCase
 
     public function test_livewire_work_search_filters_by_id_and_titles(): void
     {
-        Product::factory()->create([
+        $visible = Product::factory()->withTitles('VISIBLE_WORK_TOKEN', 'VISIBLE_ENGLISH_TOKEN')->create([
             'id' => 'RJ111111111',
-            'work_name' => 'VISIBLE_WORK_TOKEN',
-            'work_name_english' => 'VISIBLE_ENGLISH_TOKEN',
         ]);
-        Product::factory()->create([
+        $visible->localizations()->updateOrCreate(
+            ['locale' => 'zh_TW'],
+            ['title' => 'FUTURE_LOCALE_SEARCH_TOKEN'],
+        );
+        Product::factory()->withTitles('HIDDEN_WORK_TOKEN', 'HIDDEN_ENGLISH_TOKEN')->create([
             'id' => 'RJ222222222',
-            'work_name' => 'HIDDEN_WORK_TOKEN',
-            'work_name_english' => 'HIDDEN_ENGLISH_TOKEN',
         ]);
 
         Livewire::test(OptionsWorkSearch::class)
@@ -75,6 +75,39 @@ class OptionsWorkSearchTest extends TestCase
             ->assertSee('VISIBLE_FILTERED_WORK_TOKEN')
             ->assertDontSee('SELECTED_WORK_TOKEN')
             ->assertSee('<input type="hidden" name="product_ids[]" value="' . $selected->id . '">', false);
+    }
+
+
+    public function test_livewire_work_search_uses_lightweight_title_projections(): void
+    {
+        Product::factory()->withTitles('Projected Japanese title', 'Projected English title')->create([
+            'id' => 'RJ555555555',
+        ]);
+
+        Livewire::test(OptionsWorkSearch::class)
+            ->set('search', 'Projected Japanese')
+            ->assertViewHas('products', function ($products): bool {
+                $row = $products->sole();
+
+                return ! $row instanceof Product
+                    && $row->id === 'RJ555555555'
+                    && $row->japanese_title === 'Projected Japanese title'
+                    && $row->english_title === 'Projected English title';
+            });
+    }
+
+    public function test_livewire_work_search_projection_returns_null_for_missing_or_blank_english_titles(): void
+    {
+        $nullEnglish = Product::factory()->withEnglishTitle(null)->create(['id' => 'RJ555555556']);
+        $emptyEnglish = Product::factory()->withEnglishTitle('')->create(['id' => 'RJ555555557']);
+
+        Livewire::test(OptionsWorkSearch::class)
+            ->assertViewHas('products', function ($products) use ($nullEnglish, $emptyEnglish): bool {
+                $rows = $products->keyBy('id');
+
+                return $rows->get($nullEnglish->id)->english_title === null
+                    && $rows->get($emptyEnglish->id)->english_title === null;
+            });
     }
 
     public function test_image_choice_is_preserved_while_search_rerenders(): void

@@ -6,6 +6,7 @@ use App\Enums\ProductAgeCategory;
 use App\Enums\ProductContributorRole;
 use App\Support\DLSite\DLSiteRating;
 use App\Models\Product;
+use App\Models\ProductLocalization;
 use App\Support\DLSite\DLSiteWorkData;
 use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\Validator;
@@ -82,9 +83,12 @@ final class WorkArchiveData
         $coverPath = $cover['files'][0]['path'] ?? null;
         $samplePaths = $samples === null ? null : array_column($samples['files'], 'path');
 
+        $japaneseTitle = $product->work_name;
+        $englishTitle = $product->titleForLocale(ProductLocalization::LOCALE_ENGLISH) ?? $japaneseTitle;
+
         $japanese = $this->locale(
             $product,
-            $product->work_name,
+            $japaneseTitle,
             $product->description,
             $tags['jp'],
             $contributors,
@@ -93,7 +97,7 @@ final class WorkArchiveData
         );
         $english = $this->locale(
             $product,
-            $product->work_name_english ?? $product->work_name,
+            $englishTitle,
             $product->description_english ?? $product->description,
             $tags['en'],
             $contributors,

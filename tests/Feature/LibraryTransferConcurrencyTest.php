@@ -5,6 +5,7 @@ namespace Tests\Feature;
 use App\Enums\LibraryImportItemStatus;
 use App\Models\Option;
 use App\Models\Product;
+use App\Models\ProductLocalization;
 use App\Support\Transfers\ImportReview;
 use App\Support\Transfers\LibraryData;
 use App\Support\Transfers\LibraryTransferService;
@@ -26,7 +27,7 @@ class LibraryTransferConcurrencyTest extends TestCase
         Bus::fake();
         Storage::fake('local');
         Storage::fake('public');
-        config(['queue.default' => 'database', 'database.connections.transfer_concurrent' => config('database.connections.'.config('database.default'))]);
+        config(['queue.default' => 'database', 'database.connections.transfer_concurrent' => config('database.connections.' . config('database.default'))]);
         $product = Product::factory()->create(['id' => 'RJ123456', 'work_name' => 'Original']);
         $run = app(LibraryTransferService::class)->startImport();
         $review = app(ImportReview::class);
@@ -52,6 +53,46 @@ class LibraryTransferConcurrencyTest extends TestCase
         }
     }
 
+    public function test_translated_title_locking_read_detects_a_committed_edit_even_with_an_older_mysql_snapshot(): void
+    {
+        if (DB::getDriverName() !== 'mysql') {
+            $this->markTestSkipped('This regression requires MySQL REPEATABLE READ.');
+        }
+        Bus::fake();
+        Storage::fake('local');
+        Storage::fake('public');
+        config(['queue.default' => 'database', 'database.connections.transfer_concurrent' => config('database.connections.' . config('database.default'))]);
+        $product = Product::factory()->withEnglishTitle('Original EN')->create(['id' => 'RJ123457']);
+        $run = app(LibraryTransferService::class)->startImport();
+        $review = app(ImportReview::class);
+        $record = app(LibraryData::class)->work($product);
+        $record['titles']['work_name_english'] = 'Imported EN';
+        DB::beginTransaction();
+        try {
+            $review->stage($run, 'works', $record, []);
+            $item = $run->items()->where('metadata->field', 'work_name_english')->firstOrFail();
+            DB::connection('transfer_concurrent')->table('product_localizations')
+                ->where('product_id', $product->id)
+                ->where('locale', ProductLocalization::LOCALE_ENGLISH)
+                ->update(['title' => 'Concurrent EN edit']);
+
+            // The normal relation read remains on the old snapshot; the locking read used
+            // by Import Review must observe the committed translated-title edit.
+            $snapshotProduct = Product::findOrFail($product->id);
+            $this->assertSame('Original EN', $snapshotProduct->titleForLocale(ProductLocalization::LOCALE_ENGLISH));
+            $item->update(['decision' => 'overwrite']);
+            $review->applyItem($item);
+            $this->assertSame(LibraryImportItemStatus::Conflict, $item->fresh()->status);
+            DB::commit();
+            $this->assertSame('Concurrent EN edit', $product->fresh()->titleForLocale(ProductLocalization::LOCALE_ENGLISH));
+        } finally {
+            while (DB::transactionLevel() > 0) {
+                DB::rollBack();
+            }
+            DB::purge('transfer_concurrent');
+        }
+    }
+
     public function test_option_conflicts_use_the_locking_value_not_an_older_mysql_snapshot(): void
     {
         if (DB::getDriverName() !== 'mysql') {
@@ -59,7 +100,7 @@ class LibraryTransferConcurrencyTest extends TestCase
         }
         Bus::fake();
         Storage::fake('local');
-        config(['queue.default' => 'database', 'database.connections.transfer_concurrent' => config('database.connections.'.config('database.default'))]);
+        config(['queue.default' => 'database', 'database.connections.transfer_concurrent' => config('database.connections.' . config('database.default'))]);
         Option::setIndexPerPage(25);
         $run = app(LibraryTransferService::class)->startImport();
         $review = app(ImportReview::class);

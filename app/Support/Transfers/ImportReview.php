@@ -11,6 +11,7 @@ use App\Models\LibraryImportItem;
 use App\Models\LibraryTransferEntry;
 use App\Models\LibraryTransferRun;
 use App\Models\Product;
+use App\Models\ProductLocalization;
 use App\Support\GraphCycleValidator;
 use App\Support\ProductContributorSync;
 use App\Support\ProductGenreSync;
@@ -588,11 +589,21 @@ final class ImportReview
                 : Arr::only($current, array_keys($incoming));
         }
         if (isset($item->metadata['field'])) {
-            if ($item->metadata['field'] === 'announce_date') {
+            $field = $item->metadata['field'];
+            if ($field === 'announce_date') {
                 return $product->announce_date?->format('Y-m-d H:i:s');
             }
 
-            return $product->getAttribute($item->metadata['field']);
+            $locale = $this->titleLocale($field);
+
+            if ($locale !== null) {
+                return $product->localizations()
+                    ->when($this->locking, fn($query) => $query->lockForUpdate())
+                    ->where('locale', $locale)
+                    ->value('title');
+            }
+
+            return $product->getAttribute($field);
         }
         if (in_array($item->category, ['cover', 'sample_images'], true)) {
             return $this->imageBaseline($product, $item->category);
@@ -846,11 +857,24 @@ final class ImportReview
     {
         $value = $item->incoming;
         if ($item->category === 'new_works') {
-            $product = new Product(['id' => $item->entity_key]);
+            $product = new Product([
+                'id' => $item->entity_key,
+                'work_name' => $value['titles']['work_name'],
+            ]);
             foreach (LibraryData::FIELDS as $category => $fields) {
+                if ($category === 'titles') {
+                    continue;
+                }
+
                 $product->fill(Arr::only($value[$category] ?? [], $fields));
             }
             $product->save();
+
+            $englishTitle = $value['titles']['work_name_english'] ?? null;
+            Product::withoutTouching(fn() => $product->syncLocalization(
+                ProductLocalization::LOCALE_ENGLISH,
+                ['title' => blank($englishTitle) ? null : $englishTitle],
+            ));
             $this->contributors($product, $value['contributors'] ?? []);
             $this->tags($product, $value['tags'] ?? [], $item);
             foreach (['cover', 'sample_images'] as $category) {
@@ -865,10 +889,22 @@ final class ImportReview
         $merge = $item->decision === LibraryImportDecision::Merge;
         if (isset($item->metadata['field'])) {
             $field = $item->metadata['field'];
-            if (! $merge || $product->$field === null || $product->$field === '') {
-                $product->setAttribute($field, $value);
-                if ($product->isDirty()) {
-                    $product->save();
+            $locale = $this->titleLocale($field);
+            $current = $locale !== null
+                ? $product->titleForLocale($locale)
+                : $product->getAttribute($field);
+
+            if (! $merge || $current === null || $current === '') {
+                if ($locale !== null) {
+                    $product->syncLocalization(
+                        $locale,
+                        ['title' => blank($value) ? null : $value],
+                    );
+                } else {
+                    $product->setAttribute($field, $value);
+                    if ($product->isDirty()) {
+                        $product->save();
+                    }
                 }
             }
         } elseif (($item->metadata['domain'] ?? null) === 'details') {
@@ -1133,6 +1169,14 @@ final class ImportReview
         if (! GraphCycleValidator::isAcyclic($edges)) {
             throw new InvalidArgumentException('tag.relationship_cycle');
         }
+    }
+
+    private function titleLocale(string $field): ?string
+    {
+        return match ($field) {
+            'work_name_english' => ProductLocalization::LOCALE_ENGLISH,
+            default => null,
+        };
     }
 
     private function restoreTimestamps(Product $product, array $values): void

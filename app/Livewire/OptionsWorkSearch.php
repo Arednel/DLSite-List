@@ -3,6 +3,8 @@
 namespace App\Livewire;
 
 use App\Models\Product;
+use App\Models\ProductLocalization;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Collection;
 use Illuminate\View\View;
 use Livewire\Component;
@@ -41,17 +43,27 @@ class OptionsWorkSearch extends Component
 
     private function products(): Collection
     {
-        $query = Product::query();
-
         $search = trim($this->search);
 
+        $query = Product::query()
+            ->select(['id', 'work_name as japanese_title'])
+            ->withAggregate([
+                'localizations as english_title' => fn(Builder $query) =>
+                $query->where('locale', ProductLocalization::LOCALE_ENGLISH),
+            ], 'title');
+
         if ($search !== '') {
-            $query->whereAny(['id', 'work_name', 'work_name_english'], 'like', "%{$search}%");
+            $query->where(
+                fn(Builder $query) => $query
+                    ->whereLike('id', "%{$search}%")
+                    ->orWhere(fn(Builder $query) => $query->filterTitle($search))
+            );
         }
 
         return $query
             ->orderByNumericCode()
-            ->get(['id', 'work_name', 'work_name_english']);
+            ->toBase()
+            ->get();
     }
 
     /**

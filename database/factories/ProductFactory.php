@@ -3,6 +3,7 @@
 namespace Database\Factories;
 
 use App\Models\Product;
+use App\Models\ProductLocalization;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
 /**
@@ -23,7 +24,6 @@ class ProductFactory extends Factory
             'id' => $id,
             'maker_id' => 'RG' . substr($id, 2),
             'work_name' => 'WORK_' . $id,
-            'work_name_english' => 'WORK_EN_' . $id,
             'age_category' => 'ALL_AGES',
             'product_format' => null,
             'announce_date' => null,
@@ -42,6 +42,33 @@ class ProductFactory extends Factory
             're_listen_value' => null,
             'priority' => null,
         ];
+    }
+
+    public function configure(): static
+    {
+        return $this->afterCreating(function (Product $product): void {
+            Product::withoutTouching(fn() => $product->syncLocalization(
+                ProductLocalization::LOCALE_ENGLISH,
+                ['title' => 'WORK_EN_' . $product->id],
+            ));
+        });
+    }
+
+    public function withTitles(string $japanese, ?string $english = null): static
+    {
+        return $this
+            ->state(fn(array $attributes) => ['work_name' => $japanese])
+            ->withEnglishTitle($english);
+    }
+
+    public function withEnglishTitle(?string $english): static
+    {
+        return $this->afterCreating(function (Product $product) use ($english): void {
+            Product::withoutTouching(fn() => $product->syncLocalization(
+                ProductLocalization::LOCALE_ENGLISH,
+                ['title' => blank($english) ? null : $english],
+            ));
+        });
     }
 
     public function listening(): static

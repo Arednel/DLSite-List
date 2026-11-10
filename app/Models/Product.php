@@ -12,6 +12,7 @@ use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Query\Builder as QueryBuilder;
 use Illuminate\Support\Facades\Storage;
 
@@ -28,7 +29,6 @@ class Product extends Model
         'site_id',
         'maker_id',
         'work_name',
-        'work_name_english',
         'age_category',
         'product_format',
         'announce_date',
@@ -102,6 +102,86 @@ class Product extends Model
         $version = is_file($file) ? filemtime($file) : false;
 
         return $version === false ? $path : "{$path}?v={$version}";
+    }
+
+    public function localizations(): HasMany
+    {
+        return $this->hasMany(ProductLocalization::class);
+    }
+
+    public function titleForLocale(string $locale): ?string
+    {
+        if ($locale === ProductLocalization::LOCALE_JAPANESE) {
+            return $this->work_name;
+        }
+
+        if (! $this->exists) {
+            return null;
+        }
+
+        return $this->localizations()
+            ->where('locale', $locale)
+            ->value('title');
+    }
+
+    /**
+     * @param  array<string, mixed>  $attributes
+     */
+    public function syncLocalization(string $locale, array $attributes): bool
+    {
+        if ($locale === ProductLocalization::LOCALE_JAPANESE) {
+            throw new \InvalidArgumentException('Japanese localization is stored on the Product model.');
+        }
+
+        if (array_key_exists('locale', $attributes)) {
+            throw new \InvalidArgumentException('Localization attributes cannot change the locale.');
+        }
+
+        if (! $this->exists) {
+            throw new \LogicException('Cannot sync a localization for an unsaved Product.');
+        }
+
+        if ($attributes === []) {
+            return false;
+        }
+
+        $localization = $this->localizations()
+            ->where('locale', $locale)
+            ->first();
+
+        if ($localization === null) {
+            $candidate = $this->localizations()->make([
+                'locale' => $locale,
+                ...$attributes,
+            ]);
+
+            if ($candidate->isEmpty()) {
+                return false;
+            }
+
+            $localization = $this->localizations()->createOrFirst(
+                ['locale' => $locale],
+                $attributes,
+            );
+
+            if ($localization->wasRecentlyCreated) {
+                return true;
+            }
+        }
+
+        $localization->fill($attributes);
+
+        if ($localization->isEmpty()) {
+            return (bool) $localization->delete();
+        }
+
+        if (! $localization->isDirty(array_keys($attributes))) {
+            return false;
+        }
+
+        $localization->save();
+
+        return true;
     }
 
     public function genres(): BelongsToMany
@@ -311,7 +391,6 @@ class Product extends Model
         $columns = [
             'id',
             'work_name',
-            'work_name_english',
             'series',
             'notes',
             'circle',
@@ -326,6 +405,10 @@ class Product extends Model
 
         $query->where(function (Builder $searchQuery) use ($columns, $search, $searchTags, $fetchedLanguage): void {
             $searchQuery->whereAny($columns, 'like', $search)
+                ->orWhereIn('products.id', ProductLocalization::query()
+                    ->select('product_id')
+                    ->whereIn('locale', ProductLocalization::SEARCHABLE_TITLE_LOCALES)
+                    ->whereLike('title', $search))
                 ->orWhereHas('contributors', function (Builder $contributorQuery) use ($search): void {
                     $contributorQuery->whereLike('contributors.name', $search);
                 });
@@ -344,7 +427,22 @@ class Product extends Model
     #[Scope]
     protected function filterTitle(Builder $query, string $title): void
     {
-        $query->whereAny(['work_name', 'work_name_english'], 'like', '%' . trim($title) . '%');
+        $title = trim($title);
+
+        if ($title === '') {
+            return;
+        }
+
+        $search = "%{$title}%";
+
+        $query->where(function (Builder $titleQuery) use ($search): void {
+            $titleQuery
+                ->whereLike('products.work_name', $search)
+                ->orWhereIn('products.id', ProductLocalization::query()
+                    ->select('product_id')
+                    ->whereIn('locale', ProductLocalization::SEARCHABLE_TITLE_LOCALES)
+                    ->whereLike('title', $search));
+        });
     }
 
     #[Scope]

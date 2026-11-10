@@ -1,6 +1,7 @@
 @props([
     'field',
     'product',
+    'englishTitle',
     'ageCategoryOptions',
     'contributorInputs',
     'fetchedGenres',
@@ -22,10 +23,10 @@
     @case('title')
         @if ($field['editable'])
             <x-fields.title-japanese :value="$product->work_name" required />
-            <x-fields.title-english :value="$product->work_name_english" />
+            <x-fields.title-english :value="$englishTitle" />
         @else
             <x-fields.readonly-text :label="__('Japanese Title')" :value="$product->work_name" />
-            <x-fields.readonly-text :label="__('English Title')" :value="$product->work_name_english" />
+            <x-fields.readonly-text :label="__('English Title')" :value="$englishTitle" />
         @endif
     @break
 

@@ -19,9 +19,9 @@
                 <input type="checkbox" name="product_ids[]" value="{{ $product->id }}" wire:model="selectedProductIds">
                 <span>
                     <strong>{{ $product->id }} - </strong>
-                    {{ $product->work_name }}
-                    @if ($product->work_name_english)
-                        <span class="work-checklist__muted">{{ $product->work_name_english }}</span>
+                    {{ $product->japanese_title }}
+                    @if ($product->english_title)
+                        <span class="work-checklist__muted">{{ $product->english_title }}</span>
                     @endif
                 </span>
             </label>

@@ -17,6 +17,7 @@ use App\Http\Requests\UpdateProductRequest;
 use App\Models\Genre;
 use App\Models\Option;
 use App\Models\Product;
+use App\Models\ProductLocalization;
 use App\Support\DLSite\DLSiteFetchResult;
 use App\Support\DLSite\DLSiteProductAlreadyExistsException;
 use App\Support\DLSite\DLSiteProductImportException;
@@ -55,7 +56,6 @@ class ProductController extends Controller
 
     private const VISIBILITY_AFFECTING_PRODUCT_FIELDS = [
         'work_name',
-        'work_name_english',
         'description',
         'description_english',
         'notes',
@@ -180,7 +180,6 @@ class ProductController extends Controller
                     'id' => $workID,
                     'maker_id' => $makerId,
                     'work_name' => $validated['work_name'],
-                    'work_name_english' => $validated['work_name_english'] ?? null,
                     'age_category' => $validated['age_category'],
                     'product_format' => $this->createFieldSubmitted($request, $visibleCreateFields, ProductField::ProductFormat, 'product_format')
                         ? (($validated['product_format'] ?? []) ?: null)
@@ -224,6 +223,11 @@ class ProductController extends Controller
                         : null,
                 ]);
 
+                Product::withoutTouching(fn() => $product->syncLocalization(
+                    ProductLocalization::LOCALE_ENGLISH,
+                    ['title' => blank($validated['work_name_english'] ?? null) ? null : $validated['work_name_english']],
+                ));
+
                 $this->genreSync->syncCustom(
                     $product,
                     Genre::resolveIdsFromTitles(
@@ -253,6 +257,7 @@ class ProductController extends Controller
      */
     public function edit(Request $request, Product $product)
     {
+        $englishTitle = $product->titleForLocale(ProductLocalization::LOCALE_ENGLISH);
         $fetchedLanguage = Option::effectiveFetchedTagLanguage()->value;
         $editGenres = $this->loadEditGenresForProduct($product->getKey(), $fetchedLanguage);
         $showReadonlyGenreColors = Option::tagColorSurfaceEnabled(Option::TAG_COLOR_SURFACE_EDIT_READONLY);
@@ -291,6 +296,7 @@ class ProductController extends Controller
 
         return view('Edit', [
             'product' => $product,
+            'englishTitle' => $englishTitle,
             'isModal' => $request->boolean('modal'),
             'productFormThemeClass' => $this->productFormThemeClass(),
             'fetchedGenres' => $fetchedGenres,
@@ -341,16 +347,39 @@ class ProductController extends Controller
             $editFieldLayout,
             $updatePayload,
         ): array {
+            $englishTitleSubmitted = array_key_exists('work_name_english', $updatePayload);
+            $englishTitle = $updatePayload['work_name_english'] ?? null;
+
             $product->fill([
-                ...$updatePayload,
+                ...Arr::except($updatePayload, ['work_name_english']),
                 'work_image' => $images['work_image'],
                 'sample_images' => $images['sample_images'],
             ]);
             $productFieldsChanged = $product->isDirty(self::VISIBILITY_AFFECTING_PRODUCT_FIELDS);
+            $productSaved = $product->isDirty();
 
-            if ($product->isDirty()) {
+            if ($productSaved) {
                 $product->save();
             }
+
+            $englishTitleChanged = false;
+
+            if ($englishTitleSubmitted) {
+                $syncEnglishTitle = fn(): bool => $product->syncLocalization(
+                    ProductLocalization::LOCALE_ENGLISH,
+                    ['title' => blank($englishTitle) ? null : $englishTitle],
+                );
+
+                if ($productSaved) {
+                    Product::withoutTouching(function () use ($syncEnglishTitle, &$englishTitleChanged): void {
+                        $englishTitleChanged = $syncEnglishTitle();
+                    });
+                } else {
+                    $englishTitleChanged = $syncEnglishTitle();
+                }
+            }
+
+            $productFieldsChanged = $productFieldsChanged || $englishTitleChanged;
 
             return [
                 'product_fields_changed' => $productFieldsChanged,

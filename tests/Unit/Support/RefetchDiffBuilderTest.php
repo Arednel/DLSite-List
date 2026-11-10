@@ -22,12 +22,10 @@ class RefetchDiffBuilderTest extends TestCase
 
     public function test_api_aliases_do_not_propose_removals_but_shortened_credits_remain_reviewable(): void
     {
-        $product = Product::factory()->create([
+        $product = Product::factory()->withTitles('Title', null)->create([
             'id' => 'RJ123456',
             'site_id' => 'maniax',
             'maker_id' => 'RG123',
-            'work_name' => 'Title',
-            'work_name_english' => null,
             'description' => 'Description',
             'description_english' => null,
             'publisher' => null,
@@ -62,10 +60,8 @@ class RefetchDiffBuilderTest extends TestCase
     public function test_it_builds_full_metadata_diffs_and_keeps_failed_sample_images_unavailable(): void
     {
         Storage::fake('public');
-        $product = Product::factory()->create([
+        $product = Product::factory()->withTitles('Old JP', 'Old EN')->create([
             'maker_id' => 'RGOLD',
-            'work_name' => 'Old JP',
-            'work_name_english' => 'Old EN',
             'age_category' => 'ALL_AGES',
             'product_format' => ['MOV', 'SND'],
             'announce_date' => null,
@@ -149,6 +145,30 @@ class RefetchDiffBuilderTest extends TestCase
         $this->assertArrayNotHasKey(RefetchCategory::SampleImages->value, $changes);
         $this->assertSame('2026-09-24 00:00:00', $changes['announce_date']['announce_date']['new']);
         $this->assertSame('Custom Tag', $changes['tags']['tags']['old']['custom'][0]);
+    }
+
+    public function test_missing_japanese_title_does_not_propose_removal_but_english_title_can_clear(): void
+    {
+        $product = Product::factory()->withTitles('Required Japanese title', 'Optional English title')->create();
+
+        $changes = app(RefetchDiffBuilder::class)->build(
+            $product,
+            new DLSiteFetchResult(
+                workData: DLSiteWorkData::fromArray([
+                    'japanese' => ['product_id' => $product->getKey()],
+                    'english' => [],
+                ]),
+                failedImages: [],
+            ),
+            null,
+        );
+
+        $this->assertArrayNotHasKey('work_name', $changes[RefetchCategory::Titles->value]);
+        $this->assertSame([
+            'label' => 'English Title',
+            'old' => 'Optional English title',
+            'new' => null,
+        ], $changes[RefetchCategory::Titles->value]['work_name_english']);
     }
 
     public function test_site_id_diff_is_reviewable_and_missing_fetched_site_proposes_removal(): void

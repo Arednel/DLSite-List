@@ -6,9 +6,11 @@ use App\Enums\LibraryTransferDirection;
 use App\Models\LibraryTransferRun;
 use App\Models\Option;
 use App\Models\Product;
+use App\Models\ProductLocalization;
 use App\Support\Transfers\LibraryTransferCleanupService;
 use App\Support\Transfers\LibraryTransferService;
 use App\Support\Transfers\TransferMessage;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
 use Illuminate\View\View;
@@ -171,16 +173,25 @@ class OptionsTransfers extends Component
     public function render(LibraryTransferCleanupService $cleanupService, LibraryTransferService $transferService): View
     {
         $products = collect();
-
         if (in_array('works', $this->scopes, true) && $this->mode === 'selected') {
+            $search = trim($this->search);
+
             $products = Product::query()
-                ->when(trim($this->search) !== '', fn($query) => $query->whereAny(
-                    ['id', 'work_name', 'work_name_english'],
-                    'like',
-                    '%' . trim($this->search) . '%',
-                ))
+                ->select(['id', 'work_name'])
+                ->withAggregate([
+                    'localizations as work_name_english' => fn(Builder $query) =>
+                    $query->where('locale', ProductLocalization::LOCALE_ENGLISH),
+                ], 'title')
+                ->when(
+                    $search !== '',
+                    fn(Builder $query) => $query->where(
+                        fn(Builder $query) => $query
+                            ->whereLike('id', "%{$search}%")
+                            ->orWhere(fn(Builder $query) => $query->filterTitle($search))
+                    )
+                )
                 ->orderByNumericCode()
-                ->get(['id', 'work_name', 'work_name_english']);
+                ->get();
         }
 
         return view('livewire.options-transfers', [

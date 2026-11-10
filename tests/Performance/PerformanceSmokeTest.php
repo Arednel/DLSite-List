@@ -238,7 +238,6 @@ class PerformanceSmokeTest extends TestCase
                             'code_number' => $number,
                             'maker_id' => sprintf('RG%09d', $number),
                             'work_name' => sprintf('PERF_WORK_%d', $number),
-                            'work_name_english' => sprintf('PERF_WORK_EN_%d', $number),
                             'age_category' => $number % 2 === 0 ? 'ALL_AGES' : 'R18',
                             'circle' => 'PERF_CIRCLE',
                             'work_image' => sprintf('storage/Works/%s/cover.jpg', $this->productId($number)),
@@ -256,6 +255,18 @@ class PerformanceSmokeTest extends TestCase
                             'num_re_listen_times' => null,
                             're_listen_value' => null,
                             'priority' => null,
+                            'created_at' => $now,
+                            'updated_at' => $now,
+                        ])
+                        ->all()
+                );
+
+                DB::table('product_localizations')->insert(
+                    $chunk
+                        ->map(fn(int $number): array => [
+                            'product_id' => $this->productId($number),
+                            'locale' => 'en',
+                            'title' => sprintf('PERF_WORK_EN_%d', $number),
                             'created_at' => $now,
                             'updated_at' => $now,
                         ])
@@ -430,7 +441,6 @@ class PerformanceSmokeTest extends TestCase
                 'code_number' => 999999999,
                 'maker_id' => 'RG999999999',
                 'work_name' => 'PERF_DELETE_TARGET',
-                'work_name_english' => 'PERF_DELETE_TARGET_EN',
                 'age_category' => 'ALL_AGES',
                 'circle' => 'PERF_CIRCLE',
                 'work_image' => 'storage/Works/RJ999999999/cover.jpg',
@@ -451,6 +461,11 @@ class PerformanceSmokeTest extends TestCase
                 'created_at' => now(),
                 'updated_at' => now(),
             ],
+        );
+
+        DB::table('product_localizations')->updateOrInsert(
+            ['product_id' => $this->deleteTargetId(), 'locale' => 'en'],
+            ['title' => 'PERF_DELETE_TARGET_EN', 'created_at' => now(), 'updated_at' => now()],
         );
     }
 

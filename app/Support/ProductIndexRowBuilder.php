@@ -58,6 +58,9 @@ final readonly class ProductIndexRowBuilder
         ): ProductIndexRow {
             $attributes = $product->attributesToArray();
             $id = Arr::string($attributes, 'id');
+            $workName = Arr::string($attributes, 'work_name');
+            $workNameEnglish = $attributes['english_title'] ?? null;
+
             $series = $attributes['series'] ?? null;
             $circle = $attributes['circle'] ?? null;
             $publisher = $attributes['publisher'] ?? null;
@@ -80,8 +83,8 @@ final readonly class ProductIndexRowBuilder
 
             return new ProductIndexRow(
                 id: $id,
-                workName: Arr::string($attributes, 'work_name'),
-                workNameEnglish: $attributes['work_name_english'] ?? null,
+                workName: $workName,
+                workNameEnglish: $workNameEnglish,
                 notes: $attributes['notes'] ?? null,
                 progress: $attributes['progress'] ?? null,
                 workImage: blank($workImage)

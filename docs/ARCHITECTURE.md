@@ -28,6 +28,8 @@ For test commands and the current test inventory, see [TESTING.md](TESTING.md).
 
 Index state is kept in the query string so filtered/sorted views can be linked and restored.
 
+Index queries avoid hydrating localization models when only the translated title scalar is needed. The main Index selects the Japanese `work_name` normally and projects the English title through a scalar localization subquery. Global and Title search match the canonical Japanese title directly and translated titles through a product-ID localization subquery restricted to the configured searchable locales.
+
 `ProductIndexSettings` loads the Index-related `options` values in one batched lookup per render. It prepares:
 - Index field layout
 - Filter layout
@@ -72,6 +74,14 @@ The main DLsite `Product Format` is stored first; only SND (Voice), MS2 (Music),
 - `rate_count_detail` is normalized by `DLSiteRating`; its weighted vote distribution is used once to persist independent two-decimal 5-point and 10-point ratings plus the vote count
 
 Explicit `circle`, `publisher`, `brand`, and `description` fields remain authoritative when present, including explicit empty values. Canonical DLsite metadata is read from the Japanese payload only; English remains separate localized data for Title, Description, and fetched Tags. Creator-role metadata that is not exposed by `dlsite-async` is not reconstructed by DLSite List.
+
+The required Japanese Product title is stored in `products.work_name`, with a database-level `NOT NULL` constraint. Optional translated titles are stored in `product_localizations`, with one row per `(product_id, locale)` and a unique constraint on that pair. English is the supported translated title locale.
+
+Japanese titles are written through normal `Product` persistence. Optional localized fields are managed through `Product::syncLocalization()`, which uses the `Product::localizations()` `HasMany` relationship. A localization row exists only while it contains localized data; `ProductLocalization::isEmpty()` defines that invariant, and empty localization rows are removed. The localization foreign key cascades on Product deletion, and localization changes touch the parent Product.
+
+`Product::titleForLocale('ja')` reads `products.work_name`. Translated titles are resolved through `product_localizations`.
+
+Whole-library selectors use lightweight Product queries with a scalar English-title projection and reuse the Product title-filter and numeric-code ordering scopes. Descriptions are stored on `products`.
 
 For translated works, `DLSiteWorkFetcher` identifies the original work from the Japanese `language_editions` entry with `display_order: 1`. If no usable entry is available, it uses the Japanese `translation_info.original_workno` value instead. When the resolved ID differs from the fetched work, the original work is fetched and its `RG` maker metadata is used when available. If no original reference is available, the fetched work is used normally. A missing reference is logged only when Japanese `translation_info.is_original` is explicitly `false`. The original response is validated before use, and only Japanese `RG` maker metadata is used for the original-work override.
 

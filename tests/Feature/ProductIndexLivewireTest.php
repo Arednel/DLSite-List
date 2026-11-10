@@ -573,6 +573,51 @@ class ProductIndexLivewireTest extends TestCase
             ->assertDontSee('ADDED_DATE_NEW');
     }
 
+    public function test_index_results_project_titles_without_loading_localization_models(): void
+    {
+        $this->createProduct(1, [
+            'work_name' => 'PROJECTED_INDEX_TITLE',
+            'work_name_english' => 'PROJECTED_INDEX_TITLE_EN',
+        ]);
+
+        DB::flushQueryLog();
+        DB::enableQueryLog();
+
+        $products = app(ProductIndexResults::class)->getProducts(
+            new ProductIndexFilters,
+            Option::INDEX_PER_PAGE_UNLIMITED,
+            [],
+            RatingScale::Ten,
+            RatingVisualStyle::Simple,
+        );
+
+        $queries = collect(DB::getQueryLog())
+            ->pluck('query')
+            ->map(fn(string $query): string => strtolower($query));
+        DB::disableQueryLog();
+
+        $product = $products->sole();
+        $attributes = $product->getAttributes();
+
+        $this->assertSame('PROJECTED_INDEX_TITLE', $attributes['work_name']);
+        $this->assertSame('PROJECTED_INDEX_TITLE_EN', $attributes['english_title']);
+        $this->assertFalse($product->relationLoaded('localizations'));
+        $this->assertTrue($queries->contains(
+            fn(string $query): bool =>
+            $this->isProductSelectQuery($query)
+                && str_contains($query, 'english_title')
+                && str_contains($query, 'product_localizations')
+        ));
+        $this->assertFalse($queries->contains(function (string $query): bool {
+            $fromLocalizations = str_contains($query, 'from "product_localizations"')
+                || str_contains($query, 'from `product_localizations`');
+            $fromProducts = str_contains($query, 'from "products"')
+                || str_contains($query, 'from `products`');
+
+            return $fromLocalizations && ! $fromProducts;
+        }));
+    }
+
     public function test_index_results_hydrate_only_base_columns_and_sort_without_hydrating_sort_fields(): void
     {
         $this->createProduct(1, [
@@ -621,7 +666,10 @@ class ProductIndexLivewireTest extends TestCase
 
         $this->assertArrayHasKey('id', $attributes);
         $this->assertArrayHasKey('work_name', $attributes);
-        $this->assertArrayHasKey('work_name_english', $attributes);
+        $this->assertArrayNotHasKey('work_name_english', $attributes);
+        $this->assertFalse($product->relationLoaded('localizations'));
+        $this->assertSame('NARROW_PRIORITY_LOW', $attributes['work_name']);
+        $this->assertSame('NARROW_PRIORITY_LOW_EN', $attributes['english_title']);
         $this->assertArrayHasKey('notes', $attributes);
         $this->assertArrayHasKey('progress', $attributes);
         $this->assertArrayHasKey('site_id', $attributes);
@@ -889,7 +937,10 @@ class ProductIndexLivewireTest extends TestCase
 
         $this->assertArrayHasKey('id', $attributes);
         $this->assertArrayHasKey('work_name', $attributes);
-        $this->assertArrayHasKey('work_name_english', $attributes);
+        $this->assertArrayNotHasKey('work_name_english', $attributes);
+        $this->assertFalse($product->relationLoaded('localizations'));
+        $this->assertSame('VISIBLE_COLUMNS_WORK', $attributes['work_name']);
+        $this->assertSame('VISIBLE_COLUMNS_WORK_EN', $attributes['english_title']);
         $this->assertArrayHasKey('notes', $attributes);
         $this->assertArrayHasKey('progress', $attributes);
         $this->assertArrayHasKey('work_image', $attributes);
@@ -3146,14 +3197,33 @@ class ProductIndexLivewireTest extends TestCase
         }
     }
 
+    private function isProductSelectQuery(string $query): bool
+    {
+        $fromProducts = str_contains($query, 'from "products"')
+            || str_contains($query, 'from `products`');
+
+        return $fromProducts
+            && str_contains($query, 'notes')
+            && str_contains($query, 'progress');
+    }
+
     private function createProduct(int $number, array $attributes = []): Product
     {
         $id = 'RJ' . str_pad((string) $number, 9, '0', STR_PAD_LEFT);
+        $japaneseTitle = $attributes['work_name']
+            ?? 'WORK_' . str_pad((string) $number, 3, '0', STR_PAD_LEFT);
+        $hasEnglishTitle = array_key_exists('work_name_english', $attributes);
+        $englishTitle = $attributes['work_name_english'] ?? null;
+        unset($attributes['work_name'], $attributes['work_name_english']);
 
-        return Product::factory()->create(array_merge([
+        $factory = Product::factory()->state(['work_name' => $japaneseTitle]);
+        if ($hasEnglishTitle) {
+            $factory = $factory->withEnglishTitle($englishTitle);
+        }
+
+        return $factory->create(array_merge([
             'id' => $id,
             'maker_id' => 'RG' . substr($id, 2),
-            'work_name' => 'WORK_' . str_pad((string) $number, 3, '0', STR_PAD_LEFT),
         ], $attributes));
     }
 

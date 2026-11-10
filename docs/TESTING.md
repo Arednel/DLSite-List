@@ -243,7 +243,7 @@ Storage cleanup coverage holds the upload lock before database registration to v
 
 #### `tests/Feature/LibraryTransferConcurrencyTest.php`
 
-Covers stale-value detection for work fields and typed Options using two MySQL connections and an older `REPEATABLE READ` snapshot. Never run this test against production.
+Covers stale-value detection for canonical Product fields, translated-title localization rows, and typed Options using two MySQL connections and an older `REPEATABLE READ` snapshot. Never run this test against production.
 
 #### `tests/Feature/GenreGroupRelationshipTest.php`
 
@@ -330,14 +330,18 @@ Covers Refetch review tabs, compact collapsed failed-result/warning errors, curr
 
 #### `tests/Feature/OptionsWorkSearchTest.php`
 
-Covers selected-work Refetch search, product-code-desc ordering, and preservation of selected products while filtering.
+Covers selected-work Refetch search across the canonical Japanese title and current English translation, exclusion of future translated title locales until language support is generalized, product-code-desc ordering, preservation of selected products while filtering, and lightweight title projections for whole-library selectors.
+
+#### `tests/Feature/ProductLocalizationTest.php`
+
+Covers migration backfill/rollback that retains required Japanese `products.work_name` while moving only non-blank English titles to localization rows, canonical Japanese and translated title reads, arbitrary translation locales, `Product::syncLocalization()` create/update/no-op/delete semantics, race-safe first creation, locale-identity protection, parent timestamp touching for changed translations, model-owned cleanup of null/empty/whitespace-only localizations, absent-row semantics for missing translations, translated-title search behavior, and cascade deletion of localization rows with the Product.
 
 #### `tests/Feature/ProductControllerTest.php`
 
 Covers the main product HTTP workflows:
 - Index filtering/sorting/display
 - all-tags pattern matching, overlapping matches, missing tags, and per-attachment language/custom-source visibility
-- Create/Edit field order using submitted input names, product binding, and return-navigation data, including rejection of unsafe (non-http(s)) `return_url` values
+- Create/Edit field order using submitted input names, product binding, controller-prepared translated title values, and return-navigation data, including rejection of unsafe (non-http(s)) `return_url` values
 - hidden/read-only field preservation
 - focused DLsite Rating input/read-only display across both scales, read-only mutation protection, canonical Score input, validation restoration, manual conversion, vote-count updates that preserve independently rounded ratings, and conditional Rating Scale lookups for form rendering and manual submissions
 - DLsite Rating clearing and omission semantics, independent vote-count preservation, and unchanged Updated Date when already-null ratings are submitted again
@@ -371,6 +375,7 @@ The tests cover the server-side multipart contract and rendered form structure. 
 
 Covers the Livewire Index:
 - pagination/query-string state
+- canonical Japanese `work_name` selection plus scalar English-title projection without a separate localization-model eager-load query
 - filtering/search/date ranges, including inclusive Scheduled Release Date boundaries
 - Product Format display, partial label/custom search, exact-code matching, JSON-element boundaries, and special-character search escaping
 - sort behavior, including Product Format sorting by its first stored value, scale-aware DLsite Rating sorting/filtering with nulls last, and announcement-date sorting with nulls last
@@ -580,11 +585,11 @@ Covers server-rendered Add/Edit modal completion fallback output and conditional
 - Covers grouped DLsite Rating paths and labels used by new-work Library Import review, nonempty JSON-path mappings for every configured new-work review category, and preservation of numeric/null vote counts in persisted previews.
 
 `tests/Unit/Support/ProductIndexRowBuilderTest.php`
-- Covers typed Index row construction from narrow product hydration, visibility-aware rating preparation, scale-dependent display values, half-star fills, vote counts, missing/unhydrated ratings, encoded Series/Circle/contributor filter URLs, preserved Edit return state/fragment, age-aware DLsite URLs, and rejection of a missing required `work_name`. Localized combined source labels are covered by `ProductSurfaceLocalizationTest`.
+- Covers typed Index row construction from narrow Product hydration with canonical Japanese `work_name` plus a prepared English scalar title, preservation of null/empty English titles without loading localization models, visibility-aware rating preparation, scale-dependent display values, half-star fills, vote counts, missing/unhydrated ratings, encoded Series/Circle/contributor filter URLs, preserved Edit return state/fragment, and age-aware DLsite URLs. Localized combined source labels are covered by `ProductSurfaceLocalizationTest`.
 
 `tests/Unit/Support/RefetchDiffBuilderTest.php`
 - Covers all Refetch metadata/creator/tag categories (including grouped DLsite Rating changes when both scales change or only the ten-point cache changes, and independent Publisher/Brand changes), main-only Product Format comparison that ignores fetched additional formats, plus tag identity handling, cover hashing, and unavailable sample-image behavior.
-- Checks that normalized scraper fields and dates ending in `+09:00` do not cause false removal suggestions, while changed creator-name lists are shown in the Refetch review.
+- Checks that normalized scraper fields and dates ending in `+09:00` do not cause false removal suggestions, a missing fetched Japanese title does not propose clearing the required stored title while the English title remains nullable, and changed creator-name lists are shown in the Refetch review.
 
 `tests/Unit/Support/ReturnTargetTest.php`
 - Covers Index-only return-query/fragment normalization, malformed input fallback, legacy route rejection, and URL generation.
