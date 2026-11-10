@@ -34,6 +34,28 @@ class AutocompleteMatcher
         }
     }
 
+    /**
+     * Orders rows in SQL the same way {@see matchRank()} ranks them, so the result limit can be applied by the database.
+     */
+    public function orderByMatchRank(Builder|EloquentBuilder $query, string $column, string $value): void
+    {
+        $escapedValue = $this->escapeLike($value);
+        $cases = ["WHEN {$column} LIKE ? THEN 0"];
+        $bindings = ["{$escapedValue}%"];
+
+        foreach (self::WORD_SEPARATORS as $separator) {
+            $cases[] = "WHEN {$column} LIKE ? THEN 1";
+            $bindings[] = '%' . $this->escapeLike($separator) . "{$escapedValue}%";
+        }
+
+        if ($this->containsNonAscii($value)) {
+            $cases[] = "WHEN {$column} LIKE ? THEN 2";
+            $bindings[] = "%{$escapedValue}%";
+        }
+
+        $query->orderByRaw('CASE ' . implode(' ', $cases) . ' ELSE 3 END', $bindings);
+    }
+
     public function matchRank(string $value, string $query): int
     {
         $normalizedValue = mb_strtolower($value);
