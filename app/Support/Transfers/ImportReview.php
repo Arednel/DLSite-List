@@ -890,21 +890,26 @@ final class ImportReview
         if (isset($item->metadata['field'])) {
             $field = $item->metadata['field'];
             $locale = $this->titleLocale($field);
-            $current = $locale !== null
-                ? $product->titleForLocale($locale)
-                : $product->getAttribute($field);
 
-            if (! $merge || $current === null || $current === '') {
-                if ($locale !== null) {
-                    $product->syncLocalization(
-                        $locale,
-                        ['title' => blank($value) ? null : $value],
-                    );
-                } else {
-                    $product->setAttribute($field, $value);
-                    if ($product->isDirty()) {
-                        $product->save();
-                    }
+            if ($merge) {
+                $current = $locale !== null
+                    ? $product->titleForLocale($locale)
+                    : $product->getAttribute($field);
+
+                if ($current !== null && $current !== '') {
+                    return;
+                }
+            }
+
+            if ($locale !== null) {
+                $product->syncLocalization(
+                    $locale,
+                    ['title' => blank($value) ? null : $value],
+                );
+            } else {
+                $product->setAttribute($field, $value);
+                if ($product->isDirty()) {
+                    $product->save();
                 }
             }
         } elseif (($item->metadata['domain'] ?? null) === 'details') {

@@ -14,6 +14,7 @@ use App\Models\LibraryImportItem;
 use App\Models\LibraryTransferRun;
 use App\Models\Option;
 use App\Models\Product;
+use App\Models\ProductLocalization;
 use App\Support\LibraryMutationLock;
 use App\Support\OptionStylesheet;
 use App\Support\ProductContributorSync;
@@ -511,6 +512,42 @@ class LibraryTransferReviewTest extends TestCase
         $this->assertTrue($title->fresh()->decision_override);
         $view->call('decideMany', 'merge');
         $this->assertSame(LibraryImportDecision::Ignore, $title->fresh()->decision);
+    }
+
+    public function test_translated_title_overwrite_avoids_redundant_pre_write_read(): void
+    {
+        $product = Product::factory()->withEnglishTitle('Original EN')->create(['id' => 'RJ123458']);
+        $run = $this->service()->startImport();
+        $review = $this->review();
+        $record = app(LibraryData::class)->work($product);
+        $record['titles']['work_name_english'] = 'Imported EN';
+        $review->stage($run, 'works', $record, []);
+        $item = $run->items()->where('metadata->field', 'work_name_english')->firstOrFail();
+        $item->update(['decision' => 'overwrite']);
+
+        $item = $item->fresh();
+        $product = $product->fresh();
+        DB::flushQueryLog();
+        DB::enableQueryLog();
+
+        $method = new \ReflectionMethod(ImportReview::class, 'applyWork');
+        $method->invoke($review, $item, $product);
+
+        $localizationReads = collect(DB::getQueryLog())
+            ->filter(function (array $query): bool {
+                $sql = strtolower($query['query']);
+
+                return str_starts_with($sql, 'select')
+                    && str_contains($sql, 'product_localizations');
+            })
+            ->values();
+        DB::disableQueryLog();
+
+        $this->assertCount(1, $localizationReads);
+        $this->assertSame(
+            'Imported EN',
+            $product->fresh()->titleForLocale(ProductLocalization::LOCALE_ENGLISH),
+        );
     }
 
     public function test_work_review_uses_refetch_tabs_and_separate_dlsite_list_fields(): void
