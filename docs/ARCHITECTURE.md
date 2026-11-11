@@ -240,6 +240,8 @@ The export flow is:
 3. `TransferArchive` packs deterministic data/image ZIP parts with a `manifest.json` per part.
 4. Completed parts are validated and atomically published from private transfer storage.
 
+Work export planning eager-loads each Product batch with title localizations, contributors, and the custom, Japanese, and English tag relations. Contributor and tag relations are ordered by attachment ID during eager loading and consumed through a dedicated preloaded snapshot path that requires all expected relations to be loaded. Japanese titles are read from `products.work_name`, while the batched export path reads English titles from the preloaded localization collection. Ordinary snapshot and category reads query current relation values rather than implicitly reusing loaded collections.
+
 The import flow is:
 
 1. Uploaded ZIPs are stored under immutable private paths and inspected asynchronously.

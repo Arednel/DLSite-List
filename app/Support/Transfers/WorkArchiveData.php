@@ -74,8 +74,29 @@ final class WorkArchiveData
 
     public function exportSnapshot(Product $product, bool $images = false): array
     {
-        $contributors = $this->data->category($product, 'contributors');
-        $tags = $this->data->category($product, 'tags');
+        return $this->buildExportSnapshot($product, $images, false);
+    }
+
+    /**
+     * Export using preloaded localizations and contributor/tag relations in canonical attachment order.
+     */
+    public function exportSnapshotFromPreorderedRelations(Product $product, bool $images = false): array
+    {
+        return $this->buildExportSnapshot($product, $images, true);
+    }
+
+    private function buildExportSnapshot(Product $product, bool $images, bool $usePreorderedRelations): array
+    {
+        if ($usePreorderedRelations && ! $product->relationLoaded('localizations')) {
+            throw new \LogicException('Preordered localization export relation is not loaded.');
+        }
+
+        $contributors = $usePreorderedRelations
+            ? $this->data->preorderedLoadedCategory($product, 'contributors')
+            : $this->data->category($product, 'contributors');
+        $tags = $usePreorderedRelations
+            ? $this->data->preorderedLoadedCategory($product, 'tags')
+            : $this->data->category($product, 'tags');
         $coverInspection = $images ? $this->data->inspectImageCategory($product, 'cover') : null;
         $sampleInspection = $images ? $this->data->inspectImageCategory($product, 'sample_images') : null;
         $cover = $coverInspection === null ? null : Arr::except($coverInspection, ['unavailable']);
@@ -84,7 +105,11 @@ final class WorkArchiveData
         $samplePaths = $samples === null ? null : array_column($samples['files'], 'path');
 
         $japaneseTitle = $product->work_name;
-        $englishTitle = $product->titleForLocale(ProductLocalization::LOCALE_ENGLISH) ?? $japaneseTitle;
+        $englishTitle = ($usePreorderedRelations
+            ? $product->getRelation('localizations')
+            ->firstWhere('locale', ProductLocalization::LOCALE_ENGLISH)
+            ?->title
+            : $product->titleForLocale(ProductLocalization::LOCALE_ENGLISH)) ?? $japaneseTitle;
 
         $japanese = $this->locale(
             $product,

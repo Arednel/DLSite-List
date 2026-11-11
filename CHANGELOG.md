@@ -25,6 +25,7 @@ For existing manual installations:
 
 * Simplified Index column rendering and styling by relying on existing field classes.
 * Improved Index return navigation performance by avoiding redundant visibility checks when a single filter hides the affected Product.
+* Improved Library Transfer export planning performance by batch-loading work titles, contributors, and tags.
 
 ### Fixed
 

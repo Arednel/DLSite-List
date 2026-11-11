@@ -217,6 +217,8 @@ Covers core transfer contracts, route/review smoke coverage, transfer error rend
 
 Covers export selection/planning, deterministic work/image inventory, Tag Library/Options fragmentation, raw `user.css` export, multipart manifests and size boundaries, work-level progress, source-change replanning, downloads, and English/Japanese download failure messages rendered by the transfer view. Product Format coverage verifies that ordered canonical/custom values are written to both locale documents and survive export/import round trips; announcement dates are exported in both locales. DLsite Rating coverage verifies round trips and Merge filling an absent vote count without overwriting existing cached rating values.
 
+Work-export planning coverage verifies that each Product batch loads Products, title localizations, contributors, and the three tag buckets in six snapshot-data queries while preserving complete archive contents and attachment ordering. The dedicated preloaded snapshot path rejects missing required relations, while ordinary and locking reads continue to use current database values rather than stale loaded collections.
+
 Regression coverage injects failures after successor-job insertion in every planning phase, verifies transaction rollback and successful retry, and checks stale planning calls. Empty-library and empty-selection export errors are checked in English and Japanese, including that no transfer is started.
 
 #### `tests/Feature/LibraryTransferImportTest.php`

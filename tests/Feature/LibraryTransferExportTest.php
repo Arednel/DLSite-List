@@ -8,12 +8,18 @@ use App\Enums\LibraryTransferRunStatus;
 use App\Jobs\LibraryTransferJob;
 use App\Livewire\OptionsTransferRun;
 use App\Livewire\OptionsTransfers;
+use App\Models\Contributor;
 use App\Models\Genre;
 use App\Models\LibraryTransferRun;
 use App\Models\Option;
 use App\Models\Product;
+use App\Models\ProductLocalization;
+use App\Support\ProductContributorSync;
+use App\Support\ProductGenreSync;
+use App\Support\Transfers\LibraryData;
 use App\Support\Transfers\SourceChanged;
 use App\Support\Transfers\TransferArchive;
+use App\Support\Transfers\WorkArchiveData;
 use App\Support\UserStylesheet;
 use Illuminate\Support\Facades\Bus;
 use Illuminate\Support\Facades\DB;
@@ -136,6 +142,121 @@ class LibraryTransferExportTest extends TestCase
             $this->assertSame(0, $run->entries()->count());
             $this->assertSame(0, $run->parts()->count());
         }
+    }
+
+    public function test_work_planning_batch_loads_snapshot_relations_once_and_preserves_contents(): void
+    {
+        config(['transfers.database_batch_records' => 3]);
+        $products = Product::factory()->count(3)->create();
+        $first = $products->first();
+        // Create identities in the opposite order to their attachments so that
+        // primary-key ordering cannot accidentally satisfy the archive contract.
+        $customA = Genre::resolveByTitle('Custom A');
+        $customZ = Genre::resolveByTitle('Custom Z');
+        $shared = Genre::resolveByTitle('Shared fetched tag');
+        $japanese = Genre::resolveByTitle('Japanese only');
+        $english = Genre::resolveByTitle('English only');
+        app(ProductGenreSync::class)->sync($first, [
+            Genre::LANGUAGE_JAPANESE => [$shared->id, $japanese->id],
+            Genre::LANGUAGE_ENGLISH => [$shared->id, $english->id],
+        ], [$customZ->id, $customA->id]);
+        $first->customGenres()->detach();
+        $first->customGenres()->attach([
+            $customZ->id => ['source' => Genre::PIVOT_SOURCE_CUSTOM],
+            $customA->id => ['source' => Genre::PIVOT_SOURCE_CUSTOM],
+        ]);
+        Contributor::resolveByName('Voice A');
+        Contributor::resolveByName('Voice Z');
+        app(ProductContributorSync::class)->sync($first, [
+            'voice_actor' => ['Voice Z', 'Voice A'],
+            'scenario' => ['Voice A'],
+        ]);
+        $expected = $products->mapWithKeys(fn(Product $product): array => [
+            $product->id => app(WorkArchiveData::class)->exportSnapshot($product->fresh())['work'],
+        ]);
+        $this->assertSame(['Custom Z', 'Custom A'], $expected[$first->id]['dlsite_list']['custom_tags']);
+        $this->assertSame(['Voice Z', 'Voice A'], $expected[$first->id]['japanese']['voice_actor']);
+        $run = $this->service()->export(['works'], 'all', []);
+        $queries = [];
+
+        DB::listen(function ($query) use (&$queries): void {
+            $sql = strtolower($query->sql);
+            if (
+                str_contains($sql, 'from `products`')
+                || str_contains($sql, 'from "products"')
+                || str_contains($sql, 'from `product_localizations`')
+                || str_contains($sql, 'from "product_localizations"')
+                || str_contains($sql, 'from `contributors`')
+                || str_contains($sql, 'from `genres`')
+            ) {
+                $queries[] = $sql;
+            }
+        });
+
+        $this->archive()->plan($run->fresh());
+
+        $productQueries = array_filter(
+            $queries,
+            fn(string $sql): bool => str_contains($sql, 'from `products`') || str_contains($sql, 'from "products"'),
+        );
+        $localizationQueries = array_filter(
+            $queries,
+            fn(string $sql): bool => str_contains($sql, 'from `product_localizations`') || str_contains($sql, 'from "product_localizations"'),
+        );
+
+        $this->assertCount(1, $productQueries);
+        $this->assertCount(1, $localizationQueries);
+        $this->assertCount(6, $queries);
+
+        foreach ($run->entries()->where('section', 'works')->get() as $entry) {
+            $actual = json_decode(Storage::disk('local')->get($entry->source_path), true, flags: JSON_THROW_ON_ERROR);
+            $this->assertSame($expected[$entry->logical_key], $actual);
+        }
+    }
+
+    public function test_preordered_export_snapshot_requires_all_expected_relations_to_be_loaded(): void
+    {
+        $product = Product::factory()->create();
+        $archive = app(WorkArchiveData::class);
+        $requiredRelations = [
+            'localizations' => 'Preordered localization export relation is not loaded.',
+            'contributors' => 'Preordered contributor export relation is not loaded.',
+            'customGenres' => 'Preordered customGenres export relation is not loaded.',
+            'japaneseGenres' => 'Preordered japaneseGenres export relation is not loaded.',
+            'englishGenres' => 'Preordered englishGenres export relation is not loaded.',
+        ];
+
+        foreach ($requiredRelations as $missingRelation => $expectedMessage) {
+            $candidate = $product->fresh();
+            $candidate->load(array_values(array_diff(array_keys($requiredRelations), [$missingRelation])));
+
+            try {
+                $archive->exportSnapshotFromPreorderedRelations($candidate);
+                $this->fail("Preordered export should require the {$missingRelation} relation.");
+            } catch (\LogicException $exception) {
+                $this->assertSame($expectedMessage, $exception->getMessage());
+            }
+        }
+    }
+
+    public function test_ordinary_export_reads_remain_fresh_even_when_export_relations_are_loaded(): void
+    {
+        $product = Product::factory()->withEnglishTitle('Original English')->create();
+        $sync = app(ProductContributorSync::class);
+        $sync->syncRole($product, 'voice_actor', ['Original voice']);
+        $product->load('localizations', 'contributors', 'customGenres');
+        $sync->syncRole($product, 'voice_actor', ['Updated voice']);
+        $tag = Genre::resolveByTitle('New custom tag');
+        $product->customGenres()->attach($tag->id, ['source' => Genre::PIVOT_SOURCE_CUSTOM]);
+        $product->syncLocalization(ProductLocalization::LOCALE_ENGLISH, ['title' => 'Updated English']);
+        $data = app(LibraryData::class);
+        $snapshot = app(WorkArchiveData::class)->exportSnapshot($product);
+
+        $this->assertSame('Updated English', $snapshot['work']['english']['work_name']);
+        $this->assertSame(['Updated voice'], $data->category($product, 'contributors')['voice_actor']);
+        $this->assertSame(['New custom tag'], $data->category($product, 'tags')['custom']);
+        $this->assertSame(['Updated voice'], $data->category($product, 'contributors', lock: true)['voice_actor']);
+        $this->assertSame(['New custom tag'], $data->category($product, 'tags', lock: true)['custom']);
     }
 
     public function test_export_planning_persists_bounded_inventory_before_packing_parts(): void

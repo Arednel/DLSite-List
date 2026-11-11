@@ -49,11 +49,31 @@ final class LibraryData
 
     public function category(Product $product, string $category, bool $lock = false): array
     {
+        return $this->categoryValues($product, $category, $lock, false);
+    }
+
+    /**
+     * Serialize export relations that the caller already loaded in attachment order.
+     */
+    public function preorderedLoadedCategory(Product $product, string $category): array
+    {
+        return $this->categoryValues($product, $category, false, true);
+    }
+
+    private function categoryValues(Product $product, string $category, bool $lock, bool $usePreorderedRelations): array
+    {
         if ($category === 'contributors') {
-            $values = $product->contributors()
+            if ($usePreorderedRelations && ! $product->relationLoaded('contributors')) {
+                throw new \LogicException('Preordered contributor export relation is not loaded.');
+            }
+
+            $contributors = $usePreorderedRelations
+                ? $product->getRelation('contributors')
+                : $product->contributors()
                 ->when($lock, fn($query) => $query->lockForUpdate())
                 ->orderBy('contributor_product.id')
-                ->get(['contributors.id', 'contributors.name'])
+                ->get(['contributors.id', 'contributors.name']);
+            $values = $contributors
                 ->groupBy('pivot.role')
                 ->map(fn($contributors): array => $contributors->pluck('name')->values()->all())
                 ->all();
@@ -67,7 +87,17 @@ final class LibraryData
         if ($category === 'tags') {
             $values = [];
             foreach (['custom' => 'customGenres', 'jp' => 'japaneseGenres', 'en' => 'englishGenres'] as $bucket => $relation) {
-                $values[$bucket] = $product->$relation()->when($lock, fn($query) => $query->lockForUpdate())->orderBy('genre_product.id')->pluck('title')->all();
+                if ($usePreorderedRelations && ! $product->relationLoaded($relation)) {
+                    throw new \LogicException("Preordered {$relation} export relation is not loaded.");
+                }
+
+                $values[$bucket] = $usePreorderedRelations
+                    ? $product->getRelation($relation)->pluck('title')->values()->all()
+                    : $product->$relation()
+                    ->when($lock, fn($query) => $query->lockForUpdate())
+                    ->orderBy('genre_product.id')
+                    ->pluck('title')
+                    ->all();
             }
 
             return $values;

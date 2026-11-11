@@ -125,15 +125,37 @@ final class TransferArchive
         $warnings = $run->warnings ?? [];
         $withImages = in_array('images', $settings['scopes'], true);
 
+        $products = $batch === []
+            ? collect()
+            : Product::query()
+            ->with([
+                'localizations:id,product_id,locale,title',
+                'contributors' => fn($query) => $query
+                    ->select(['contributors.id', 'contributors.name'])
+                    ->orderBy('contributor_product.id'),
+                'customGenres' => fn($query) => $query
+                    ->select(['genres.id', 'genres.title'])
+                    ->orderBy('genre_product.id'),
+                'japaneseGenres' => fn($query) => $query
+                    ->select(['genres.id', 'genres.title'])
+                    ->orderBy('genre_product.id'),
+                'englishGenres' => fn($query) => $query
+                    ->select(['genres.id', 'genres.title'])
+                    ->orderBy('genre_product.id'),
+            ])
+            ->whereKey($batch)
+            ->get()
+            ->keyBy('id');
+
         foreach ($batch as $id) {
-            $product = Product::find($id);
+            $product = $products->get($id);
             if (! $product) {
                 $warnings[] = $id . ': work was removed before export planning.';
                 $offset++;
 
                 continue;
             }
-            $snapshot = $this->works->exportSnapshot($product, $withImages);
+            $snapshot = $this->works->exportSnapshotFromPreorderedRelations($product, $withImages);
             foreach ($snapshot['image_warnings'] as $image) {
                 $warnings[] = $id . ': ' . $image . ' is incomplete.';
             }
