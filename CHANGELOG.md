@@ -4,6 +4,12 @@ All notable changes to this project are documented in this file.
 
 ## Unreleased
 
+### Upgrade notes
+
+For existing manual installations:
+
+* Run `php artisan migrate`.
+
 ### Added
 
 * Added the Edit action to Field Layouts so it can be reordered or hidden.
@@ -12,9 +18,13 @@ All notable changes to this project are documented in this file.
 
 * Reworked application error localization so user-facing errors are translated more consistently across the application.
 * Changed the mobile Edit column to use only half of the row instead of the full row.
-* Simplified Index column rendering and styling by relying on existing field classes.
-* English DLsite metadata is now used only for Title, Description, and fetched Tags. All other DLsite metadata uses the Japanese API response with no fallback..
+* English DLsite metadata is now used only for Title, Description, and fetched Tags. All other DLsite metadata uses the Japanese API response with no fallback.
 * Moved optional translated DLsite work titles to locale-based localization records, with English titles stored separately while the required Japanese title is stored as canonical Product data.
+
+### Performance
+
+* Simplified Index column rendering and styling by relying on existing field classes.
+* Improved Index return navigation performance by avoiding redundant visibility checks when a single filter hides the affected Product.
 
 ### Fixed
 

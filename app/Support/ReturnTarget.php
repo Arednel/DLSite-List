@@ -229,19 +229,25 @@ final readonly class ReturnTarget
     ): array {
         $query = $this->queryWithoutPage();
         $filters = ProductIndexFilters::fromQuery($query);
+        $activeFilterGroups = Arr::where(
+            ProductIndexFilters::VISIBILITY_FILTER_GROUPS,
+            fn(array $filterGroup): bool => Arr::hasAny($query, $filterGroup),
+        );
 
         if (
-            ! self::hasVisibilityFilters($query)
+            $activeFilterGroups === []
             || $results->containsProduct($filters, $product, $ratingScale, $descriptionSearchColumns, $searchTags)
         ) {
             return $filters->toQuery();
         }
 
-        foreach (ProductIndexFilters::VISIBILITY_FILTER_GROUPS as $filterGroup) {
-            if (! Arr::hasAny($query, $filterGroup)) {
-                continue;
-            }
+        if (count($activeFilterGroups) === 1) {
+            return ProductIndexFilters::fromQuery(
+                Arr::except($query, Arr::first($activeFilterGroups))
+            )->toQuery();
+        }
 
+        foreach ($activeFilterGroups as $filterGroup) {
             $groupQuery = Arr::only($query, $filterGroup);
 
             if (! $results->containsProduct(ProductIndexFilters::fromQuery($groupQuery), $product, $ratingScale, $descriptionSearchColumns, $searchTags)) {
@@ -250,16 +256,5 @@ final readonly class ReturnTarget
         }
 
         return ProductIndexFilters::fromQuery($query)->toQuery();
-    }
-
-    private static function hasVisibilityFilters(array $query): bool
-    {
-        foreach (ProductIndexFilters::VISIBILITY_FILTER_GROUPS as $filterGroup) {
-            if (Arr::hasAny($query, $filterGroup)) {
-                return true;
-            }
-        }
-
-        return false;
     }
 }

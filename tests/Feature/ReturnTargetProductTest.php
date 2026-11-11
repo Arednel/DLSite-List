@@ -13,6 +13,7 @@ use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\App;
 use Illuminate\Support\Facades\DB;
+use PHPUnit\Framework\Attributes\TestWith;
 use Tests\TestCase;
 
 class ReturnTargetProductTest extends TestCase
@@ -165,6 +166,33 @@ class ReturnTargetProductTest extends TestCase
         ]))->forProduct($product, perPage: 2, visibilityMayHaveChanged: false);
 
         $this->assertSame('/?progress=Listening#RJ000000001', $target->toUrl());
+    }
+
+    #[TestWith([
+        ['progress' => 'Listening'],
+        ['progress' => 'Completed'],
+    ], 'progress')]
+    #[TestWith([
+        ['start_date' => ['year' => 2026, 'month' => 1, 'day' => 1]],
+        ['start_date_from' => '2026-02-01', 'start_date_to' => '2026-02-28'],
+    ], 'date range')]
+    public function test_for_product_drops_a_single_hiding_filter_group_without_rechecking_it(
+        array $attributes,
+        array $returnQuery,
+    ): void {
+        $product = Product::factory()->create([
+            'id' => 'RJ000000001',
+            ...$attributes,
+        ]);
+
+        // The page and combined-filter checks are enough to identify the sole hiding group.
+        $this->expectsDatabaseQueryCount(2);
+
+        $target = ReturnTarget::fromRequest(Request::create('/update/RJ000000001', 'POST', [
+            'return_query' => $returnQuery,
+        ]))->forProduct($product, perPage: Option::INDEX_PER_PAGE_UNLIMITED);
+
+        $this->assertSame('/#RJ000000001', $target->toUrl());
     }
 
     public function test_for_product_drops_multiple_hiding_filter_groups(): void

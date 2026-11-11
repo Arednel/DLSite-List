@@ -447,7 +447,7 @@ Covers the server-rendered DLSite Quick Add fetching-status contract across stan
 
 #### `tests/Feature/ReturnTargetProductTest.php`
 
-Covers product-aware Index return URLs, visibility checks, pagination/page cleanup, filters, hidden-description behavior, selected-language tag filtering, the no-Options-query fast path for ordinary returns, and scale-aware DLsite-rating return-page calculations.
+Covers product-aware Index return URLs, visibility checks, pagination/page cleanup, filters, hidden-description behavior, selected-language tag filtering, the no-Options-query fast path for ordinary returns, single-filter cleanup without a redundant visibility recheck using Laravel's query-count assertion for progress and paired date bounds, and scale-aware DLsite-rating return-page calculations.
 
 #### `tests/Feature/SetUiLocaleTest.php`
 
