@@ -23,11 +23,13 @@ class OptionsWorkSearch extends Component
     public function render(): View
     {
         $products = $this->products();
+        $hasAnyProducts = $products->isNotEmpty()
+            || (trim($this->search) !== '' && Product::query()->exists());
 
         return view('livewire.options-work-search', [
             'products' => $products,
             'hiddenSelectedProductIds' => $this->hiddenSelectedProductIds($products),
-            'hasAnyProducts' => $products->isNotEmpty() || Product::query()->exists(),
+            'hasAnyProducts' => $hasAnyProducts,
         ]);
     }
 

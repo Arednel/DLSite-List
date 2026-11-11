@@ -239,7 +239,7 @@ Partial work-document coverage verifies that canonical Japanese contributor valu
 
 #### `tests/Feature/LibraryTransferLifecycleTest.php`
 
-Covers supersession/cancellation, active-transfer guards, history cleanup, queued checkpoints/retries, generation and operation tokens, late callbacks, publication recovery, browser-started imports, transfer-storage cleanup, and semantic fallback errors when queue failures have empty exception messages.
+Covers supersession/cancellation, active-transfer guards, history cleanup, queued checkpoints/retries, generation and operation tokens, late callbacks, publication recovery, browser-started imports, transfer-storage cleanup, selector Product-existence query avoidance, and semantic fallback errors when queue failures have empty exception messages.
 
 Storage cleanup coverage holds the upload lock before database registration to verify that a sweep skips active uploads and later removes only unreferenced files.
 
@@ -332,7 +332,7 @@ Covers Refetch review tabs, compact collapsed failed-result/warning errors, curr
 
 #### `tests/Feature/OptionsWorkSearchTest.php`
 
-Covers selected-work Refetch search across the canonical Japanese title and current English translation, exclusion of future translated title locales until language support is generalized, product-code-desc ordering, preservation of selected products while filtering, and lightweight title projections for whole-library selectors.
+Covers selected-work Refetch search across the canonical Japanese title and current English translation, exclusion of future translated title locales until language support is generalized, product-code-desc ordering, preservation of selected products while filtering, lightweight title projections for whole-library selectors, and avoidance of redundant Product existence queries when unfiltered selector results already determine availability.
 
 #### `tests/Feature/ProductLocalizationTest.php`
 

@@ -69,6 +69,40 @@ class LibraryTransferLifecycleTest extends TestCase
             ->assertSeeInOrder(['Latest export', 'Latest import']);
     }
 
+    public function test_transfer_work_selector_avoids_redundant_product_existence_queries(): void
+    {
+        $productExistenceQueries = [];
+
+        DB::listen(function ($query) use (&$productExistenceQueries): void {
+            $sql = strtolower(str_replace(['`', '"'], '', $query->sql));
+
+            if (str_starts_with($sql, 'select exists') && str_contains($sql, 'from products')) {
+                $productExistenceQueries[] = $sql;
+            }
+        });
+
+        $component = Livewire::test(OptionsTransfers::class)
+            ->assertViewHas('hasAnyProducts', true);
+
+        $this->assertCount(0, $productExistenceQueries);
+
+        $productExistenceQueries = [];
+        $component
+            ->set('mode', 'selected')
+            ->assertViewHas('hasAnyProducts', false);
+
+        $this->assertCount(0, $productExistenceQueries);
+
+        Product::factory()->create(['work_name' => 'VISIBLE_WORK']);
+        $productExistenceQueries = [];
+
+        $component
+            ->set('search', 'NO_MATCHING_WORK')
+            ->assertViewHas('hasAnyProducts', true);
+
+        $this->assertCount(1, $productExistenceQueries);
+    }
+
     public function test_import_is_not_created_until_the_explicit_start_action_returns_upload_routes(): void
     {
         $uploadMaxBytes = $this->service()->uploadLimitBytes();

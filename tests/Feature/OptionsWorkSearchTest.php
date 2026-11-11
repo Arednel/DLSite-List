@@ -5,6 +5,7 @@ namespace Tests\Feature;
 use App\Livewire\OptionsWorkSearch;
 use App\Models\Product;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\DB;
 use Livewire\Livewire;
 use Tests\TestCase;
 
@@ -108,6 +109,33 @@ class OptionsWorkSearchTest extends TestCase
                 return $rows->get($nullEnglish->id)->english_title === null
                     && $rows->get($emptyEnglish->id)->english_title === null;
             });
+    }
+
+    public function test_work_search_avoids_redundant_product_existence_queries(): void
+    {
+        $productExistenceQueries = [];
+
+        DB::listen(function ($query) use (&$productExistenceQueries): void {
+            $sql = strtolower(str_replace(['`', '"'], '', $query->sql));
+
+            if (str_starts_with($sql, 'select exists') && str_contains($sql, 'from products')) {
+                $productExistenceQueries[] = $sql;
+            }
+        });
+
+        $component = Livewire::test(OptionsWorkSearch::class)
+            ->assertViewHas('hasAnyProducts', false);
+
+        $this->assertCount(0, $productExistenceQueries);
+
+        Product::factory()->create(['work_name' => 'VISIBLE_WORK']);
+        $productExistenceQueries = [];
+
+        $component
+            ->set('search', 'NO_MATCHING_WORK')
+            ->assertViewHas('hasAnyProducts', true);
+
+        $this->assertCount(1, $productExistenceQueries);
     }
 
     public function test_image_choice_is_preserved_while_search_rerenders(): void

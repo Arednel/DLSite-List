@@ -173,6 +173,8 @@ class OptionsTransfers extends Component
     public function render(LibraryTransferCleanupService $cleanupService, LibraryTransferService $transferService): View
     {
         $products = collect();
+        $hasAnyProducts = true;
+
         if (in_array('works', $this->scopes, true) && $this->mode === 'selected') {
             $search = trim($this->search);
 
@@ -192,11 +194,14 @@ class OptionsTransfers extends Component
                 )
                 ->orderByNumericCode()
                 ->get();
+
+            $hasAnyProducts = $products->isNotEmpty()
+                || ($search !== '' && Product::query()->exists());
         }
 
         return view('livewire.options-transfers', [
             'products' => $products,
-            'hasAnyProducts' => $products->isNotEmpty() || Product::query()->exists(),
+            'hasAnyProducts' => $hasAnyProducts,
             'latestImportRunId' => LibraryTransferRun::query()->where('direction', LibraryTransferDirection::Import)->latest('id')->value('id'),
             'latestExportRunId' => LibraryTransferRun::query()->where('direction', LibraryTransferDirection::Export)->latest('id')->value('id'),
             'cleanupUnavailable' => $cleanupService->unavailable(),

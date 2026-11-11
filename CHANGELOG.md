@@ -27,6 +27,7 @@ For existing manual installations:
 * Improved Index return navigation performance by avoiding redundant visibility checks when a single filter hides the affected Product.
 * Improved Library Transfer export planning performance by batch-loading work titles, contributors, and tags.
 * Improved Library Transfer Import Review performance by avoiding a redundant translated-title read during overwrite.
+* Improved Options work-selector performance by avoiding redundant Product existence queries when selector results already determine whether works are available.
 
 ### Fixed
 
