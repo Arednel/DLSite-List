@@ -14,6 +14,7 @@ use App\Models\LibraryImportItem;
 use App\Models\LibraryTransferRun;
 use App\Models\Option;
 use App\Models\Product;
+use App\Models\ProductLocalization;
 use App\Support\DLSite\DLSiteRating;
 use App\Support\ProductContributorSync;
 use App\Support\Transfers\InvalidArchive;
@@ -1030,7 +1031,7 @@ class LibraryTransferImportTest extends TestCase
         $roles = app(ProductContributorSync::class)->namesByRole($product);
         $this->assertSame('Imported', $product->work_name);
         $this->assertSame("Imported description\nSecond line", $product->description);
-        $this->assertNull($product->description_english);
+        $this->assertNull($product->descriptionForLocale(ProductLocalization::LOCALE_ENGLISH));
         $this->assertSame('2026-05-27 00:00:00', $product->announce_date?->format('Y-m-d H:i:s'));
         $this->assertSame('Masked series', $product->series);
         $this->assertSame('Keep personal notes', $product->notes);

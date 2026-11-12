@@ -7,7 +7,6 @@ use App\Enums\ProductFormat;
 use App\Enums\RefetchCategory;
 use App\Models\Genre;
 use App\Models\Product;
-use App\Models\ProductLocalization;
 use App\Support\DLSite\DLSiteFetchResult;
 use App\Support\DLSite\DLSiteRating;
 use App\Support\ProductContributorSync;
@@ -29,14 +28,16 @@ final class RefetchDiffBuilder
     ): array {
         $work = $fetch->workData;
         $contributors = $this->contributorSync->namesByRole($product);
+        $englishLocalization = $product->englishLocalization()
+            ->first(['title', 'description']);
         $changes = [];
 
         if ($work->workName !== null) {
             $this->add($changes, RefetchCategory::Titles, 'work_name', 'Japanese Title', $product->work_name, $work->workName);
         }
-        $this->add($changes, RefetchCategory::Titles, 'work_name_english', 'English Title', $product->titleForLocale(ProductLocalization::LOCALE_ENGLISH), $work->englishWorkName);
+        $this->add($changes, RefetchCategory::Titles, 'work_name_english', 'English Title', $englishLocalization?->title, $work->englishWorkName);
         $this->add($changes, RefetchCategory::Descriptions, 'description', 'Japanese Description', $product->description, $work->description);
-        $this->add($changes, RefetchCategory::Descriptions, 'description_english', 'English Description', $product->description_english, $work->englishDescription);
+        $this->add($changes, RefetchCategory::Descriptions, 'description_english', 'English Description', $englishLocalization?->description, $work->englishDescription);
         $this->add($changes, RefetchCategory::Series, 'series', 'Series', $product->series, $work->autoSeries());
         $this->add($changes, RefetchCategory::Age, 'age_category', 'Age', $product->age_category, $work->ageCategory);
         $this->add($changes, RefetchCategory::SiteId, 'site_id', 'Site ID', $product->site_id, $work->siteId);

@@ -850,22 +850,24 @@ class FullRefetchTest extends TestCase
     public function test_apply_all_overwrites_fetched_metadata_and_preserves_user_owned_fields_and_custom_tags(): void
     {
         Storage::fake('local');
-        $product = Product::factory()->withTitles('Old JP', 'Old EN')->create([
-            'maker_id' => 'RGOLD',
-            'description' => 'Old Description',
-            'description_english' => 'Old English Description',
-            'series' => 'Old Series',
-            'age_category' => 'ALL_AGES',
-            'circle' => 'Old Circle',
-            'progress' => 'Completed',
-            'score' => 9,
-            'start_date' => ['year' => '2025', 'month' => '01', 'day' => '02'],
-            'end_date' => ['year' => '2025', 'month' => '01', 'day' => '03'],
-            'notes' => 'Keep my notes',
-            'priority' => '2',
-            'num_re_listen_times' => 4,
-            're_listen_value' => 1,
-        ]);
+        $product = Product::factory()
+            ->withTitles('Old JP', 'Old EN')
+            ->withEnglishDescription('Old English Description')
+            ->create([
+                'maker_id' => 'RGOLD',
+                'description' => 'Old Description',
+                'series' => 'Old Series',
+                'age_category' => 'ALL_AGES',
+                'circle' => 'Old Circle',
+                'progress' => 'Completed',
+                'score' => 9,
+                'start_date' => ['year' => '2025', 'month' => '01', 'day' => '02'],
+                'end_date' => ['year' => '2025', 'month' => '01', 'day' => '03'],
+                'notes' => 'Keep my notes',
+                'priority' => '2',
+                'num_re_listen_times' => 4,
+                're_listen_value' => 1,
+            ]);
         app(ProductContributorSync::class)->sync($product, [
             ProductContributorRole::Circle->value => ['Old Circle'],
             ProductContributorRole::Scenario->value => ['Old Scenario'],
@@ -980,7 +982,7 @@ class FullRefetchTest extends TestCase
             'work_name' => $product->work_name,
             'work_name_english' => $product->titleForLocale(ProductLocalization::LOCALE_ENGLISH),
             'description' => $product->description,
-            'description_english' => $product->description_english,
+            'description_english' => $product->descriptionForLocale(ProductLocalization::LOCALE_ENGLISH),
             'series' => $product->series,
             'age_category' => $product->age_category,
             'circle' => $product->circle,

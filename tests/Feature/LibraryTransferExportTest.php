@@ -219,7 +219,7 @@ class LibraryTransferExportTest extends TestCase
         $product = Product::factory()->create();
         $archive = app(WorkArchiveData::class);
         $requiredRelations = [
-            'localizations' => 'Preordered localization export relation is not loaded.',
+            'englishLocalization' => 'Preordered English localization export relation is not loaded.',
             'contributors' => 'Preordered contributor export relation is not loaded.',
             'customGenres' => 'Preordered customGenres export relation is not loaded.',
             'japaneseGenres' => 'Preordered japaneseGenres export relation is not loaded.',
@@ -244,7 +244,7 @@ class LibraryTransferExportTest extends TestCase
         $product = Product::factory()->withEnglishTitle('Original English')->create();
         $sync = app(ProductContributorSync::class);
         $sync->syncRole($product, 'voice_actor', ['Original voice']);
-        $product->load('localizations', 'contributors', 'customGenres');
+        $product->load('englishLocalization', 'contributors', 'customGenres');
         $sync->syncRole($product, 'voice_actor', ['Updated voice']);
         $tag = Genre::resolveByTitle('New custom tag');
         $product->customGenres()->attach($tag->id, ['source' => Genre::PIVOT_SOURCE_CUSTOM]);

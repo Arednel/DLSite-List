@@ -242,7 +242,6 @@ class PerformanceSmokeTest extends TestCase
                             'circle' => 'PERF_CIRCLE',
                             'work_image' => sprintf('storage/Works/%s/cover.jpg', $this->productId($number)),
                             'description' => sprintf('PERF_DESCRIPTION_JP_%d', $number),
-                            'description_english' => sprintf('PERF_DESCRIPTION_EN_%d', $number),
                             'notes' => null,
                             'sample_images' => json_encode([]),
                             'score' => ($number % 10) + 1,
@@ -267,6 +266,7 @@ class PerformanceSmokeTest extends TestCase
                             'product_id' => $this->productId($number),
                             'locale' => 'en',
                             'title' => sprintf('PERF_WORK_EN_%d', $number),
+                            'description' => sprintf('PERF_DESCRIPTION_EN_%d', $number),
                             'created_at' => $now,
                             'updated_at' => $now,
                         ])
@@ -445,7 +445,6 @@ class PerformanceSmokeTest extends TestCase
                 'circle' => 'PERF_CIRCLE',
                 'work_image' => 'storage/Works/RJ999999999/cover.jpg',
                 'description' => null,
-                'description_english' => null,
                 'notes' => null,
                 'sample_images' => json_encode([]),
                 'score' => 1,

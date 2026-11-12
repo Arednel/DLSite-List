@@ -30,7 +30,6 @@ class ProductFactory extends Factory
             'circle' => 'Circle',
             'work_image' => "storage/Works/{$id}/cover.jpg",
             'description' => 'Description',
-            'description_english' => 'Description English',
             'notes' => null,
             'sample_images' => [],
             'score' => null,
@@ -49,7 +48,10 @@ class ProductFactory extends Factory
         return $this->afterCreating(function (Product $product): void {
             Product::withoutTouching(fn() => $product->syncLocalization(
                 ProductLocalization::LOCALE_ENGLISH,
-                ['title' => 'WORK_EN_' . $product->id],
+                [
+                    'title' => 'WORK_EN_' . $product->id,
+                    'description' => 'Description English',
+                ],
             ));
         });
     }
@@ -67,6 +69,16 @@ class ProductFactory extends Factory
             Product::withoutTouching(fn() => $product->syncLocalization(
                 ProductLocalization::LOCALE_ENGLISH,
                 ['title' => blank($english) ? null : $english],
+            ));
+        });
+    }
+
+    public function withEnglishDescription(?string $english): static
+    {
+        return $this->afterCreating(function (Product $product) use ($english): void {
+            Product::withoutTouching(fn() => $product->syncLocalization(
+                ProductLocalization::LOCALE_ENGLISH,
+                ['description' => blank($english) ? null : $english],
             ));
         });
     }

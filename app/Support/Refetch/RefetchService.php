@@ -509,6 +509,15 @@ final class RefetchService
             );
         }
 
+        if ($category === RefetchCategory::Descriptions && $field === 'description_english') {
+            $description = $change['new'] ?? null;
+
+            return $product->syncLocalization(
+                ProductLocalization::LOCALE_ENGLISH,
+                ['description' => blank($description) ? null : $description],
+            );
+        }
+
         return DB::transaction(function () use ($product, $category, $field, $change): bool {
             if (in_array($category, [
                 RefetchCategory::Descriptions,

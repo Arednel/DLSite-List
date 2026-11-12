@@ -20,6 +20,7 @@ class ProductLocalization extends Model
     protected $fillable = [
         'locale',
         'title',
+        'description',
     ];
 
     protected static function booted(): void
@@ -33,7 +34,8 @@ class ProductLocalization extends Model
 
     public function isEmpty(): bool
     {
-        return blank($this->title);
+        return blank($this->title)
+            && blank($this->description);
     }
 
     public function product(): BelongsTo

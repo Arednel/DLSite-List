@@ -12,6 +12,7 @@ use App\Support\ProductContributorSync;
 use App\Support\ProductGenreSync;
 use App\Support\Refetch\RefetchDiffBuilder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 use PHPUnit\Framework\Attributes\DataProvider;
 use Tests\TestCase;
@@ -22,12 +23,11 @@ class RefetchDiffBuilderTest extends TestCase
 
     public function test_api_aliases_do_not_propose_removals_but_shortened_credits_remain_reviewable(): void
     {
-        $product = Product::factory()->withTitles('Title', null)->create([
+        $product = Product::factory()->withTitles('Title', null)->withEnglishDescription(null)->create([
             'id' => 'RJ123456',
             'site_id' => 'maniax',
             'maker_id' => 'RG123',
             'description' => 'Description',
-            'description_english' => null,
             'publisher' => null,
             'brand' => null,
             'series' => null,
@@ -60,17 +60,19 @@ class RefetchDiffBuilderTest extends TestCase
     public function test_it_builds_full_metadata_diffs_and_keeps_failed_sample_images_unavailable(): void
     {
         Storage::fake('public');
-        $product = Product::factory()->withTitles('Old JP', 'Old EN')->create([
-            'maker_id' => 'RGOLD',
-            'age_category' => 'ALL_AGES',
-            'product_format' => ['MOV', 'SND'],
-            'announce_date' => null,
-            'circle' => 'Old Circle',
-            'series' => 'Old Series',
-            'description' => 'Old Description',
-            'description_english' => 'Old English Description',
-            'sample_images' => ['storage/Works/RJ123456/sample_1.jpg'],
-        ]);
+        $product = Product::factory()
+            ->withTitles('Old JP', 'Old EN')
+            ->withEnglishDescription('Old English Description')
+            ->create([
+                'maker_id' => 'RGOLD',
+                'age_category' => 'ALL_AGES',
+                'product_format' => ['MOV', 'SND'],
+                'announce_date' => null,
+                'circle' => 'Old Circle',
+                'series' => 'Old Series',
+                'description' => 'Old Description',
+                'sample_images' => ['storage/Works/RJ123456/sample_1.jpg'],
+            ]);
         app(ProductContributorSync::class)->sync($product, [
             ProductContributorRole::Circle->value => ['Old Circle'],
             ProductContributorRole::Scenario->value => ['Old Writer'],
@@ -145,6 +147,51 @@ class RefetchDiffBuilderTest extends TestCase
         $this->assertArrayNotHasKey(RefetchCategory::SampleImages->value, $changes);
         $this->assertSame('2026-09-24 00:00:00', $changes['announce_date']['announce_date']['new']);
         $this->assertSame('Custom Tag', $changes['tags']['tags']['old']['custom'][0]);
+    }
+
+    public function test_english_title_and_description_are_read_from_one_localization_query(): void
+    {
+        $product = Product::factory()
+            ->withTitles('Japanese Title', 'Old English Title')
+            ->withEnglishDescription('Old English Description')
+            ->create(['description' => 'Japanese Description']);
+        $fetch = new DLSiteFetchResult(
+            workData: DLSiteWorkData::fromArray([
+                'japanese' => ['product_id' => $product->id],
+                'english' => [
+                    'work_name' => 'New English Title',
+                    'description' => 'New English Description',
+                ],
+            ]),
+            failedImages: [],
+        );
+
+        DB::flushQueryLog();
+        DB::enableQueryLog();
+
+        try {
+            $changes = app(RefetchDiffBuilder::class)->build($product, $fetch, null);
+            $localizationReads = collect(DB::getQueryLog())
+                ->filter(function (array $query): bool {
+                    $sql = strtolower($query['query']);
+
+                    return str_starts_with($sql, 'select')
+                        && str_contains($sql, 'product_localizations');
+                })
+                ->values();
+        } finally {
+            DB::disableQueryLog();
+        }
+
+        $this->assertCount(1, $localizationReads);
+        $this->assertSame(
+            'Old English Title',
+            $changes[RefetchCategory::Titles->value]['work_name_english']['old'],
+        );
+        $this->assertSame(
+            'Old English Description',
+            $changes[RefetchCategory::Descriptions->value]['description_english']['old'],
+        );
     }
 
     public function test_missing_japanese_title_does_not_propose_removal_but_english_title_can_clear(): void

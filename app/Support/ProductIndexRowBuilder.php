@@ -109,7 +109,7 @@ final readonly class ProductIndexRowBuilder
                 makerNames: $makerNames,
                 makerId: $attributes['maker_id'] ?? null,
                 description: $attributes['description'] ?? null,
-                descriptionEnglish: $attributes['description_english'] ?? null,
+                descriptionEnglish: $attributes['english_description'] ?? null,
                 contributors: $this->buildContributors(
                     $contributorsByProductId->get($id) ?? collect(),
                     $indexUrl,

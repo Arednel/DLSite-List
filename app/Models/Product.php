@@ -13,6 +13,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Database\Query\Builder as QueryBuilder;
 use Illuminate\Support\Facades\Storage;
 
@@ -37,7 +38,6 @@ class Product extends Model
         'brand',
         'work_image',
         'description',
-        'description_english',
         'notes',
         'sample_images',
         'score',
@@ -109,6 +109,13 @@ class Product extends Model
         return $this->hasMany(ProductLocalization::class);
     }
 
+    public function englishLocalization(): HasOne
+    {
+        return $this->localizations()
+            ->one()
+            ->where('locale', ProductLocalization::LOCALE_ENGLISH);
+    }
+
     public function titleForLocale(string $locale): ?string
     {
         if ($locale === ProductLocalization::LOCALE_JAPANESE) {
@@ -122,6 +129,21 @@ class Product extends Model
         return $this->localizations()
             ->where('locale', $locale)
             ->value('title');
+    }
+
+    public function descriptionForLocale(string $locale): ?string
+    {
+        if ($locale === ProductLocalization::LOCALE_JAPANESE) {
+            return $this->description;
+        }
+
+        if (! $this->exists) {
+            return null;
+        }
+
+        return $this->localizations()
+            ->where('locale', $locale)
+            ->value('description');
     }
 
     /**
@@ -376,7 +398,10 @@ class Product extends Model
     #[Scope]
     protected function filterDescriptionEnglish(Builder $query, string $description): void
     {
-        $query->whereLike('description_english', '%' . trim($description) . '%');
+        $query->whereHas(
+            'englishLocalization',
+            fn(Builder $query) => $query->whereLike('description', '%' . trim($description) . '%'),
+        );
     }
 
     #[Scope]
@@ -398,12 +423,13 @@ class Product extends Model
             'brand',
         ];
 
-        array_push($columns, ...array_values(array_intersect(
-            ['description', 'description_english'],
-            $descriptionColumns,
-        )));
+        if (in_array('description', $descriptionColumns, true)) {
+            $columns[] = 'description';
+        }
 
-        $query->where(function (Builder $searchQuery) use ($columns, $search, $searchTags, $fetchedLanguage): void {
+        $searchEnglishDescription = in_array('description_english', $descriptionColumns, true);
+
+        $query->where(function (Builder $searchQuery) use ($columns, $search, $searchEnglishDescription, $searchTags, $fetchedLanguage): void {
             $searchQuery->whereAny($columns, 'like', $search)
                 ->orWhereIn('products.id', ProductLocalization::query()
                     ->select('product_id')
@@ -412,6 +438,13 @@ class Product extends Model
                 ->orWhereHas('contributors', function (Builder $contributorQuery) use ($search): void {
                     $contributorQuery->whereLike('contributors.name', $search);
                 });
+
+            if ($searchEnglishDescription) {
+                $searchQuery->orWhereHas(
+                    'englishLocalization',
+                    fn(Builder $query) => $query->whereLike('description', $search),
+                );
+            }
 
             if (! $searchTags) {
                 return;

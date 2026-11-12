@@ -14,7 +14,6 @@ use App\Enums\RatingVisualStyle;
 use App\Models\Genre;
 use App\Models\Option;
 use App\Models\Product;
-use App\Models\ProductLocalization;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Collection as EloquentCollection;
 use Illuminate\Pagination\LengthAwarePaginator;
@@ -54,7 +53,6 @@ final class ProductIndexResults
         'brand' => ['brand'],
         'maker_names' => ['circle', 'publisher', 'brand'],
         'description_japanese' => ['description'],
-        'description_english' => ['description_english'],
     ];
 
     private const DISPLAY_VALUE_FIELDS = [
@@ -89,12 +87,11 @@ final class ProductIndexResults
             $fetchedLanguage,
         );
         $query = $this->applySqlSorting($query, $filters->sorts(), $ratingScale)
-            ->addSelect([
-                'english_title' => ProductLocalization::query()
-                    ->select('title')
-                    ->whereColumn('product_localizations.product_id', 'products.id')
-                    ->where('locale', ProductLocalization::LOCALE_ENGLISH),
-            ]);
+            ->withAggregate('englishLocalization as english_title', 'title');
+
+        if (in_array(ProductField::DescriptionEnglish->value, $visibleFields, true)) {
+            $query->withAggregate('englishLocalization as english_description', 'description');
+        }
 
         return $perPage === Option::INDEX_PER_PAGE_UNLIMITED
             ? $query->get()

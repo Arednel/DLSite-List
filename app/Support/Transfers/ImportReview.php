@@ -594,13 +594,13 @@ final class ImportReview
                 return $product->announce_date?->format('Y-m-d H:i:s');
             }
 
-            $locale = $this->titleLocale($field);
+            $localizationField = $this->localizationField($field);
 
-            if ($locale !== null) {
+            if ($localizationField !== null) {
                 return $product->localizations()
                     ->when($this->locking, fn($query) => $query->lockForUpdate())
-                    ->where('locale', $locale)
-                    ->value('title');
+                    ->where('locale', $localizationField['locale'])
+                    ->value($localizationField['attribute']);
             }
 
             return $product->getAttribute($field);
@@ -860,9 +860,10 @@ final class ImportReview
             $product = new Product([
                 'id' => $item->entity_key,
                 'work_name' => $value['titles']['work_name'],
+                'description' => $value['descriptions']['description'] ?? null,
             ]);
             foreach (LibraryData::FIELDS as $category => $fields) {
-                if ($category === 'titles') {
+                if (in_array($category, ['titles', 'descriptions'], true)) {
                     continue;
                 }
 
@@ -871,9 +872,13 @@ final class ImportReview
             $product->save();
 
             $englishTitle = $value['titles']['work_name_english'] ?? null;
+            $englishDescription = $value['descriptions']['description_english'] ?? null;
             Product::withoutTouching(fn() => $product->syncLocalization(
                 ProductLocalization::LOCALE_ENGLISH,
-                ['title' => blank($englishTitle) ? null : $englishTitle],
+                [
+                    'title' => blank($englishTitle) ? null : $englishTitle,
+                    'description' => blank($englishDescription) ? null : $englishDescription,
+                ],
             ));
             $this->contributors($product, $value['contributors'] ?? []);
             $this->tags($product, $value['tags'] ?? [], $item);
@@ -889,11 +894,13 @@ final class ImportReview
         $merge = $item->decision === LibraryImportDecision::Merge;
         if (isset($item->metadata['field'])) {
             $field = $item->metadata['field'];
-            $locale = $this->titleLocale($field);
+            $localizationField = $this->localizationField($field);
 
             if ($merge) {
-                $current = $locale !== null
-                    ? $product->titleForLocale($locale)
+                $current = $localizationField !== null
+                    ? $product->localizations()
+                    ->where('locale', $localizationField['locale'])
+                    ->value($localizationField['attribute'])
                     : $product->getAttribute($field);
 
                 if ($current !== null && $current !== '') {
@@ -901,10 +908,10 @@ final class ImportReview
                 }
             }
 
-            if ($locale !== null) {
+            if ($localizationField !== null) {
                 $product->syncLocalization(
-                    $locale,
-                    ['title' => blank($value) ? null : $value],
+                    $localizationField['locale'],
+                    [$localizationField['attribute'] => blank($value) ? null : $value],
                 );
             } else {
                 $product->setAttribute($field, $value);
@@ -1176,10 +1183,18 @@ final class ImportReview
         }
     }
 
-    private function titleLocale(string $field): ?string
+    /** @return array{locale: string, attribute: string}|null */
+    private function localizationField(string $field): ?array
     {
         return match ($field) {
-            'work_name_english' => ProductLocalization::LOCALE_ENGLISH,
+            'work_name_english' => [
+                'locale' => ProductLocalization::LOCALE_ENGLISH,
+                'attribute' => 'title',
+            ],
+            'description_english' => [
+                'locale' => ProductLocalization::LOCALE_ENGLISH,
+                'attribute' => 'description',
+            ],
             default => null,
         };
     }

@@ -33,7 +33,7 @@ class ProductIndexRowBuilderTest extends TestCase
             'circle' => 'Circle / One',
             'maker_id' => 'RG 321',
             'description' => 'Japanese description',
-            'description_english' => 'English description',
+            'english_description' => 'English description',
         ]);
 
         $contributorsByProductId = collect([

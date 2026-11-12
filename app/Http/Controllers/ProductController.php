@@ -57,7 +57,6 @@ class ProductController extends Controller
     private const VISIBILITY_AFFECTING_PRODUCT_FIELDS = [
         'work_name',
         'description',
-        'description_english',
         'notes',
         'series',
         'age_category',
@@ -191,7 +190,6 @@ class ProductController extends Controller
                         ? ($validated['brand'] ?? null) : null,
                     'work_image' => $images['work_image'],
                     'description' => $description,
-                    'description_english' => $descriptionEnglish,
                     'notes' => $this->createFieldSubmitted($request, $visibleCreateFields, ProductField::Notes, 'notes')
                         ? ($validated['notes'] ?? null)
                         : null,
@@ -225,7 +223,10 @@ class ProductController extends Controller
 
                 Product::withoutTouching(fn() => $product->syncLocalization(
                     ProductLocalization::LOCALE_ENGLISH,
-                    ['title' => blank($validated['work_name_english'] ?? null) ? null : $validated['work_name_english']],
+                    [
+                        'title' => blank($validated['work_name_english'] ?? null) ? null : $validated['work_name_english'],
+                        'description' => blank($descriptionEnglish) ? null : $descriptionEnglish,
+                    ],
                 ));
 
                 $this->genreSync->syncCustom(
@@ -257,7 +258,10 @@ class ProductController extends Controller
      */
     public function edit(Request $request, Product $product)
     {
-        $englishTitle = $product->titleForLocale(ProductLocalization::LOCALE_ENGLISH);
+        $englishLocalization = $product->englishLocalization()
+            ->first(['title', 'description']);
+        $englishTitle = $englishLocalization?->title;
+        $englishDescription = $englishLocalization?->description;
         $fetchedLanguage = Option::effectiveFetchedTagLanguage()->value;
         $editGenres = $this->loadEditGenresForProduct($product->getKey(), $fetchedLanguage);
         $showReadonlyGenreColors = Option::tagColorSurfaceEnabled(Option::TAG_COLOR_SURFACE_EDIT_READONLY);
@@ -297,6 +301,7 @@ class ProductController extends Controller
         return view('Edit', [
             'product' => $product,
             'englishTitle' => $englishTitle,
+            'englishDescription' => $englishDescription,
             'isModal' => $request->boolean('modal'),
             'productFormThemeClass' => $this->productFormThemeClass(),
             'fetchedGenres' => $fetchedGenres,
@@ -314,6 +319,7 @@ class ProductController extends Controller
                 $ratingScale,
                 $dlsiteRatingValue,
                 $readonlyDLSiteRatingVisible,
+                $englishDescription,
             ),
             'progressOptions' => ProductProgress::visibleOptions(
                 Option::optionalProductStatuses(),
@@ -347,11 +353,20 @@ class ProductController extends Controller
             $editFieldLayout,
             $updatePayload,
         ): array {
-            $englishTitleSubmitted = array_key_exists('work_name_english', $updatePayload);
-            $englishTitle = $updatePayload['work_name_english'] ?? null;
+            $localizationAttributes = [];
+
+            if (array_key_exists('work_name_english', $updatePayload)) {
+                $englishTitle = $updatePayload['work_name_english'];
+                $localizationAttributes['title'] = blank($englishTitle) ? null : $englishTitle;
+            }
+
+            if (array_key_exists('description_english', $updatePayload)) {
+                $englishDescription = $updatePayload['description_english'];
+                $localizationAttributes['description'] = blank($englishDescription) ? null : $englishDescription;
+            }
 
             $product->fill([
-                ...Arr::except($updatePayload, ['work_name_english']),
+                ...Arr::except($updatePayload, ['work_name_english', 'description_english']),
                 'work_image' => $images['work_image'],
                 'sample_images' => $images['sample_images'],
             ]);
@@ -362,24 +377,24 @@ class ProductController extends Controller
                 $product->save();
             }
 
-            $englishTitleChanged = false;
+            $localizationChanged = false;
 
-            if ($englishTitleSubmitted) {
-                $syncEnglishTitle = fn(): bool => $product->syncLocalization(
+            if ($localizationAttributes !== []) {
+                $syncLocalization = fn(): bool => $product->syncLocalization(
                     ProductLocalization::LOCALE_ENGLISH,
-                    ['title' => blank($englishTitle) ? null : $englishTitle],
+                    $localizationAttributes,
                 );
 
                 if ($productSaved) {
-                    Product::withoutTouching(function () use ($syncEnglishTitle, &$englishTitleChanged): void {
-                        $englishTitleChanged = $syncEnglishTitle();
+                    Product::withoutTouching(function () use ($syncLocalization, &$localizationChanged): void {
+                        $localizationChanged = $syncLocalization();
                     });
                 } else {
-                    $englishTitleChanged = $syncEnglishTitle();
+                    $localizationChanged = $syncLocalization();
                 }
             }
 
-            $productFieldsChanged = $productFieldsChanged || $englishTitleChanged;
+            $productFieldsChanged = $productFieldsChanged || $localizationChanged;
 
             return [
                 'product_fields_changed' => $productFieldsChanged,
@@ -493,6 +508,7 @@ class ProductController extends Controller
         RatingScale $ratingScale,
         ?string $dlsiteRatingValue,
         bool $readonlyDLSiteRatingVisible,
+        ?string $englishDescription,
     ): array {
         $dlsiteRatingDisplay = null;
 
@@ -509,7 +525,7 @@ class ProductController extends Controller
                 ? null
                 : implode(', ', ProductFormat::labelsFor($product->product_format)),
             ProductField::DescriptionJapanese->value => $product->description,
-            ProductField::DescriptionEnglish->value => $product->description_english,
+            ProductField::DescriptionEnglish->value => $englishDescription,
             ProductField::Notes->value => $product->notes,
             ProductField::StartDate->value => PartialDateFormatter::format($product->start_date),
             ProductField::FinishDate->value => PartialDateFormatter::format($product->end_date),

@@ -69,12 +69,12 @@
                                                         :work-name="$product->work_name" />
                                                     @foreach ($editFields as $field)
                                                         <x-fields.edit-configurable-row :field="$field"
-                                                            :product="$product" :english-title="$englishTitle" :age-category-options="$ageCategoryOptions"
-                                                            :contributor-inputs="$contributorInputs" :fetched-genres="$fetchedGenres" :custom-genres="$customGenres"
-                                                            :genre-fetched-input="$genreFetchedInput" :genre-fetched-language="$genreFetchedLanguage" :genre-custom-input="$genreCustomInput"
-                                                            :readonly-field-values="$readonlyFieldValues" :month-labels="$monthLabels" :days="$days"
-                                                            :years="$years" :show-readonly-genre-colors="$showReadonlyGenreColors" :progress-options="$progressOptions"
-                                                            :rating-scale="$ratingScale" :dlsite-rating-value="$dlsiteRatingValue" />
+                                                            :product="$product" :english-title="$englishTitle" :english-description="$englishDescription"
+                                                            :age-category-options="$ageCategoryOptions" :contributor-inputs="$contributorInputs" :fetched-genres="$fetchedGenres"
+                                                            :custom-genres="$customGenres" :genre-fetched-input="$genreFetchedInput" :genre-fetched-language="$genreFetchedLanguage"
+                                                            :genre-custom-input="$genreCustomInput" :readonly-field-values="$readonlyFieldValues" :month-labels="$monthLabels"
+                                                            :days="$days" :years="$years" :show-readonly-genre-colors="$showReadonlyGenreColors"
+                                                            :progress-options="$progressOptions" :rating-scale="$ratingScale" :dlsite-rating-value="$dlsiteRatingValue" />
                                                     @endforeach
                                                 </tbody>
                                             </table>

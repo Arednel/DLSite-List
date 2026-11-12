@@ -16,6 +16,7 @@ use App\Livewire\TagLibraryManager;
 use App\Models\Genre;
 use App\Models\Option;
 use App\Models\Product;
+use App\Models\ProductLocalization;
 use App\Support\ProductContributorSync;
 use App\Support\ProductGenreSync;
 use DOMDocument;
@@ -1197,10 +1198,9 @@ class ProductControllerTest extends TestCase
             ['field' => ProductField::DescriptionEnglish->value, 'visible' => true, 'editable' => false],
         ]);
 
-        $product = Product::factory()->create([
+        $product = Product::factory()->withEnglishDescription('READONLY_EN_DESCRIPTION_TOKEN')->create([
             'work_name' => 'READONLY_DESCRIPTION_EDIT_TOKEN',
             'description' => 'READONLY_JP_DESCRIPTION_TOKEN',
-            'description_english' => 'READONLY_EN_DESCRIPTION_TOKEN',
         ]);
 
         $this->get("/edit/{$product->id}")
@@ -1225,7 +1225,7 @@ class ProductControllerTest extends TestCase
             ['field' => ProductField::Priority->value, 'visible' => false, 'editable' => false],
         ]);
 
-        $product = Product::factory()->create([
+        $product = Product::factory()->withEnglishDescription(null)->create([
             'work_name' => 'HIDDEN_EDIT_ROWS_TOKEN',
             'notes' => 'HIDDEN_NOTES_SHOULD_NOT_RENDER',
         ]);
@@ -1264,7 +1264,6 @@ class ProductControllerTest extends TestCase
             'brand' => 'Old Brand',
             'maker_id' => null,
             'description' => null,
-            'description_english' => null,
         ]);
 
         $this->get("/edit/{$product->id}")
@@ -1309,7 +1308,7 @@ class ProductControllerTest extends TestCase
         $this->assertSame('New Brand', $product->brand);
         $this->assertSame('RG_EDITABLE_METADATA', $product->maker_id);
         $this->assertSame('Japanese metadata description', $product->description);
-        $this->assertSame('English metadata description', $product->description_english);
+        $this->assertSame('English metadata description', $product->descriptionForLocale(ProductLocalization::LOCALE_ENGLISH));
         $this->assertSame(['New Circle'], $namesByRole[ProductContributorRole::Circle->value]);
         $this->assertSame(['Scenario One', 'Scenario Two'], $namesByRole[ProductContributorRole::Scenario->value]);
         $this->assertSame(['Voice One'], $namesByRole[ProductContributorRole::VoiceActor->value]);
@@ -1380,10 +1379,9 @@ class ProductControllerTest extends TestCase
             ['field' => ProductField::DescriptionEnglish->value, 'visible' => true, 'editable' => true],
         ]);
 
-        $product = Product::factory()->create([
+        $product = Product::factory()->withEnglishDescription('Old English description')->create([
             'work_name' => 'DUPLICATE_DESCRIPTION_TOKEN',
             'description' => 'Old Japanese description',
-            'description_english' => 'Old English description',
         ]);
 
         $this->post("/update/{$product->id}", [
@@ -1395,7 +1393,7 @@ class ProductControllerTest extends TestCase
         $product->refresh();
 
         $this->assertSame('Same description', $product->description);
-        $this->assertNull($product->description_english);
+        $this->assertNull($product->descriptionForLocale(ProductLocalization::LOCALE_ENGLISH));
     }
 
     public function test_update_collapses_english_description_against_hidden_japanese_description(): void
@@ -1405,10 +1403,9 @@ class ProductControllerTest extends TestCase
             ['field' => ProductField::DescriptionEnglish->value, 'visible' => true, 'editable' => true],
         ]);
 
-        $product = Product::factory()->create([
+        $product = Product::factory()->withEnglishDescription('Old English description')->create([
             'work_name' => 'DUPLICATE_HIDDEN_JP_DESCRIPTION_TOKEN',
             'description' => 'Stored duplicate description',
-            'description_english' => 'Old English description',
         ]);
 
         $this->post("/update/{$product->id}", [
@@ -1419,7 +1416,7 @@ class ProductControllerTest extends TestCase
         $product->refresh();
 
         $this->assertSame('Stored duplicate description', $product->description);
-        $this->assertNull($product->description_english);
+        $this->assertNull($product->descriptionForLocale(ProductLocalization::LOCALE_ENGLISH));
     }
 
     public function test_update_preserves_hidden_and_readonly_split_descriptions(): void
@@ -1429,10 +1426,9 @@ class ProductControllerTest extends TestCase
             ['field' => ProductField::DescriptionEnglish->value, 'visible' => true, 'editable' => false],
         ]);
 
-        $product = Product::factory()->create([
+        $product = Product::factory()->withEnglishDescription('Stored English description')->create([
             'work_name' => 'PRESERVE_SPLIT_DESCRIPTION_TOKEN',
             'description' => 'Stored Japanese description',
-            'description_english' => 'Stored English description',
         ]);
 
         $this->post("/update/{$product->id}", [
@@ -1444,7 +1440,7 @@ class ProductControllerTest extends TestCase
         $product->refresh();
 
         $this->assertSame('Stored Japanese description', $product->description);
-        $this->assertSame('Stored English description', $product->description_english);
+        $this->assertSame('Stored English description', $product->descriptionForLocale(ProductLocalization::LOCALE_ENGLISH));
     }
 
     public function test_edit_defaults_go_back_fragment_to_current_product_when_not_provided(): void
@@ -2365,7 +2361,7 @@ class ProductControllerTest extends TestCase
         $this->assertSame('SCRAPED_CREATE_BRAND_TOKEN', $product->brand);
         $this->assertSame('RG_MANUAL_CREATE', $product->maker_id);
         $this->assertSame('MANUAL_CREATE_DESCRIPTION_TOKEN', $product->description);
-        $this->assertSame('MANUAL_CREATE_EN_DESCRIPTION_TOKEN', $product->description_english);
+        $this->assertSame('MANUAL_CREATE_EN_DESCRIPTION_TOKEN', $product->descriptionForLocale(ProductLocalization::LOCALE_ENGLISH));
         $this->assertDatabaseHas('contributors', ['name' => 'MANUAL_CREATE_SCENARIO_TOKEN']);
         $this->assertDatabaseHas('contributors', ['name' => 'SCRAPED_CREATE_VOICE_TOKEN']);
         $this->assertDatabaseMissing('contributors', ['name' => 'MALICIOUS_CREATE_VOICE_TOKEN']);
@@ -2398,7 +2394,7 @@ class ProductControllerTest extends TestCase
         $product = Product::query()->whereKey($workId)->firstOrFail();
 
         $this->assertSame('VISIBLE_SPLIT_JP_OVERRIDE', $product->description);
-        $this->assertSame('SCRAPED_HIDDEN_SPLIT_EN_DESCRIPTION', $product->description_english);
+        $this->assertSame('SCRAPED_HIDDEN_SPLIT_EN_DESCRIPTION', $product->descriptionForLocale(ProductLocalization::LOCALE_ENGLISH));
     }
 
     public function test_store_keeps_manual_series_when_title_name_is_fetched(): void
@@ -2818,7 +2814,7 @@ class ProductControllerTest extends TestCase
         $this->assertSame('CUSTOM_VISIBLE_CIRCLE_TOKEN', $product->circle);
         $this->assertSame('RG_CUSTOM_VISIBLE', $product->maker_id);
         $this->assertSame('CUSTOM_VISIBLE_DESCRIPTION_TOKEN', $product->description);
-        $this->assertSame('CUSTOM_VISIBLE_EN_DESCRIPTION_TOKEN', $product->description_english);
+        $this->assertSame('CUSTOM_VISIBLE_EN_DESCRIPTION_TOKEN', $product->descriptionForLocale(ProductLocalization::LOCALE_ENGLISH));
         $this->assertSame([], $product->sample_images);
         $this->assertDatabaseHas('contributors', ['name' => 'CUSTOM_VISIBLE_AUTHOR_TOKEN']);
         $this->assertDatabaseMissing('contributors', ['name' => 'MALICIOUS_CUSTOM_VOICE_TOKEN']);
@@ -2845,7 +2841,7 @@ class ProductControllerTest extends TestCase
         $product = Product::query()->whereKey($workId)->firstOrFail();
 
         $this->assertSame('CUSTOM_VISIBLE_SPLIT_JP_DESCRIPTION', $product->description);
-        $this->assertNull($product->description_english);
+        $this->assertNull($product->descriptionForLocale(ProductLocalization::LOCALE_ENGLISH));
     }
 
     public function test_custom_store_accepts_missing_cover_image(): void

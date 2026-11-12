@@ -6,7 +6,6 @@ use App\Enums\ProductAgeCategory;
 use App\Enums\ProductContributorRole;
 use App\Support\DLSite\DLSiteRating;
 use App\Models\Product;
-use App\Models\ProductLocalization;
 use App\Support\DLSite\DLSiteWorkData;
 use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\Validator;
@@ -78,7 +77,7 @@ final class WorkArchiveData
     }
 
     /**
-     * Export using preloaded localizations and contributor/tag relations in canonical attachment order.
+     * Export using the preloaded English localization and contributor/tag relations in canonical attachment order.
      */
     public function exportSnapshotFromPreorderedRelations(Product $product, bool $images = false): array
     {
@@ -87,8 +86,8 @@ final class WorkArchiveData
 
     private function buildExportSnapshot(Product $product, bool $images, bool $usePreorderedRelations): array
     {
-        if ($usePreorderedRelations && ! $product->relationLoaded('localizations')) {
-            throw new \LogicException('Preordered localization export relation is not loaded.');
+        if ($usePreorderedRelations && ! $product->relationLoaded('englishLocalization')) {
+            throw new \LogicException('Preordered English localization export relation is not loaded.');
         }
 
         $contributors = $usePreorderedRelations
@@ -104,12 +103,13 @@ final class WorkArchiveData
         $coverPath = $cover['files'][0]['path'] ?? null;
         $samplePaths = $samples === null ? null : array_column($samples['files'], 'path');
 
+        $englishLocalization = $usePreorderedRelations
+            ? $product->getRelation('englishLocalization')
+            : $product->englishLocalization()
+            ->first(['title', 'description']);
         $japaneseTitle = $product->work_name;
-        $englishTitle = ($usePreorderedRelations
-            ? $product->getRelation('localizations')
-            ->firstWhere('locale', ProductLocalization::LOCALE_ENGLISH)
-            ?->title
-            : $product->titleForLocale(ProductLocalization::LOCALE_ENGLISH)) ?? $japaneseTitle;
+        $englishTitle = $englishLocalization?->title ?? $japaneseTitle;
+        $englishDescription = $englishLocalization?->description ?? $product->description;
 
         $japanese = $this->locale(
             $product,
@@ -123,7 +123,7 @@ final class WorkArchiveData
         $english = $this->locale(
             $product,
             $englishTitle,
-            $product->description_english ?? $product->description,
+            $englishDescription,
             $tags['en'],
             $contributors,
             $coverPath,

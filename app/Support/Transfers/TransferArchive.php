@@ -129,7 +129,7 @@ final class TransferArchive
             ? collect()
             : Product::query()
             ->with([
-                'localizations:id,product_id,locale,title',
+                'englishLocalization:id,product_id,title,description',
                 'contributors' => fn($query) => $query
                     ->select(['contributors.id', 'contributors.name'])
                     ->orderBy('contributor_product.id'),

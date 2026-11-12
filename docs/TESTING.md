@@ -217,7 +217,7 @@ Covers core transfer contracts, route/review smoke coverage, transfer error rend
 
 Covers export selection/planning, deterministic work/image inventory, Tag Library/Options fragmentation, raw `user.css` export, multipart manifests and size boundaries, work-level progress, source-change replanning, downloads, and English/Japanese download failure messages rendered by the transfer view. Product Format coverage verifies that ordered canonical/custom values are written to both locale documents and survive export/import round trips; announcement dates are exported in both locales. DLsite Rating coverage verifies round trips and Merge filling an absent vote count without overwriting existing cached rating values.
 
-Work-export planning coverage verifies that each Product batch loads Products, title localizations, contributors, and the three tag buckets in six snapshot-data queries while preserving complete archive contents and attachment ordering. The dedicated preloaded snapshot path rejects missing required relations, while ordinary and locking reads continue to use current database values rather than stale loaded collections.
+Work-export planning coverage verifies that each Product batch loads Products, only the scoped English localization for translated Title/Description, contributors, and the three tag buckets in six snapshot-data queries while preserving complete archive contents and attachment ordering. The dedicated preloaded snapshot path rejects missing required relations, while ordinary and locking reads continue to use current database values rather than stale loaded relations.
 
 Regression coverage injects failures after successor-job insertion in every planning phase, verifies transaction rollback and successful retry, and checks stale planning calls. Empty-library and empty-selection export errors are checked in English and Japanese, including that no transfer is started.
 
@@ -336,14 +336,14 @@ Covers selected-work Refetch search across the canonical Japanese title and curr
 
 #### `tests/Feature/ProductLocalizationTest.php`
 
-Covers migration backfill/rollback that retains required Japanese `products.work_name` while moving only non-blank English titles to localization rows, canonical Japanese and translated title reads, arbitrary translation locales, `Product::syncLocalization()` create/update/no-op/delete semantics, race-safe first creation, locale-identity protection, parent timestamp touching for changed translations, model-owned cleanup of null/empty/whitespace-only localizations, absent-row semantics for missing translations, translated-title search behavior, and cascade deletion of localization rows with the Product.
+Covers migration backfill/rollback that keeps Japanese Title/Description on Product storage while moving non-blank English Title/Description into localization rows, Description rollback restoration and blank-title cleanup across batch boundaries while preserving valid titles across locales, canonical Japanese and translated Title/Description reads, the scoped English `HasOne` relationship, arbitrary translation locales, `Product::syncLocalization()` create/update/no-op/delete semantics, race-safe first creation, locale-identity protection, parent timestamp touching for changed translations, model-owned cleanup only when all localized fields are blank, absent-row semantics for missing translations, translated-title search behavior, and cascade deletion of localization rows with the Product.
 
 #### `tests/Feature/ProductControllerTest.php`
 
 Covers the main product HTTP workflows:
 - Index filtering/sorting/display
 - all-tags pattern matching, overlapping matches, missing tags, and per-attachment language/custom-source visibility
-- Create/Edit field order using submitted input names, product binding, controller-prepared translated title values, and return-navigation data, including rejection of unsafe (non-http(s)) `return_url` values
+- Create/Edit field order using submitted input names, product binding, controller-prepared translated Title/Description values, and return-navigation data, including rejection of unsafe (non-http(s)) `return_url` values
 - hidden/read-only field preservation
 - focused DLsite Rating input/read-only display across both scales, read-only mutation protection, canonical Score input, validation restoration, manual conversion, vote-count updates that preserve independently rounded ratings, and conditional Rating Scale lookups for form rendering and manual submissions
 - DLsite Rating clearing and omission semantics, independent vote-count preservation, and unchanged Updated Date when already-null ratings are submitted again
@@ -377,8 +377,8 @@ The tests cover the server-side multipart contract and rendered form structure. 
 
 Covers the Livewire Index:
 - pagination/query-string state
-- canonical Japanese `work_name` selection plus scalar English-title projection without a separate localization-model eager-load query
-- filtering/search/date ranges, including inclusive Scheduled Release Date boundaries
+- canonical Japanese Title/Description selection plus `withAggregate()` scalar English Title/Description projection without a separate localization-model eager-load query
+- filtering/search/date ranges, including scoped English Description relationship filtering that excludes other translation locales and inclusive Scheduled Release Date boundaries
 - Product Format display, partial label/custom search, exact-code matching, JSON-element boundaries, and special-character search escaping
 - sort behavior, including Product Format sorting by its first stored value, scale-aware DLsite Rating sorting/filtering with nulls last, and announcement-date sorting with nulls last
 - separate and combined rating rendering across both scales and all visual styles, with focused cases for upward half-star rounding, independent star rounding, missing ratings, zero/absent vote counts, and scale-adjusted Score filter labels that retain canonical values

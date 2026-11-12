@@ -2,6 +2,7 @@
     'field',
     'product',
     'englishTitle',
+    'englishDescription',
     'ageCategoryOptions',
     'contributorInputs',
     'fetchedGenres',
@@ -161,7 +162,7 @@
                 <td width="130" class="form-table-cell">{{ __('English Description') }}</td>
                 <td class="form-table-cell">
                     <textarea id="description_english" name="description_english" class="form-control form-field-long" rows="4"
-                        cols="65" placeholder="{{ __('English description') }}">{{ old('description_english', $product->description_english) }}</textarea>
+                        cols="65" placeholder="{{ __('English description') }}">{{ old('description_english', $englishDescription) }}</textarea>
                 </td>
                 <td class="form-table-cell form-table-cell--long-spacer" aria-hidden="true"></td>
             </tr>

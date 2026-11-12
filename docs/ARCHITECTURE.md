@@ -28,7 +28,7 @@ For test commands and the current test inventory, see [TESTING.md](TESTING.md).
 
 Index state is kept in the query string so filtered/sorted views can be linked and restored.
 
-Index queries avoid hydrating localization models when only the translated title scalar is needed. The main Index selects the Japanese `work_name` normally and projects the English title through a scalar localization subquery. Global and Title search match the canonical Japanese title directly and translated titles through a product-ID localization subquery restricted to the configured searchable locales.
+Index queries avoid hydrating localization models when only translated scalar values are needed. The main Index selects Japanese `work_name` and `description` normally, and projects the English title and visible English description through `withAggregate()` on the scoped English localization relationship. Global and Title search match the canonical Japanese title directly and translated titles through a product-ID localization subquery restricted to the configured searchable locales.
 
 `ProductIndexSettings` loads the Index-related `options` values in one batched lookup per render. It prepares:
 - Index field layout
@@ -75,13 +75,13 @@ The main DLsite `Product Format` is stored first; only SND (Voice), MS2 (Music),
 
 Explicit `circle`, `publisher`, `brand`, and `description` fields remain authoritative when present, including explicit empty values. Canonical DLsite metadata is read from the Japanese payload only; English remains separate localized data for Title, Description, and fetched Tags. Creator-role metadata that is not exposed by `dlsite-async` is not reconstructed by DLSite List.
 
-The required Japanese Product title is stored in `products.work_name`, with a database-level `NOT NULL` constraint. Optional translated titles are stored in `product_localizations`, with one row per `(product_id, locale)` and a unique constraint on that pair. English is the supported translated title locale.
+The required Japanese Product title is stored in `products.work_name`, with a database-level `NOT NULL` constraint. Japanese Description is stored in nullable `products.description`. Optional translated titles and descriptions are stored in `product_localizations`, with one row per `(product_id, locale)` and a unique constraint on that pair. English is the supported translated locale.
 
-Japanese titles are written through normal `Product` persistence. Optional localized fields are managed through `Product::syncLocalization()`, which uses the `Product::localizations()` `HasMany` relationship. A localization row exists only while it contains localized data; `ProductLocalization::isEmpty()` defines that invariant, and empty localization rows are removed. The localization foreign key cascades on Product deletion, and localization changes touch the parent Product.
+Japanese titles and descriptions are written through normal `Product` persistence. Optional localized fields are managed through `Product::syncLocalization()`, which uses the general `Product::localizations()` `HasMany` relationship. `Product::englishLocalization()` is the scoped `HasOne` read/query relationship for the unique English row. A localization row exists while at least one localized field contains data; `ProductLocalization::isEmpty()` defines that invariant, and rows with both blank Title and Description are removed. The localization foreign key cascades on Product deletion, and localization changes touch the parent Product.
 
-`Product::titleForLocale('ja')` reads `products.work_name`. Translated titles are resolved through `product_localizations`.
+`Product::titleForLocale('ja')` reads `products.work_name`, and `Product::descriptionForLocale('ja')` reads `products.description`. Translated values are resolved through `product_localizations`.
 
-Whole-library selectors use lightweight Product queries with a scalar English-title projection and reuse the Product title-filter and numeric-code ordering scopes. Descriptions are stored on `products`.
+Whole-library selectors use lightweight Product queries with a scalar English-title projection and reuse the Product title-filter and numeric-code ordering scopes.
 
 For translated works, `DLSiteWorkFetcher` identifies the original work from the Japanese `language_editions` entry with `display_order: 1`. If no usable entry is available, it uses the Japanese `translation_info.original_workno` value instead. When the resolved ID differs from the fetched work, the original work is fetched and its `RG` maker metadata is used when available. If no original reference is available, the fetched work is used normally. A missing reference is logged only when Japanese `translation_info.is_original` is explicitly `false`. The original response is validated before use, and only Japanese `RG` maker metadata is used for the original-work override.
 
@@ -240,7 +240,7 @@ The export flow is:
 3. `TransferArchive` packs deterministic data/image ZIP parts with a `manifest.json` per part.
 4. Completed parts are validated and atomically published from private transfer storage.
 
-Work export planning eager-loads each Product batch with title localizations, contributors, and the custom, Japanese, and English tag relations. Contributor and tag relations are ordered by attachment ID during eager loading and consumed through a dedicated preloaded snapshot path that requires all expected relations to be loaded. Japanese titles are read from `products.work_name`, while the batched export path reads English titles from the preloaded localization collection. Ordinary snapshot and category reads query current relation values rather than implicitly reusing loaded collections.
+Work export planning eager-loads each Product batch with the scoped English localization, contributors, and the custom, Japanese, and English tag relations. Contributor and tag relations are ordered by attachment ID during eager loading and consumed through a dedicated preloaded snapshot path that requires all expected relations to be loaded. Japanese titles/descriptions are read from Product columns, while the batched export path reads English titles/descriptions from the single preloaded English localization. Ordinary snapshot and category reads query current relation values rather than implicitly reusing loaded relations.
 
 The import flow is:
 

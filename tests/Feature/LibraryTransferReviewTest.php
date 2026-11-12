@@ -550,6 +550,61 @@ class LibraryTransferReviewTest extends TestCase
         );
     }
 
+    public function test_translated_description_merge_and_overwrite_preserve_the_sibling_title(): void
+    {
+        $product = Product::factory()
+            ->withTitles('Japanese Title', 'Existing English Title')
+            ->withEnglishDescription('Local English Description')
+            ->create(['id' => 'RJ123459']);
+        $review = $this->review();
+
+        $mergeRun = LibraryTransferRun::create([
+            'direction' => 'import',
+            'status' => 'review',
+            'settings' => [],
+        ]);
+        $mergeRecord = app(LibraryData::class)->work($product);
+        $mergeRecord['descriptions']['description_english'] = 'Imported English Description';
+        $review->stage($mergeRun, 'works', $mergeRecord, []);
+        $mergeItem = $mergeRun->items()->where('metadata->field', 'description_english')->firstOrFail();
+        $mergeItem->update(['decision' => 'merge']);
+
+        $review->applyWorkItems(collect([$mergeItem->fresh()]));
+
+        $product = $product->fresh();
+        $this->assertSame(
+            'Local English Description',
+            $product->descriptionForLocale(ProductLocalization::LOCALE_ENGLISH),
+        );
+        $this->assertSame(
+            'Existing English Title',
+            $product->titleForLocale(ProductLocalization::LOCALE_ENGLISH),
+        );
+
+        $overwriteRun = LibraryTransferRun::create([
+            'direction' => 'import',
+            'status' => 'review',
+            'settings' => [],
+        ]);
+        $overwriteRecord = app(LibraryData::class)->work($product);
+        $overwriteRecord['descriptions']['description_english'] = 'Imported English Description';
+        $review->stage($overwriteRun, 'works', $overwriteRecord, []);
+        $overwriteItem = $overwriteRun->items()->where('metadata->field', 'description_english')->firstOrFail();
+        $overwriteItem->update(['decision' => 'overwrite']);
+
+        $review->applyWorkItems(collect([$overwriteItem->fresh()]));
+
+        $product = $product->fresh();
+        $this->assertSame(
+            'Imported English Description',
+            $product->descriptionForLocale(ProductLocalization::LOCALE_ENGLISH),
+        );
+        $this->assertSame(
+            'Existing English Title',
+            $product->titleForLocale(ProductLocalization::LOCALE_ENGLISH),
+        );
+    }
+
     public function test_work_review_uses_refetch_tabs_and_separate_dlsite_list_fields(): void
     {
         Product::factory()->create(['id' => 'RJ123456']);

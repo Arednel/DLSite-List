@@ -114,7 +114,6 @@ final class DLSiteProductImporter
                     'brand' => $brand,
                     'work_image' => $workImage,
                     'description' => $description,
-                    'description_english' => $englishDescription,
                     'notes' => $input->fieldSubmitted(ProductField::Notes, 'notes')
                         ? $input->value('notes')
                         : null,
@@ -151,7 +150,10 @@ final class DLSiteProductImporter
 
             Product::withoutTouching(fn() => $product->syncLocalization(
                 ProductLocalization::LOCALE_ENGLISH,
-                ['title' => blank($englishWorkName) ? null : $englishWorkName],
+                [
+                    'title' => blank($englishWorkName) ? null : $englishWorkName,
+                    'description' => blank($englishDescription) ? null : $englishDescription,
+                ],
             ));
 
             $this->genreSync->sync($product, [

@@ -680,7 +680,7 @@ class ProductIndexLivewireTest extends TestCase
         $this->assertArrayNotHasKey('circle', $attributes);
         $this->assertArrayNotHasKey('maker_id', $attributes);
         $this->assertArrayNotHasKey('description', $attributes);
-        $this->assertArrayNotHasKey('description_english', $attributes);
+        $this->assertArrayNotHasKey('english_description', $attributes);
         $this->assertArrayNotHasKey('priority', $attributes);
         $this->assertArrayNotHasKey('num_re_listen_times', $attributes);
         $this->assertArrayNotHasKey('re_listen_value', $attributes);
@@ -951,7 +951,7 @@ class ProductIndexLivewireTest extends TestCase
         $this->assertArrayHasKey('circle', $attributes);
         $this->assertArrayHasKey('maker_id', $attributes);
         $this->assertArrayHasKey('description', $attributes);
-        $this->assertArrayHasKey('description_english', $attributes);
+        $this->assertArrayHasKey('english_description', $attributes);
         $this->assertArrayNotHasKey('priority', $attributes);
         $this->assertArrayNotHasKey('num_re_listen_times', $attributes);
         $this->assertArrayNotHasKey('re_listen_value', $attributes);
@@ -1414,7 +1414,7 @@ class ProductIndexLivewireTest extends TestCase
         );
 
         $this->assertArrayHasKey('description', $products->first()->getAttributes());
-        $this->assertArrayHasKey('description_english', $products->first()->getAttributes());
+        $this->assertArrayHasKey('english_description', $products->first()->getAttributes());
 
         Livewire::test(ProductIndex::class)
             ->assertSee('FIELD_LAYOUT_VISIBLE_JP_DESCRIPTION')
@@ -2915,6 +2915,24 @@ class ProductIndexLivewireTest extends TestCase
             ->assertDontSee($japaneseDescription->work_name);
     }
 
+    public function test_english_description_filter_does_not_match_other_localization_languages(): void
+    {
+        Option::setIndexFieldLayout([
+            ['field' => ProductField::DescriptionEnglish->value, 'visible' => false],
+        ]);
+
+        $product = $this->createProduct(1, [
+            'work_name' => 'NON_ENGLISH_DESCRIPTION_FILTER_WORK',
+            'description_english' => 'Different English text',
+        ]);
+        $product->syncLocalization('zh_TW', [
+            'description' => 'SCOPED_ENGLISH_DESCRIPTION_FILTER_TOKEN',
+        ]);
+
+        Livewire::test(ProductIndex::class, ['description_english' => 'SCOPED_ENGLISH_DESCRIPTION_FILTER_TOKEN'])
+            ->assertDontSee($product->work_name);
+    }
+
     public function test_filter_changes_reset_pagination_to_first_page(): void
     {
         Option::setIndexPerPage(1);
@@ -3214,11 +3232,16 @@ class ProductIndexLivewireTest extends TestCase
             ?? 'WORK_' . str_pad((string) $number, 3, '0', STR_PAD_LEFT);
         $hasEnglishTitle = array_key_exists('work_name_english', $attributes);
         $englishTitle = $attributes['work_name_english'] ?? null;
-        unset($attributes['work_name'], $attributes['work_name_english']);
+        $hasEnglishDescription = array_key_exists('description_english', $attributes);
+        $englishDescription = $attributes['description_english'] ?? null;
+        unset($attributes['work_name'], $attributes['work_name_english'], $attributes['description_english']);
 
         $factory = Product::factory()->state(['work_name' => $japaneseTitle]);
         if ($hasEnglishTitle) {
             $factory = $factory->withEnglishTitle($englishTitle);
+        }
+        if ($hasEnglishDescription) {
+            $factory = $factory->withEnglishDescription($englishDescription);
         }
 
         return $factory->create(array_merge([

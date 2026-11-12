@@ -20,6 +20,7 @@ For existing manual installations:
 * Changed the mobile Edit column to use only half of the row instead of the full row.
 * English DLsite metadata is now used only for Title, Description, and fetched Tags. All other DLsite metadata uses the Japanese API response with no fallback.
 * Moved optional translated DLsite work titles to locale-based localization records, with English titles stored separately while the required Japanese title is stored as canonical Product data.
+* Moved optional translated DLsite work descriptions to locale-based localization records, with English descriptions stored separately while Japanese descriptions remain Product data.
 
 ### Performance
 
