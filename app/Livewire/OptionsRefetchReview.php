@@ -694,7 +694,7 @@ class OptionsRefetchReview extends Component
                     ...data_get($change, 'new.english', []),
                 ]))
             ->map(fn(mixed $title): string => trim((string) $title))
-            ->filter()
+            ->filter(fn(string $title): bool => $title !== '')
             ->unique()
             ->values();
         $pairs = TagColor::effectiveColorPairsForTitleKeys(

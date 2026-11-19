@@ -515,4 +515,26 @@ class RefetchDiffBuilderTest extends TestCase
             failedImages: [],
         );
     }
+
+    public function test_refetch_tag_comparison_keeps_zero_as_a_real_tag(): void
+    {
+        $product = Product::factory()->create();
+
+        $changes = app(RefetchDiffBuilder::class)->build(
+            $product,
+            new DLSiteFetchResult(
+                workData: DLSiteWorkData::fromArray([
+                    'japanese' => [
+                        'product_id' => $product->getKey(),
+                        'genre' => ['0'],
+                    ],
+                ]),
+                failedImages: [],
+            ),
+            null,
+        );
+
+        $this->assertSame(['0'], data_get($changes, 'tags.tags.new.japanese'));
+        $this->assertSame(['0'], data_get($changes, 'tags.tags.details.added_japanese'));
+    }
 }

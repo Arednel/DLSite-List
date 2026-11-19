@@ -160,7 +160,7 @@ final class RefetchDiffBuilder
     {
         return collect(is_array($values) ? $values : [$values])
             ->map(fn(mixed $value): ?string => $this->text($value))
-            ->filter()
+            ->filter(fn(?string $value): bool => $value !== null)
             ->unique(fn(string $value): string => mb_convert_case($value, MB_CASE_FOLD, 'UTF-8'))
             ->sortBy(fn(string $value): string => mb_convert_case($value, MB_CASE_FOLD, 'UTF-8'))
             ->values()
@@ -306,7 +306,7 @@ final class RefetchDiffBuilder
     {
         return collect($tags)
             ->map(fn(mixed $tag): string => trim((string) $tag))
-            ->filter()
+            ->filter(fn(string $tag): bool => $tag !== '')
             ->unique(fn(string $tag): string => Genre::titleKey($tag))
             ->values()
             ->all();

@@ -999,4 +999,36 @@ class LibraryTransferReviewTest extends TestCase
         $this->assertSame(1, $items->pluck('entity_key')->unique()->count());
         $this->assertSame(2, $items->pluck('identity_hash')->unique()->count());
     }
+
+    public function test_work_tag_import_preserves_zero_and_skips_blank_titles(): void
+    {
+        $product = Product::factory()->create(['id' => 'RJ123460']);
+        $run = LibraryTransferRun::create([
+            'direction' => 'import',
+            'status' => 'review',
+            'settings' => [],
+        ]);
+        $review = $this->review();
+        $baseline = app(LibraryData::class)->category($product, 'tags');
+        $incoming = $baseline;
+        $incoming['jp'] = ['0', '', '   '];
+
+        $item = $review->item(
+            $run,
+            'works',
+            'tags',
+            $product->id,
+            $baseline,
+            $incoming,
+            ['title' => $product->work_name, 'domain' => 'tags'],
+        );
+        $item->update(['decision' => LibraryImportDecision::Overwrite]);
+
+        $review->applyWorkItems(collect([$item->fresh()]));
+
+        $this->assertSame(
+            ['0'],
+            $product->fresh()->japaneseGenres()->pluck('genres.title')->all(),
+        );
+    }
 }

@@ -83,4 +83,12 @@ class GenreTest extends TestCase
             'child_genre_id' => $child->getKey(),
         ]);
     }
+
+    public function test_resolve_ids_from_titles_keeps_zero_as_a_valid_title(): void
+    {
+        $ids = Genre::resolveIdsFromTitles(['0', '', null]);
+
+        $this->assertCount(1, $ids);
+        $this->assertSame('0', Genre::query()->findOrFail($ids[0])->title);
+    }
 }

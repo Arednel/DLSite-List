@@ -120,7 +120,7 @@ class Genre extends Model
     {
         return collect($titles)
             ->map(fn(mixed $title) => self::normalizeTitle($title))
-            ->filter()
+            ->filter(fn(?string $title): bool => $title !== null)
             ->unique(fn(string $title): string => self::titleKey($title))
             ->map(fn(string $title) => self::resolveByTitle($title)->getKey())
             ->values()

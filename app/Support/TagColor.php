@@ -77,7 +77,7 @@ final class TagColor
     {
         $keys = collect($titleKeys)
             ->map(fn($key): string => trim((string) $key))
-            ->filter()
+            ->filter(fn(string $key): bool => $key !== '')
             ->unique()
             ->values();
 

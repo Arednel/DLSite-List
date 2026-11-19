@@ -33,6 +33,7 @@ For existing manual installations:
 ### Fixed
 
 * Improved Custom CSS error handling.
+* Fixed literal `0` values being ignored in Tags and other metadata lists.
 
 ## 2.3.0 - 2026-11-07
 

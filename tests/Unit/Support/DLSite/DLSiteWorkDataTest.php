@@ -412,4 +412,16 @@ class DLSiteWorkDataTest extends TestCase
         $this->assertSame('9.93', $work->rating->rating10);
         $this->assertSame(1000, $work->rating->count);
     }
+
+    public function test_tag_normalization_keeps_zero_as_a_valid_tag(): void
+    {
+        $data = DLSiteWorkData::fromArray([
+            'japanese' => [
+                'product_id' => 'RJ123456',
+                'genre' => ['0', '', null],
+            ],
+        ]);
+
+        $this->assertSame(['0'], $data->japaneseGenres);
+    }
 }

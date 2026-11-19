@@ -986,7 +986,7 @@ final class ImportReview
     /** @param array<string, list<string>> $buckets */
     private function resolveTagBuckets(array $buckets, LibraryImportItem $item): array
     {
-        $titles = collect($buckets)->flatten()->map(fn($title): string => trim((string) $title))->filter();
+        $titles = collect($buckets)->flatten()->map(fn($title): string => trim((string) $title))->filter(fn(string $title): bool => $title !== '');
         $normalized = $titles->unique(fn(string $title): string => Genre::titleKey($title))->mapWithKeys(fn(string $title): array => [Genre::titleKey($title) => $title]);
         $existing = Genre::query()->whereIn('title_key', $normalized->keys())->when($this->locking, fn($query) => $query->lockForUpdate())->get()->keyBy('title_key');
         $missing = $normalized->except($existing->keys());

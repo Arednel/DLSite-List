@@ -226,7 +226,7 @@ final readonly class DLSiteWorkData
     {
         return collect(is_array($value) ? $value : [$value])
             ->map(fn(mixed $item): ?string => self::text($item))
-            ->filter()
+            ->filter(fn(?string $item): bool => $item !== null)
             ->unique(fn(string $item): string => mb_convert_case($item, MB_CASE_FOLD, 'UTF-8'))
             ->values()
             ->all();
