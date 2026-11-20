@@ -470,14 +470,36 @@ Default: `English`
 Choices:
 - `English` (`en`)
 - `日本語` (`ja`)
+- `简体中文` (`zh_CN`)
 - `繁體中文` (`zh_TW`)
+- `한국어` (`ko`)
+- `Deutsch` (`de`)
+- `Français` (`fr`)
+- `Español` (`es`)
+- `Italiano` (`it`)
+- `Português` (`pt_BR`)
+- `Svenska` (`sv`)
+- `Bahasa Indonesia` (`id`)
+- `ภาษาไทย` (`th`)
+- `Tiếng Việt` (`vi`)
 
 `UI Language` sets the interface language for the whole application.
 
 `Follow UI language automatically` is enabled by default:
-- `en` UI → English DLsite metadata
-- `ja` UI → Japanese DLsite metadata
-- `zh_TW` UI → Traditional Chinese DLsite metadata
+- `English` (`en`) → English metadata
+- `日本語` (`ja`) → Japanese metadata
+- `简体中文` (`zh_CN`) → Simplified Chinese metadata
+- `繁體中文` (`zh_TW`) → Traditional Chinese metadata
+- `한국어` (`ko`) → Korean metadata
+- `Deutsch` (`de`) → German metadata
+- `Français` (`fr`) → French metadata
+- `Español` (`es`) → Spanish metadata
+- `Italiano` (`it`) → Italian metadata
+- `Português` (`pt_BR`) → Brazilian Portuguese metadata
+- `Svenska` (`sv`) → Swedish metadata
+- `Bahasa Indonesia` (`id`) → Indonesian metadata
+- `ภาษาไทย` (`th`) → Thai metadata
+- `Tiếng Việt` (`vi`) → Vietnamese metadata
 
 Turn off automatic selection to choose `Preferred metadata language` independently.
 

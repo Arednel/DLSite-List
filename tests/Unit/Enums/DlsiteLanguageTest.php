@@ -7,14 +7,29 @@ use App\Enums\UiLanguage;
 use Illuminate\Support\Facades\App;
 use Illuminate\Support\Facades\File;
 use PHPUnit\Framework\Attributes\DataProviderExternal;
-use Tests\LanguageCases;
+use Tests\Fixtures\DlsiteLanguageLabels;
 use Tests\TestCase;
 
 class DlsiteLanguageTest extends TestCase
 {
     public function test_supported_codes_and_upstream_api_locales(): void
     {
-        $expected = ['ja' => null, 'en' => 'en_US', 'zh_TW' => 'zh_TW'];
+        $expected = [
+            'ja' => null,
+            'en' => 'en_US',
+            'zh_CN' => 'zh_CN',
+            'zh_TW' => 'zh_TW',
+            'ko' => 'ko_KR',
+            'de' => 'de_DE',
+            'fr' => 'fr_FR',
+            'es' => 'es_ES',
+            'it' => 'it_IT',
+            'pt_BR' => 'pt_BR',
+            'sv' => 'sv_SE',
+            'id' => 'id_ID',
+            'th' => 'th_TH',
+            'vi' => 'vi_VN',
+        ];
 
         $this->assertEqualsCanonicalizing(array_keys($expected), DlsiteLanguage::values());
         $this->assertSame(array_column(DlsiteLanguage::cases(), 'value'), DlsiteLanguage::values());
@@ -23,34 +38,25 @@ class DlsiteLanguageTest extends TestCase
         }
     }
 
-    #[DataProviderExternal(LanguageCases::class, 'ui')]
-    public function test_options_use_the_display_names_in_the_selected_catalog(UiLanguage $ui): void
-    {
-        App::setLocale($ui->value);
-        $catalog = File::json(lang_path("{$ui->value}.json"));
-        $expected = [];
+    #[DataProviderExternal(DlsiteLanguageLabels::class, 'cases')]
+    public function test_metadata_language_options_use_reviewed_catalog_labels(
+        string $uiLocale,
+        array $reviewedLabels,
+    ): void {
+        $uiLanguage = UiLanguage::from($uiLocale);
+        App::setLocale($uiLocale);
+
+        $catalog = File::json(lang_path("{$uiLocale}.json"));
+        $catalogLabels = [];
         foreach (DlsiteLanguage::cases() as $language) {
-            $expected[$language->value] = $catalog[$language->name];
+            $catalogLabels[$language->value] = $catalog[$language->name];
         }
 
-        $this->assertSame($expected, DlsiteLanguage::options());
-    }
+        $this->assertSame($reviewedLabels, $catalogLabels, $uiLocale);
+        $this->assertSame($reviewedLabels, DlsiteLanguage::options(), $uiLocale);
 
-    public function test_metadata_language_options_use_the_reviewed_labels(): void
-    {
-        $reviewedLabels = [
-            'en' => ['ja' => 'Japanese', 'en' => 'English', 'zh_TW' => 'Traditional Chinese'],
-            'ja' => ['ja' => '日本語', 'en' => '英語', 'zh_TW' => '繁体字中国語'],
-            'zh_TW' => ['ja' => '日文', 'en' => '英文', 'zh_TW' => '繁體中文'],
-        ];
-
-        foreach ($reviewedLabels as $uiLocale => $labels) {
-            App::setLocale($uiLocale);
-            $options = DlsiteLanguage::options();
-
-            foreach ($labels as $code => $label) {
-                $this->assertSame($label, $options[$code] ?? null, "{$uiLocale} label for {$code}");
-            }
-        }
+        $metadataLanguage = $uiLanguage->dlsiteLanguage();
+        $this->assertNotNull($metadataLanguage, $uiLocale);
+        $this->assertSame($uiLanguage->label(), $reviewedLabels[$metadataLanguage->value], $uiLocale);
     }
 }

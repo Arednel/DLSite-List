@@ -136,6 +136,8 @@ class LibraryTransferReviewTest extends TestCase
             DlsiteLanguage::Japanese->value => Genre::resolveIdsFromTitles(['Japanese fetched']),
             DlsiteLanguage::English->value => Genre::resolveIdsFromTitles(['English fetched']),
             DlsiteLanguage::TraditionalChinese->value => Genre::resolveIdsFromTitles(['Traditional Chinese fetched']),
+            DlsiteLanguage::German->value => Genre::resolveIdsFromTitles(['German fetched']),
+            DlsiteLanguage::Vietnamese->value => Genre::resolveIdsFromTitles(['Vietnamese fetched']),
         ], Genre::resolveIdsFromTitles(['Custom tag']));
 
         DB::flushQueryLog();
@@ -156,9 +158,14 @@ class LibraryTransferReviewTest extends TestCase
 
         $this->assertCount(1, $tagQueries);
         $this->assertSame(['Custom tag'], $data['tags']['custom']);
+        foreach (DlsiteLanguage::cases() as $language) {
+            $this->assertArrayHasKey($language->value, $data['tags']);
+        }
         $this->assertSame(['Japanese fetched'], $data['tags'][DlsiteLanguage::Japanese->value]);
         $this->assertSame(['English fetched'], $data['tags'][DlsiteLanguage::English->value]);
         $this->assertSame(['Traditional Chinese fetched'], $data['tags'][DlsiteLanguage::TraditionalChinese->value]);
+        $this->assertSame(['German fetched'], $data['tags'][DlsiteLanguage::German->value]);
+        $this->assertSame(['Vietnamese fetched'], $data['tags'][DlsiteLanguage::Vietnamese->value]);
     }
 
     public function test_dlsite_rating_review_formats_vote_count_before_rendering(): void

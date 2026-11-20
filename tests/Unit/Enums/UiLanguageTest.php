@@ -12,9 +12,22 @@ class UiLanguageTest extends TestCase
     {
         $options = UiLanguage::options();
         $this->assertSame(array_column(UiLanguage::cases(), 'value'), array_keys($options));
-        $this->assertSame('English', $options['en']);
-        $this->assertSame('日本語', $options['ja']);
-        $this->assertSame('繁體中文', $options['zh_TW']);
+        $this->assertSame([
+            'en' => 'English',
+            'ja' => '日本語',
+            'zh_CN' => '简体中文',
+            'zh_TW' => '繁體中文',
+            'ko' => '한국어',
+            'de' => 'Deutsch',
+            'fr' => 'Français',
+            'es' => 'Español',
+            'it' => 'Italiano',
+            'pt_BR' => 'Português',
+            'sv' => 'Svenska',
+            'id' => 'Bahasa Indonesia',
+            'th' => 'ภาษาไทย',
+            'vi' => 'Tiếng Việt',
+        ], $options);
         foreach ($options as $label) {
             $this->assertNotSame('', trim($label));
         }

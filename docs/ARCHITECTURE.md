@@ -662,24 +662,32 @@ Temporary-file sweeps hold the per-run upload lock throughout reference lookup a
 | --- | --- | --- | --- | --- | --- |
 | Japanese | `ja` | Machine translated and LLM-reviewed | Supported | Machine translated and LLM-reviewed | Framework messages based on [Laravel-Lang](https://github.com/Laravel-Lang); project-specific translations machine translated and LLM-reviewed |
 | English | `en` | Manually translated | Supported | Manually translated | Manually translated |
+| Simplified Chinese | `zh_CN` | Machine translated and LLM-reviewed using DLsite terminology | Supported | Machine translated and LLM-reviewed | Framework messages based on [Laravel-Lang](https://github.com/Laravel-Lang); project-specific labels use DLsite terminology and the UI catalog |
 | Traditional Chinese | `zh_TW` | Mix of manual and machine translation with LLM review | Supported | Mix of manual and machine translation with LLM review | Mix of user-translated and automatically translated messages with LLM review |
+| Korean | `ko` | Machine translated and LLM-reviewed using DLsite terminology | Supported | Machine translated and LLM-reviewed | Framework messages based on [Laravel-Lang](https://github.com/Laravel-Lang) where available; project-specific labels use the UI catalog |
+| German | `de` | Machine translated and LLM-reviewed using DLsite terminology | Supported | Machine translated and LLM-reviewed | Framework messages based on [Laravel-Lang](https://github.com/Laravel-Lang) where available; project-specific labels use the UI catalog |
+| French | `fr` | Machine translated and LLM-reviewed using DLsite terminology | Supported | Machine translated and LLM-reviewed | Framework messages based on [Laravel-Lang](https://github.com/Laravel-Lang) where available; project-specific labels use the UI catalog |
+| Spanish | `es` | Machine translated and LLM-reviewed using DLsite terminology | Supported | Machine translated and LLM-reviewed | Framework messages based on [Laravel-Lang](https://github.com/Laravel-Lang) where available; project-specific labels use the UI catalog |
+| Italian | `it` | Machine translated and LLM-reviewed using DLsite terminology | Supported | Machine translated and LLM-reviewed | Framework messages based on [Laravel-Lang](https://github.com/Laravel-Lang) where available; project-specific labels use the UI catalog |
+| Portuguese | `pt_BR` | Machine translated and LLM-reviewed using DLsite terminology | Supported | Machine translated and LLM-reviewed | Framework messages based on [Laravel-Lang](https://github.com/Laravel-Lang) where available; project-specific labels use the UI catalog |
+| Swedish | `sv` | Machine translated and LLM-reviewed using DLsite terminology | Supported | Machine translated and LLM-reviewed | Framework messages based on [Laravel-Lang](https://github.com/Laravel-Lang) where available; project-specific labels use the UI catalog |
+| Indonesian | `id` | Machine translated and LLM-reviewed using DLsite terminology | Supported | Machine translated and LLM-reviewed | Framework messages based on [Laravel-Lang](https://github.com/Laravel-Lang) where available; project-specific labels use the UI catalog |
+| Thai | `th` | Machine translated and LLM-reviewed using DLsite terminology | Supported | Machine translated and LLM-reviewed | Framework messages based on [Laravel-Lang](https://github.com/Laravel-Lang) where available; project-specific labels use the UI catalog |
+| Vietnamese | `vi` | Machine translated and LLM-reviewed using DLsite terminology | Supported | Machine translated and LLM-reviewed | Framework messages based on [Laravel-Lang](https://github.com/Laravel-Lang) where available; project-specific labels use the UI catalog |
 
 DLsite metadata is fetched directly from DLsite and is not translated by DLSite List.
 
 When localized metadata is unavailable for the requested locale, DLsite may return Japanese metadata as a fallback.
 
-Application-owned UI text is stored in:
-- `lang/en.json`
-- `lang/ja.json`
-- `lang/zh_TW.json`
+Application-owned UI text is stored in `lang/{locale}.json`.
 
 Application-owned errors use stable semantic codes (for example, `transfer.archive.invalid_zip`) defined in `lang/{locale}/errors.php` and translated with Laravel's translator. Parameterized errors pass replacement values to the translator.
 
 Laravel’s built-in validation messages use `lang/{locale}/validation.php`.
 
-Blade uses `str_replace('_', '-', app()->getLocale())` because HTML language tags use hyphens (`zh-TW`), while the application's locale uses an underscore (`zh_TW`). This only formats the HTML `lang` attribute; it does not change which translations Laravel loads.
+Blade uses `str_replace('_', '-', app()->getLocale())` because HTML language tags use hyphens (`zh-TW`, `pt-BR`), while some application locales use underscores (`zh_TW`, `pt_BR`). This only formats the HTML `lang` attribute; it does not change which translations Laravel loads.
 
-`UiLanguage` defines interface languages independently of `DlsiteLanguage`. Automatic metadata selection follows the language table above: matching locale codes select matching metadata, while a UI-only language falls back to English. `SetUiLocale` applies the saved UI language to web requests. See [UI Language](CONFIGURATION.md#ui-language) for the display and fetch settings.
+`UiLanguage` and `DlsiteLanguage` use matching locale values for all supported languages, so `Follow UI language automatically` selects the matching metadata language without special-case mappings. `SetUiLocale` applies the saved UI language to web requests. See [UI Language](CONFIGURATION.md#ui-language) for the display and fetch settings.
 
 Localized display labels are generated for enums, field layouts, and settings, while backed enum values, routes, query values, stored data, and user content remain stable.
 

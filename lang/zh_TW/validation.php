@@ -270,12 +270,11 @@ return [
         'mode' => '顯示模式',
         'theme' => '主題',
         'sizeChoice' => 'ZIP 分割大小',
-        'customSize' => '自訂 ZIP 分割大小',
+        'customMib' => '每個 ZIP 檔案的大小上限（MiB）',
         'tagOrder' => '標籤排序',
         'seriesOrder' => '系列排序',
         'focus' => '內容類型',
-        'files' => 'ZIP 檔案',
-        'files.*' => 'ZIP 檔案',
+        'archive' => 'ZIP 檔案',
     ],
 
 ];

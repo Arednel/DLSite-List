@@ -238,7 +238,7 @@ Covers Ignore, Overwrite, and Merge across works, tags, groups, relationships, a
 
 Existing-work review coverage verifies that all Tag language memberships are loaded with one baseline query, independent of the number of supported metadata languages.
 
-Localized review cases verify headings in all three UI languages, pagination that keeps a work’s languages together, and independent decisions for translated text and fetched tags. Tag tests check that applying one language preserves shared tags and other memberships. New-work cases cover blank translations and missing, null, or zero rating values.
+Localized review cases verify headings in English, Japanese, and Traditional Chinese, pagination that keeps a work’s languages together, and independent decisions for translated text and fetched tags. Tag tests check that applying one language preserves shared tags and other memberships. New-work cases cover blank translations and missing, null, or zero rating values.
 
 Partial work-document coverage verifies that canonical Japanese contributor values overwrite existing values, omitted roles survive Overwrite, explicitly empty roles can still be cleared, and English-only canonical metadata is ignored without validation or staging clears. Announcement-date review checks use matching date formats for unchanged imported values.
 
@@ -323,7 +323,7 @@ Covers Refetch cleanup:
 Covers:
 - localized Options/Refetch UI
 - stable persisted/action values across locales
-- Japanese and English Title and Description labels on the same saved Refetch review after switching among all three UI languages, alongside the original fetched text
+- Japanese and English Title and Description labels on the same saved Refetch review after switching among English, Japanese, and Traditional Chinese, alongside the original fetched text
 - unchanged raw scraped details where appropriate
 - localized validation
 - reset navigation behavior
@@ -528,13 +528,13 @@ Covers server-rendered Add/Edit modal completion fallback output and conditional
 - Covers image-promotion error codes at Transfer and Refetch display boundaries; combined recovery failures translate known coded causes and preserve unknown/raw causes verbatim while leaving the stored diagnostic string unchanged.
 
 `tests/Unit/Support/Transfers/TransferMessageTest.php`
-- Covers localized transfer progress, upload failures, diagnostics, and metadata field labels in all three UI languages. Checks that unknown diagnostics and user-supplied names display verbatim.
+- Covers localized transfer progress, upload failures, diagnostics, and metadata field labels in English, Japanese, and Traditional Chinese. Checks that unknown diagnostics and user-supplied names display verbatim.
 
 `tests/Unit/TraditionalChineseCatalogTest.php`
 - Covers Traditional Chinese plural rendering, missing-key output for unknown diagnostics, and translated framework validation messages.
 
 `tests/Unit/Localization/CatalogTest.php`
-- Checks every registered UI language for matching UI and error keys, nonblank messages, placeholders, framework validation rules, and project overrides. Also checks the English display overrides.
+- Checks every registered UI language for matching UI and error keys, nonblank messages, placeholders, framework validation rules, and project overrides. Translated validation catalogs must also expose the same project attribute keys as Japanese. Also checks the English display overrides.
 
 #### Enums
 
@@ -548,7 +548,7 @@ Covers server-rendered Add/Edit modal completion fallback output and conditional
 - Covers valid Index sort fields (including DLsite Rating, DLsite Rating Count, Publisher, Brand, and the virtual combined Maker sort), labels/backend metadata, and sort-dropdown behavior.
 
 `tests/Unit/Enums/DlsiteLanguageTest.php`
-- Checks metadata language codes and their labels in every UI language. When adding a metadata language, add its expected DLsite API locale here. The workflow tests pick up the new enum case automatically.
+- Checks metadata language codes, upstream API locales, the reviewed 14-language label matrix in every UI catalog, native UI/metadata label matching, and automatic UI-to-metadata mapping. Workflow tests pick up new enum cases automatically.
 
 `tests/Unit/Enums/UiLanguageTest.php`
 - Covers UI language values, labels, and locale fallback.

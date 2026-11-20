@@ -42,6 +42,20 @@ class CatalogTest extends TestCase
         $this->assertCatalogMatches($expected, Arr::only(Arr::dot($actual), array_keys($expected)));
     }
 
+    #[DataProviderExternal(LanguageCases::class, 'translatedUi')]
+    public function test_translated_validation_catalogs_use_the_same_project_attribute_keys(UiLanguage $language): void
+    {
+        $expected = array_keys((require lang_path('ja/validation.php'))['attributes']);
+        $actual = (require lang_path("{$language->value}/validation.php"))['attributes'] ?? [];
+
+        $this->assertEqualsCanonicalizing($expected, array_keys($actual), $language->value);
+        foreach ($expected as $key) {
+            $this->assertArrayHasKey($key, $actual, "{$language->value}: {$key}");
+            $this->assertIsString($actual[$key], "{$language->value}: {$key}");
+            $this->assertNotSame('', trim($actual[$key]), "{$language->value}: {$key}");
+        }
+    }
+
     public function test_english_display_overrides(): void
     {
         $englishDisplayOverrides = [
