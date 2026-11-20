@@ -71,6 +71,39 @@ class UiLanguageSettingsTest extends TestCase
             ->assertSee('wire:model.live="fetchLanguages" value="en"', false);
     }
 
+    public function test_preferred_metadata_language_replaces_the_fetch_switch_role_without_changing_optional_selection(): void
+    {
+        Livewire::test(UiLanguageSettings::class)
+            ->set('followUiLanguage', false)
+            ->set('fetchLanguages', [DlsiteLanguage::English->value])
+            ->set('metadataLanguage', DlsiteLanguage::SimplifiedChinese->value)
+            ->assertSet('fetchLanguages', [DlsiteLanguage::English->value])
+            ->assertSee('wire:key="metadata-fetch-zh_CN-locked"', false)
+            ->assertSee('wire:key="metadata-fetch-en-editable"', false)
+            ->assertSee('Preferred language')
+            ->set('metadataLanguage', DlsiteLanguage::German->value)
+            ->assertSet('fetchLanguages', [DlsiteLanguage::English->value])
+            ->assertSee('wire:key="metadata-fetch-zh_CN-editable"', false)
+            ->assertSee('wire:key="metadata-fetch-de-locked"', false);
+    }
+
+    public function test_follow_mode_replaces_the_matching_fetch_switch_role_when_ui_language_changes(): void
+    {
+        Livewire::test(UiLanguageSettings::class)
+            ->set('fetchLanguages', [DlsiteLanguage::English->value])
+            ->set('language', UiLanguage::SimplifiedChinese->value)
+            ->assertSet('followUiLanguage', true)
+            ->assertSet('metadataLanguage', DlsiteLanguage::English->value)
+            ->assertSet('fetchLanguages', [DlsiteLanguage::English->value])
+            ->assertSee('wire:key="metadata-fetch-zh_CN-locked"', false)
+            ->assertSee('wire:key="metadata-fetch-en-editable"', false)
+            ->assertSee('Follows UI language')
+            ->set('language', UiLanguage::German->value)
+            ->assertSet('fetchLanguages', [DlsiteLanguage::English->value])
+            ->assertSee('wire:key="metadata-fetch-zh_CN-editable"', false)
+            ->assertSee('wire:key="metadata-fetch-de-locked"', false);
+    }
+
     public function test_it_rejects_unsupported_language_settings_without_persisting_them(): void
     {
         Livewire::test(UiLanguageSettings::class)

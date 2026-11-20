@@ -56,13 +56,15 @@
 
                 @foreach ($optionalFetchLanguageOptions as $value => $label)
                     @if ($displayedMetadataLanguage === $value)
-                        <x-options.switch :disabled="true" :checked="true">
+                        <x-options.switch wire:key="metadata-fetch-{{ $value }}-locked" :disabled="true"
+                            :checked="true">
                             {{ $label }}
                             <span
                                 class="field-layout-lock-note">{{ $followUiLanguage ? __('Follows UI language') : __('Preferred language') }}</span>
                         </x-options.switch>
                     @else
-                        <x-options.switch wire:model.live="fetchLanguages" value="{{ $value }}">
+                        <x-options.switch wire:key="metadata-fetch-{{ $value }}-editable"
+                            wire:model.live="fetchLanguages" value="{{ $value }}">
                             {{ $label }}
                         </x-options.switch>
                     @endif
