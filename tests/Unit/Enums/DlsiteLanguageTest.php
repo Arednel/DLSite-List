@@ -11,7 +11,7 @@ class DlsiteLanguageTest extends TestCase
 {
     public function test_values_returns_canonical_language_codes_in_case_order(): void
     {
-        $this->assertSame(['ja', 'en'], DlsiteLanguage::values());
+        $this->assertSame(['ja', 'en', 'zh_TW'], DlsiteLanguage::values());
     }
 
     public function test_it_exposes_currently_supported_dlsite_languages(): void
@@ -19,6 +19,7 @@ class DlsiteLanguageTest extends TestCase
         $this->assertSame([
             DlsiteLanguage::Japanese->value => 'Japanese',
             DlsiteLanguage::English->value => 'English',
+            DlsiteLanguage::TraditionalChinese->value => 'Traditional Chinese',
         ], DlsiteLanguage::options());
     }
 
@@ -26,15 +27,16 @@ class DlsiteLanguageTest extends TestCase
     {
         $this->assertNull(DlsiteLanguage::Japanese->apiLocale());
         $this->assertSame('en_US', DlsiteLanguage::English->apiLocale());
+        $this->assertSame('zh_TW', DlsiteLanguage::TraditionalChinese->apiLocale());
     }
 
     public function test_labels_follow_the_current_ui_locale(): void
     {
         foreach (
             [
-                UiLanguage::English->value => ['ja' => 'Japanese', 'en' => 'English'],
-                UiLanguage::Japanese->value => ['ja' => '日本語', 'en' => '英語'],
-                UiLanguage::TraditionalChinese->value => ['ja' => '日文', 'en' => '英文'],
+                UiLanguage::English->value => ['ja' => 'Japanese', 'en' => 'English', 'zh_TW' => 'Traditional Chinese'],
+                UiLanguage::Japanese->value => ['ja' => '日本語', 'en' => '英語', 'zh_TW' => '繁体字中国語'],
+                UiLanguage::TraditionalChinese->value => ['ja' => '日文', 'en' => '英文', 'zh_TW' => '繁體中文'],
             ] as $locale => $expected
         ) {
             App::setLocale($locale);
@@ -46,6 +48,6 @@ class DlsiteLanguageTest extends TestCase
     {
         $this->assertSame(DlsiteLanguage::English, UiLanguage::English->dlsiteLanguage());
         $this->assertSame(DlsiteLanguage::Japanese, UiLanguage::Japanese->dlsiteLanguage());
-        $this->assertNull(UiLanguage::TraditionalChinese->dlsiteLanguage());
+        $this->assertSame(DlsiteLanguage::TraditionalChinese, UiLanguage::TraditionalChinese->dlsiteLanguage());
     }
 }

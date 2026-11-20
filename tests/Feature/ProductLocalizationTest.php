@@ -226,18 +226,21 @@ class ProductLocalizationTest extends TestCase
             ->withTitles('Japanese title', 'English title')
             ->withEnglishDescription('English description')
             ->create(['description' => 'Japanese description']);
-        $product->syncLocalization('zh_TW', [
+        $product->syncLocalization(DlsiteLanguage::TraditionalChinese, [
             'title' => 'Traditional Chinese title',
             'description' => 'Traditional Chinese description',
         ]);
 
         $englishLocalization = $product->localizations()->where('locale', DlsiteLanguage::English->value)->firstOrFail();
+        $chineseLocalization = $product->localizations()->where('locale', DlsiteLanguage::TraditionalChinese->value)->firstOrFail();
 
         $this->assertSame('Japanese title', $product->work_name);
         $this->assertSame('Japanese description', $product->description);
         $this->assertSame(DlsiteLanguage::English->value, $englishLocalization->locale);
         $this->assertSame('English title', $englishLocalization->title);
         $this->assertSame('English description', $englishLocalization->description);
+        $this->assertSame('Traditional Chinese title', $chineseLocalization->title);
+        $this->assertSame('Traditional Chinese description', $chineseLocalization->description);
         $this->assertFalse($product->localizations()->where('locale', DlsiteLanguage::Japanese->value)->exists());
     }
 
@@ -245,15 +248,15 @@ class ProductLocalizationTest extends TestCase
     {
         $product = Product::factory()->create();
 
-        $changed = $product->syncLocalization('zh_TW', [
-            'title' => '繁體中文標題',
+        $changed = $product->syncLocalization('fr', [
+            'title' => 'French title',
         ]);
 
         $this->assertTrue($changed);
         $this->assertDatabaseHas('product_localizations', [
             'product_id' => $product->id,
-            'locale' => 'zh_TW',
-            'title' => '繁體中文標題',
+            'locale' => 'fr',
+            'title' => 'French title',
         ]);
     }
 
@@ -459,7 +462,7 @@ class ProductLocalizationTest extends TestCase
     public function test_title_filter_uses_canonical_japanese_and_requested_localization(): void
     {
         $product = Product::factory()->withTitles('Japanese searchable title', 'English searchable title')->create();
-        $product->syncLocalization('zh_TW', [
+        $product->syncLocalization('fr', [
             'title' => 'Future locale only token',
         ]);
 
@@ -476,7 +479,7 @@ class ProductLocalizationTest extends TestCase
             ->whereKey($product->getKey())
             ->exists());
         $this->assertTrue(Product::query()
-            ->filterTitle('Future locale only', 'zh_TW')
+            ->filterTitle('Future locale only', 'fr')
             ->whereKey($product->getKey())
             ->exists());
     }
@@ -484,7 +487,7 @@ class ProductLocalizationTest extends TestCase
     public function test_general_search_uses_canonical_japanese_and_all_stored_localized_titles(): void
     {
         $product = Product::factory()->withTitles('Japanese searchable title', 'English searchable title')->create();
-        $product->syncLocalization('zh_TW', [
+        $product->syncLocalization('fr', [
             'title' => 'Future locale only token',
         ]);
 

@@ -85,6 +85,10 @@ class OptionMetadataSettingsTest extends TestCase
 
         $this->assertSame(DlsiteLanguage::Japanese, Option::effectiveDlsiteMetadataLanguage());
 
+        Option::setUiLanguage(UiLanguage::TraditionalChinese);
+
+        $this->assertSame(DlsiteLanguage::TraditionalChinese, Option::effectiveDlsiteMetadataLanguage());
+
         Option::setDlsiteMetadataLanguageFollowsUi(false);
         Option::setDlsiteMetadataLanguage(DlsiteLanguage::English);
 

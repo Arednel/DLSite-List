@@ -1633,12 +1633,13 @@ class LibraryTransferImportTest extends TestCase
         config(['transfers.fragment_bytes' => 600]);
         Product::factory()->count(3)->create();
         $export = $this->service()->export(['works'], 'all', []);
-        $export->update(['settings' => [...$export->settings, 'part_bytes' => 8500]]);
+        $partBytes = 10_240;
+        $export->update(['settings' => [...$export->settings, 'part_bytes' => $partBytes]]);
         $this->planExport($export);
         $this->assertSame(3, $export->parts()->count());
         foreach ($export->parts()->get() as $part) {
             $this->archive()->build($part);
-            $this->assertLessThanOrEqual(8500, $part->fresh()->bytes);
+            $this->assertLessThanOrEqual($partBytes, $part->fresh()->bytes);
         }
         $run = $this->service()->startImport();
         $last = $export->parts()->latest('id')->first();
@@ -1833,7 +1834,7 @@ class LibraryTransferImportTest extends TestCase
         config(['transfers.fragment_bytes' => 600]);
         Product::factory()->count(12)->create();
         $export = $this->service()->export(['works'], 'all', []);
-        $export->update(['settings' => [...$export->settings, 'part_bytes' => 8500]]);
+        $export->update(['settings' => [...$export->settings, 'part_bytes' => 10_240]]);
         $this->planExport($export);
         $this->assertSame(LibraryTransferRunStatus::AwaitingConfirmation, $export->fresh()->status);
         $this->service()->action($export->fresh(), LibraryTransferAction::ContinueExport);

@@ -30,10 +30,12 @@ class VisibleGenreAttachmentTest extends TestCase
         $custom = Genre::query()->create(['title' => 'Custom Visible']);
         $english = Genre::query()->create(['title' => 'English Fetched']);
         $japanese = Genre::query()->create(['title' => 'Japanese Fetched']);
+        $traditionalChinese = Genre::query()->create(['title' => 'Traditional Chinese Fetched']);
 
         $this->attachGenre($product, $custom, Genre::PIVOT_SOURCE_CUSTOM);
         $this->attachGenre($product, $english, Genre::PIVOT_SOURCE_FETCHED, [DlsiteLanguage::English->value]);
         $this->attachGenre($product, $japanese, Genre::PIVOT_SOURCE_FETCHED, [DlsiteLanguage::Japanese->value]);
+        $this->attachGenre($product, $traditionalChinese, Genre::PIVOT_SOURCE_FETCHED, [DlsiteLanguage::TraditionalChinese->value]);
 
         $this->assertSame([
             'Custom Visible',
@@ -107,7 +109,7 @@ class VisibleGenreAttachmentTest extends TestCase
     {
         yield 'English' => [UiLanguage::English, 'English Fetched'];
         yield 'Japanese' => [UiLanguage::Japanese, 'Japanese Fetched'];
-        yield 'Traditional Chinese uses English fetched tags' => [UiLanguage::TraditionalChinese, 'English Fetched'];
+        yield 'Traditional Chinese' => [UiLanguage::TraditionalChinese, 'Traditional Chinese Fetched'];
     }
 
     /**

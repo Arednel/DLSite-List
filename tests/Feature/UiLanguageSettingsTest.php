@@ -30,6 +30,7 @@ class UiLanguageSettingsTest extends TestCase
             ->assertSee('class="field-layout-section field-layout-collapsible metadata-language-nested"', false)
             ->assertSee('Fetched languages')
             ->assertSee('English')
+            ->assertSee('Traditional Chinese')
             ->assertSee('日本語')
             ->assertSee('繁體中文');
     }

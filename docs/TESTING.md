@@ -202,7 +202,7 @@ Covers cancellation, individual job failures, transactional rollback, lifecycle 
 
 #### `tests/Feature/BulkImportTest.php`
 
-Covers product-code validation, queued item processing, skips, failures, and transactional run completion. Tests verify that the submitted metadata language, fetch languages, and rating scale survive later Option changes. Import cases cover Product Format overrides, announcement dates, Site IDs, and failed image downloads.
+Covers product-code validation, queued item processing, skips, failures, and transactional run completion. Bulk Import reads the fetch languages from Options when the run starts and includes the metadata language submitted with the form. Tests check that queued jobs keep the run's language settings and rating scale, and that the form uses the current metadata language after a validation error. Import cases cover Product Format overrides, announcement dates, Site IDs, and failed image downloads.
 
 Busy-start coverage checks the wrapped cache lock timeout and ensures unrelated dispatch exceptions with the same message are not misclassified as lock contention.
 
@@ -224,7 +224,7 @@ Regression coverage injects failures after successor-job insertion in every plan
 
 #### `tests/Feature/LibraryTransferImportTest.php`
 
-Covers multipart upload and validation, archive integrity, analysis retries, incomplete images, and data-only imports. Compatibility cases cover v1 through v3 archives, historical Option keys and layouts, and v4 round trips with both Japanese and English metadata.
+Covers multipart upload and validation, archive integrity, analysis retries, incomplete images, and data-only imports. Compatibility cases cover v1 through v3 archives, historical Option keys and layouts, and v4 round trips across every supported DLsite metadata language.
 
 Work import tests distinguish omitted fields from explicit clears, preserve explicit v4 translations equal to Japanese, and reject malformed locale documents and fetch-language settings. Other cases cover scraper aliases, Product Format, Series, notes, dates, Site IDs, and DLsite ratings. Custom CSS tests cover review, overwrite, rollback, and recovery after interruption.
 
@@ -348,7 +348,7 @@ Covers the main product HTTP workflows:
 - Index filtering/sorting/display
 - all-tags pattern matching, overlapping matches, missing tags, and per-attachment language/custom-source visibility
 - Create/Edit field order using submitted input names, product binding, controller-prepared translated Title/Description values, and return-navigation data, including rejection of unsafe (non-http(s)) `return_url` values
-- preservation of hidden and read-only fields, localized form values and fetched tags after validation redirects, and metadata-language lookups on Edit
+- preservation of hidden and read-only fields, rendered-language snapshots on successful submissions, current-language reloads with persisted fetched tags after validation redirects, and metadata-language lookups on Edit
 - focused DLsite Rating input/read-only display across both scales, read-only mutation protection, canonical Score input, validation restoration, manual conversion, vote-count updates that preserve independently rounded ratings, and conditional Rating Scale lookups for form rendering and manual submissions
 - DLsite Rating clearing and omission semantics, independent vote-count preservation, and unchanged Updated Date when already-null ratings are submitted again
 - DLsite Quick Add fetch/store/error behavior and shared importer regression coverage
@@ -358,7 +358,7 @@ Covers the main product HTTP workflows:
 - tag/contributor synchronization
 - metadata and partial-date updates
 - automatic Series
-- selected-language fetched/custom tags
+- Custom Tags and fetched tags for the selected language
 - Index-aware return navigation
 - modal completion responses
 - deletion and cleanup-error handling, including associated original-work JSON files and directory listing failures that must not block product deletion
@@ -475,12 +475,12 @@ Covers localized Tag Library labels, controls, selected-language behavior, and d
 
 #### `tests/Feature/TraditionalChineseUiTest.php`
 
-Covers application-wide Traditional Chinese selection, English DLsite metadata fallback with a preserved manual Japanese metadata choice, translated review/count/help controls, primary pages and review surfaces, administrator form validation, and unchanged stored titles, tags, statuses, and canonical diagnostics.
+Covers application-wide Traditional Chinese selection, matching Traditional Chinese DLsite metadata with a preserved manual Japanese metadata choice, translated review/count/help controls, primary pages and review surfaces, administrator form validation, and unchanged stored titles, tags, statuses, and canonical diagnostics.
 
 #### `tests/Feature/TagLibraryManagerTest.php`
 
 Covers Tag Library behavior:
-- selected-language fetched/custom/empty tags
+- Custom Tags, unused tags, and fetched tags for the selected language
 - create/rename/delete
 - groups and multi-group membership
 - saved ordering
@@ -715,7 +715,7 @@ These checks remain manual because they depend on browser behavior, JavaScript e
 ### Authentication
 
 - Sign in with Remember me, restart the browser normally, and confirm the login persists.
-- Spot-check Login, Setup, Help, and Recovery pages in both authentication themes and both UI languages.
+- Spot-check Login, Setup, Help, and Recovery pages in both authentication themes for each supported UI language.
 - Change the password and exercise both Cancel and Accept on the browser confirmation.
 - In a trusted local environment:
   1. set `ADMIN_PASSWORD_RESET=true`

@@ -359,7 +359,11 @@ class ProductSurfaceLocalizationTest extends TestCase
             $this->assertSame($placeholders($key), $placeholders($japanese[$key]), $key);
         }
 
-        $this->assertSame($englishDisplayOverrides, $actualEnglishOverrides);
+        // DlsiteLanguageTest checks the display label for every metadata language.
+        $this->assertEquals(
+            $englishDisplayOverrides,
+            Arr::except($actualEnglishOverrides, array_column(DlsiteLanguage::cases(), 'name')),
+        );
 
         $this->assertEqualsCanonicalizing(array_keys($englishErrors), array_keys($japaneseErrors));
         $this->assertSame([], array_values(array_intersect(array_keys($english), array_keys($englishErrors))));

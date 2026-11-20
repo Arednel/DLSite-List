@@ -477,13 +477,13 @@ Choices:
 `Follow UI language automatically` is enabled by default:
 - `en` UI → English DLsite metadata
 - `ja` UI → Japanese DLsite metadata
-- `zh_TW` UI → English DLsite metadata
+- `zh_TW` UI → Traditional Chinese DLsite metadata
 
 Turn off automatic selection to choose `Preferred metadata language` independently.
 
-`Preferred metadata language` controls which title, description, and fetched tags are shown on work forms and the Index. Japanese uses the canonical Japanese metadata, so the additional translated title and description fields and translated description filter are hidden. Changing the preferred language only changes which already-stored metadata is shown. Use Refetch to retrieve missing translations for existing works.
+`Preferred metadata language` selects which translated titles and descriptions are shown and which Fetched Tags appear on the Index and Edit form. Selecting Japanese hides the extra translation fields and the translated description filter.
 
-`Fetched languages` controls which translated titles, descriptions, and tags Quick Add, Bulk Import, and Refetch request from DLsite. Japanese and the preferred metadata language are always fetched. English is selected by default and can be turned off when Japanese is preferred.
+Quick Add, Bulk Import, and Refetch always request Japanese and the preferred metadata language. Use `Fetched languages` to include additional languages for titles, descriptions, and tags. English is selected by default. To fill in missing translations for existing works, use Refetch. See [Languages](ARCHITECTURE.md#languages) for the supported UI and metadata locales.
 
 #### Index Pagination
 
@@ -549,7 +549,7 @@ Hiding the Image field does not reset the saved Image Viewer option.
 
 `Set Series from DLsite metadata when no Series is entered in Quick Add` is enabled by default.
 
-When enabled, DLSite Quick Add fills Series only when the user did not enter one, using `japanese.title_name`.
+When enabled, DLsite Quick Add and Bulk Import use the series name from the Japanese DLsite metadata if you leave Series blank.
 
 It does not apply to Custom Quick Add or Refetch.
 

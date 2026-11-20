@@ -38,7 +38,7 @@ class LibraryWorkValidatorTest extends TestCase
             'null English title' => [['titles' => ['ja' => 'Title', 'en' => null]], null],
             'empty English title' => [['titles' => ['ja' => 'Title', 'en' => '']], null],
             'non-string English title' => [['titles' => ['ja' => 'Title', 'en' => []]], 'titles.en'],
-            'unsupported title locale' => [['titles' => ['ja' => 'Title', 'zh_TW' => 'Title']], 'titles'],
+            'unsupported title locale' => [['titles' => ['ja' => 'Title', 'fr' => 'Title']], 'titles'],
             'maximum Japanese title' => [['titles' => ['ja' => str_repeat('あ', 1000)]], null],
             'oversized Japanese title' => [['titles' => ['ja' => str_repeat('あ', 1001)]], 'titles.ja'],
             'maximum English title' => [['titles' => ['ja' => 'Title', 'en' => str_repeat('x', 1000)]], null],
@@ -47,7 +47,7 @@ class LibraryWorkValidatorTest extends TestCase
             'null descriptions' => [['titles' => ['ja' => 'Title'], 'descriptions' => ['ja' => null, 'en' => null]], null],
             'empty description values' => [['titles' => ['ja' => 'Title'], 'descriptions' => ['ja' => '', 'en' => '']], null],
             'non-string description' => [['titles' => ['ja' => 'Title'], 'descriptions' => ['en' => []]], 'descriptions.en'],
-            'unsupported description locale' => [['titles' => ['ja' => 'Title'], 'descriptions' => ['zh_TW' => 'Description']], 'descriptions'],
+            'unsupported description locale' => [['titles' => ['ja' => 'Title'], 'descriptions' => ['fr' => 'Description']], 'descriptions'],
             'maximum ASCII description' => [['titles' => ['ja' => 'Title'], 'descriptions' => ['en' => str_repeat('x', 65535)]], null],
             'oversized ASCII description' => [['titles' => ['ja' => 'Title'], 'descriptions' => ['en' => str_repeat('x', 65536)]], 'descriptions.en'],
             'maximum multibyte description' => [['titles' => ['ja' => 'Title'], 'descriptions' => ['ja' => str_repeat('あ', 21845)]], null],
@@ -77,23 +77,25 @@ class LibraryWorkValidatorTest extends TestCase
     {
         $validated = app(LibraryWorkValidator::class)->validate([
             'product_code' => 'RJ123456',
-            'titles' => ['ja' => 'Test work', 'en' => 'English work'],
-            'descriptions' => ['ja' => 'Japanese description', 'en' => 'English description'],
+            'titles' => ['ja' => 'Test work', 'en' => 'English work', 'zh_TW' => '繁體中文作品'],
+            'descriptions' => ['ja' => 'Japanese description', 'en' => 'English description', 'zh_TW' => '繁體中文說明'],
             'tags' => [
                 'custom' => ['Custom'],
                 'ja' => ['Japanese'],
                 'en' => ['English'],
+                'zh_TW' => ['繁體中文'],
             ],
         ]);
 
-        $this->assertSame(['ja' => 'Test work', 'en' => 'English work'], $validated['titles']);
+        $this->assertSame(['ja' => 'Test work', 'en' => 'English work', 'zh_TW' => '繁體中文作品'], $validated['titles']);
         $this->assertSame(
-            ['ja' => 'Japanese description', 'en' => 'English description'],
+            ['ja' => 'Japanese description', 'en' => 'English description', 'zh_TW' => '繁體中文說明'],
             $validated['descriptions'],
         );
         $this->assertSame(['Custom'], $validated['tags']['custom']);
         $this->assertSame(['Japanese'], $validated['tags']['ja']);
         $this->assertSame(['English'], $validated['tags']['en']);
+        $this->assertSame(['繁體中文'], $validated['tags']['zh_TW']);
     }
 
     public function test_tags_reject_unsupported_locale_keys(): void
@@ -103,7 +105,7 @@ class LibraryWorkValidatorTest extends TestCase
         app(LibraryWorkValidator::class)->validate([
             'product_code' => 'RJ123456',
             'titles' => ['ja' => 'Test work'],
-            'tags' => ['zh_TW' => ['Unsupported']],
+            'tags' => ['fr' => ['Unsupported']],
         ]);
     }
 

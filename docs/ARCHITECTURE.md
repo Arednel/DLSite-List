@@ -91,7 +91,7 @@ Custom Quick Add:
 
 Custom Quick Add and Edit keep newly selected image files in the browser until Save. Previews use browser object URLs, while removal/reordering state is represented by the form and submitted through the normal multipart request. `ProductImageSubmission` converts that submitted state into the final cover/sample image set and delegates filesystem-changing saves to `ProductImagePromotion`. Existing-image removal/order can be restored through Laravel old input after validation; newly selected local files must be selected again after a full redirect.
 
-Quick Add and Edit forms submit the metadata language they displayed. Validation redirects reuse that language so localized text and fetched Tags still refer to the same locale if someone changes Options in another tab.
+Quick Add and Edit save changes using the metadata language shown when the form opened. If validation fails, the form reopens using the current language set in Options. Any title or description you typed into the translation fields reappears if those fields are visible, even if the language has changed.
 
 Custom works still use the normal product/tag/contributor model and can participate in the library and Refetch selection workflow.
 
@@ -131,7 +131,7 @@ Bulk Import history cleanup deletes all persisted run/item history and is unavai
 `GET /tags` renders the Tag Library shell and mounts `app/Livewire/TagLibraryManager.php`.
 
 `TagLibraryManager` owns:
-- selected-language fetched/custom tag listing
+- listing fetched tags for the selected language and all Custom Tags
 - zero-use manual tags
 - tag search
 - empty tag creation/deletion
@@ -253,7 +253,7 @@ Each bounded export planning phase locks and rechecks the run, then commits inve
 
 Partial work imports read shared DLsite fields from the Japanese document. Omitted fields preserve existing values. An explicit null for optional text or an empty fetched Tag list can clear that value on Overwrite. Import validates incoming fields before applying the same aliases used for scraped work data.
 
-Import Review keeps all languages for a work together when paging through Titles, Descriptions, or Tags. Each decision applies only to the reviewed field or tag bucket. Merge rereads that bucket under the apply lock and preserves unrelated language memberships.
+For existing works, Import Review keeps all languages for a work on the same page. Titles, Descriptions, and fetched Tags can each be reviewed separately for each language. Merging fetched tags rereads the selected language's tags under the apply lock and preserves memberships in other languages. For a new work, one Add or Ignore decision covers the whole work.
 
 Incomplete image categories remain importable. Import applies the valid image files present in the archive and records a warning; an incomplete category with no available files is treated as unavailable data rather than an explicit empty category, so it does not clear existing images. New works follow the same rule and import any available images.
 
@@ -572,7 +572,7 @@ Removing a relationship does not remove parent tags already attached to products
 - overwrite/ignore decisions
 - whether an accepted decision actually changed the work
 
-Refetch and Import share field identifiers for review decisions. Japanese text uses `work_name` and `description`. Translated text uses `localization:<locale>:title` and `localization:<locale>:description`. Both reviews translate the labels when displayed.
+Refetch and Import share field identifiers for review decisions. Japanese text uses `work_name` and `description`. Translated text uses `localization:<locale>:title` and `localization:<locale>:description`. Refetch and existing-work import reviews show field headings in the current UI language. New-work import previews keep the headings saved during analysis.
 
 Laravel queue infrastructure uses:
 - `jobs`
@@ -653,6 +653,21 @@ Temporary-file sweeps hold the per-run upload lock throughout reference lookup a
 
 ## UI and Localization
 
+### Languages
+
+- **UI support** controls the application interface.
+- **DLsite metadata support** controls locale-specific **Title, Description, and fetched Tags** fetched from DLsite.
+
+| Language | Locale | UI | DLsite metadata | Errors file | Validation file |
+| --- | --- | --- | --- | --- | --- |
+| Japanese | `ja` | Machine translated and LLM-reviewed | Supported | Machine translated and LLM-reviewed | Framework messages based on [Laravel-Lang](https://github.com/Laravel-Lang); project-specific translations machine translated and LLM-reviewed |
+| English | `en` | Manually translated | Supported | Manually translated | Manually translated |
+| Traditional Chinese | `zh_TW` | Mix of manual and machine translation with LLM review | Supported | Mix of manual and machine translation with LLM review | Mix of user-translated and automatically translated messages with LLM review |
+
+DLsite metadata is fetched directly from DLsite and is not translated by DLSite List.
+
+When localized metadata is unavailable for the requested locale, DLsite may return Japanese metadata as a fallback.
+
 Application-owned UI text is stored in:
 - `lang/en.json`
 - `lang/ja.json`
@@ -664,7 +679,7 @@ Laravel’s built-in validation messages use `lang/{locale}/validation.php`.
 
 Blade uses `str_replace('_', '-', app()->getLocale())` because HTML language tags use hyphens (`zh-TW`), while the application's locale uses an underscore (`zh_TW`). This only formats the HTML `lang` attribute; it does not change which translations Laravel loads.
 
-`UiLanguage` defines interface languages independently of `DlsiteLanguage`. Automatic metadata selection matches their locale codes and falls back to English for a UI-only language. `SetUiLocale` applies the saved UI language to web requests. See [UI Language](CONFIGURATION.md#ui-language) for the display and fetch settings.
+`UiLanguage` defines interface languages independently of `DlsiteLanguage`. Automatic metadata selection follows the language table above: matching locale codes select matching metadata, while a UI-only language falls back to English. `SetUiLocale` applies the saved UI language to web requests. See [UI Language](CONFIGURATION.md#ui-language) for the display and fetch settings.
 
 Localized display labels are generated for enums, field layouts, and settings, while backed enum values, routes, query values, stored data, and user content remain stable.
 

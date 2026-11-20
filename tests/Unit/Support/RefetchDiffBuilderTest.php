@@ -195,6 +195,47 @@ class RefetchDiffBuilderTest extends TestCase
         );
     }
 
+    public function test_traditional_chinese_title_and_description_use_locale_specific_refetch_fields(): void
+    {
+        $product = Product::factory()->create([
+            'work_name' => 'Japanese Title',
+            'description' => 'Japanese Description',
+        ]);
+        $product->syncLocalization(DlsiteLanguage::TraditionalChinese->value, [
+            'title' => '舊標題',
+            'description' => '舊說明',
+        ]);
+
+        $changes = app(RefetchDiffBuilder::class)->build(
+            $product,
+            new DLSiteFetchResult(
+                workData: DLSiteWorkData::fromArray([
+                    'locales' => [
+                        'ja' => ['product_id' => $product->getKey()],
+                        'zh_TW' => [
+                            'product_id' => $product->getKey(),
+                            'work_name' => '新標題',
+                            'description' => '新說明',
+                        ],
+                    ],
+                ]),
+                failedImages: [],
+            ),
+            null,
+        );
+
+        $this->assertSame([
+            'label' => 'Traditional Chinese Title',
+            'old' => '舊標題',
+            'new' => '新標題',
+        ], $changes[RefetchCategory::Titles->value]['localization:zh_TW:title']);
+        $this->assertSame([
+            'label' => 'Traditional Chinese Description',
+            'old' => '舊說明',
+            'new' => '新說明',
+        ], $changes[RefetchCategory::Descriptions->value]['localization:zh_TW:description']);
+    }
+
     public function test_missing_japanese_title_does_not_propose_removal_but_english_title_can_clear(): void
     {
         $product = Product::factory()->withTitles('Required Japanese title', 'Optional English title')->create();

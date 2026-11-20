@@ -188,9 +188,10 @@ class LibraryTransferExportTest extends TestCase
             'custom' => ['Custom Z', 'Custom A'],
             'ja' => ['Shared fetched tag', 'Japanese only'],
             'en' => ['Shared fetched tag', 'English only'],
+            'zh_TW' => [],
         ], $tagBuckets[$first->id]);
-        $this->assertSame(['custom' => [], 'ja' => [], 'en' => ['Shared fetched tag']], $tagBuckets[$products[1]->id]);
-        $this->assertSame(['custom' => [], 'ja' => [], 'en' => []], $tagBuckets[$products[2]->id]);
+        $this->assertSame(['custom' => [], 'ja' => [], 'en' => ['Shared fetched tag'], 'zh_TW' => []], $tagBuckets[$products[1]->id]);
+        $this->assertSame(['custom' => [], 'ja' => [], 'en' => [], 'zh_TW' => []], $tagBuckets[$products[2]->id]);
         $this->assertSame(
             [$products[1]->id => $tagBuckets[$products[1]->id]],
             $data->tagBucketsForProducts([$products[1]->id]),
@@ -269,7 +270,7 @@ class LibraryTransferExportTest extends TestCase
             $candidate->load(array_values(array_diff(array_keys($requiredRelations), [$missingRelation])));
 
             try {
-                $archive->exportSnapshotFromLoadedData($candidate, ['custom' => [], 'ja' => [], 'en' => []]);
+                $archive->exportSnapshotFromLoadedData($candidate, ['custom' => [], 'ja' => [], 'en' => [], 'zh_TW' => []]);
                 $this->fail("Preordered export should require the {$missingRelation} relation.");
             } catch (\LogicException $exception) {
                 $this->assertSame($expectedMessage, $exception->getMessage());
@@ -343,7 +344,7 @@ class LibraryTransferExportTest extends TestCase
         $alpha = Product::factory()->withEnglishTitle('Alpha English')->create(['id' => 'RJ111111', 'work_name' => 'Alpha']);
         $alpha->localizations()->updateOrCreate(
             ['locale' => 'zh_TW'],
-            ['title' => 'Future locale transfer token'],
+            ['title' => 'Traditional Chinese transfer token'],
         );
         Product::factory()->create(['id' => 'RJ222222', 'work_name' => 'Beta']);
         Option::setDlsiteMetadataLanguageFollowsUi(false);
@@ -351,7 +352,7 @@ class LibraryTransferExportTest extends TestCase
 
         Livewire::test(OptionsTransfers::class)
             ->set('mode', 'selected')
-            ->set('search', 'Future locale transfer')
+            ->set('search', 'Traditional Chinese transfer')
             ->assertDontSee('RJ111111')
             ->assertDontSee('RJ222222')
             ->set('search', 'Alpha')
@@ -446,7 +447,7 @@ class LibraryTransferExportTest extends TestCase
         config(['transfers.fragment_bytes' => 600]);
         Product::factory()->count(11)->create();
         $run = $this->service()->export(['works'], 'all', []);
-        $run->update(['settings' => [...$run->settings, 'part_bytes' => 8500]]);
+        $run->update(['settings' => [...$run->settings, 'part_bytes' => 10_240]]);
         do {
             $archive->plan($run->fresh());
         } while ($run->fresh()->status === LibraryTransferRunStatus::Planning);

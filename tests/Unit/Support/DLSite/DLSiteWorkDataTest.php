@@ -72,15 +72,24 @@ class DLSiteWorkDataTest extends TestCase
                     'description' => 'English Description',
                     'genre' => ['EN Tag'],
                 ],
+                'zh_TW' => [
+                    'product_id' => 'RJ123456',
+                    'work_name' => '繁體中文標題',
+                    'description' => '繁體中文說明',
+                    'genre' => ['繁體中文標籤'],
+                ],
             ],
         ]);
 
         $this->assertSame('日本語タイトル', $data->titleForLocale(DlsiteLanguage::Japanese));
         $this->assertSame('English Title', $data->titleForLocale(DlsiteLanguage::English));
         $this->assertSame('English Description', $data->descriptionForLocale(DlsiteLanguage::English));
+        $this->assertSame('繁體中文標題', $data->titleForLocale(DlsiteLanguage::TraditionalChinese));
+        $this->assertSame('繁體中文說明', $data->descriptionForLocale(DlsiteLanguage::TraditionalChinese));
         $this->assertSame([
             'ja' => ['JP Tag'],
             'en' => ['EN Tag'],
+            'zh_TW' => ['繁體中文標籤'],
         ], $data->genresByLocale());
 
         $normalized = DLSiteWorkData::normalizePayload([

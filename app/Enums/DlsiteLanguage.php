@@ -10,6 +10,7 @@ enum DlsiteLanguage: string
 
     case Japanese = 'ja';
     case English = 'en';
+    case TraditionalChinese = 'zh_TW';
 
     public function label(): string
     {
@@ -31,6 +32,7 @@ enum DlsiteLanguage: string
         return match ($this) {
             self::Japanese => null,
             self::English => 'en_US',
+            self::TraditionalChinese => 'zh_TW',
         };
     }
 

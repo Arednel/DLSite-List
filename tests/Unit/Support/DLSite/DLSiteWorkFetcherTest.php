@@ -74,6 +74,8 @@ class DLSiteWorkFetcherTest extends TestCase
             'empty means Japanese only' => [[], ['ja' => null]],
             'English only' => [['en'], ['ja' => null, 'en' => 'en_US']],
             'Japanese and English' => [['ja', 'en'], ['ja' => null, 'en' => 'en_US']],
+            'Traditional Chinese only' => [['zh_TW'], ['ja' => null, 'zh_TW' => 'zh_TW']],
+            'English and Traditional Chinese' => [['en', 'zh_TW'], ['ja' => null, 'en' => 'en_US', 'zh_TW' => 'zh_TW']],
         ];
     }
 

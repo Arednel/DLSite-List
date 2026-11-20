@@ -3097,7 +3097,7 @@ class ProductIndexLivewireTest extends TestCase
             );
     }
 
-    public function test_ui_only_language_following_metadata_uses_english_localized_description_fields(): void
+    public function test_traditional_chinese_ui_following_metadata_uses_traditional_chinese_description_fields(): void
     {
         Option::setUiLanguage(UiLanguage::TraditionalChinese);
         Option::setDlsiteMetadataLanguageFollowsUi(true);
@@ -3111,7 +3111,7 @@ class ProductIndexLivewireTest extends TestCase
         Livewire::test(ProductIndex::class)
             ->assertViewHas(
                 'metadataLanguage',
-                fn(DlsiteLanguage $language): bool => $language === DlsiteLanguage::English,
+                fn(DlsiteLanguage $language): bool => $language === DlsiteLanguage::TraditionalChinese,
             )
             ->assertViewHas(
                 'indexColumns',

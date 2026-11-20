@@ -34,7 +34,7 @@ class TraditionalChineseUiTest extends TestCase
             ->set('language', UiLanguage::TraditionalChinese->value)
             ->set('followUiLanguage', true)
             ->set('metadataLanguage', DlsiteLanguage::Japanese->value)
-            ->assertSee('value="en" selected', false)
+            ->assertSee('value="zh_TW" selected', false)
             ->call('save')
             ->assertHasNoErrors()
             ->assertRedirectToRoute('options.index', ['tab' => 'general']);
@@ -50,7 +50,11 @@ class TraditionalChineseUiTest extends TestCase
             ->assertSee('已儲存語言設定。')
             ->assertDontSee('Language settings saved.');
 
-        $this->assertSame(DlsiteLanguage::English, Option::effectiveDlsiteMetadataLanguage());
+        $this->assertSame(DlsiteLanguage::TraditionalChinese, Option::effectiveDlsiteMetadataLanguage());
+        $this->assertSame(
+            [DlsiteLanguage::Japanese, DlsiteLanguage::English, DlsiteLanguage::TraditionalChinese],
+            Option::effectiveDlsiteMetadataFetchLanguages(),
+        );
 
         Livewire::test(UiLanguageSettings::class)
             ->set('followUiLanguage', false)

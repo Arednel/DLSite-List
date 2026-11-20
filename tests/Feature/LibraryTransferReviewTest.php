@@ -837,8 +837,10 @@ class LibraryTransferReviewTest extends TestCase
         ], []);
 
         $record = app(LibraryData::class)->work($product);
-        $record['tags'][DlsiteLanguage::Japanese->value] = ['Imported Japanese fetched', '0'];
-        $record['tags'][DlsiteLanguage::English->value] = ['Imported English fetched'];
+        $record['tags'] = [
+            DlsiteLanguage::Japanese->value => ['Imported Japanese fetched', '0'],
+            DlsiteLanguage::English->value => ['Imported English fetched'],
+        ];
 
         $run = LibraryTransferRun::create([
             'direction' => 'import',
@@ -848,26 +850,16 @@ class LibraryTransferReviewTest extends TestCase
         $review = $this->review();
         $review->stage($run, 'works', $record, []);
 
+        $tagItemIds = $run->items()->where('category', 'tags')->orderBy('id')->pluck('id')->all();
+
+        $review->stage($run, 'works', $record, []);
         $tagItems = $run->items()
             ->where('category', 'tags')
             ->orderBy('id')
             ->get();
-
-        $this->assertCount(2, $tagItems);
-        $this->assertSame(2, $tagItems->pluck('identity_hash')->unique()->count());
-        $this->assertEqualsCanonicalizing(
-            [DlsiteLanguage::Japanese->value, DlsiteLanguage::English->value],
-            $tagItems->pluck('metadata')->pluck('bucket')->all(),
-        );
-
-        $review->stage($run, 'works', $record, []);
-        $this->assertSame(2, $run->items()->where('category', 'tags')->count());
-
-        $tagItems = $run->items()
-            ->where('category', 'tags')
-            ->orderBy('id')
-            ->get()
-            ->keyBy(fn(LibraryImportItem $item): string => $item->metadata['bucket']);
+        $this->assertSame($tagItemIds, $tagItems->modelKeys());
+        $this->assertEqualsCanonicalizing(array_keys($record['tags']), $tagItems->pluck('metadata.bucket')->all());
+        $tagItems = $tagItems->keyBy('metadata.bucket');
 
         Livewire::test(OptionsTransferRun::class, ['run' => $run->fresh()])
             ->call('tab', 'works', 'tags')

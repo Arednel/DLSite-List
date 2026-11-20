@@ -251,12 +251,15 @@ class LibraryTransferTest extends TestCase
         $this->assertSame(LibraryTransferRunStatus::Review, $run->status);
         $this->assertFalse($run->items()->where('decision', '<>', 'ignore')->exists());
 
+        $titleIds = $run->items()->where('section', 'works')->where('category', 'titles')->pluck('id')->all();
+        $this->assertNotEmpty($titleIds);
+
         Livewire::test(OptionsTransferRun::class, ['run' => $run])
             ->call('tab', 'works', 'titles')
             ->call('decideMany', 'merge')
             ->assertHasNoErrors();
 
-        $this->assertSame(2, $run->items()->where('decision', 'merge')->count());
+        $this->assertEqualsCanonicalizing($titleIds, $run->items()->where('decision', 'merge')->pluck('id')->all());
 
         $ignored = $run->items()->where('decision', 'ignore')->firstOrFail();
         $this->review()->applyItem($ignored);
