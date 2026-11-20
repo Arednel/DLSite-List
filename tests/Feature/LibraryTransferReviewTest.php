@@ -129,6 +129,38 @@ class LibraryTransferReviewTest extends TestCase
         $this->assertSame('Parent Tags', ImportValue::label('relationships'));
     }
 
+    public function test_existing_work_review_loads_all_tag_buckets_with_one_query(): void
+    {
+        $product = Product::factory()->create(['id' => 'RJ123455']);
+        app(ProductGenreSync::class)->sync($product, [
+            DlsiteLanguage::Japanese->value => Genre::resolveIdsFromTitles(['Japanese fetched']),
+            DlsiteLanguage::English->value => Genre::resolveIdsFromTitles(['English fetched']),
+            DlsiteLanguage::TraditionalChinese->value => Genre::resolveIdsFromTitles(['Traditional Chinese fetched']),
+        ], Genre::resolveIdsFromTitles(['Custom tag']));
+
+        DB::flushQueryLog();
+        DB::enableQueryLog();
+        try {
+            $data = app(LibraryData::class)->work($product);
+            $tagQueries = collect(DB::getQueryLog())
+                ->filter(function (array $query): bool {
+                    $sql = strtolower($query['query']);
+
+                    return str_starts_with($sql, 'select')
+                        && str_contains($sql, 'genre_product');
+                })
+                ->values();
+        } finally {
+            DB::disableQueryLog();
+        }
+
+        $this->assertCount(1, $tagQueries);
+        $this->assertSame(['Custom tag'], $data['tags']['custom']);
+        $this->assertSame(['Japanese fetched'], $data['tags'][DlsiteLanguage::Japanese->value]);
+        $this->assertSame(['English fetched'], $data['tags'][DlsiteLanguage::English->value]);
+        $this->assertSame(['Traditional Chinese fetched'], $data['tags'][DlsiteLanguage::TraditionalChinese->value]);
+    }
+
     public function test_dlsite_rating_review_formats_vote_count_before_rendering(): void
     {
         $product = Product::factory()->create(['id' => 'RJ123456']);

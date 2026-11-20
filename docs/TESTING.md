@@ -236,6 +236,8 @@ Covers original-Circle resolution from Japanese `language_editions` through Quic
 
 Covers Ignore, Overwrite, and Merge across works, tags, groups, relationships, and Options. Tests also cover stale decisions, atomic updates, image recovery, Custom CSS decisions, timestamps, and completed reviews.
 
+Existing-work review coverage verifies that all Tag language memberships are loaded with one baseline query, independent of the number of supported metadata languages.
+
 Localized review cases verify headings in all three UI languages, pagination that keeps a work’s languages together, and independent decisions for translated text and fetched tags. Tag tests check that applying one language preserves shared tags and other memberships. New-work cases cover blank translations and missing, null, or zero rating values.
 
 Partial work-document coverage verifies that canonical Japanese contributor values overwrite existing values, omitted roles survive Overwrite, explicitly empty roles can still be cleared, and English-only canonical metadata is ignored without validation or staging clears. Announcement-date review checks use matching date formats for unchanged imported values.

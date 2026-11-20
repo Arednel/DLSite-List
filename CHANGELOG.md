@@ -32,6 +32,7 @@ For existing manual installations:
 * Improved Library Transfer export planning performance by batch-loading work titles, contributors, and tags.
 * Improved Library Transfer Import Review performance by avoiding a redundant translated-title read during overwrite.
 * Improved Options work-selector performance by avoiding redundant Product existence queries when selector results already determine whether works are available.
+* Improved Library Transfer Import Review performance by loading all fetched Tag language memberships in one query per existing work.
 
 ### Fixed
 

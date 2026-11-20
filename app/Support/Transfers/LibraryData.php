@@ -56,7 +56,8 @@ final class LibraryData
             $data[$category] = Arr::only($attributes, $fields);
         }
         $data['contributors'] = $this->category($product, 'contributors');
-        $data['tags'] = $this->category($product, 'tags');
+        $tagBuckets = $this->tagBucketsForProducts([$product->id]);
+        $data['tags'] = $tagBuckets[$product->id];
         if ($images) {
             $data['cover'] = $this->imageCategory($product, 'cover');
             $data['sample_images'] = $this->imageCategory($product, 'sample_images');
