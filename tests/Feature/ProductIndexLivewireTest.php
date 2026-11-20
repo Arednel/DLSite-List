@@ -2,7 +2,7 @@
 
 namespace Tests\Feature;
 
-use App\Enums\FetchedTagLanguage;
+use App\Enums\DlsiteLanguage;
 use App\Enums\ProductContributorRole;
 use App\Enums\ProductField;
 use App\Enums\ProductIndexSortField;
@@ -577,7 +577,7 @@ class ProductIndexLivewireTest extends TestCase
     {
         $this->createProduct(1, [
             'work_name' => 'PROJECTED_INDEX_TITLE',
-            'work_name_english' => 'PROJECTED_INDEX_TITLE_EN',
+            'localized_title' => 'PROJECTED_INDEX_TITLE_EN',
         ]);
 
         DB::flushQueryLog();
@@ -600,12 +600,12 @@ class ProductIndexLivewireTest extends TestCase
         $attributes = $product->getAttributes();
 
         $this->assertSame('PROJECTED_INDEX_TITLE', $attributes['work_name']);
-        $this->assertSame('PROJECTED_INDEX_TITLE_EN', $attributes['english_title']);
+        $this->assertSame('PROJECTED_INDEX_TITLE_EN', $attributes['localized_title']);
         $this->assertFalse($product->relationLoaded('localizations'));
         $this->assertTrue($queries->contains(
             fn(string $query): bool =>
             $this->isProductSelectQuery($query)
-                && str_contains($query, 'english_title')
+                && str_contains($query, 'localized_title')
                 && str_contains($query, 'product_localizations')
         ));
         $this->assertFalse($queries->contains(function (string $query): bool {
@@ -618,11 +618,51 @@ class ProductIndexLivewireTest extends TestCase
         }));
     }
 
+    public function test_japanese_metadata_language_skips_localized_index_projection_and_ui(): void
+    {
+        Option::setDlsiteMetadataLanguageFollowsUi(false);
+        Option::setDlsiteMetadataLanguage(DlsiteLanguage::Japanese);
+        Option::setIndexFieldLayout([
+            ['field' => ProductField::Title->value, 'visible' => true],
+            ['field' => ProductField::DescriptionLocalized->value, 'visible' => true],
+        ]);
+        Option::setFilterFieldLayout([
+            ['field' => ProductField::DescriptionLocalized->value, 'visible' => true],
+        ]);
+
+        $this->createProduct(1, [
+            'work_name' => 'JAPANESE_METADATA_INDEX_TITLE',
+            'localized_title' => 'HIDDEN_ENGLISH_INDEX_TITLE',
+            'description_localized' => 'HIDDEN_ENGLISH_INDEX_DESCRIPTION',
+        ]);
+
+        $products = app(ProductIndexResults::class)->getProducts(
+            new ProductIndexFilters,
+            Option::INDEX_PER_PAGE_UNLIMITED,
+            [ProductField::DescriptionLocalized->value],
+            RatingScale::Ten,
+            RatingVisualStyle::Simple,
+            metadataLanguage: DlsiteLanguage::Japanese->value,
+        );
+        $attributes = $products->sole()->getAttributes();
+        $this->assertArrayNotHasKey('localized_title', $attributes);
+        $this->assertArrayNotHasKey('localized_description', $attributes);
+
+        Livewire::test(ProductIndex::class)
+            ->assertSee('JAPANESE_METADATA_INDEX_TITLE')
+            ->assertDontSee('HIDDEN_ENGLISH_INDEX_TITLE')
+            ->assertDontSee('HIDDEN_ENGLISH_INDEX_DESCRIPTION')
+            ->assertViewHas('indexColumns', fn(array $columns): bool => collect($columns)
+                ->doesntContain(fn(array $column): bool => $column['field'] === ProductField::DescriptionLocalized->value))
+            ->assertViewHas('filterFields', fn(array $fields): bool => collect($fields)
+                ->doesntContain(fn(array $field): bool => $field['field'] === ProductField::DescriptionLocalized->value));
+    }
+
     public function test_index_results_hydrate_only_base_columns_and_sort_without_hydrating_sort_fields(): void
     {
         $this->createProduct(1, [
             'work_name' => 'NARROW_PRIORITY_LOW',
-            'work_name_english' => 'NARROW_PRIORITY_LOW_EN',
+            'localized_title' => 'NARROW_PRIORITY_LOW_EN',
             'notes' => 'NARROW_VISIBLE_NOTES',
             'work_image' => 'NARROW_HIDDEN_IMAGE',
             'score' => 9,
@@ -631,7 +671,7 @@ class ProductIndexLivewireTest extends TestCase
             'circle' => 'NARROW_HIDDEN_CIRCLE',
             'maker_id' => 'RG000000001',
             'description' => 'NARROW_COLUMNS_HIDDEN_DESCRIPTION',
-            'description_english' => 'NARROW_COLUMNS_HIDDEN_DESCRIPTION_EN',
+            'description_localized' => 'NARROW_COLUMNS_HIDDEN_DESCRIPTION_EN',
             'progress' => 'Completed',
             'priority' => 1,
             'num_re_listen_times' => 4,
@@ -666,10 +706,9 @@ class ProductIndexLivewireTest extends TestCase
 
         $this->assertArrayHasKey('id', $attributes);
         $this->assertArrayHasKey('work_name', $attributes);
-        $this->assertArrayNotHasKey('work_name_english', $attributes);
         $this->assertFalse($product->relationLoaded('localizations'));
         $this->assertSame('NARROW_PRIORITY_LOW', $attributes['work_name']);
-        $this->assertSame('NARROW_PRIORITY_LOW_EN', $attributes['english_title']);
+        $this->assertSame('NARROW_PRIORITY_LOW_EN', $attributes['localized_title']);
         $this->assertArrayHasKey('notes', $attributes);
         $this->assertArrayHasKey('progress', $attributes);
         $this->assertArrayHasKey('site_id', $attributes);
@@ -680,7 +719,7 @@ class ProductIndexLivewireTest extends TestCase
         $this->assertArrayNotHasKey('circle', $attributes);
         $this->assertArrayNotHasKey('maker_id', $attributes);
         $this->assertArrayNotHasKey('description', $attributes);
-        $this->assertArrayNotHasKey('english_description', $attributes);
+        $this->assertArrayNotHasKey('localized_description', $attributes);
         $this->assertArrayNotHasKey('priority', $attributes);
         $this->assertArrayNotHasKey('num_re_listen_times', $attributes);
         $this->assertArrayNotHasKey('re_listen_value', $attributes);
@@ -885,7 +924,7 @@ class ProductIndexLivewireTest extends TestCase
     {
         $this->createProduct(1, [
             'work_name' => 'VISIBLE_COLUMNS_WORK',
-            'work_name_english' => 'VISIBLE_COLUMNS_WORK_EN',
+            'localized_title' => 'VISIBLE_COLUMNS_WORK_EN',
             'notes' => 'VISIBLE_COLUMNS_NOTES',
             'work_image' => 'VISIBLE_COLUMNS_IMAGE',
             'score' => 8,
@@ -895,7 +934,7 @@ class ProductIndexLivewireTest extends TestCase
             'circle' => 'VISIBLE_COLUMNS_CIRCLE',
             'maker_id' => 'RG000000001',
             'description' => 'VISIBLE_COLUMNS_DESCRIPTION',
-            'description_english' => 'VISIBLE_COLUMNS_DESCRIPTION_EN',
+            'description_localized' => 'VISIBLE_COLUMNS_DESCRIPTION_EN',
             'progress' => 'Listening',
             'priority' => 2,
             'num_re_listen_times' => 3,
@@ -922,7 +961,7 @@ class ProductIndexLivewireTest extends TestCase
                 ProductField::VoiceActor->value,
                 ProductField::Author->value,
                 ProductField::DescriptionJapanese->value,
-                ProductField::DescriptionEnglish->value,
+                ProductField::DescriptionLocalized->value,
                 ProductField::Tags->value,
             ],
             RatingScale::Ten,
@@ -937,10 +976,9 @@ class ProductIndexLivewireTest extends TestCase
 
         $this->assertArrayHasKey('id', $attributes);
         $this->assertArrayHasKey('work_name', $attributes);
-        $this->assertArrayNotHasKey('work_name_english', $attributes);
         $this->assertFalse($product->relationLoaded('localizations'));
         $this->assertSame('VISIBLE_COLUMNS_WORK', $attributes['work_name']);
-        $this->assertSame('VISIBLE_COLUMNS_WORK_EN', $attributes['english_title']);
+        $this->assertSame('VISIBLE_COLUMNS_WORK_EN', $attributes['localized_title']);
         $this->assertArrayHasKey('notes', $attributes);
         $this->assertArrayHasKey('progress', $attributes);
         $this->assertArrayHasKey('work_image', $attributes);
@@ -951,7 +989,7 @@ class ProductIndexLivewireTest extends TestCase
         $this->assertArrayHasKey('circle', $attributes);
         $this->assertArrayHasKey('maker_id', $attributes);
         $this->assertArrayHasKey('description', $attributes);
-        $this->assertArrayHasKey('english_description', $attributes);
+        $this->assertArrayHasKey('localized_description', $attributes);
         $this->assertArrayNotHasKey('priority', $attributes);
         $this->assertArrayNotHasKey('num_re_listen_times', $attributes);
         $this->assertArrayNotHasKey('re_listen_value', $attributes);
@@ -1395,11 +1433,11 @@ class ProductIndexLivewireTest extends TestCase
         $this->createProduct(1, [
             'work_name' => 'FIELD_LAYOUT_VISIBLE_WORK',
             'description' => 'FIELD_LAYOUT_VISIBLE_JP_DESCRIPTION',
-            'description_english' => 'FIELD_LAYOUT_VISIBLE_EN_DESCRIPTION',
+            'description_localized' => 'FIELD_LAYOUT_VISIBLE_EN_DESCRIPTION',
         ]);
 
         Option::setIndexFieldLayout([
-            ['field' => ProductField::DescriptionEnglish->value, 'visible' => true],
+            ['field' => ProductField::DescriptionLocalized->value, 'visible' => true],
             ['field' => ProductField::DescriptionJapanese->value, 'visible' => true],
             ['field' => ProductField::Score->value, 'visible' => false],
             ['field' => ProductField::Tags->value, 'visible' => true],
@@ -1408,13 +1446,13 @@ class ProductIndexLivewireTest extends TestCase
         $products = app(ProductIndexResults::class)->getProducts(
             new ProductIndexFilters,
             Option::INDEX_PER_PAGE_UNLIMITED,
-            [ProductField::DescriptionJapanese->value, ProductField::DescriptionEnglish->value],
+            [ProductField::DescriptionJapanese->value, ProductField::DescriptionLocalized->value],
             RatingScale::Ten,
             RatingVisualStyle::Simple,
         );
 
         $this->assertArrayHasKey('description', $products->first()->getAttributes());
-        $this->assertArrayHasKey('english_description', $products->first()->getAttributes());
+        $this->assertArrayHasKey('localized_description', $products->first()->getAttributes());
 
         Livewire::test(ProductIndex::class)
             ->assertSee('FIELD_LAYOUT_VISIBLE_JP_DESCRIPTION')
@@ -1821,8 +1859,8 @@ class ProductIndexLivewireTest extends TestCase
         ]);
 
         app(ProductGenreSync::class)->sync($product, [
-            Genre::LANGUAGE_ENGLISH => [$englishGenre->getKey(), $sharedGenre->getKey()],
-            Genre::LANGUAGE_JAPANESE => [$japaneseGenre->getKey(), $sharedGenre->getKey()],
+            DlsiteLanguage::English->value => [$englishGenre->getKey(), $sharedGenre->getKey()],
+            DlsiteLanguage::Japanese->value => [$japaneseGenre->getKey(), $sharedGenre->getKey()],
         ], [$customGenre->getKey()]);
 
         Option::setIndexFieldLayout([
@@ -1884,8 +1922,8 @@ class ProductIndexLivewireTest extends TestCase
     public function test_index_can_use_a_manual_fetched_tag_language_independent_from_the_ui_language(): void
     {
         App::setLocale(UiLanguage::English->value);
-        Option::setFetchedTagLanguageFollowsUi(false);
-        Option::setFetchedTagLanguage(FetchedTagLanguage::Japanese);
+        Option::setDlsiteMetadataLanguageFollowsUi(false);
+        Option::setDlsiteMetadataLanguage(DlsiteLanguage::Japanese);
 
         $product = $this->createProduct(1, [
             'work_name' => 'SPLIT_JA_INDEX_TAG_WORK',
@@ -1908,8 +1946,8 @@ class ProductIndexLivewireTest extends TestCase
         ]);
 
         app(ProductGenreSync::class)->sync($product, [
-            Genre::LANGUAGE_ENGLISH => [$englishGenre->getKey(), $sharedGenre->getKey()],
-            Genre::LANGUAGE_JAPANESE => [$japaneseGenre->getKey(), $sharedGenre->getKey()],
+            DlsiteLanguage::English->value => [$englishGenre->getKey(), $sharedGenre->getKey()],
+            DlsiteLanguage::Japanese->value => [$japaneseGenre->getKey(), $sharedGenre->getKey()],
         ], [$customGenre->getKey()]);
 
         Option::setIndexFieldLayout([
@@ -1962,7 +2000,7 @@ class ProductIndexLivewireTest extends TestCase
 
         app(ProductGenreSync::class)->syncCustom($customProduct, [$customGenre->getKey()]);
         app(ProductGenreSync::class)->sync($fetchedProduct, [
-            Genre::LANGUAGE_ENGLISH => [$englishGenre->getKey()],
+            DlsiteLanguage::English->value => [$englishGenre->getKey()],
         ], []);
 
         Option::setIndexFieldLayout([
@@ -2015,14 +2053,14 @@ class ProductIndexLivewireTest extends TestCase
 
         app(ProductGenreSync::class)->syncCustom($customProduct, [$customGenre->getKey()]);
         app(ProductGenreSync::class)->sync($englishProduct, [
-            Genre::LANGUAGE_ENGLISH => [$englishGenre->getKey()],
+            DlsiteLanguage::English->value => [$englishGenre->getKey()],
         ], []);
         app(ProductGenreSync::class)->sync($japaneseProduct, [
-            Genre::LANGUAGE_JAPANESE => [$japaneseGenre->getKey()],
+            DlsiteLanguage::Japanese->value => [$japaneseGenre->getKey()],
         ], []);
         app(ProductGenreSync::class)->sync($sharedProduct, [
-            Genre::LANGUAGE_ENGLISH => [$sharedGenre->getKey()],
-            Genre::LANGUAGE_JAPANESE => [$sharedGenre->getKey()],
+            DlsiteLanguage::English->value => [$sharedGenre->getKey()],
+            DlsiteLanguage::Japanese->value => [$sharedGenre->getKey()],
         ], []);
 
         $this->assertIndexUsesFetchedLanguage(
@@ -2789,6 +2827,29 @@ class ProductIndexLivewireTest extends TestCase
             ->assertSee('scripts/work-form-modal.js', false);
     }
 
+    public function test_index_request_scoped_settings_pick_up_metadata_language_changes_on_later_requests(): void
+    {
+        Option::setDlsiteMetadataLanguageFollowsUi(false);
+        Option::setDlsiteMetadataLanguage(DlsiteLanguage::English);
+        Option::setIndexFieldLayout([
+            ['field' => ProductField::Title->value, 'visible' => true],
+        ]);
+        $this->createProduct(1, [
+            'work_name' => 'REQUEST_SCOPED_METADATA_JP_TITLE',
+            'localized_title' => 'REQUEST_SCOPED_METADATA_EN_TITLE',
+        ]);
+
+        $component = Livewire::test(ProductIndex::class)
+            ->assertSee('REQUEST_SCOPED_METADATA_EN_TITLE');
+
+        Option::setDlsiteMetadataLanguage(DlsiteLanguage::Japanese);
+
+        $component
+            ->call('applySearch')
+            ->assertSee('REQUEST_SCOPED_METADATA_JP_TITLE')
+            ->assertDontSee('REQUEST_SCOPED_METADATA_EN_TITLE');
+    }
+
     public function test_search_results_paginate_across_pages(): void
     {
         Option::setIndexPerPage(2);
@@ -2811,11 +2872,32 @@ class ProductIndexLivewireTest extends TestCase
             ->assertDontSee('SEARCH_PAGE_OTHER');
     }
 
+    public function test_general_search_matches_all_stored_titles_regardless_of_metadata_language(): void
+    {
+        Option::setDlsiteMetadataLanguageFollowsUi(false);
+        Option::setDlsiteMetadataLanguage(DlsiteLanguage::Japanese);
+
+        $product = $this->createProduct(1, [
+            'work_name' => 'ALL_LOCALIZED_TITLES_SEARCH_WORK',
+            'localized_title' => 'ALL_LOCALIZED_TITLES_EN_TOKEN',
+        ]);
+        $product->syncLocalization('zh_TW', [
+            'title' => 'ALL_LOCALIZED_TITLES_ZH_TOKEN',
+        ]);
+
+        foreach (['ALL_LOCALIZED_TITLES_EN_TOKEN', 'ALL_LOCALIZED_TITLES_ZH_TOKEN'] as $search) {
+            Livewire::test(ProductIndex::class)
+                ->set('searchInput', $search)
+                ->call('applySearch')
+                ->assertSee($product->work_name);
+        }
+    }
+
     public function test_general_search_ignores_hidden_descriptions_by_default(): void
     {
         Option::setIndexFieldLayout([
             ['field' => ProductField::DescriptionJapanese->value, 'visible' => false],
-            ['field' => ProductField::DescriptionEnglish->value, 'visible' => false],
+            ['field' => ProductField::DescriptionLocalized->value, 'visible' => false],
         ]);
 
         $hiddenDescription = $this->createProduct(1, [
@@ -2838,18 +2920,18 @@ class ProductIndexLivewireTest extends TestCase
     {
         Option::setIndexFieldLayout([
             ['field' => ProductField::DescriptionJapanese->value, 'visible' => true],
-            ['field' => ProductField::DescriptionEnglish->value, 'visible' => false],
+            ['field' => ProductField::DescriptionLocalized->value, 'visible' => false],
         ]);
 
         $japaneseDescription = $this->createProduct(1, [
             'work_name' => 'VISIBLE_JP_DESCRIPTION_SEARCH_WORK',
             'description' => 'VISIBLE_JP_DESCRIPTION_GENERAL_SEARCH_TOKEN',
-            'description_english' => 'HIDDEN_EN_DESCRIPTION_GENERAL_SEARCH_TOKEN',
+            'description_localized' => 'HIDDEN_EN_DESCRIPTION_GENERAL_SEARCH_TOKEN',
         ]);
         $englishDescription = $this->createProduct(2, [
             'work_name' => 'HIDDEN_EN_DESCRIPTION_SEARCH_WORK',
             'description' => 'Unrelated description',
-            'description_english' => 'VISIBLE_LANGUAGE_EN_ONLY_SEARCH_TOKEN',
+            'description_localized' => 'VISIBLE_LANGUAGE_EN_ONLY_SEARCH_TOKEN',
         ]);
 
         Livewire::test(ProductIndex::class)
@@ -2867,14 +2949,14 @@ class ProductIndexLivewireTest extends TestCase
     {
         Option::setIndexFieldLayout([
             ['field' => ProductField::DescriptionJapanese->value, 'visible' => false],
-            ['field' => ProductField::DescriptionEnglish->value, 'visible' => false],
+            ['field' => ProductField::DescriptionLocalized->value, 'visible' => false],
         ]);
         Option::setIndexSearchHiddenDescriptionsEnabled(true);
 
         $product = $this->createProduct(1, [
             'work_name' => 'OVERRIDE_DESCRIPTION_SEARCH_WORK',
             'description' => 'OVERRIDE_DESCRIPTION_GENERAL_SEARCH_TOKEN',
-            'description_english' => 'OVERRIDE_EN_DESCRIPTION_GENERAL_SEARCH_TOKEN',
+            'description_localized' => 'OVERRIDE_EN_DESCRIPTION_GENERAL_SEARCH_TOKEN',
         ]);
 
         Livewire::test(ProductIndex::class)
@@ -2888,29 +2970,95 @@ class ProductIndexLivewireTest extends TestCase
             ->assertSee($product->work_name);
     }
 
+    public function test_hidden_description_search_matches_all_stored_localizations(): void
+    {
+        Option::setIndexFieldLayout([
+            ['field' => ProductField::DescriptionJapanese->value, 'visible' => false],
+            ['field' => ProductField::DescriptionLocalized->value, 'visible' => false],
+        ]);
+        Option::setIndexSearchHiddenDescriptionsEnabled(true);
+
+        $product = $this->createProduct(1, [
+            'work_name' => 'ALL_LOCALIZED_DESCRIPTIONS_SEARCH_WORK',
+            'description' => 'Unrelated Japanese description',
+            'description_localized' => 'Unrelated English description',
+        ]);
+        $product->syncLocalization('zh_TW', [
+            'description' => 'ALL_LOCALIZED_DESCRIPTIONS_ZH_TOKEN',
+        ]);
+
+        Livewire::test(ProductIndex::class)
+            ->set('searchInput', 'ALL_LOCALIZED_DESCRIPTIONS_ZH_TOKEN')
+            ->call('applySearch')
+            ->assertSee($product->work_name);
+    }
+
+    public function test_hidden_description_search_matches_localizations_when_japanese_metadata_is_selected(): void
+    {
+        Option::setDlsiteMetadataLanguageFollowsUi(false);
+        Option::setDlsiteMetadataLanguage(DlsiteLanguage::Japanese);
+        Option::setIndexFieldLayout([
+            ['field' => ProductField::DescriptionJapanese->value, 'visible' => false],
+            ['field' => ProductField::DescriptionLocalized->value, 'visible' => false],
+        ]);
+        Option::setIndexSearchHiddenDescriptionsEnabled(true);
+
+        $product = $this->createProduct(1, [
+            'work_name' => 'JAPANESE_METADATA_HIDDEN_LOCALIZED_SEARCH_WORK',
+            'description' => 'Unrelated Japanese description',
+            'description_localized' => 'JAPANESE_METADATA_HIDDEN_ENGLISH_TOKEN',
+        ]);
+
+        Livewire::test(ProductIndex::class)
+            ->set('searchInput', 'JAPANESE_METADATA_HIDDEN_ENGLISH_TOKEN')
+            ->call('applySearch')
+            ->assertSee($product->work_name);
+    }
+
+    public function test_visible_localized_description_search_remains_scoped_to_current_metadata_language(): void
+    {
+        Option::setIndexFieldLayout([
+            ['field' => ProductField::DescriptionJapanese->value, 'visible' => false],
+            ['field' => ProductField::DescriptionLocalized->value, 'visible' => true],
+        ]);
+
+        $product = $this->createProduct(1, [
+            'work_name' => 'VISIBLE_LOCALIZED_DESCRIPTION_SCOPE_WORK',
+            'description_localized' => 'Visible English description',
+        ]);
+        $product->syncLocalization('zh_TW', [
+            'description' => 'HIDDEN_OTHER_LOCALE_VISIBLE_DESCRIPTION_TOKEN',
+        ]);
+
+        Livewire::test(ProductIndex::class)
+            ->set('searchInput', 'HIDDEN_OTHER_LOCALE_VISIBLE_DESCRIPTION_TOKEN')
+            ->call('applySearch')
+            ->assertDontSee($product->work_name);
+    }
+
     public function test_description_filters_match_each_language_when_index_description_columns_are_hidden(): void
     {
         Option::setIndexFieldLayout([
             ['field' => ProductField::DescriptionJapanese->value, 'visible' => false],
-            ['field' => ProductField::DescriptionEnglish->value, 'visible' => false],
+            ['field' => ProductField::DescriptionLocalized->value, 'visible' => false],
         ]);
 
         $japaneseDescription = $this->createProduct(1, [
             'work_name' => 'JP_DESCRIPTION_FILTER_HIDDEN_COLUMN_WORK',
             'description' => 'DESCRIPTION_FILTER_HIDDEN_COLUMN_TOKEN',
-            'description_english' => 'Different English text',
+            'description_localized' => 'Different English text',
         ]);
         $englishDescription = $this->createProduct(2, [
             'work_name' => 'EN_DESCRIPTION_FILTER_HIDDEN_COLUMN_WORK',
             'description' => 'Different Japanese text',
-            'description_english' => 'DESCRIPTION_EN_FILTER_HIDDEN_COLUMN_TOKEN',
+            'description_localized' => 'DESCRIPTION_EN_FILTER_HIDDEN_COLUMN_TOKEN',
         ]);
 
         Livewire::test(ProductIndex::class, ['description' => 'DESCRIPTION_FILTER_HIDDEN_COLUMN_TOKEN'])
             ->assertSee($japaneseDescription->work_name)
             ->assertDontSee($englishDescription->work_name);
 
-        Livewire::test(ProductIndex::class, ['description_english' => 'DESCRIPTION_EN_FILTER_HIDDEN_COLUMN_TOKEN'])
+        Livewire::test(ProductIndex::class, ['description_localized' => 'DESCRIPTION_EN_FILTER_HIDDEN_COLUMN_TOKEN'])
             ->assertSee($englishDescription->work_name)
             ->assertDontSee($japaneseDescription->work_name);
     }
@@ -2918,19 +3066,63 @@ class ProductIndexLivewireTest extends TestCase
     public function test_english_description_filter_does_not_match_other_localization_languages(): void
     {
         Option::setIndexFieldLayout([
-            ['field' => ProductField::DescriptionEnglish->value, 'visible' => false],
+            ['field' => ProductField::DescriptionLocalized->value, 'visible' => false],
         ]);
 
         $product = $this->createProduct(1, [
             'work_name' => 'NON_ENGLISH_DESCRIPTION_FILTER_WORK',
-            'description_english' => 'Different English text',
+            'description_localized' => 'Different English text',
         ]);
         $product->syncLocalization('zh_TW', [
             'description' => 'SCOPED_ENGLISH_DESCRIPTION_FILTER_TOKEN',
         ]);
 
-        Livewire::test(ProductIndex::class, ['description_english' => 'SCOPED_ENGLISH_DESCRIPTION_FILTER_TOKEN'])
+        Livewire::test(ProductIndex::class, ['description_localized' => 'SCOPED_ENGLISH_DESCRIPTION_FILTER_TOKEN'])
             ->assertDontSee($product->work_name);
+    }
+
+    public function test_japanese_metadata_mode_clears_the_hidden_localized_description_filter(): void
+    {
+        Option::setDlsiteMetadataLanguageFollowsUi(false);
+        Option::setDlsiteMetadataLanguage(DlsiteLanguage::Japanese);
+
+        Livewire::test(ProductIndex::class)
+            ->set('description_localized', 'SHOULD_NOT_REMAIN_ACTIVE')
+            ->assertSet('description_localized', '')
+            ->assertViewHas('filterActive', false)
+            ->assertViewHas(
+                'filterFields',
+                fn(array $fields): bool => ! collect($fields)
+                    ->contains(fn(array $field): bool => $field['field'] === ProductField::DescriptionLocalized->value),
+            );
+    }
+
+    public function test_ui_only_language_following_metadata_uses_english_localized_description_fields(): void
+    {
+        Option::setUiLanguage(UiLanguage::TraditionalChinese);
+        Option::setDlsiteMetadataLanguageFollowsUi(true);
+        Option::setIndexFieldLayout([
+            ['field' => ProductField::DescriptionLocalized->value, 'visible' => true],
+        ]);
+        Option::setFilterFieldLayout([
+            ['field' => ProductField::DescriptionLocalized->value, 'visible' => true],
+        ]);
+
+        Livewire::test(ProductIndex::class)
+            ->assertViewHas(
+                'metadataLanguage',
+                fn(DlsiteLanguage $language): bool => $language === DlsiteLanguage::English,
+            )
+            ->assertViewHas(
+                'indexColumns',
+                fn(array $columns): bool => collect($columns)
+                    ->contains(fn(array $column): bool => $column['field'] === ProductField::DescriptionLocalized->value),
+            )
+            ->assertViewHas(
+                'filterFields',
+                fn(array $fields): bool => collect($fields)
+                    ->contains(fn(array $field): bool => $field['field'] === ProductField::DescriptionLocalized->value),
+            );
     }
 
     public function test_filter_changes_reset_pagination_to_first_page(): void
@@ -3155,6 +3347,7 @@ class ProductIndexLivewireTest extends TestCase
         string $otherWork,
     ): void {
         App::setLocale($language->value);
+        Option::setUiLanguage($language);
 
         Livewire::test(ProductIndex::class)
             ->set('searchInput', $currentTag)
@@ -3230,11 +3423,11 @@ class ProductIndexLivewireTest extends TestCase
         $id = 'RJ' . str_pad((string) $number, 9, '0', STR_PAD_LEFT);
         $japaneseTitle = $attributes['work_name']
             ?? 'WORK_' . str_pad((string) $number, 3, '0', STR_PAD_LEFT);
-        $hasEnglishTitle = array_key_exists('work_name_english', $attributes);
-        $englishTitle = $attributes['work_name_english'] ?? null;
-        $hasEnglishDescription = array_key_exists('description_english', $attributes);
-        $englishDescription = $attributes['description_english'] ?? null;
-        unset($attributes['work_name'], $attributes['work_name_english'], $attributes['description_english']);
+        $hasEnglishTitle = array_key_exists('localized_title', $attributes);
+        $englishTitle = $attributes['localized_title'] ?? null;
+        $hasEnglishDescription = array_key_exists('description_localized', $attributes);
+        $englishDescription = $attributes['description_localized'] ?? null;
+        unset($attributes['work_name'], $attributes['localized_title'], $attributes['description_localized']);
 
         $factory = Product::factory()->state(['work_name' => $japaneseTitle]);
         if ($hasEnglishTitle) {

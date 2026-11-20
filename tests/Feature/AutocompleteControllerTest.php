@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use App\Enums\DlsiteLanguage;
 use App\Enums\AutocompleteOrder;
 use App\Enums\ProductField;
 use App\Models\Genre;
@@ -261,14 +262,14 @@ class AutocompleteControllerTest extends TestCase
             $product = Product::factory()->create();
 
             $fetchedByLanguage = [
-                Genre::LANGUAGE_JAPANESE => [],
-                Genre::LANGUAGE_ENGLISH => [],
+                DlsiteLanguage::Japanese->value => [],
+                DlsiteLanguage::English->value => [],
             ];
             $customGenreIds = [];
 
             match ($type) {
-                Genre::TYPE_AUTO_GENERATED_JAPANESE => $fetchedByLanguage[Genre::LANGUAGE_JAPANESE][] = $genre->getKey(),
-                Genre::TYPE_AUTO_GENERATED_ENGLISH => $fetchedByLanguage[Genre::LANGUAGE_ENGLISH][] = $genre->getKey(),
+                Genre::TYPE_AUTO_GENERATED_JAPANESE => $fetchedByLanguage[DlsiteLanguage::Japanese->value][] = $genre->getKey(),
+                Genre::TYPE_AUTO_GENERATED_ENGLISH => $fetchedByLanguage[DlsiteLanguage::English->value][] = $genre->getKey(),
                 default => $customGenreIds[] = $genre->getKey(),
             };
 

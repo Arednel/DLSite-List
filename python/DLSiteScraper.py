@@ -34,6 +34,7 @@ def parse_arguments(argv=None):
     parser.add_argument("--work-id", required=True)
     parser.add_argument("--json-output", required=True)
     parser.add_argument("--log-directory", required=True)
+    parser.add_argument("--locale-config", required=True)
     parser.add_argument("--image-output")
     return parser.parse_args(argv)
 
@@ -94,21 +95,50 @@ def product_format_codes(work):
     return formats
 
 
-async def japanese_dlsite(work_id):
-    async with DlsiteAPI() as api:
+def parse_locale_config(raw_config):
+    try:
+        config = json.loads(raw_config)
+    except json.JSONDecodeError as error:
+        raise ValueError(f"Invalid locale config JSON: {error.msg}") from error
+
+    if not isinstance(config, dict):
+        raise ValueError("Locale config must be an object")
+
+    canonical = config.get("canonical")
+    locales = config.get("locales")
+
+    if not isinstance(canonical, str):
+        raise ValueError("Locale config canonical key must be a string")
+    if not isinstance(locales, dict):
+        raise ValueError("Locale config locales must be an object")
+    if canonical not in locales:
+        raise ValueError("Locale config canonical key must exist in locales")
+
+    return canonical, locales
+
+
+async def dlsite_for_locale(work_id, api_locale):
+    if api_locale is None:
+        async with DlsiteAPI() as api:
+            return await api.get_work(work_id)
+
+    async with DlsiteAPI(locale=api_locale) as api:
         return await api.get_work(work_id)
 
 
-async def english_dlsite(work_id):
-    async with DlsiteAPI(locale="en_US") as api:
-        return await api.get_work(work_id)
+async def fetch_work_data(work_id, locales):
+    works = {}
 
+    # Fetch sequentially
+    for output_locale, api_locale in locales.items():
+        try:
+            works[output_locale] = await dlsite_for_locale(work_id, api_locale)
+        except Exception as error:
+            raise RuntimeError(
+                f"Failed to fetch locale {output_locale!r} using DLsite API locale {api_locale!r}: {error}"
+            ) from error
 
-async def fetch_work_data(work_id):
-    japanese = await japanese_dlsite(work_id)
-    english = await english_dlsite(work_id)
-
-    return japanese, english
+    return works
 
 
 def require_https_image_url(url):
@@ -250,12 +280,17 @@ def fetch_images(work, image_output):
 
 
 def run(arguments):
-    work_japanese, work_english = asyncio.run(fetch_work_data(arguments.work_id))
-    japanese = to_serializable(work_japanese)
-    english = to_serializable(work_english)
-    japanese["product_format"] = product_format_codes(work_japanese)
-    english["product_format"] = product_format_codes(work_english)
-    combined = {"japanese": japanese, "english": english}
+    canonical_locale, locale_config = parse_locale_config(arguments.locale_config)
+    works = asyncio.run(fetch_work_data(arguments.work_id, locale_config))
+    locales = {}
+
+    for output_locale, work in works.items():
+        serialized = to_serializable(work)
+        serialized["product_format"] = product_format_codes(work)
+        locales[output_locale] = serialized
+
+    canonical = locales[canonical_locale]
+    combined = {"locales": locales}
     json_output = Path(arguments.json_output)
     json_output.parent.mkdir(parents=True, exist_ok=True)
 
@@ -267,11 +302,11 @@ def run(arguments):
 
     if arguments.image_output:
         downloaded_images, failed_images = fetch_images(
-            japanese,
+            canonical,
             Path(arguments.image_output),
         )
 
-    product_id = japanese.get("product_id") or arguments.work_id
+    product_id = canonical.get("product_id") or arguments.work_id
     logging.info(f"{product_id} completed")
 
     return {

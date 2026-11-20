@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Enums\DlsiteLanguage;
 use App\Enums\ProductAgeCategory;
 use App\Enums\ProductField;
 use App\Enums\ProductProgress;
@@ -42,6 +43,10 @@ class BulkImportController extends Controller
             $returnParameters['return_query'] = $returnTarget->query;
         }
 
+        $metadataLanguage = Option::effectiveDlsiteMetadataLanguage();
+        $metadataLanguageValue = $metadataLanguage->value;
+        $localizedTitleLabel = $metadataLanguage === DlsiteLanguage::Japanese ? null : $metadataLanguage->titleLabel();
+        $localizedDescriptionLabel = $metadataLanguage === DlsiteLanguage::Japanese ? null : $metadataLanguage->descriptionLabel();
         $quickAddFields = ProductFieldLayout::bulkImportFields(Option::bulkImportFieldLayout());
         $ratingScale = Arr::some(
             $quickAddFields,
@@ -56,6 +61,9 @@ class BulkImportController extends Controller
             'isModal' => $request->boolean('modal'),
             'productFormThemeClass' => 'product-form-theme-' . Option::productFormTheme(),
             'quickAddFields' => $quickAddFields,
+            'metadataLanguageValue' => $metadataLanguageValue,
+            'localizedTitleLabel' => $localizedTitleLabel,
+            'localizedDescriptionLabel' => $localizedDescriptionLabel,
             'returnQuery' => $returnTarget->query,
             'returnUrl' => $returnUrl,
             'returnParameters' => $returnParameters,

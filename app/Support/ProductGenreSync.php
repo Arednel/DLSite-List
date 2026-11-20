@@ -2,9 +2,11 @@
 
 namespace App\Support;
 
+use App\Enums\DlsiteLanguage;
 use App\Models\Genre;
 use App\Models\Product;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\DB;
 
 final class ProductGenreSync
@@ -77,7 +79,7 @@ final class ProductGenreSync
      */
     public function syncEditableTagBuckets(
         Product $product,
-        ?string $fetchedLanguage,
+        DlsiteLanguage|string|null $fetchedLanguage,
         ?array $fetchedGenreIds,
         ?array $customGenreIds,
     ): bool {
@@ -88,7 +90,14 @@ final class ProductGenreSync
                 throw new \InvalidArgumentException('Fetched tag language is required when fetched tags are being changed.');
             }
 
-            $fetchedGenreIdsByLanguage[$fetchedLanguage] = $this->normalizeGenreIds($fetchedGenreIds);
+            $language = $fetchedLanguage instanceof DlsiteLanguage
+                ? $fetchedLanguage
+                : DlsiteLanguage::tryFrom($fetchedLanguage);
+            if ($language === null) {
+                throw new \InvalidArgumentException('Unsupported fetched tag language.');
+            }
+
+            $fetchedGenreIdsByLanguage[$language->value] = $this->normalizeGenreIds($fetchedGenreIds);
         }
 
         return $this->sync(
@@ -167,7 +176,7 @@ final class ProductGenreSync
     private function flattenGenreIds(array $genreIdsByLanguage): array
     {
         return $this->normalizeGenreIds(
-            collect($genreIdsByLanguage)->flatten()->all()
+            Arr::flatten($genreIdsByLanguage)
         );
     }
 
@@ -204,11 +213,23 @@ final class ProductGenreSync
      */
     private function normalizeFetchedGenreIdsByLanguage(array $genreIdsByLanguage): array
     {
-        return collect($genreIdsByLanguage)
-            ->map(fn(array $genreIds): array => $this->normalizeGenreIds($genreIds))
-            ->filter()
-            ->sortKeys()
-            ->all();
+        $normalized = [];
+
+        foreach ($genreIdsByLanguage as $language => $genreIds) {
+            $language = trim((string) $language);
+            if ($language === '') {
+                throw new \InvalidArgumentException('Fetched tag language cannot be empty.');
+            }
+
+            $normalized[$language] = $this->normalizeGenreIds([
+                ...($normalized[$language] ?? []),
+                ...$genreIds,
+            ]);
+        }
+
+        ksort($normalized);
+
+        return array_filter($normalized);
     }
 
     /**

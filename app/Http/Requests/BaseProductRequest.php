@@ -2,6 +2,7 @@
 
 namespace App\Http\Requests;
 
+use App\Enums\DlsiteLanguage;
 use App\Enums\ProductAgeCategory;
 use App\Enums\ProductFormat;
 use App\Enums\ProductContributorRole;
@@ -76,9 +77,10 @@ abstract class BaseProductRequest extends FormRequest
             ProductContributorRole::Illustration->value => ['nullable', 'array'],
             ProductContributorRole::Author->value => ['nullable', 'array'],
             'genre_custom' => ['nullable', 'array'],
-            'work_name_english' => ['nullable', 'string'],
+            'metadata_language' => ['required', Rule::enum(DlsiteLanguage::class)],
+            'localized_title' => ['nullable', 'string'],
             'description' => ['nullable', 'string'],
-            'description_english' => ['nullable', 'string'],
+            'description_localized' => ['nullable', 'string'],
             'notes' => ['nullable', 'string'],
             'start_date' => ['nullable', 'array'],
             'end_date' => ['nullable', 'array'],

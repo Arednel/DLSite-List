@@ -6,7 +6,6 @@ use App\Enums\LibraryTransferDirection;
 use App\Models\LibraryTransferRun;
 use App\Models\Option;
 use App\Models\Product;
-use App\Models\ProductLocalization;
 use App\Support\Transfers\LibraryTransferCleanupService;
 use App\Support\Transfers\LibraryTransferService;
 use App\Support\Transfers\TransferMessage;
@@ -178,18 +177,16 @@ class OptionsTransfers extends Component
         if (in_array('works', $this->scopes, true) && $this->mode === 'selected') {
             $search = trim($this->search);
 
+            $metadataLanguage = Option::effectiveDlsiteMetadataLanguage();
             $products = Product::query()
-                ->select(['id', 'work_name'])
-                ->withAggregate([
-                    'localizations as work_name_english' => fn(Builder $query) =>
-                    $query->where('locale', ProductLocalization::LOCALE_ENGLISH),
-                ], 'title')
+                ->select(['id', 'work_name as japanese_title'])
+                ->withLocalizedTitle($metadataLanguage->value)
                 ->when(
                     $search !== '',
                     fn(Builder $query) => $query->where(
                         fn(Builder $query) => $query
                             ->whereLike('id', "%{$search}%")
-                            ->orWhere(fn(Builder $query) => $query->filterTitle($search))
+                            ->orWhere(fn(Builder $query) => $query->filterTitle($search, $metadataLanguage->value))
                     )
                 )
                 ->orderByNumericCode()

@@ -2,6 +2,7 @@
 
 namespace App\Support\DLSite;
 
+use App\Enums\DlsiteLanguage;
 use Illuminate\Contracts\Process\ProcessResult;
 use Illuminate\Support\Facades\File;
 use Illuminate\Support\Facades\Log;
@@ -18,12 +19,15 @@ final class DLSiteWorkFetcher
         private readonly DLSitePythonRunner $runner,
     ) {}
 
+    /** @param list<string>|null $languages */
     public function fetch(
         string $workId,
         string $jsonPath,
         ?string $imageDirectory = null,
         ?int $processTimeoutSeconds = null,
+        ?array $languages = null,
     ): DLSiteFetchResult {
+        $localeConfig = $this->localeConfig($languages);
         $lastResult = null;
         $lastFetch = null;
         $lastRaw = null;
@@ -32,6 +36,7 @@ final class DLSiteWorkFetcher
             $lastResult = $this->runner->fetchWork(
                 $workId,
                 $jsonPath,
+                $localeConfig,
                 $imageDirectory,
                 $processTimeoutSeconds,
             );
@@ -86,13 +91,18 @@ final class DLSiteWorkFetcher
         throw new RuntimeException($message);
     }
 
-    private function fetchOriginal(string $workId, array $raw, string $jsonPath, ?int $timeout): ?array
-    {
+    private function fetchOriginal(
+        string $workId,
+        array $raw,
+        string $jsonPath,
+        ?int $timeout,
+    ): ?array {
         // Prefer the Japanese language-edition group; fall back to the older translation reference.
         $originalId = DLSiteWorkData::originalWorkId($raw);
 
         if ($originalId === null) {
-            if (data_get($raw, 'japanese.translation_info.is_original') === false) {
+            $normalized = DLSiteWorkData::normalizePayload($raw);
+            if (data_get($normalized, 'locales.ja.translation_info.is_original') === false) {
                 Log::info('No original DLsite work reference found.', [
                     'work_id' => $workId,
                 ]);
@@ -119,7 +129,13 @@ final class DLSiteWorkFetcher
             $destination = dirname($jsonPath) . DIRECTORY_SEPARATOR . "{$workId} - {$originalId}.json";
             // Fresh output prevents a missing response from reusing an older saved JSON.
             $outputPath = $destination . '.' . Str::uuid() . '.json';
-            $result = $this->runner->fetchWork($originalId, $outputPath, null, $timeout);
+            $result = $this->runner->fetchWork(
+                $originalId,
+                $outputPath,
+                $this->localeConfig([DlsiteLanguage::Japanese->value]),
+                null,
+                $timeout,
+            );
             if ($result->failed()) {
                 throw new RuntimeException($this->failureMessage($result));
             }
@@ -132,10 +148,9 @@ final class DLSiteWorkFetcher
             if (! is_array($original)) {
                 throw new RuntimeException('Original fetch returned invalid JSON.');
             }
-            foreach (['japanese', 'english'] as $language) {
-                if (data_get($original, "{$language}.product_id") !== $originalId) {
-                    throw new RuntimeException('Original fetch returned a different product ID.');
-                }
+            $normalizedOriginal = DLSiteWorkData::normalizePayload($original);
+            if (data_get($normalizedOriginal, 'locales.ja.product_id') !== $originalId) {
+                throw new RuntimeException('Original fetch returned a different product ID.');
             }
             if (DLSiteWorkData::originalMaker($original) === null) {
                 throw new RuntimeException('Original work has no usable Circle maker.');
@@ -159,6 +174,26 @@ final class DLSiteWorkFetcher
                 File::delete($outputPath);
             }
         }
+    }
+
+    /**
+     * @param list<string>|null $languages
+     * @return array{canonical: string, locales: array<string, ?string>}
+     */
+    private function localeConfig(?array $languages): array
+    {
+        $japanese = DlsiteLanguage::Japanese;
+        $locales = [$japanese->value => $japanese->apiLocale()];
+
+        foreach ($languages ?? [DlsiteLanguage::English->value] as $locale) {
+            $language = DlsiteLanguage::from($locale);
+            $locales[$language->value] = $language->apiLocale();
+        }
+
+        return [
+            'canonical' => $japanese->value,
+            'locales' => $locales,
+        ];
     }
 
     /**

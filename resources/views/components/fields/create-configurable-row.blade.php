@@ -7,6 +7,8 @@
     'years' => [],
     'progressOptions' => null,
     'ratingScale',
+    'localizedTitleLabel' => null,
+    'localizedDescriptionLabel' => null,
 ])
 
 @switch($field['field'])
@@ -32,7 +34,9 @@
 
     @case('title')
         <x-fields.title-japanese :required="$isCustomCreate" />
-        <x-fields.title-english />
+        @if ($localizedTitleLabel !== null)
+            <x-fields.title-localized :label="$localizedTitleLabel" />
+        @endif
     @break
 
     @case('tags')
@@ -100,14 +104,16 @@
         </tr>
     @break
 
-    @case('description_english')
-        <tr>
-            <td width="130" class="form-table-cell">{{ __('English Description') }}</td>
-            <td class="form-table-cell">
-                <textarea id="description_english" name="description_english" class="form-control" rows="4" cols="65"
-                    placeholder="{{ __('English description') }}">{{ old('description_english') }}</textarea>
-            </td>
-        </tr>
+    @case('description_localized')
+        @if ($localizedDescriptionLabel !== null)
+            <tr>
+                <td width="130" class="form-table-cell">{{ $localizedDescriptionLabel }}</td>
+                <td class="form-table-cell">
+                    <textarea id="description_localized" name="description_localized" class="form-control" rows="4" cols="65"
+                        placeholder="{{ $localizedDescriptionLabel }}">{{ old('description_localized') }}</textarea>
+                </td>
+            </tr>
+        @endif
     @break
 
     @case('image')
@@ -137,4 +143,5 @@
     @case('priority')
         <x-fields.priority />
     @break
+
 @endswitch

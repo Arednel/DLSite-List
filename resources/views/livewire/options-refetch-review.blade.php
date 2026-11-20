@@ -89,65 +89,107 @@
                         @else
                             <div class="refetch-change-list">
                                 @foreach ($activeReview['cards'] as $card)
-                                    <article class="result-card"
-                                        wire:key="refetch-change-{{ $activeReview['value'] }}-{{ $card['result_id'] }}-{{ $card['field'] }}">
+                                    <article class="result-card refetch-review-card"
+                                        wire:key="refetch-change-{{ $activeReview['value'] }}-{{ $card['result_id'] }}-{{ $card['kind'] }}{{ $card['field'] ?? '' }}">
                                         <header>
                                             <strong>{{ $card['product_id'] }}</strong>
                                             <span>{{ $card['work_name'] }}</span>
                                         </header>
-                                        <h3>{{ __($card['label']) }}</h3>
-                                        <div class="refetch-change-comparison">
-                                            <div>
-                                                <strong>{{ __('Current') }}</strong>
-                                                <x-options.refetch-value :value="$card['current']" :image="$activeReview['is_image']" />
-                                            </div>
-                                            <div>
-                                                <strong>{{ __('Refetched') }}</strong>
-                                                <x-options.refetch-value :value="$card['refetched']" :image="$activeReview['is_image']" />
-                                            </div>
-                                        </div>
 
-                                        @if ($activeReview['is_tags'])
-                                            <div class="refetch-tag-details">
-                                                @foreach ($card['tag_details'] as $detail)
-                                                    <div>
-                                                        <strong>{{ __($detail['label']) }}</strong>
-                                                        <x-options.refetch-value :value="$detail['tags']" />
+                                        @if ($card['kind'] === 'localized_text')
+                                            @if ($card['japanese'])
+                                                @include('livewire.partials.refetch-text-change', [
+                                                    'item' => $card['japanese'],
+                                                ])
+                                            @endif
+
+                                            @if ($card['localized'] !== [])
+                                                <section class="refetch-localized-block">
+                                                    <div class="refetch-localized-header">
+                                                        <strong>{{ $card['localized_label'] }}</strong>
+                                                        <span>{{ trans_choice(':count change|:count changes', count($card['localized']), ['count' => count($card['localized'])]) }}</span>
                                                     </div>
-                                                @endforeach
-                                            </div>
-                                        @endif
+                                                    <div class="refetch-localized-list">
+                                                        @foreach ($card['localized'] as $item)
+                                                            <div class="refetch-localized-row">
+                                                                <div class="refetch-locale-header">
+                                                                    <h4>{{ $item['language_label'] }}</h4>
+                                                                </div>
+                                                                @include(
+                                                                    'livewire.partials.refetch-text-change',
+                                                                    ['item' => $item, 'showHeading' => false]
+                                                                )
+                                                            </div>
+                                                        @endforeach
+                                                    </div>
+                                                </section>
+                                            @endif
+                                        @elseif ($card['kind'] === 'tags')
+                                            @if ($card['japanese'])
+                                                @include('livewire.partials.refetch-tag-locale', [
+                                                    'item' => $card['japanese'],
+                                                ])
+                                            @endif
 
-                                        <label>
-                                            {{ __('This change') }}
-                                            <select
-                                                wire:model="actions.{{ $activeReview['value'] }}.{{ $card['result_id'] }}.{{ $card['field'] }}"
-                                                @disabled(!$canApply || $activeReview['resolved'])>
-                                                @foreach ($activeReview['is_tags'] ? $tagChangeActionOptions : $changeActionOptions as $option)
-                                                    <option value="{{ $option['value'] }}">
-                                                        {{ __($option['label']) }}
-                                                    </option>
-                                                @endforeach
-                                            </select>
-                                        </label>
+                                            @if ($card['localized'] !== [])
+                                                <section class="refetch-localized-block">
+                                                    <div class="refetch-localized-header">
+                                                        <strong>{{ $card['localized_label'] }}</strong>
+                                                        <span>{{ trans_choice(':count language|:count languages', count($card['localized']), ['count' => count($card['localized'])]) }}</span>
+                                                    </div>
+                                                    <div class="refetch-localized-list">
+                                                        @foreach ($card['localized'] as $item)
+                                                            @include(
+                                                                'livewire.partials.refetch-tag-locale',
+                                                                ['item' => $item]
+                                                            )
+                                                        @endforeach
+                                                    </div>
+                                                </section>
+                                            @endif
 
-                                        @if ($activeReview['is_tags'])
-                                            <div class="review-actions review-actions--compact">
-                                                @foreach ($tagActionFields as $tagAction)
+                                            @if ($card['custom_to_fetched'] !== [])
+                                                <section class="refetch-custom-to-fetched">
+                                                    <div>
+                                                        <strong>{{ __('Custom tags now returned as fetched') }}</strong>
+                                                        <x-options.refetch-value :value="$card['custom_to_fetched']" />
+                                                    </div>
                                                     <label>
-                                                        {{ __($tagAction['label']) }}
+                                                        {{ __('This change') }}
                                                         <select
-                                                            wire:model="tagActions.{{ $card['result_id'] }}.{{ $tagAction['key'] }}"
+                                                            wire:model="tagActions.{{ $card['result_id'] }}.custom_to_fetched"
                                                             @disabled(!$canApply || $activeReview['resolved'])>
-                                                            @foreach ($tagAction['options'] as $option)
+                                                            @foreach ($tagCustomActionOptions as $option)
                                                                 <option value="{{ $option['value'] }}">
-                                                                    {{ __($option['label']) }}
-                                                                </option>
+                                                                    {{ __($option['label']) }}</option>
                                                             @endforeach
                                                         </select>
                                                     </label>
-                                                @endforeach
+                                                </section>
+                                            @endif
+                                        @else
+                                            <h3>{{ __($card['label']) }}</h3>
+                                            <div class="refetch-change-comparison">
+                                                <div>
+                                                    <strong>{{ __('Current') }}</strong>
+                                                    <x-options.refetch-value :value="$card['current']" :image="$activeReview['is_image']" />
+                                                </div>
+                                                <div>
+                                                    <strong>{{ __('Refetched') }}</strong>
+                                                    <x-options.refetch-value :value="$card['refetched']" :image="$activeReview['is_image']" />
+                                                </div>
                                             </div>
+                                            <label>
+                                                {{ __('This change') }}
+                                                <select
+                                                    wire:model="actions.{{ $activeReview['value'] }}.{{ $card['result_id'] }}.{{ $card['field'] }}"
+                                                    @disabled(!$canApply || $activeReview['resolved'])>
+                                                    @foreach ($changeActionOptions as $option)
+                                                        <option value="{{ $option['value'] }}">
+                                                            {{ __($option['label']) }}</option>
+                                                    @endforeach
+                                                </select>
+                                            </label>
                                         @endif
                                     </article>
                                 @endforeach

@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Enums\DlsiteLanguage;
 use App\Enums\ProductAgeCategory;
 use App\Enums\ProductContributorRole;
 use App\Enums\ProductFormat;
@@ -13,7 +14,6 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
-use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Database\Query\Builder as QueryBuilder;
 use Illuminate\Support\Facades\Storage;
 
@@ -109,49 +109,14 @@ class Product extends Model
         return $this->hasMany(ProductLocalization::class);
     }
 
-    public function englishLocalization(): HasOne
-    {
-        return $this->localizations()
-            ->one()
-            ->where('locale', ProductLocalization::LOCALE_ENGLISH);
-    }
-
-    public function titleForLocale(string $locale): ?string
-    {
-        if ($locale === ProductLocalization::LOCALE_JAPANESE) {
-            return $this->work_name;
-        }
-
-        if (! $this->exists) {
-            return null;
-        }
-
-        return $this->localizations()
-            ->where('locale', $locale)
-            ->value('title');
-    }
-
-    public function descriptionForLocale(string $locale): ?string
-    {
-        if ($locale === ProductLocalization::LOCALE_JAPANESE) {
-            return $this->description;
-        }
-
-        if (! $this->exists) {
-            return null;
-        }
-
-        return $this->localizations()
-            ->where('locale', $locale)
-            ->value('description');
-    }
-
     /**
      * @param  array<string, mixed>  $attributes
      */
-    public function syncLocalization(string $locale, array $attributes): bool
+    public function syncLocalization(DlsiteLanguage|string $locale, array $attributes): bool
     {
-        if ($locale === ProductLocalization::LOCALE_JAPANESE) {
+        $locale = $locale instanceof DlsiteLanguage ? $locale->value : $locale;
+
+        if ($locale === DlsiteLanguage::Japanese->value) {
             throw new \InvalidArgumentException('Japanese localization is stored on the Product model.');
         }
 
@@ -230,23 +195,15 @@ class Product extends Model
             ->withPivotValue('role', $role->value);
     }
 
-    public function japaneseGenres(): BelongsToMany
-    {
-        return $this->fetchedGenresForLanguage(Genre::LANGUAGE_JAPANESE);
-    }
-
-    public function englishGenres(): BelongsToMany
-    {
-        return $this->fetchedGenresForLanguage(Genre::LANGUAGE_ENGLISH);
-    }
-
     public function customGenres(): BelongsToMany
     {
         return $this->genres()->wherePivot('source', Genre::PIVOT_SOURCE_CUSTOM);
     }
 
-    private function fetchedGenresForLanguage(string $language): BelongsToMany
+    public function fetchedGenresForLanguage(DlsiteLanguage|string $language): BelongsToMany
     {
+        $language = $language instanceof DlsiteLanguage ? $language->value : $language;
+
         return $this->genres()
             ->wherePivot('source', Genre::PIVOT_SOURCE_FETCHED)
             ->whereExists(function ($query) use ($language): void {
@@ -396,11 +353,17 @@ class Product extends Model
     }
 
     #[Scope]
-    protected function filterDescriptionEnglish(Builder $query, string $description): void
+    protected function filterDescriptionLocalized(Builder $query, string $description, string $locale): void
     {
+        if ($locale === DlsiteLanguage::Japanese->value) {
+            return;
+        }
+
         $query->whereHas(
-            'englishLocalization',
-            fn(Builder $query) => $query->whereLike('description', '%' . trim($description) . '%'),
+            'localizations',
+            fn(Builder $query) => $query
+                ->where('locale', $locale)
+                ->whereLike('description', '%' . trim($description) . '%'),
         );
     }
 
@@ -410,55 +373,54 @@ class Product extends Model
         string $search,
         array $descriptionColumns = [],
         bool $searchTags = true,
-        ?string $fetchedLanguage = null,
+        ?string $metadataLanguage = null,
     ): void {
-        $search = '%' . trim($search) . '%';
-        $columns = [
-            'id',
-            'work_name',
-            'series',
-            'notes',
-            'circle',
-            'publisher',
-            'brand',
-        ];
+        $pattern = '%' . trim($search) . '%';
+        $columns = ['id', 'work_name', 'series', 'notes', 'circle', 'publisher', 'brand'];
 
         if (in_array('description', $descriptionColumns, true)) {
             $columns[] = 'description';
         }
 
-        $searchEnglishDescription = in_array('description_english', $descriptionColumns, true);
+        $query->where(function (Builder $searchQuery) use (
+            $columns,
+            $pattern,
+            $descriptionColumns,
+            $searchTags,
+            $metadataLanguage,
+        ): void {
+            $searchQuery->whereAny($columns, 'like', $pattern)
+                ->orWhereRelation('contributors', 'contributors.name', 'like', $pattern)
+                ->orWhereHas('localizations', function (Builder $translations) use (
+                    $pattern,
+                    $descriptionColumns,
+                    $metadataLanguage
+                ): void {
+                    $translations->whereLike('title', $pattern);
 
-        $query->where(function (Builder $searchQuery) use ($columns, $search, $searchEnglishDescription, $searchTags, $fetchedLanguage): void {
-            $searchQuery->whereAny($columns, 'like', $search)
-                ->orWhereIn('products.id', ProductLocalization::query()
-                    ->select('product_id')
-                    ->whereIn('locale', ProductLocalization::SEARCHABLE_TITLE_LOCALES)
-                    ->whereLike('title', $search))
-                ->orWhereHas('contributors', function (Builder $contributorQuery) use ($search): void {
-                    $contributorQuery->whereLike('contributors.name', $search);
+                    if (in_array('description_localized_all', $descriptionColumns, true)) {
+                        $translations->orWhereLike('description', $pattern);
+                    } elseif (
+                        in_array('description_localized', $descriptionColumns, true)
+                        && $metadataLanguage !== null
+                        && $metadataLanguage !== DlsiteLanguage::Japanese->value
+                    ) {
+                        $translations->orWhere(fn(Builder $description) => $description
+                            ->where('locale', $metadataLanguage)
+                            ->whereLike('description', $pattern));
+                    }
                 });
 
-            if ($searchEnglishDescription) {
-                $searchQuery->orWhereHas(
-                    'englishLocalization',
-                    fn(Builder $query) => $query->whereLike('description', $search),
-                );
+            if ($searchTags) {
+                $searchQuery->orWhereHas('genres', fn(Builder $genres) => $genres
+                    ->whereLike('title', $pattern)
+                    ->where(VisibleGenreAttachment::query($metadataLanguage)));
             }
-
-            if (! $searchTags) {
-                return;
-            }
-
-            $searchQuery->orWhereHas('genres', function (Builder $genreQuery) use ($search, $fetchedLanguage): void {
-                $genreQuery->whereLike('title', $search);
-                $genreQuery->where(VisibleGenreAttachment::query($fetchedLanguage));
-            });
         });
     }
 
     #[Scope]
-    protected function filterTitle(Builder $query, string $title): void
+    protected function filterTitle(Builder $query, string $title, string $locale): void
     {
         $title = trim($title);
 
@@ -468,14 +430,27 @@ class Product extends Model
 
         $search = "%{$title}%";
 
-        $query->where(function (Builder $titleQuery) use ($search): void {
-            $titleQuery
-                ->whereLike('products.work_name', $search)
-                ->orWhereIn('products.id', ProductLocalization::query()
-                    ->select('product_id')
-                    ->whereIn('locale', ProductLocalization::SEARCHABLE_TITLE_LOCALES)
-                    ->whereLike('title', $search));
+        $query->where(function (Builder $titleQuery) use ($search, $locale): void {
+            $titleQuery->whereLike('products.work_name', $search);
+
+            if ($locale !== DlsiteLanguage::Japanese->value) {
+                $titleQuery->orWhereHas(
+                    'localizations',
+                    fn(Builder $localizationQuery) => $localizationQuery
+                        ->where('locale', $locale)
+                        ->whereLike('title', $search),
+                );
+            }
         });
+    }
+
+    #[Scope]
+    protected function withLocalizedTitle(Builder $query, string $locale): void
+    {
+        $query->withAggregate([
+            'localizations as localized_title' => fn(Builder $localizationQuery) =>
+            $localizationQuery->where('locale', $locale),
+        ], 'title');
     }
 
     #[Scope]

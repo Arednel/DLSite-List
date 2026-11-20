@@ -167,10 +167,10 @@
                                                     {{ $product->workName }}</a>
                                                 <div class="notes">
                                                     <div class="note-text">
-                                                        @if ($product->workName != $product->workNameEnglish && $product->workNameEnglish)
+                                                        @if ($product->localizedTitle)
                                                             <a href="{{ $product->dlsiteWorkUrl }}" class="product-link"
                                                                 target="_blank">
-                                                                {{ $product->id }} - {{ $product->workNameEnglish }}</a>
+                                                                {{ $product->id }} - {{ $product->localizedTitle }}</a>
                                                         @endif
                                                     </div>
                                                 </div>
@@ -412,10 +412,10 @@
             </div>
         @break
 
-        @case('description_english')
+        @case('description_localized')
             <div class="description-cell">
-                @if ($product->descriptionEnglish)
-                    <div>{{ $product->descriptionEnglish }}</div>
+                @if ($product->localizedDescription)
+                    <div>{{ $product->localizedDescription }}</div>
                 @else
                     -
                 @endif

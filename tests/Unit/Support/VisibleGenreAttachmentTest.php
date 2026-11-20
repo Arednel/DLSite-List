@@ -2,7 +2,7 @@
 
 namespace Tests\Unit\Support;
 
-use App\Enums\FetchedTagLanguage;
+use App\Enums\DlsiteLanguage;
 use App\Enums\UiLanguage;
 use App\Models\Genre;
 use App\Models\Option;
@@ -24,6 +24,7 @@ class VisibleGenreAttachmentTest extends TestCase
         string $expectedFetchedTitle,
     ): void {
         App::setLocale($uiLanguage->value);
+        Option::setUiLanguage($uiLanguage);
 
         $product = Product::factory()->create();
         $custom = Genre::query()->create(['title' => 'Custom Visible']);
@@ -31,8 +32,8 @@ class VisibleGenreAttachmentTest extends TestCase
         $japanese = Genre::query()->create(['title' => 'Japanese Fetched']);
 
         $this->attachGenre($product, $custom, Genre::PIVOT_SOURCE_CUSTOM);
-        $this->attachGenre($product, $english, Genre::PIVOT_SOURCE_FETCHED, [Genre::LANGUAGE_ENGLISH]);
-        $this->attachGenre($product, $japanese, Genre::PIVOT_SOURCE_FETCHED, [Genre::LANGUAGE_JAPANESE]);
+        $this->attachGenre($product, $english, Genre::PIVOT_SOURCE_FETCHED, [DlsiteLanguage::English->value]);
+        $this->attachGenre($product, $japanese, Genre::PIVOT_SOURCE_FETCHED, [DlsiteLanguage::Japanese->value]);
 
         $this->assertSame([
             'Custom Visible',
@@ -43,8 +44,8 @@ class VisibleGenreAttachmentTest extends TestCase
     public function test_manual_fetched_tag_language_can_differ_from_the_ui_language(): void
     {
         App::setLocale(UiLanguage::English->value);
-        Option::setFetchedTagLanguageFollowsUi(false);
-        Option::setFetchedTagLanguage(FetchedTagLanguage::Japanese);
+        Option::setDlsiteMetadataLanguageFollowsUi(false);
+        Option::setDlsiteMetadataLanguage(DlsiteLanguage::Japanese);
 
         $product = Product::factory()->create();
         $custom = Genre::query()->create(['title' => 'Custom Visible']);
@@ -52,8 +53,8 @@ class VisibleGenreAttachmentTest extends TestCase
         $japanese = Genre::query()->create(['title' => 'Japanese Visible']);
 
         $this->attachGenre($product, $custom, Genre::PIVOT_SOURCE_CUSTOM);
-        $this->attachGenre($product, $english, Genre::PIVOT_SOURCE_FETCHED, [Genre::LANGUAGE_ENGLISH]);
-        $this->attachGenre($product, $japanese, Genre::PIVOT_SOURCE_FETCHED, [Genre::LANGUAGE_JAPANESE]);
+        $this->attachGenre($product, $english, Genre::PIVOT_SOURCE_FETCHED, [DlsiteLanguage::English->value]);
+        $this->attachGenre($product, $japanese, Genre::PIVOT_SOURCE_FETCHED, [DlsiteLanguage::Japanese->value]);
 
         $this->assertSame([
             'Custom Visible',
@@ -69,13 +70,13 @@ class VisibleGenreAttachmentTest extends TestCase
         $japanese = Genre::query()->create(['title' => 'Japanese Visible']);
 
         $this->attachGenre($product, $custom, Genre::PIVOT_SOURCE_CUSTOM);
-        $this->attachGenre($product, $english, Genre::PIVOT_SOURCE_FETCHED, [Genre::LANGUAGE_ENGLISH]);
-        $this->attachGenre($product, $japanese, Genre::PIVOT_SOURCE_FETCHED, [Genre::LANGUAGE_JAPANESE]);
+        $this->attachGenre($product, $english, Genre::PIVOT_SOURCE_FETCHED, [DlsiteLanguage::English->value]);
+        $this->attachGenre($product, $japanese, Genre::PIVOT_SOURCE_FETCHED, [DlsiteLanguage::Japanese->value]);
 
         $this->assertSame([
             'Custom Visible',
             'Japanese Visible',
-        ], $this->visibleTitlesFor($product, Genre::LANGUAGE_JAPANESE));
+        ], $this->visibleTitlesFor($product, DlsiteLanguage::Japanese->value));
     }
 
     public function test_it_keeps_same_title_japanese_and_english_attachment_visible_once(): void
@@ -84,12 +85,12 @@ class VisibleGenreAttachmentTest extends TestCase
         $shared = Genre::query()->create(['title' => 'ASMR']);
 
         $this->attachGenre($product, $shared, Genre::PIVOT_SOURCE_FETCHED, [
-            Genre::LANGUAGE_JAPANESE,
-            Genre::LANGUAGE_ENGLISH,
+            DlsiteLanguage::Japanese->value,
+            DlsiteLanguage::English->value,
         ]);
 
-        $this->assertSame(['ASMR'], $this->visibleTitlesFor($product, Genre::LANGUAGE_ENGLISH));
-        $this->assertSame(['ASMR'], $this->visibleTitlesFor($product, Genre::LANGUAGE_JAPANESE));
+        $this->assertSame(['ASMR'], $this->visibleTitlesFor($product, DlsiteLanguage::English->value));
+        $this->assertSame(['ASMR'], $this->visibleTitlesFor($product, DlsiteLanguage::Japanese->value));
     }
 
     public function test_a_language_row_does_not_make_a_non_fetched_attachment_visible(): void
@@ -97,9 +98,9 @@ class VisibleGenreAttachmentTest extends TestCase
         $product = Product::factory()->create();
         $otherSource = Genre::query()->create(['title' => 'Other Source Hidden']);
 
-        $this->attachGenre($product, $otherSource, 'other', [Genre::LANGUAGE_ENGLISH]);
+        $this->attachGenre($product, $otherSource, 'other', [DlsiteLanguage::English->value]);
 
-        $this->assertSame([], $this->visibleTitlesFor($product, Genre::LANGUAGE_ENGLISH));
+        $this->assertSame([], $this->visibleTitlesFor($product, DlsiteLanguage::English->value));
     }
 
     public static function localeVisibilityProvider(): iterable

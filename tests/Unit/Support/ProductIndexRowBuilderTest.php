@@ -20,7 +20,7 @@ class ProductIndexRowBuilderTest extends TestCase
         $product->setRawAttributes([
             'id' => 'RJ000000321',
             'work_name' => 'Typed Row',
-            'english_title' => 'Typed Row English',
+            'localized_title' => 'Typed Row English',
             'notes' => 'Typed notes',
             'progress' => 'Listening',
             'work_image' => '/images/typed-row.jpg',
@@ -33,7 +33,7 @@ class ProductIndexRowBuilderTest extends TestCase
             'circle' => 'Circle / One',
             'maker_id' => 'RG 321',
             'description' => 'Japanese description',
-            'english_description' => 'English description',
+            'localized_description' => 'English description',
         ]);
 
         $contributorsByProductId = collect([
@@ -63,7 +63,7 @@ class ProductIndexRowBuilderTest extends TestCase
         $this->assertInstanceOf(ProductIndexRow::class, $row);
         $this->assertSame('RJ000000321', $row->id);
         $this->assertSame('TYPED ROW', $row->workName);
-        $this->assertSame('Typed Row English', $row->workNameEnglish);
+        $this->assertSame('Typed Row English', $row->localizedTitle);
         $this->assertFalse($product->relationLoaded('localizations'));
         $this->assertSame('9', $row->score);
         $this->assertSame('9.93', $row->dlsiteRating);
@@ -172,7 +172,7 @@ class ProductIndexRowBuilderTest extends TestCase
         $product->setRawAttributes([
             'id' => 'RJ000000654',
             'work_name' => 'Narrow Row',
-            'english_title' => null,
+            'localized_title' => null,
             'notes' => null,
             'progress' => null,
         ]);
@@ -189,7 +189,7 @@ class ProductIndexRowBuilderTest extends TestCase
 
         $this->assertSame('RJ000000654', $row->id);
         $this->assertSame('Narrow Row', $row->workName);
-        $this->assertNull($row->workNameEnglish);
+        $this->assertNull($row->localizedTitle);
         $this->assertNull($row->notes);
         $this->assertNull($row->progress);
         $this->assertNull($row->workImage);
@@ -203,7 +203,7 @@ class ProductIndexRowBuilderTest extends TestCase
         $this->assertNull($row->circle);
         $this->assertNull($row->makerId);
         $this->assertNull($row->description);
-        $this->assertNull($row->descriptionEnglish);
+        $this->assertNull($row->localizedDescription);
         $this->assertTrue($row->contributors->isEmpty());
         $this->assertNull($row->seriesUrl);
         $this->assertNull($row->circleUrl);
@@ -276,7 +276,7 @@ class ProductIndexRowBuilderTest extends TestCase
             RatingVisualStyle::Simple,
         )->sole();
 
-        $this->assertNull($row->workNameEnglish);
+        $this->assertNull($row->localizedTitle);
         $this->assertFalse($product->relationLoaded('localizations'));
     }
 
@@ -286,7 +286,7 @@ class ProductIndexRowBuilderTest extends TestCase
         $product->setRawAttributes([
             'id' => 'RJ000000986',
             'work_name' => 'Japanese title',
-            'english_title' => '',
+            'localized_title' => '',
         ]);
 
         $row = app(ProductIndexRowBuilder::class)->build(
@@ -299,7 +299,7 @@ class ProductIndexRowBuilderTest extends TestCase
             RatingVisualStyle::Simple,
         )->sole();
 
-        $this->assertSame('', $row->workNameEnglish);
+        $this->assertSame('', $row->localizedTitle);
         $this->assertFalse($product->relationLoaded('localizations'));
     }
 }

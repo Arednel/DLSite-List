@@ -2,18 +2,21 @@
 
 namespace App\Livewire;
 
+use App\Enums\DlsiteLanguage;
 use App\Enums\LibraryImportDecision;
 use App\Enums\LibraryImportItemStatus;
 use App\Enums\LibraryTransferAction;
 use App\Enums\LibraryTransferDirection;
 use App\Enums\LibraryTransferPartStatus;
 use App\Enums\LibraryTransferRunStatus;
+use App\Models\Genre;
 use App\Models\LibraryImportItem;
 use App\Models\LibraryTransferRun;
 use App\Models\Option;
 use App\Support\DLSite\DLSiteRating;
 use App\Support\Transfers\ImportReview;
 use App\Support\Transfers\ImportValue;
+use App\Support\LocalizedMetadataField;
 use App\Support\Transfers\LibraryTransferService;
 use App\Support\Transfers\TransferMessage;
 use App\Support\Transfers\TransferArchive;
@@ -389,20 +392,39 @@ class OptionsTransferRun extends Component
                 }
             });
         }
-        $items = $itemQuery->orderByDesc('collection')->orderBy('id')
-            ->paginate(self::REVIEW_PAGE_SIZE, ['id', 'library_transfer_run_id', 'section', 'category', 'entity_key', 'status', 'decision', 'decision_override', 'metadata', 'error', 'baseline_preview', 'incoming_preview', 'collection']);
-        $reviewItems = $items->getCollection();
-        $itemLabels = $reviewItems
+        $groupLocalizedItems = $this->section === 'works'
+            && in_array($this->category, ['titles', 'descriptions', 'tags'], true);
+        $columns = ['id', 'library_transfer_run_id', 'section', 'category', 'entity_key', 'status', 'decision', 'decision_override', 'metadata', 'error', 'baseline_preview', 'incoming_preview', 'collection'];
+
+        if ($groupLocalizedItems) {
+            $pagination = (clone $itemQuery)
+                ->distinct('entity_key')
+                ->orderBy('entity_key')
+                ->paginate(self::REVIEW_PAGE_SIZE, ['entity_key']);
+            $entityKeys = $pagination->getCollection()->pluck('entity_key')->all();
+            $items = $entityKeys === []
+                ? collect()
+                : (clone $itemQuery)
+                ->whereIn('entity_key', $entityKeys)
+                ->orderBy('entity_key')
+                ->orderBy('id')
+                ->get($columns);
+        } else {
+            $pagination = $itemQuery->orderByDesc('collection')->orderBy('id')
+                ->paginate(self::REVIEW_PAGE_SIZE, $columns);
+            $items = $pagination->getCollection();
+        }
+        $itemLabels = $items
             ->mapWithKeys(fn(LibraryImportItem $item): array => [$item->id => $this->reviewItemLabel($item)])
             ->all();
         $labels = collect(array_keys($categories))
             ->merge(collect($categories)->flatten())
-            ->merge($reviewItems->map(fn(LibraryImportItem $item): mixed => $item->metadata['field'] ?? null))
+            ->merge($items->map(fn(LibraryImportItem $item): mixed => $item->metadata['field'] ?? null))
             ->filter(fn($key): bool => is_string($key) && $key !== '')
             ->unique()
             ->mapWithKeys(fn(string $key): array => [$key => ImportValue::label($key)])
             ->all();
-        $newWorkChanges = $reviewItems
+        $newWorkChanges = $items
             ->mapWithKeys(function (LibraryImportItem $item): array {
                 $changes = array_map(
                     fn(array $change): array => [
@@ -415,7 +437,7 @@ class OptionsTransferRun extends Component
                 return [$item->id => $changes];
             })
             ->all();
-        $previews = $reviewItems
+        $previews = $items
             ->mapWithKeys(function (LibraryImportItem $item): array {
                 $field = $item->category === 'dlsite_rating'
                     ? 'dlsite_rating'
@@ -429,6 +451,10 @@ class OptionsTransferRun extends Component
                 ];
             })
             ->all();
+
+        $reviewGroups = $groupLocalizedItems
+            ? $this->localizedReviewGroups($items, $previews)
+            : [];
 
         $newWorkCounts = $this->category === 'new_works'
             ? $this->newWorkCategoryCounts($run, array_slice($categories['works'], 1))
@@ -451,7 +477,7 @@ class OptionsTransferRun extends Component
             ->keys()
             ->all();
 
-        return compact('counts', 'items', 'itemLabels', 'labels', 'newWorkChanges', 'newWorkCounts', 'previews', 'decisionOptions', 'decisionLoading', 'decisionHelp') + [
+        return compact('counts', 'items', 'pagination', 'itemLabels', 'labels', 'newWorkChanges', 'newWorkCounts', 'previews', 'reviewGroups', 'decisionOptions', 'decisionLoading', 'decisionHelp') + [
             'section' => $this->section,
             'category' => $this->category,
             'tabDecisionOptions' => match ($this->category) {
@@ -461,6 +487,102 @@ class OptionsTransferRun extends Component
             },
             'availableMainTabs' => $availableMainTabs,
         ];
+    }
+
+    /**
+     * @param  Collection<int, LibraryImportItem>  $items
+     * @param  array<int, array<string, array{value: mixed, image: bool, truncated: bool}>>  $previews
+     * @return list<array<string, mixed>>
+     */
+    private function localizedReviewGroups(Collection $items, array $previews): array
+    {
+        return $items
+            ->groupBy('entity_key')
+            ->map(function (Collection $productItems, string $entityKey) use ($previews): array {
+                $japanese = null;
+                $localized = [];
+
+                foreach ($productItems as $item) {
+                    $language = $this->reviewItemLanguage($item);
+                    if ($language === null) {
+                        continue;
+                    }
+
+                    $row = [
+                        'item_id' => $item->getKey(),
+                        'warning' => $item->displayWarning(),
+                        'pending' => $item->status->isPending(),
+                        'decision_override' => $item->decision_override,
+                        'decision' => $item->decision->value,
+                        'locale' => $language->value,
+                        'language_label' => $language->label(),
+                        'field_label' => match ($item->category) {
+                            'titles' => $language->titleLabel(),
+                            'descriptions' => $language->descriptionLabel(),
+                            default => $language->label(),
+                        },
+                        'previews' => $previews[$item->id] ?? [],
+                        'added' => [],
+                        'current_only' => [],
+                    ];
+
+                    if ($item->category === 'tags') {
+                        $current = is_array($item->baseline_preview['value'] ?? null)
+                            ? $item->baseline_preview['value']
+                            : [];
+                        $incoming = is_array($item->incoming_preview['value'] ?? null)
+                            ? $item->incoming_preview['value']
+                            : [];
+                        $index = static fn(array $tags): Collection => collect($tags)
+                            ->filter(fn(mixed $tag): bool => is_array($tag))
+                            ->mapWithKeys(function (array $tag): array {
+                                $key = Genre::titleKey((string) ($tag['value'] ?? ''));
+
+                                return $key === '' ? [] : [$key => $tag];
+                            });
+                        $currentByKey = $index($current);
+                        $incomingByKey = $index($incoming);
+                        $row['added'] = $incomingByKey->diffKeys($currentByKey)->values()->all();
+                        $row['current_only'] = $currentByKey->diffKeys($incomingByKey)->values()->all();
+                    }
+
+                    if ($language === DlsiteLanguage::Japanese) {
+                        $japanese = $row;
+                    } else {
+                        $localized[$language->value] = $row;
+                    }
+                }
+
+                return [
+                    'entity_key' => $entityKey,
+                    'title' => $productItems->first()?->metadata['title'] ?? '',
+                    'japanese' => $japanese,
+                    'localized' => DlsiteLanguage::orderedRows($localized),
+                    'localized_label' => match ($this->category) {
+                        'titles' => __('Localized titles'),
+                        'descriptions' => __('Localized descriptions'),
+                        default => __('Localized tags'),
+                    },
+                ];
+            })
+            ->values()
+            ->all();
+    }
+
+    private function reviewItemLanguage(LibraryImportItem $item): ?DlsiteLanguage
+    {
+        if ($item->category === 'tags') {
+            $bucket = $item->metadata['bucket'] ?? null;
+
+            return is_string($bucket) ? DlsiteLanguage::tryFrom($bucket) : null;
+        }
+
+        $field = $item->metadata['field'] ?? null;
+        if (! is_string($field)) {
+            return null;
+        }
+
+        return LocalizedMetadataField::parse($field)['language'] ?? null;
     }
 
     /**
@@ -755,11 +877,13 @@ class OptionsTransferRun extends Component
             'uploadMaxBytes' => $partData['uploadMaxBytes'],
             'counts' => $reviewData['counts'] ?? null,
             'items' => $reviewData['items'] ?? null,
+            'pagination' => $reviewData['pagination'] ?? null,
             'itemLabels' => $reviewData['itemLabels'] ?? [],
             'labels' => $reviewData['labels'] ?? null,
             'newWorkChanges' => $reviewData['newWorkChanges'] ?? null,
             'newWorkCounts' => $reviewData['newWorkCounts'] ?? [],
             'previews' => $reviewData['previews'] ?? null,
+            'reviewGroups' => $reviewData['reviewGroups'] ?? [],
             'section' => $reviewData['section'] ?? $this->section,
             'category' => $reviewData['category'] ?? $this->category,
             'decisionOptions' => $reviewData['decisionOptions'] ?? null,
@@ -771,6 +895,7 @@ class OptionsTransferRun extends Component
             'availableMainTabs' => $reviewData['availableMainTabs'] ?? [],
             'categories' => ImportReview::CATEGORIES,
             'newWorkCategories' => array_slice(ImportReview::CATEGORIES['works'], 1),
+            'reviewable' => $run->reviewable(),
             'confirmationAction' => $this->confirmationAction($run),
         ])->withErrors($this->displayErrors($run));
     }

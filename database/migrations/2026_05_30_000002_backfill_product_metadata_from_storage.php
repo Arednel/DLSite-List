@@ -49,18 +49,26 @@ return new class extends Migration
             return;
         }
 
+        $japaneseDescription = $workData->description;
+        $englishDescription = $workData->descriptionForLocale('en');
+        if ($englishDescription === $japaneseDescription) {
+            $englishDescription = null;
+        }
+
         DB::table('products')
             ->where('id', $product->id)
             ->update([
                 'maker_id' => $workData->makerId,
                 'circle' => $workData->circle,
-                'description' => $workData->description,
-                'description_english' => $workData->englishDescription,
+                'description' => $japaneseDescription,
+                'description_english' => $englishDescription,
             ]);
 
         $eloquentProduct = \App\Models\Product::query()->find($product->id);
 
         if ($eloquentProduct) {
+            // Avoid Product saving hooks that require later schema columns.
+            $eloquentProduct->timestamps = false;
             $sync->sync($eloquentProduct, $workData->contributorsByRole, $workData->makerId);
         }
     }

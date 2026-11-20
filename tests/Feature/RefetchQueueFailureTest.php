@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use App\Enums\DlsiteLanguage;
 use App\Jobs\FetchProductWorkJob;
 use App\Models\Product;
 use App\Models\RefetchRun;
@@ -51,7 +52,7 @@ class RefetchQueueFailureTest extends TestCase
 
     public function test_refetch_job_has_a_finite_ten_minute_timeout_and_fails_on_timeout(): void
     {
-        $job = new FetchProductWorkJob(1, 'RJ000001');
+        $job = new FetchProductWorkJob(1, 'RJ000001', ['ja', 'en']);
 
         $this->assertSame(FetchProductWorkJob::TIMEOUT_SECONDS, $job->timeout);
         $this->assertSame(600, $job->timeout);
@@ -107,14 +108,26 @@ class RefetchQueueFailureTest extends TestCase
             ->shouldReceive('fetchWork')->once()->with(
                 $second->product_id,
                 $jsonPath,
+                [
+                    'canonical' => DlsiteLanguage::Japanese->value,
+                    'locales' => [
+                        DlsiteLanguage::Japanese->value => null,
+                        DlsiteLanguage::English->value => 'en_US',
+                    ],
+                ],
                 null,
                 RefetchService::FETCH_PROCESS_TIMEOUT_SECONDS,
             )
             ->andReturn(Process::result(output: '{"failed_images":[]}'));
         File::partialMock()->shouldReceive('isFile')->with($jsonPath)->andReturnTrue();
         File::shouldReceive('json')->with($jsonPath)->andReturn([
-            'japanese' => ['product_id' => $second->product_id, 'work_name' => 'Refetched title'],
-            'english' => [],
+            'locales' => [
+                DlsiteLanguage::Japanese->value => [
+                    'product_id' => $second->product_id,
+                    'work_name' => 'Refetched title',
+                ],
+                DlsiteLanguage::English->value => [],
+            ],
         ]);
 
         $this->expireFirstReservation();
@@ -157,7 +170,7 @@ class RefetchQueueFailureTest extends TestCase
         $pendingSnapshot = clone $result;
         $result->forceFill(['status' => $status, 'error' => 'Original diagnostic.'])->save();
         $before = $result->refresh()->getAttributes();
-        $job = new FetchProductWorkJob($run->id, $result->product_id);
+        $job = new FetchProductWorkJob($run->id, $result->product_id, ['ja', 'en']);
 
         $job->failed(new RuntimeException('Later queue failure.'));
         $job->failed(new RuntimeException('Repeated queue failure.'));
@@ -171,7 +184,7 @@ class RefetchQueueFailureTest extends TestCase
         $run = $this->createRun();
         app(RefetchService::class)->cancelRun($run);
         $result = $run->results()->sole();
-        $job = new FetchProductWorkJob($run->id, $result->product_id);
+        $job = new FetchProductWorkJob($run->id, $result->product_id, ['ja', 'en']);
 
         $job->failed(null);
         $resultBefore = $result->refresh()->getAttributes();
@@ -200,7 +213,7 @@ class RefetchQueueFailureTest extends TestCase
             'changes' => ['titles' => ['work_name' => ['old' => 'Old title', 'new' => 'New title']]],
         ])->save();
         $fetchedBefore = $fetched->refresh()->getAttributes();
-        $batch = Bus::batch([new FetchProductWorkJob($run->id, $pending->product_id)])->dispatch();
+        $batch = Bus::batch([new FetchProductWorkJob($run->id, $pending->product_id, ['ja', 'en'])])->dispatch();
         $run->forceFill(['batch_id' => $batch->id])->save();
 
         // Recreate the old failure bookkeeping without invoking the new callback.

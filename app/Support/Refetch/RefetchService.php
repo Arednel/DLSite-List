@@ -2,13 +2,14 @@
 
 namespace App\Support\Refetch;
 
+use App\Enums\DlsiteLanguage;
 use App\Enums\ProductContributorRole;
 use App\Enums\ProductFormat;
 use App\Enums\RefetchCategory;
 use App\Jobs\FetchProductWorkJob;
 use App\Models\Genre;
+use App\Models\Option;
 use App\Models\Product;
-use App\Models\ProductLocalization;
 use App\Models\RefetchRun;
 use App\Models\RefetchWorkResult;
 use App\Support\DLSite\DLSiteWorkData;
@@ -16,12 +17,14 @@ use App\Support\DLSite\DLSiteWorkFetcher;
 use App\Support\LibraryMutationLock;
 use App\Support\ProductContributorSync;
 use App\Support\ProductGenreSync;
+use App\Support\LocalizedMetadataField;
 use App\Support\ProductImagePromotion;
 use Closure;
 use Exception;
 use Illuminate\Contracts\Cache\LockTimeoutException;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Collection as EloquentCollection;
+use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\Bus;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
@@ -34,13 +37,13 @@ final class RefetchService
 {
     public const FETCH_PROCESS_TIMEOUT_SECONDS = 590;
 
-    public const ACTION_INHERIT = 'inherit';
+    public const ACTION_INHERIT = RefetchWorkResult::ACTION_INHERIT;
 
-    public const ACTION_IGNORE = 'ignore';
+    public const ACTION_IGNORE = RefetchWorkResult::ACTION_IGNORE;
 
-    public const ACTION_OVERWRITE = 'overwrite';
+    public const ACTION_OVERWRITE = RefetchWorkResult::ACTION_OVERWRITE;
 
-    public const ACTION_DETAILED = 'detailed';
+    public const ACTION_DETAILED = RefetchWorkResult::ACTION_DETAILED;
 
     public const TAG_STALE_MOVE_TO_CUSTOM = 'move_to_custom';
 
@@ -78,11 +81,16 @@ final class RefetchService
      */
     public function startRun(array $productIds, bool $checkImages): RefetchRun
     {
-        return $this->mutationLock->run(fn(): RefetchRun => DB::transaction(function () use ($productIds, $checkImages): RefetchRun {
+        $languages = array_column(
+            Option::effectiveDlsiteMetadataFetchLanguages(),
+            'value',
+        );
+
+        return $this->mutationLock->run(fn(): RefetchRun => DB::transaction(function () use ($productIds, $checkImages, $languages): RefetchRun {
             $run = $this->createPendingRun($productIds, $checkImages);
             $batch = Bus::batch(
                 collect($productIds)
-                    ->map(fn(string $productId): FetchProductWorkJob => new FetchProductWorkJob($run->getKey(), $productId))
+                    ->map(fn(string $productId): FetchProductWorkJob => new FetchProductWorkJob($run->getKey(), $productId, $languages))
                     ->all(),
             )
                 ->name("Refetch works #{$run->getKey()}")
@@ -126,7 +134,8 @@ final class RefetchService
         return $run;
     }
 
-    public function fetchAndRecordResult(RefetchWorkResult $result): void
+    /** @param list<string> $languages */
+    public function fetchAndRecordResult(RefetchWorkResult $result, array $languages): void
     {
         $product = Product::query()->find($result->product_id);
 
@@ -142,13 +151,13 @@ final class RefetchService
         $imageDirectory = $run->check_images
             ? $stagedWorkPath
             : null;
-
         try {
             $fetch = $this->fetcher->fetch(
                 $result->product_id,
                 Storage::disk('local')->path($jsonPath),
                 $imageDirectory === null ? null : Storage::disk('public')->path($imageDirectory),
                 self::FETCH_PROCESS_TIMEOUT_SECONDS,
+                $languages,
             );
 
             $warnings = [];
@@ -401,30 +410,53 @@ final class RefetchService
             $this->imagePromotion->transaction(function () use ($result, $category, $changes, $actions, $globalAction, $tagActions): void {
                 $decisions = $result->decisions ?? [];
 
+                if ($category === RefetchCategory::Tags) {
+                    $change = $changes['tags'] ?? null;
+
+                    if (! is_array($change)) {
+                        return;
+                    }
+
+                    $resultActions = $actions[$result->getKey()] ?? [];
+                    $localeActions = $result->resolvedTagActions(
+                        is_array($resultActions) ? $resultActions : [],
+                        $globalAction,
+                    );
+
+                    $resultTagActions = $tagActions[(string) $result->getKey()] ?? [];
+                    $changed = $this->applyLocalizedTagChoices(
+                        $result,
+                        $change,
+                        $localeActions,
+                        $resultTagActions,
+                    );
+                    $decisions[$category->value]['tags'] = [
+                        'action' => 'per_locale',
+                        'changed' => $changed,
+                        'locales' => collect($localeActions)
+                            ->map(fn(string $action): array => ['action' => $action])
+                            ->all(),
+                        'tag_actions' => $resultTagActions,
+                    ];
+
+                    $result->forceFill(['decisions' => $decisions])->save();
+
+                    return;
+                }
+
                 foreach ($changes as $field => $change) {
                     $action = $this->resolvedAction(
                         data_get($actions, "{$result->getKey()}.{$field}"),
                         $globalAction,
-                        $category === RefetchCategory::Tags,
                     );
-                    $changed = false;
-
-                    if ($action === self::ACTION_OVERWRITE) {
-                        $changed = $this->applyChange($result, $category, $field, $change);
-                    } elseif ($action === self::ACTION_DETAILED && $category === RefetchCategory::Tags) {
-                        $changed = $this->applyDetailedTags(
-                            $result,
-                            $change,
-                            $tagActions[(string) $result->getKey()] ?? [],
-                        );
-                    }
+                    $changed = $action === self::ACTION_OVERWRITE
+                        ? $this->applyChange($result, $category, $field, $change)
+                        : false;
 
                     $decisions[$category->value][$field] = [
                         'action' => $action,
                         'changed' => $changed,
-                        'tag_actions' => $action === self::ACTION_DETAILED
-                            ? ($tagActions[(string) $result->getKey()] ?? [])
-                            : null,
+                        'tag_actions' => null,
                     ];
                 }
 
@@ -479,9 +511,13 @@ final class RefetchService
         }
 
         if ($category === RefetchCategory::Titles) {
-            if ($field === 'work_name') {
-                $title = $change['new'] ?? null;
+            $parsed = LocalizedMetadataField::parse($field);
+            if ($parsed === null || $parsed['attribute'] !== LocalizedMetadataField::TITLE) {
+                return false;
+            }
 
+            $title = $change['new'] ?? null;
+            if ($parsed['language'] === DlsiteLanguage::Japanese) {
                 if (! is_string($title)) {
                     return false;
                 }
@@ -497,25 +533,26 @@ final class RefetchService
                 return true;
             }
 
-            if ($field !== 'work_name_english') {
-                return false;
-            }
-
-            $title = $change['new'] ?? null;
-
             return $product->syncLocalization(
-                ProductLocalization::LOCALE_ENGLISH,
+                $parsed['language'],
                 ['title' => blank($title) ? null : $title],
             );
         }
 
-        if ($category === RefetchCategory::Descriptions && $field === 'description_english') {
-            $description = $change['new'] ?? null;
+        if ($category === RefetchCategory::Descriptions) {
+            $parsed = LocalizedMetadataField::parse($field);
+            if ($parsed === null || $parsed['attribute'] !== LocalizedMetadataField::DESCRIPTION) {
+                return false;
+            }
 
-            return $product->syncLocalization(
-                ProductLocalization::LOCALE_ENGLISH,
-                ['description' => blank($description) ? null : $description],
-            );
+            if ($parsed['language'] !== DlsiteLanguage::Japanese) {
+                $description = $change['new'] ?? null;
+
+                return $product->syncLocalization(
+                    $parsed['language'],
+                    ['description' => blank($description) ? null : $description],
+                );
+            }
         }
 
         return DB::transaction(function () use ($product, $category, $field, $change): bool {
@@ -595,30 +632,19 @@ final class RefetchService
                 return $changed;
             }
 
-            if ($category === RefetchCategory::Tags) {
-                return $this->overwriteFetchedTags($product, $change);
-            }
-
             return false;
         });
     }
 
-    private function overwriteFetchedTags(Product $product, array $change): bool
-    {
-        $custom = $product->customGenres()->pluck('genres.title')->all();
-        $japanese = $this->tagDiff($change['new']['japanese'] ?? [], $custom);
-        $english = $this->tagDiff($change['new']['english'] ?? [], $custom);
-
-        return $this->genreSync->sync($product, [
-            Genre::LANGUAGE_JAPANESE => Genre::resolveIdsFromTitles($japanese),
-            Genre::LANGUAGE_ENGLISH => Genre::resolveIdsFromTitles($english),
-        ], Genre::resolveIdsFromTitles($custom));
-    }
-
-    private function applyDetailedTags(
+    /**
+     * @param  array<string, string>  $localeActions
+     * @param  array<string, mixed>  $tagActions
+     */
+    private function applyLocalizedTagChoices(
         RefetchWorkResult $result,
         array $change,
-        array $actions,
+        array $localeActions,
+        array $tagActions,
     ): bool {
         $product = $result->product;
 
@@ -626,57 +652,124 @@ final class RefetchService
             return false;
         }
 
-        $details = $change['details'] ?? [];
-        $fetchedJapanese = $change['new']['japanese'] ?? [];
-        $fetchedEnglish = $change['new']['english'] ?? [];
-        $custom = $change['old']['custom'] ?? [];
-        $customToFetched = array_merge(
-            $details['custom_to_fetched_japanese'] ?? [],
-            $details['custom_to_fetched_english'] ?? [],
+        $hasActionableLocale = collect($localeActions)->contains(
+            fn(string $action): bool => in_array($action, [self::ACTION_OVERWRITE, self::ACTION_DETAILED], true),
         );
-
-        if (($actions['added_japanese'] ?? self::TAG_ADDED_ADD) === self::TAG_ADDED_IGNORE) {
-            $fetchedJapanese = $this->tagDiff($fetchedJapanese, $details['added_japanese'] ?? []);
+        if (! $hasActionableLocale) {
+            return false;
         }
 
-        if (($actions['added_english'] ?? self::TAG_ADDED_ADD) === self::TAG_ADDED_IGNORE) {
-            $fetchedEnglish = $this->tagDiff($fetchedEnglish, $details['added_english'] ?? []);
+        $incomingByLocale = is_array(data_get($change, 'new.fetched'))
+            ? data_get($change, 'new.fetched')
+            : [];
+        $details = is_array($change['details'] ?? null) ? $change['details'] : [];
+        $currentFetchedIdsByLocale = $this->genreSync->currentFetchedGenreIdsByLanguage($product);
+        $existingCustom = $product->customGenres()->pluck('genres.title')->all();
+        $custom = $existingCustom;
+        $detailedLocales = collect($localeActions)
+            ->filter(fn(string $action): bool => $action === self::ACTION_DETAILED)
+            ->keys()
+            ->all();
+        $customToFetched = $result->promotableCustomTags($localeActions);
+        $promoteCustom = ($tagActions['custom_to_fetched'] ?? self::TAG_CUSTOM_PROMOTE) === self::TAG_CUSTOM_PROMOTE;
+
+        if ($promoteCustom) {
+            $custom = $this->tagDiff($existingCustom, $customToFetched);
         }
 
-        if (($actions['custom_to_fetched'] ?? self::TAG_CUSTOM_PROMOTE) === self::TAG_CUSTOM_KEEP) {
-            $fetchedJapanese = $this->tagDiff($fetchedJapanese, $customToFetched);
-            $fetchedEnglish = $this->tagDiff($fetchedEnglish, $customToFetched);
-        } else {
-            $custom = $this->tagDiff($custom, $customToFetched);
+        $desiredFetchedTitles = [];
+        foreach ($localeActions as $locale => $action) {
+            if (! in_array($action, [self::ACTION_OVERWRITE, self::ACTION_DETAILED], true)) {
+                continue;
+            }
+
+            $tags = $incomingByLocale[$locale] ?? [];
+
+            $blockedCustom = $existingCustom;
+
+            if ($action === self::ACTION_DETAILED) {
+                $localeTagActions = data_get($tagActions, "locales.{$locale}", []);
+
+                if (($localeTagActions['added'] ?? self::TAG_ADDED_ADD) === self::TAG_ADDED_IGNORE) {
+                    $tags = $this->tagDiff($tags, $details['added'][$locale] ?? []);
+                }
+
+                if ($promoteCustom) {
+                    $blockedCustom = $this->tagDiff(
+                        $existingCustom,
+                        $details['custom_to_fetched'][$locale] ?? [],
+                    );
+                } else {
+                    $tags = $this->tagDiff($tags, $details['custom_to_fetched'][$locale] ?? []);
+                }
+            }
+
+            // Overwrite never promotes an existing Custom tag implicitly. Detailed review
+            // promotes only the explicitly reviewed Custom -> Fetched overlap for this locale.
+            $desiredFetchedTitles[$locale] = $this->tagDiff($tags, $blockedCustom);
         }
 
-        if (($actions['stale_japanese'] ?? self::TAG_STALE_MOVE_TO_CUSTOM) === self::TAG_STALE_MOVE_TO_CUSTOM) {
+        $preservedFetchedTags = $this->fetchedTagTitlesForUnchangedLocales(
+            $currentFetchedIdsByLocale,
+            array_keys($desiredFetchedTitles),
+        );
+        $finalFetchedTagLists = [
+            ...array_values($desiredFetchedTitles),
+            $preservedFetchedTags,
+        ];
+
+        foreach ($detailedLocales as $locale) {
+            $localeTagActions = data_get($tagActions, "locales.{$locale}", []);
+
+            if (($localeTagActions['stale'] ?? self::TAG_STALE_MOVE_TO_CUSTOM) !== self::TAG_STALE_MOVE_TO_CUSTOM) {
+                continue;
+            }
+
             $custom = array_merge(
                 $custom,
-                $this->tagDiff($details['stale_japanese'] ?? [], $fetchedJapanese, $fetchedEnglish),
+                $this->tagDiff($details['stale'][$locale] ?? [], ...$finalFetchedTagLists),
             );
         }
 
-        if (($actions['stale_english'] ?? self::TAG_STALE_MOVE_TO_CUSTOM) === self::TAG_STALE_MOVE_TO_CUSTOM) {
-            $custom = array_merge(
-                $custom,
-                $this->tagDiff($details['stale_english'] ?? [], $fetchedJapanese, $fetchedEnglish),
-            );
+        foreach ($desiredFetchedTitles as $locale => $tags) {
+            $currentFetchedIdsByLocale[$locale] = Genre::resolveIdsFromTitles($tags);
         }
 
-        return $this->genreSync->sync($product, [
-            Genre::LANGUAGE_JAPANESE => Genre::resolveIdsFromTitles($fetchedJapanese),
-            Genre::LANGUAGE_ENGLISH => Genre::resolveIdsFromTitles($fetchedEnglish),
-        ], Genre::resolveIdsFromTitles($custom));
+        return $this->genreSync->sync(
+            $product,
+            $currentFetchedIdsByLocale,
+            Genre::resolveIdsFromTitles($custom),
+        );
     }
 
-    private function resolvedAction(?string $action, string $globalAction, bool $allowDetailed): string
+    /**
+     * @param  array<string, list<int>>  $currentFetchedIdsByLocale
+     * @param  list<string>  $changedLocales
+     * @return list<string>
+     */
+    private function fetchedTagTitlesForUnchangedLocales(
+        array $currentFetchedIdsByLocale,
+        array $changedLocales,
+    ): array {
+        $genreIds = collect($currentFetchedIdsByLocale)
+            ->except($changedLocales)
+            ->flatten()
+            ->unique()
+            ->values();
+
+        if ($genreIds->isEmpty()) {
+            return [];
+        }
+
+        return Genre::query()
+            ->whereKey($genreIds->all())
+            ->pluck('title')
+            ->all();
+    }
+
+    private function resolvedAction(?string $action, string $globalAction): string
     {
-        $allowed = [
-            self::ACTION_IGNORE,
-            self::ACTION_OVERWRITE,
-            ...($allowDetailed ? [self::ACTION_DETAILED] : []),
-        ];
+        $allowed = [self::ACTION_IGNORE, self::ACTION_OVERWRITE];
 
         return in_array($action, $allowed, true)
             ? $action

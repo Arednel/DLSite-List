@@ -18,6 +18,24 @@ class TransferMessageTest extends TestCase
         parent::tearDown();
     }
 
+    public function test_localized_work_field_labels_use_complete_ui_translations(): void
+    {
+        foreach (
+            [
+                'en' => ['Japanese Title', 'English Title', 'Japanese Description', 'English Description'],
+                'ja' => ['日本語タイトル', '英語タイトル', '日本語の説明', '英語の説明'],
+                'zh_TW' => ['日文標題', '英文標題', '日文說明', '英文說明'],
+            ] as $locale => [$japaneseTitle, $englishTitle, $japaneseDescription, $englishDescription]
+        ) {
+            App::setLocale($locale);
+
+            $this->assertSame($japaneseTitle, ImportValue::label('work_name'));
+            $this->assertSame($englishTitle, ImportValue::label('localization:en:title'));
+            $this->assertSame($japaneseDescription, ImportValue::label('description'));
+            $this->assertSame($englishDescription, ImportValue::label('localization:en:description'));
+        }
+    }
+
     public function test_known_transfer_stages_are_localized_without_translating_stage_data(): void
     {
         App::setLocale(UiLanguage::Japanese->value);

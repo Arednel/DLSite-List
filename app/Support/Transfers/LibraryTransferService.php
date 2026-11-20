@@ -436,7 +436,7 @@ final class LibraryTransferService
                 $json = TransferArchive::decode(file_get_contents($path));
                 if ($section === 'works') {
                     $key = $entry->logical_key;
-                    $this->works->assertLayout($json, $key);
+                    $this->works->assertLayout($json, $key, $run->settings['manifest']['schema_version']);
                     $records = [$json];
                 } else {
                     if (($json['section'] ?? '') !== $section) {
@@ -458,6 +458,9 @@ final class LibraryTransferService
             foreach ($pending as $i => $record) {
                 if (! is_array($record)) {
                     $record = ['invalid_record' => $record];
+                }
+                if ($section === 'options' && is_string($record['key'] ?? null)) {
+                    $record['key'] = $this->options->normalizeKeyCompatibility($record['key']);
                 }
                 $key = match ($section) {
                     'works' => $entry->logical_key,
@@ -489,9 +492,12 @@ final class LibraryTransferService
                 DB::transaction(function () use ($run, $section, $record, $images, $natural, $key, $entry): void {
                     try {
                         if ($section === 'works') {
-                            $record = $this->works->import($record, $key);
-                        } elseif ($section === 'options' && ($run->settings['manifest']['schema_version'] ?? null) === 1 && is_string($record['key'] ?? null) && array_key_exists('value', $record)) {
-                            $record['value'] = $this->options->normalizeLegacy($record['key'], $record['value']);
+                            $record = $this->works->import($record, $key, $run->settings['manifest']['schema_version']);
+                        } elseif ($section === 'options' && is_string($record['key'] ?? null) && array_key_exists('value', $record)) {
+                            $record['value'] = $this->options->normalizeCompatibility($record['key'], $record['value']);
+                            if (($run->settings['manifest']['schema_version'] ?? 3) === 1) {
+                                $record['value'] = $this->options->normalizeSchemaV1($record['key'], $record['value']);
+                            }
                         }
                         DB::transaction(fn() => $this->review->stage(
                             $run,

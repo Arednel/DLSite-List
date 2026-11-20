@@ -2,6 +2,7 @@
 
 namespace Tests\Unit\Support;
 
+use App\Enums\DlsiteLanguage;
 use App\Enums\ProductContributorRole;
 use App\Enums\RefetchCategory;
 use App\Models\Genre;
@@ -78,8 +79,8 @@ class RefetchDiffBuilderTest extends TestCase
             ProductContributorRole::Scenario->value => ['Old Writer'],
         ], 'RGOLD');
         app(ProductGenreSync::class)->sync($product, [
-            Genre::LANGUAGE_JAPANESE => Genre::resolveIdsFromTitles(['Old JP Tag']),
-            Genre::LANGUAGE_ENGLISH => Genre::resolveIdsFromTitles(['Old EN Tag']),
+            DlsiteLanguage::Japanese->value => Genre::resolveIdsFromTitles(['Old JP Tag']),
+            DlsiteLanguage::English->value => Genre::resolveIdsFromTitles(['Old EN Tag']),
         ], Genre::resolveIdsFromTitles(['Custom Tag']));
 
         Storage::disk('public')->put("Works/{$product->id}/cover.jpg", 'old-cover');
@@ -186,11 +187,11 @@ class RefetchDiffBuilderTest extends TestCase
         $this->assertCount(1, $localizationReads);
         $this->assertSame(
             'Old English Title',
-            $changes[RefetchCategory::Titles->value]['work_name_english']['old'],
+            $changes[RefetchCategory::Titles->value]['localization:en:title']['old'],
         );
         $this->assertSame(
             'Old English Description',
-            $changes[RefetchCategory::Descriptions->value]['description_english']['old'],
+            $changes[RefetchCategory::Descriptions->value]['localization:en:description']['old'],
         );
     }
 
@@ -215,7 +216,7 @@ class RefetchDiffBuilderTest extends TestCase
             'label' => 'English Title',
             'old' => 'Optional English title',
             'new' => null,
-        ], $changes[RefetchCategory::Titles->value]['work_name_english']);
+        ], $changes[RefetchCategory::Titles->value]['localization:en:title']);
     }
 
     public function test_site_id_diff_is_reviewable_and_missing_fetched_site_proposes_removal(): void
@@ -406,7 +407,7 @@ class RefetchDiffBuilderTest extends TestCase
         $product = Product::factory()->create();
         $tag = Genre::resolveByTitle('Original DLSite Tag');
         app(ProductGenreSync::class)->sync($product, [
-            Genre::LANGUAGE_JAPANESE => [$tag->getKey()],
+            DlsiteLanguage::Japanese->value => [$tag->getKey()],
         ], []);
         $tag->forceFill(['title' => 'Manually Renamed Tag'])->save();
 
@@ -417,11 +418,74 @@ class RefetchDiffBuilderTest extends TestCase
         );
         $tagChange = $changes['tags']['tags'];
 
-        $this->assertSame(['Manually Renamed Tag'], $tagChange['old']['japanese']);
-        $this->assertSame(['Original DLSite Tag'], $tagChange['new']['japanese']);
-        $this->assertSame(['Manually Renamed Tag'], $tagChange['details']['stale_japanese']);
-        $this->assertSame(['Original DLSite Tag'], $tagChange['details']['added_japanese']);
+        $this->assertSame(['Manually Renamed Tag'], $tagChange['old']['fetched']['ja']);
+        $this->assertSame(['Original DLSite Tag'], $tagChange['new']['fetched']['ja']);
+        $this->assertSame(['Manually Renamed Tag'], $tagChange['details']['stale']['ja']);
+        $this->assertSame(['Original DLSite Tag'], $tagChange['details']['added']['ja']);
         $this->assertFalse($tag->is(Genre::resolveByTitle('Original DLSite Tag')));
+    }
+
+    public function test_per_locale_tag_changes_use_canonical_order_insensitive_comparison(): void
+    {
+        $product = Product::factory()->create();
+        $oldJapanese = Genre::resolveByTitle('Old Japanese Tag');
+        $englishAlpha = Genre::resolveByTitle('English Alpha');
+        $englishBeta = Genre::resolveByTitle('English Beta');
+        app(ProductGenreSync::class)->sync($product, [
+            DlsiteLanguage::Japanese->value => [$oldJapanese->getKey()],
+            DlsiteLanguage::English->value => [$englishAlpha->getKey(), $englishBeta->getKey()],
+        ], []);
+
+        $changes = app(RefetchDiffBuilder::class)->build(
+            $product,
+            new DLSiteFetchResult(
+                workData: DLSiteWorkData::fromArray(['locales' => [
+                    'ja' => [
+                        'product_id' => $product->getKey(),
+                        'genre' => ['New Japanese Tag'],
+                    ],
+                    'en' => [
+                        'genre' => ['English Beta', 'English Alpha'],
+                    ],
+                ]]),
+                failedImages: [],
+            ),
+            null,
+        );
+
+        $tagChange = $changes[RefetchCategory::Tags->value]['tags'];
+        $this->assertSame([DlsiteLanguage::Japanese->value], $tagChange['details']['changed_locales']);
+        $this->assertSame([], $tagChange['details']['added'][DlsiteLanguage::English->value]);
+        $this->assertSame([], $tagChange['details']['stale'][DlsiteLanguage::English->value]);
+    }
+
+    public function test_tag_order_only_changes_do_not_create_a_refetch_change(): void
+    {
+        $product = Product::factory()->create();
+        $englishAlpha = Genre::resolveByTitle('English Alpha');
+        $englishBeta = Genre::resolveByTitle('English Beta');
+        app(ProductGenreSync::class)->sync($product, [
+            DlsiteLanguage::English->value => [$englishAlpha->getKey(), $englishBeta->getKey()],
+        ], []);
+
+        $changes = app(RefetchDiffBuilder::class)->build(
+            $product,
+            new DLSiteFetchResult(
+                workData: DLSiteWorkData::fromArray(['locales' => [
+                    'ja' => [
+                        'product_id' => $product->getKey(),
+                        'genre' => [],
+                    ],
+                    'en' => [
+                        'genre' => ['English Beta', 'English Alpha'],
+                    ],
+                ]]),
+                failedImages: [],
+            ),
+            null,
+        );
+
+        $this->assertArrayNotHasKey(RefetchCategory::Tags->value, $changes);
     }
 
     public function test_case_only_renamed_fetched_tag_remains_the_same_during_refetch(): void
@@ -429,7 +493,7 @@ class RefetchDiffBuilderTest extends TestCase
         $product = Product::factory()->create();
         $tag = Genre::resolveByTitle('ASMR');
         app(ProductGenreSync::class)->sync($product, [
-            Genre::LANGUAGE_JAPANESE => [$tag->getKey()],
+            DlsiteLanguage::Japanese->value => [$tag->getKey()],
         ], []);
         $tag->forceFill(['title' => 'Asmr'])->save();
 
@@ -523,18 +587,18 @@ class RefetchDiffBuilderTest extends TestCase
         $changes = app(RefetchDiffBuilder::class)->build(
             $product,
             new DLSiteFetchResult(
-                workData: DLSiteWorkData::fromArray([
-                    'japanese' => [
+                workData: DLSiteWorkData::fromArray(['locales' => [
+                    'ja' => [
                         'product_id' => $product->getKey(),
                         'genre' => ['0'],
                     ],
-                ]),
+                ]]),
                 failedImages: [],
             ),
             null,
         );
 
-        $this->assertSame(['0'], data_get($changes, 'tags.tags.new.japanese'));
-        $this->assertSame(['0'], data_get($changes, 'tags.tags.details.added_japanese'));
+        $this->assertSame(['0'], data_get($changes, 'tags.tags.new.fetched.ja'));
+        $this->assertSame(['0'], data_get($changes, 'tags.tags.details.added.ja'));
     }
 }

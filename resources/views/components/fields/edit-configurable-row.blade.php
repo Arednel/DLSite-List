@@ -1,14 +1,15 @@
 @props([
     'field',
     'product',
-    'englishTitle',
-    'englishDescription',
+    'localizedTitle',
+    'localizedDescription',
     'ageCategoryOptions',
     'contributorInputs',
     'fetchedGenres',
     'customGenres',
     'genreFetchedInput',
-    'genreFetchedLanguage',
+    'localizedTitleLabel' => null,
+    'localizedDescriptionLabel' => null,
     'genreCustomInput',
     'readonlyFieldValues' => [],
     'monthLabels' => [],
@@ -24,10 +25,14 @@
     @case('title')
         @if ($field['editable'])
             <x-fields.title-japanese :value="$product->work_name" required />
-            <x-fields.title-english :value="$englishTitle" />
+            @if ($localizedTitleLabel !== null)
+                <x-fields.title-localized :value="$localizedTitle" :label="$localizedTitleLabel" />
+            @endif
         @else
             <x-fields.readonly-text :label="__('Japanese Title')" :value="$product->work_name" />
-            <x-fields.readonly-text :label="__('English Title')" :value="$englishTitle" />
+            @if ($localizedTitleLabel !== null)
+                <x-fields.readonly-text :label="$localizedTitleLabel" :value="$localizedTitle" />
+            @endif
         @endif
     @break
 
@@ -156,18 +161,20 @@
         @endif
     @break
 
-    @case('description_english')
-        @if ($field['editable'])
-            <tr>
-                <td width="130" class="form-table-cell">{{ __('English Description') }}</td>
-                <td class="form-table-cell">
-                    <textarea id="description_english" name="description_english" class="form-control form-field-long" rows="4"
-                        cols="65" placeholder="{{ __('English description') }}">{{ old('description_english', $englishDescription) }}</textarea>
-                </td>
-                <td class="form-table-cell form-table-cell--long-spacer" aria-hidden="true"></td>
-            </tr>
-        @else
-            <x-fields.readonly-text :label="__('English Description')" :value="$readonlyFieldValues['description_english'] ?? null" rows="5" />
+    @case('description_localized')
+        @if ($localizedDescriptionLabel !== null)
+            @if ($field['editable'])
+                <tr>
+                    <td width="130" class="form-table-cell">{{ $localizedDescriptionLabel }}</td>
+                    <td class="form-table-cell">
+                        <textarea id="description_localized" name="description_localized" class="form-control form-field-long" rows="4"
+                            cols="65" placeholder="{{ $localizedDescriptionLabel }}">{{ old('description_localized', $localizedDescription) }}</textarea>
+                    </td>
+                    <td class="form-table-cell form-table-cell--long-spacer" aria-hidden="true"></td>
+                </tr>
+            @else
+                <x-fields.readonly-text :label="$localizedDescriptionLabel" :value="$readonlyFieldValues['description_localized'] ?? null" rows="5" />
+            @endif
         @endif
     @break
 
@@ -181,7 +188,7 @@
 
     @case('fetched_tags')
         @if ($field['editable'])
-            <x-fields.genre-fetched-editable :value="$genreFetchedInput" :language="$genreFetchedLanguage" />
+            <x-fields.genre-fetched-editable :value="$genreFetchedInput" />
         @else
             <x-fields.genre-readonly :label="__('Fetched Tags')" :genres="$fetchedGenres" :show-color-chips="$showReadonlyGenreColors" />
         @endif

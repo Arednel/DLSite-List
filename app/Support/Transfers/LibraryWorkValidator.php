@@ -2,6 +2,7 @@
 
 namespace App\Support\Transfers;
 
+use App\Enums\DlsiteLanguage;
 use App\Enums\ProductAgeCategory;
 use App\Enums\ProductContributorRole;
 use App\Enums\ProductFormat;
@@ -64,12 +65,11 @@ final class LibraryWorkValidator
             'product_code' => ['required', 'string', 'max:191', 'regex:/\A(?:RJ|BJ|VJ)\d+\z/'],
             'created_at' => ['sometimes', 'nullable', 'date', 'regex:' . LibraryData::UTC_DATE_PATTERN],
             'updated_at' => ['sometimes', 'nullable', 'date', 'regex:' . LibraryData::UTC_DATE_PATTERN],
-            'titles' => ['required', 'array:' . implode(',', LibraryData::FIELDS['titles'])],
-            'titles.work_name' => ['required', 'string', 'max:1000'],
-            'titles.work_name_english' => ['sometimes', 'nullable', 'string', 'max:1000'],
-            'descriptions' => ['sometimes', 'array:' . implode(',', LibraryData::FIELDS['descriptions'])],
-            'descriptions.description' => ['sometimes', 'nullable', 'string', 'max:65535', new MaxBytes(65535)],
-            'descriptions.description_english' => ['sometimes', 'nullable', 'string', 'max:65535', new MaxBytes(65535)],
+            'titles' => ['required', Rule::array(DlsiteLanguage::cases())],
+            'titles.' . DlsiteLanguage::Japanese->value => ['required', 'string', 'max:1000'],
+            'titles.*' => ['sometimes', 'nullable', 'string', 'max:1000'],
+            'descriptions' => ['sometimes', Rule::array(DlsiteLanguage::cases())],
+            'descriptions.*' => ['sometimes', 'nullable', 'string', 'max:65535', new MaxBytes(65535)],
             'details' => ['sometimes', 'array:' . implode(',', LibraryData::FIELDS['details'])],
             'details.maker_id' => ['sometimes', 'nullable', 'string', 'max:200'],
             'details.publisher' => ['sometimes', 'nullable', 'string', 'max:200'],
@@ -97,7 +97,7 @@ final class LibraryWorkValidator
             'listening.end_date.year' => ['sometimes', 'nullable', 'integer', 'min:1', 'max:9999'],
             'listening.end_date.month' => ['sometimes', 'nullable', 'integer', 'min:1', 'max:12'],
             'listening.end_date.day' => ['sometimes', 'nullable', 'integer', 'min:1', 'max:31'],
-            'tags' => ['sometimes', 'array:custom,jp,en'],
+            'tags' => ['sometimes', Rule::array(['custom', ...DlsiteLanguage::cases()])],
             'tags.*' => ['sometimes', 'array', 'max:10000'],
             'tags.*.*' => ['required', 'string', 'max:255'],
             'contributors' => ['sometimes', 'array:' . implode(',', array_column(ProductContributorRole::cases(), 'value'))],

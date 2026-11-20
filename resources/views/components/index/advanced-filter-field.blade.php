@@ -5,7 +5,7 @@
         <div class="filter-widget title">
             <label class="widget-header" for="filter_title">{{ __('Title') }}</label>
             <input id="filter_title" type="text" name="title" wire:model="draft.title"
-                placeholder="{{ __('Japanese or English title') }}">
+                placeholder="{{ __('Japanese or translated title') }}">
         </div>
     @break
 
@@ -110,11 +110,11 @@
         </div>
     @break
 
-    @case('description_english')
-        <div class="filter-widget description-english">
-            <label class="widget-header" for="filter_description_english">{{ __('English Description') }}</label>
-            <input id="filter_description_english" type="text" name="description_english"
-                wire:model="draft.description_english" placeholder="{{ __('English description text') }}">
+    @case('description_localized')
+        <div class="filter-widget description-localized">
+            <label class="widget-header" for="filter_description_localized">{{ $field['label'] }}</label>
+            <input id="filter_description_localized" type="text" name="description_localized"
+                wire:model="draft.description_localized" placeholder="{{ $field['label'] }}">
         </div>
     @break
 

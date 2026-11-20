@@ -2,6 +2,7 @@
 
 namespace Tests\Unit\Support\DLSite;
 
+use App\Enums\DlsiteLanguage;
 use App\Support\DLSite\DLSiteWorkFetcher;
 use App\Support\DLSite\DLSiteWorkUnavailableException;
 use Illuminate\Process\FakeProcessResult;
@@ -43,7 +44,8 @@ class DLSiteWorkFetcherTest extends TestCase
         Process::assertRanTimes(fn(): bool => true, DLSiteWorkFetcher::MAX_ATTEMPTS);
     }
 
-    public function test_it_stops_after_the_first_complete_attempt(): void
+    #[DataProvider('requestedLanguageLists')]
+    public function test_it_stops_after_the_first_complete_attempt_with_requested_languages(?array $languages, array $expected): void
     {
         Storage::fake('local');
         $jsonPath = Storage::disk('local')->path('Works/RJ123456.json');
@@ -56,9 +58,30 @@ class DLSiteWorkFetcherTest extends TestCase
             '*' => $this->manifest([]),
         ])->preventStrayProcesses();
 
-        app(DLSiteWorkFetcher::class)->fetch('RJ123456', $jsonPath);
+        app(DLSiteWorkFetcher::class)->fetch('RJ123456', $jsonPath, languages: $languages);
 
         Process::assertRanTimes(fn(): bool => true, 1);
+        Process::assertRan(fn($process): bool => $this->localeConfigFromCommand($process->command) === [
+            'canonical' => DlsiteLanguage::Japanese->value,
+            'locales' => $expected,
+        ]);
+    }
+
+    public static function requestedLanguageLists(): array
+    {
+        return [
+            'default' => [null, ['ja' => null, 'en' => 'en_US']],
+            'empty means Japanese only' => [[], ['ja' => null]],
+            'English only' => [['en'], ['ja' => null, 'en' => 'en_US']],
+            'Japanese and English' => [['ja', 'en'], ['ja' => null, 'en' => 'en_US']],
+        ];
+    }
+
+    public function test_it_rejects_an_unsupported_internal_language(): void
+    {
+        $this->expectException(\ValueError::class);
+
+        app(DLSiteWorkFetcher::class)->fetch('RJ123456', 'unused.json', languages: ['invalid']);
     }
 
     public function test_it_trusts_the_manifest_without_reconciling_image_files(): void
@@ -176,6 +199,10 @@ class DLSiteWorkFetcherTest extends TestCase
             }
             $this->assertNotContains('--image-output', $command);
             $this->assertSame(590, $process->timeout);
+            $this->assertSame([
+                'canonical' => DlsiteLanguage::Japanese->value,
+                'locales' => [DlsiteLanguage::Japanese->value => null],
+            ], $this->localeConfigFromCommand($command));
             file_put_contents($command[array_search('--json-output', $command) + 1], json_encode($original));
 
             return $this->manifest([]);
@@ -394,6 +421,18 @@ class DLSiteWorkFetcherTest extends TestCase
         $locale = ['product_id' => 'RJ01647180', 'maker_id' => 'RG49556', 'maker_name' => 'RaRo'];
 
         return ['japanese' => $locale, 'english' => $locale];
+    }
+
+    /**
+     * @param  list<string>  $command
+     * @return array{canonical: string, locales: array<string, ?string>}
+     */
+    private function localeConfigFromCommand(array $command): array
+    {
+        $index = array_search('--locale-config', $command, true);
+        $this->assertIsInt($index);
+
+        return json_decode($command[$index + 1], true, 512, JSON_THROW_ON_ERROR);
     }
 
     /**

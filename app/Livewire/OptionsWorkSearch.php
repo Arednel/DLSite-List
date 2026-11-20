@@ -2,8 +2,8 @@
 
 namespace App\Livewire;
 
+use App\Models\Option;
 use App\Models\Product;
-use App\Models\ProductLocalization;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Collection;
 use Illuminate\View\View;
@@ -47,18 +47,17 @@ class OptionsWorkSearch extends Component
     {
         $search = trim($this->search);
 
+        $metadataLanguage = Option::effectiveDlsiteMetadataLanguage();
         $query = Product::query()
-            ->select(['id', 'work_name as japanese_title'])
-            ->withAggregate([
-                'localizations as english_title' => fn(Builder $query) =>
-                $query->where('locale', ProductLocalization::LOCALE_ENGLISH),
-            ], 'title');
+            ->select(['id', 'work_name as japanese_title']);
+
+        $query->withLocalizedTitle($metadataLanguage->value);
 
         if ($search !== '') {
             $query->where(
                 fn(Builder $query) => $query
                     ->whereLike('id', "%{$search}%")
-                    ->orWhere(fn(Builder $query) => $query->filterTitle($search))
+                    ->orWhere(fn(Builder $query) => $query->filterTitle($search, $metadataLanguage->value))
             );
         }
 

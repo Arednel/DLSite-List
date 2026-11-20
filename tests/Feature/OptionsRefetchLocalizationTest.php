@@ -2,24 +2,115 @@
 
 namespace Tests\Feature;
 
+use App\Enums\DlsiteLanguage;
 use App\Enums\RefetchCategory;
 use App\Enums\UiLanguage;
 use App\Livewire\OptionsRefetchReview;
 use App\Livewire\OptionsResetDefaults;
+use App\Models\Genre;
 use App\Models\Option;
 use App\Models\Product;
 use App\Models\RefetchRun;
 use App\Models\RefetchWorkResult;
+use App\Support\DLSite\DLSiteFetchResult;
+use App\Support\DLSite\DLSiteWorkData;
+use App\Support\ProductGenreSync;
+use App\Support\Refetch\RefetchDiffBuilder;
 use App\Support\Refetch\RefetchService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\App;
 use Illuminate\Support\Facades\Bus;
+use Illuminate\Support\Facades\Storage;
 use Livewire\Livewire;
+use PHPUnit\Framework\Attributes\DataProvider;
 use Tests\TestCase;
 
 class OptionsRefetchLocalizationTest extends TestCase
 {
     use RefreshDatabase;
+
+    #[DataProvider('savedMetadataLabelFormats')]
+    public function test_saved_refetch_metadata_labels_follow_ui_language_without_changing_stored_keys(bool $legacyLabels): void
+    {
+        Bus::fake();
+        Option::setUiLanguage(UiLanguage::Japanese);
+        App::setLocale(UiLanguage::Japanese->value);
+        $product = Product::factory()
+            ->withTitles('Old Japanese title', 'Old English title')
+            ->withEnglishDescription('Old English description')
+            ->create(['description' => 'Old Japanese description']);
+        $changes = app(RefetchDiffBuilder::class)->build(
+            $product,
+            new DLSiteFetchResult(
+                workData: DLSiteWorkData::fromArray(['locales' => [
+                    'ja' => [
+                        'product_id' => $product->id,
+                        'work_name' => 'New Japanese title',
+                        'description' => 'New Japanese description',
+                    ],
+                    'en' => [
+                        'work_name' => 'New English title',
+                        'description' => 'New English description',
+                    ],
+                ]]),
+                failedImages: [],
+            ),
+            null,
+        );
+        $this->assertSame(['日本語タイトル', '英語タイトル'], array_column($changes['titles'], 'label'));
+        $this->assertSame(['日本語の説明', '英語の説明'], array_column($changes['descriptions'], 'label'));
+
+        if ($legacyLabels) {
+            $changes['titles']['work_name']['label'] = 'Japanese Title';
+            $changes['titles']['localization:en:title']['label'] = 'English Title';
+            $changes['descriptions']['description']['label'] = 'Japanese Description';
+            $changes['descriptions']['localization:en:description']['label'] = 'English Description';
+        }
+
+        $run = app(RefetchService::class)->createRun([$product->id], false);
+        $result = $run->results()->firstOrFail();
+        $result->forceFill(['status' => RefetchWorkResult::STATUS_FETCHED, 'changes' => $changes])->save();
+        $run->forceFill([
+            'status' => RefetchRun::STATUS_REVIEW,
+            'processed_count' => 1,
+            'fetched_count' => 1,
+            'completed_at' => now(),
+        ])->save();
+        $storedChanges = $result->fresh()->changes;
+
+        foreach (
+            [
+                'en' => ['Japanese Title', 'English', 'Japanese Description', 'English'],
+                'ja' => ['日本語タイトル', '英語', '日本語の説明', '英語'],
+                'zh_TW' => ['日文標題', '英文', '日文說明', '英文'],
+            ] as $locale => [$japaneseTitle, $englishTitle, $japaneseDescription, $englishDescription]
+        ) {
+            Option::setUiLanguage($locale);
+            App::setLocale($locale);
+
+            Livewire::test(OptionsRefetchReview::class, ['run' => $run])
+                ->call('showCategory', RefetchCategory::Titles->value)
+                ->assertSee($japaneseTitle)
+                ->assertSee($englishTitle)
+                ->assertSee('New Japanese title')
+                ->assertSee('New English title')
+                ->call('showCategory', RefetchCategory::Descriptions->value)
+                ->assertSee($japaneseDescription)
+                ->assertSee($englishDescription)
+                ->assertSee('New Japanese description')
+                ->assertSee('New English description');
+        }
+
+        $this->assertSame($storedChanges, $result->fresh()->changes);
+    }
+
+    public static function savedMetadataLabelFormats(): array
+    {
+        return [
+            'current localized labels' => [false],
+            'previous English-string keys' => [true],
+        ];
+    }
 
     public function test_japanese_options_tabs_localize_the_app_owned_surface_and_preserve_stable_values(): void
     {
@@ -41,6 +132,8 @@ class OptionsRefetchLocalizationTest extends TestCase
             ->assertSee('一覧表の列')
             ->assertSee('チェリー')
             ->assertSee('ブラック')
+            ->assertSee('日本語タイトルと、選択したDLsiteメタデータ言語のタイトルを表示します。日本語が選択されている場合、ローカライズされたタイトルは非表示になります。')
+            ->assertSee('選択したDLsiteメタデータ言語の説明を表示します。日本語が選択されている場合、このフィールドは非表示になります。')
             ->assertSee('aria-label="更新日をドラッグ"', false)
             ->assertSee('編集可能');
 
@@ -52,6 +145,88 @@ class OptionsRefetchLocalizationTest extends TestCase
             ->assertSee('aria-label="再取得のクリーンアップについて"', false)
             ->assertSee('作品IDまたはタイトルで検索...')
             ->assertSee('value="selected"', false);
+    }
+
+    public function test_refetch_tag_review_and_apply_ignore_order_only_locales(): void
+    {
+        Storage::fake('local');
+        $product = Product::factory()->create(['work_name' => 'ORDER_INSENSITIVE_TAG_WORK']);
+        $oldJapanese = Genre::resolveByTitle('Old Japanese Tag');
+        $englishAlpha = Genre::resolveByTitle('English Alpha');
+        $englishBeta = Genre::resolveByTitle('English Beta');
+        app(ProductGenreSync::class)->sync($product, [
+            'ja' => [$oldJapanese->getKey()],
+            'en' => [$englishAlpha->getKey(), $englishBeta->getKey()],
+        ], []);
+
+        $changes = app(RefetchDiffBuilder::class)->build(
+            $product,
+            new DLSiteFetchResult(
+                workData: DLSiteWorkData::fromArray(['locales' => [
+                    'ja' => [
+                        'product_id' => $product->getKey(),
+                        'genre' => ['New Japanese Tag'],
+                    ],
+                    'en' => [
+                        'genre' => ['English Beta', 'English Alpha'],
+                    ],
+                ]]),
+                failedImages: [],
+            ),
+            null,
+        );
+        $this->assertSame(['ja'], data_get($changes, 'tags.tags.details.changed_locales'));
+
+        $run = app(RefetchService::class)->createRun([$product->getKey()], false);
+        Storage::disk('local')->put(
+            "Refetch/{$run->id}/Works/{$product->getKey()}.json",
+            json_encode([
+                'locales' => [
+                    'ja' => [
+                        'product_id' => $product->getKey(),
+                        'work_name' => $product->work_name,
+                        'genre' => ['New Japanese Tag'],
+                    ],
+                    'en' => [
+                        'genre' => ['English Beta', 'English Alpha'],
+                    ],
+                ],
+            ], JSON_THROW_ON_ERROR),
+        );
+        $result = $run->results()->firstOrFail();
+        $result->forceFill([
+            'status' => RefetchWorkResult::STATUS_FETCHED,
+            'changes' => $changes,
+        ])->save();
+        $run->forceFill([
+            'status' => RefetchRun::STATUS_REVIEW,
+            'processed_count' => 1,
+            'fetched_count' => 1,
+            'completed_at' => now(),
+            'resolved_tabs' => collect(RefetchCategory::cases())
+                ->reject(fn(RefetchCategory $category): bool => $category === RefetchCategory::Tags)
+                ->map->value
+                ->values()
+                ->all(),
+        ])->save();
+
+        Livewire::test(OptionsRefetchReview::class, ['run' => $run])
+            ->call('showCategory', RefetchCategory::Tags->value)
+            ->assertSee('New Japanese Tag')
+            ->assertDontSee('English Alpha')
+            ->assertDontSee('English Beta');
+
+        app(RefetchService::class)->applyTab(
+            $run->fresh(),
+            RefetchCategory::Tags,
+            RefetchService::ACTION_OVERWRITE,
+        );
+
+        $this->assertSame(['New Japanese Tag'], $product->fetchedGenresForLanguage(DlsiteLanguage::Japanese)->pluck('genres.title')->all());
+        $this->assertEqualsCanonicalizing(
+            ['English Alpha', 'English Beta'],
+            $product->fetchedGenresForLanguage(DlsiteLanguage::English)->pluck('genres.title')->all(),
+        );
     }
 
     public function test_japanese_refetch_review_localizes_controls_but_keeps_content_and_action_values_raw(): void
@@ -74,14 +249,19 @@ class OptionsRefetchLocalizationTest extends TestCase
                 RefetchCategory::Tags->value => [
                     'tags' => [
                         'label' => 'Fetched Tags',
-                        'old' => ['RAW_STALE_JP_TOKEN'],
-                        'new' => ['RAW_JP_TAG_TOKEN', 'RAW_EN_TAG_TOKEN'],
+                        'old' => [
+                            'fetched' => ['ja' => ['RAW_STALE_JP_TOKEN'], 'en' => []],
+                            'custom' => ['RAW_CUSTOM_TAG_TOKEN'],
+                        ],
+                        'new' => [
+                            'fetched' => ['ja' => ['RAW_JP_TAG_TOKEN'], 'en' => ['RAW_EN_TAG_TOKEN']],
+                            'custom' => ['RAW_CUSTOM_TAG_TOKEN'],
+                        ],
                         'details' => [
-                            'added_japanese' => ['RAW_JP_TAG_TOKEN'],
-                            'added_english' => ['RAW_EN_TAG_TOKEN'],
-                            'stale_japanese' => ['RAW_STALE_JP_TOKEN'],
-                            'stale_english' => [],
-                            'custom_to_fetched' => ['RAW_CUSTOM_TAG_TOKEN'],
+                            'changed_locales' => ['ja', 'en'],
+                            'added' => ['ja' => ['RAW_JP_TAG_TOKEN'], 'en' => ['RAW_EN_TAG_TOKEN']],
+                            'stale' => ['ja' => ['RAW_STALE_JP_TOKEN'], 'en' => []],
+                            'custom_to_fetched' => ['ja' => ['RAW_CUSTOM_TAG_TOKEN'], 'en' => []],
                         ],
                     ],
                 ],
@@ -120,10 +300,22 @@ class OptionsRefetchLocalizationTest extends TestCase
 
         Livewire::test(OptionsRefetchReview::class, ['run' => $run])
             ->call('showCategory', RefetchCategory::Tags->value)
-            ->assertSee('新規JP')
+            ->assertSee('日本語')
+            ->assertSee('追加')
+            ->assertSee('取得されなくなったタグ')
+            ->assertDontSee('取得タグとして返されたカスタムタグ')
+            ->assertSee('RAW_JP_TAG_TOKEN');
+
+        $tagResultId = $run->results()->where('product_id', $fetchedProduct->id)->value('id');
+        Livewire::test(OptionsRefetchReview::class, ['run' => $run])
+            ->call('showCategory', RefetchCategory::Tags->value)
+            ->set("actions.tags.{$tagResultId}.ja", RefetchService::ACTION_DETAILED)
+            ->assertSee('新しいタグ')
+            ->assertSee('取得されなくなったタグ')
+            ->assertSee('取得タグとして返されたカスタムタグ')
+            ->assertSee('RAW_CUSTOM_TAG_TOKEN')
             ->assertSee('取得済みタグとして追加')
             ->assertSee('カスタムタグに変更')
-            ->assertSee('RAW_JP_TAG_TOKEN')
             ->assertSee('value="move_to_custom"', false);
 
         Livewire::test(OptionsRefetchReview::class, ['run' => $run])

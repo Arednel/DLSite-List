@@ -49,11 +49,11 @@ final readonly class ReturnTarget
     ): self {
         $results ??= app(ProductIndexResults::class);
         $query = $this->queryWithoutPage();
-        [$perPage, $descriptionSearchColumns, $searchTags, $ratingScale] = $this->indexPaginationAndSearchPolicy($results, $query, $perPage);
+        [$perPage, $descriptionSearchColumns, $searchTags, $ratingScale, $metadataLanguage] = $this->indexPaginationAndSearchPolicy($results, $query, $perPage);
         $savedPage = self::normalizePage($this->query['page'] ?? null) ?? 1;
         $filters = ProductIndexFilters::fromQuery($query);
 
-        if ($results->pageContainsProduct($filters, $product, $perPage, $savedPage, $ratingScale, $descriptionSearchColumns, $searchTags)) {
+        if ($results->pageContainsProduct($filters, $product, $perPage, $savedPage, $ratingScale, $descriptionSearchColumns, $searchTags, $metadataLanguage)) {
             if ($savedPage > 1 && $perPage !== Option::INDEX_PER_PAGE_UNLIMITED) {
                 $query['page'] = (string) $savedPage;
             }
@@ -65,7 +65,7 @@ final readonly class ReturnTarget
         }
 
         if (! $visibilityMayHaveChanged) {
-            $page = $results->pageForProduct($filters, $product, $perPage, $ratingScale, $descriptionSearchColumns, $searchTags);
+            $page = $results->pageForProduct($filters, $product, $perPage, $ratingScale, $descriptionSearchColumns, $searchTags, $metadataLanguage);
 
             if ($page !== null) {
                 if ($page > 1) {
@@ -79,7 +79,7 @@ final readonly class ReturnTarget
             }
         }
 
-        $query = $this->queryForVisibleProduct($product, $results, $ratingScale, $descriptionSearchColumns, $searchTags);
+        $query = $this->queryForVisibleProduct($product, $results, $ratingScale, $descriptionSearchColumns, $searchTags, $metadataLanguage);
         $page = $results->pageForProduct(
             ProductIndexFilters::fromQuery($query),
             $product,
@@ -87,6 +87,7 @@ final readonly class ReturnTarget
             $ratingScale,
             $descriptionSearchColumns,
             $searchTags,
+            $metadataLanguage,
         );
 
         if ($page !== null && $page > 1) {
@@ -111,13 +112,13 @@ final readonly class ReturnTarget
             return new self(query: $query);
         }
 
-        [$perPage, $descriptionSearchColumns, $searchTags, $ratingScale] = $this->indexPaginationAndSearchPolicy($results, $query, $perPage);
+        [$perPage, $descriptionSearchColumns, $searchTags, $ratingScale, $metadataLanguage] = $this->indexPaginationAndSearchPolicy($results, $query, $perPage);
 
         if ($perPage === Option::INDEX_PER_PAGE_UNLIMITED) {
             return new self(query: $query);
         }
 
-        $lastPage = $results->lastPage(ProductIndexFilters::fromQuery($query), $perPage, $ratingScale, $descriptionSearchColumns, $searchTags);
+        $lastPage = $results->lastPage(ProductIndexFilters::fromQuery($query), $perPage, $ratingScale, $descriptionSearchColumns, $searchTags, $metadataLanguage);
         $page = min($savedPage, $lastPage ?? 1);
 
         if ($page > 1) {
@@ -180,7 +181,7 @@ final readonly class ReturnTarget
     }
 
     /**
-     * @return array{0: int|string, 1: list<string>, 2: bool, 3: RatingScale}
+     * @return array{0: int|string, 1: list<string>, 2: bool, 3: RatingScale, 4: ?string}
      */
     private function indexPaginationAndSearchPolicy(
         ProductIndexResults $results,
@@ -195,6 +196,9 @@ final readonly class ReturnTarget
                 [],
                 true,
                 self::queryUsesDLSiteRating($query) ? Option::ratingScale() : RatingScale::Ten,
+                self::queryUsesMetadataLanguage($query)
+                    ? Option::effectiveDlsiteMetadataLanguage()->value
+                    : null,
             ];
         }
 
@@ -206,10 +210,12 @@ final readonly class ReturnTarget
                 ? $results->descriptionSearchColumns(
                     $settings->visibleIndexFields,
                     $settings->searchHiddenDescriptionsEnabled,
+                    $settings->metadataLanguage,
                 )
                 : [],
             ! $hasSearch || in_array('tags', $settings->visibleIndexFields, true),
             $settings->ratingScale,
+            $settings->metadataLanguage,
         ];
     }
 
@@ -220,12 +226,21 @@ final readonly class ReturnTarget
             || ($query['sort_second_field'] ?? null) === ProductIndexSortField::DLSiteRating->value;
     }
 
+    private static function queryUsesMetadataLanguage(array $query): bool
+    {
+        return filled($query['genre'] ?? null)
+            || filled($query['title'] ?? null)
+            || filled($query['description_localized'] ?? null)
+            || filled($query['tags'] ?? null);
+    }
+
     private function queryForVisibleProduct(
         Product $product,
         ProductIndexResults $results,
         RatingScale $ratingScale,
         array $descriptionSearchColumns,
         bool $searchTags,
+        ?string $metadataLanguage,
     ): array {
         $query = $this->queryWithoutPage();
         $filters = ProductIndexFilters::fromQuery($query);
@@ -236,7 +251,7 @@ final readonly class ReturnTarget
 
         if (
             $activeFilterGroups === []
-            || $results->containsProduct($filters, $product, $ratingScale, $descriptionSearchColumns, $searchTags)
+            || $results->containsProduct($filters, $product, $ratingScale, $descriptionSearchColumns, $searchTags, $metadataLanguage)
         ) {
             return $filters->toQuery();
         }
@@ -250,7 +265,7 @@ final readonly class ReturnTarget
         foreach ($activeFilterGroups as $filterGroup) {
             $groupQuery = Arr::only($query, $filterGroup);
 
-            if (! $results->containsProduct(ProductIndexFilters::fromQuery($groupQuery), $product, $ratingScale, $descriptionSearchColumns, $searchTags)) {
+            if (! $results->containsProduct(ProductIndexFilters::fromQuery($groupQuery), $product, $ratingScale, $descriptionSearchColumns, $searchTags, $metadataLanguage)) {
                 $query = Arr::except($query, $filterGroup);
             }
         }

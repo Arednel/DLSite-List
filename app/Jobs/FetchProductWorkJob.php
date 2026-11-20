@@ -29,6 +29,7 @@ class FetchProductWorkJob implements ShouldQueue
     public function __construct(
         public int $runId,
         public string $productId,
+        public array $languages,
     ) {}
 
     public function handle(RefetchService $service): void
@@ -49,7 +50,7 @@ class FetchProductWorkJob implements ShouldQueue
             return;
         }
 
-        $service->fetchAndRecordResult($result);
+        $service->fetchAndRecordResult($result, $this->languages);
     }
 
     public function failed(?Throwable $exception): void

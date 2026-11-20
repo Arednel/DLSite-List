@@ -3,7 +3,7 @@
 namespace Tests\Unit\Models;
 
 use App\Enums\ContentFocus;
-use App\Enums\FetchedTagLanguage;
+use App\Enums\DlsiteLanguage;
 use App\Enums\ProductField;
 use App\Enums\ProductIndexSortField;
 use App\Enums\RatingScale;
@@ -13,7 +13,6 @@ use App\Models\Option;
 use App\Support\ProductFieldLayout;
 use App\Support\ProductIndexContentOverflow;
 use Illuminate\Foundation\Testing\RefreshDatabase;
-use Illuminate\Support\Facades\App;
 use Illuminate\Support\Facades\DB;
 use Tests\TestCase;
 
@@ -76,32 +75,71 @@ class OptionMetadataSettingsTest extends TestCase
         $this->assertDatabaseMissing('options', ['key' => Option::UI_LANGUAGE]);
     }
 
-    public function test_fetched_tag_language_follows_ui_by_default_and_can_be_selected_independently(): void
+    public function test_dlsite_metadata_language_follows_ui_by_default_and_can_be_selected_independently(): void
     {
-        $this->assertTrue(Option::fetchedTagLanguageFollowsUi());
-        $this->assertSame(FetchedTagLanguage::English, Option::fetchedTagLanguage());
-        $this->assertSame(FetchedTagLanguage::English, Option::effectiveFetchedTagLanguage());
+        $this->assertTrue(Option::dlsiteMetadataLanguageFollowsUi());
+        $this->assertSame(DlsiteLanguage::English, Option::dlsiteMetadataLanguage());
+        $this->assertSame(DlsiteLanguage::English, Option::effectiveDlsiteMetadataLanguage());
 
-        App::setLocale(UiLanguage::Japanese->value);
+        Option::setUiLanguage(UiLanguage::Japanese);
 
-        $this->assertSame(FetchedTagLanguage::Japanese, Option::effectiveFetchedTagLanguage());
+        $this->assertSame(DlsiteLanguage::Japanese, Option::effectiveDlsiteMetadataLanguage());
 
-        Option::setFetchedTagLanguageFollowsUi(false);
-        Option::setFetchedTagLanguage(FetchedTagLanguage::English);
+        Option::setDlsiteMetadataLanguageFollowsUi(false);
+        Option::setDlsiteMetadataLanguage(DlsiteLanguage::English);
 
-        $this->assertFalse(Option::fetchedTagLanguageFollowsUi());
-        $this->assertSame(FetchedTagLanguage::English, Option::effectiveFetchedTagLanguage());
+        $this->assertFalse(Option::dlsiteMetadataLanguageFollowsUi());
+        $this->assertSame(DlsiteLanguage::English, Option::effectiveDlsiteMetadataLanguage());
 
-        Option::setFetchedTagLanguage('unsupported');
+        Option::setDlsiteMetadataLanguage('unsupported');
 
-        $this->assertSame(FetchedTagLanguage::English, Option::fetchedTagLanguage());
+        $this->assertSame(DlsiteLanguage::English, Option::dlsiteMetadataLanguage());
     }
 
-
-    public function test_effective_fetched_tag_language_reads_its_options_in_one_query(): void
+    public function test_effective_fetch_languages_always_include_japanese_and_the_displayed_language(): void
     {
-        Option::setFetchedTagLanguageFollowsUi(false);
-        Option::setFetchedTagLanguage(FetchedTagLanguage::Japanese);
+        $this->assertSame([DlsiteLanguage::English], Option::dlsiteMetadataFetchLanguages());
+        Option::setUiLanguage(UiLanguage::Japanese);
+        Option::query()->updateOrCreate(
+            ['key' => Option::DLSITE_METADATA_FETCH_LANGUAGES],
+            ['value' => json_encode(['jp', 'en', 'en', 'unsupported', null], JSON_THROW_ON_ERROR)],
+        );
+        $this->assertSame([DlsiteLanguage::English], Option::dlsiteMetadataFetchLanguages());
+
+        Option::setDlsiteMetadataFetchLanguages([
+            DlsiteLanguage::Japanese,
+            DlsiteLanguage::English,
+            DlsiteLanguage::English->value,
+        ]);
+        $this->assertSame([DlsiteLanguage::English], Option::dlsiteMetadataFetchLanguages());
+
+        $this->assertSame(
+            [DlsiteLanguage::Japanese, DlsiteLanguage::English],
+            Option::effectiveDlsiteMetadataFetchLanguages(),
+        );
+
+        Option::setDlsiteMetadataLanguageFollowsUi(false);
+        Option::setDlsiteMetadataLanguage(DlsiteLanguage::Japanese);
+        Option::setDlsiteMetadataFetchLanguages([]);
+
+        $this->assertSame([], Option::dlsiteMetadataFetchLanguages());
+        $this->assertSame([DlsiteLanguage::Japanese], Option::effectiveDlsiteMetadataFetchLanguages());
+
+        Option::setDlsiteMetadataLanguage(DlsiteLanguage::English);
+        $this->assertSame([DlsiteLanguage::Japanese, DlsiteLanguage::English], Option::effectiveDlsiteMetadataFetchLanguages());
+    }
+
+    public function test_dlsite_metadata_fetch_language_setter_rejects_unsupported_values(): void
+    {
+        $this->expectException(\ValueError::class);
+
+        Option::setDlsiteMetadataFetchLanguages(['unsupported']);
+    }
+
+    public function test_effective_dlsite_metadata_language_reads_its_options_in_one_query(): void
+    {
+        Option::setDlsiteMetadataLanguageFollowsUi(false);
+        Option::setDlsiteMetadataLanguage(DlsiteLanguage::Japanese);
 
         $optionQueries = [];
         DB::listen(function ($query) use (&$optionQueries): void {
@@ -110,21 +148,41 @@ class OptionMetadataSettingsTest extends TestCase
             }
         });
 
-        $this->assertSame(FetchedTagLanguage::Japanese, Option::effectiveFetchedTagLanguage());
+        $this->assertSame(DlsiteLanguage::Japanese, Option::effectiveDlsiteMetadataLanguage());
         $this->assertCount(1, $optionQueries, implode("\n", $optionQueries));
     }
 
-    public function test_fetched_tag_language_settings_can_be_reset_to_defaults(): void
+    public function test_effective_dlsite_metadata_fetch_languages_reads_its_options_in_one_query(): void
     {
-        Option::setFetchedTagLanguageFollowsUi(false);
-        Option::setFetchedTagLanguage(FetchedTagLanguage::Japanese);
+        Option::setUiLanguage(UiLanguage::Japanese);
+        Option::setDlsiteMetadataFetchLanguages([DlsiteLanguage::English]);
 
-        Option::resetFetchedTagLanguageSettingsToDefault();
+        $optionQueries = [];
+        DB::listen(function ($query) use (&$optionQueries): void {
+            if (str_contains(strtolower($query->sql), 'options')) {
+                $optionQueries[] = $query->sql;
+            }
+        });
 
-        $this->assertTrue(Option::fetchedTagLanguageFollowsUi());
-        $this->assertSame(FetchedTagLanguage::English, Option::fetchedTagLanguage());
-        $this->assertDatabaseMissing('options', ['key' => Option::FETCHED_TAG_LANGUAGE_FOLLOWS_UI]);
-        $this->assertDatabaseMissing('options', ['key' => Option::FETCHED_TAG_LANGUAGE]);
+        $this->assertSame(
+            [DlsiteLanguage::Japanese, DlsiteLanguage::English],
+            Option::effectiveDlsiteMetadataFetchLanguages(),
+        );
+        $this->assertCount(1, $optionQueries, implode("\n", $optionQueries));
+    }
+
+    public function test_dlsite_metadata_language_settings_can_be_reset_to_defaults(): void
+    {
+        Option::setDlsiteMetadataLanguageFollowsUi(false);
+        Option::setDlsiteMetadataLanguage(DlsiteLanguage::Japanese);
+
+        Option::resetDlsiteMetadataLanguageSettingsToDefault();
+
+        $this->assertTrue(Option::dlsiteMetadataLanguageFollowsUi());
+        $this->assertSame(DlsiteLanguage::English, Option::dlsiteMetadataLanguage());
+        $this->assertDatabaseMissing('options', ['key' => Option::DLSITE_METADATA_LANGUAGE_FOLLOWS_UI]);
+        $this->assertDatabaseMissing('options', ['key' => Option::DLSITE_METADATA_LANGUAGE]);
+        $this->assertDatabaseMissing('options', ['key' => Option::DLSITE_METADATA_FETCH_LANGUAGES]);
     }
 
     public function test_content_focus_defaults_to_general_and_can_be_saved_and_reset(): void
@@ -329,7 +387,7 @@ class OptionMetadataSettingsTest extends TestCase
         Option::setIndexFieldLayout([
             ['field' => 'description', 'visible' => true],
             ['field' => ProductField::DescriptionJapanese->value, 'visible' => true],
-            ['field' => ProductField::DescriptionEnglish->value, 'visible' => false],
+            ['field' => ProductField::DescriptionLocalized->value, 'visible' => false],
             ['field' => ProductField::Score->value, 'visible' => false],
         ]);
 
@@ -343,7 +401,7 @@ class OptionMetadataSettingsTest extends TestCase
         $this->assertTrue($layout[1]['notes_visible']);
         $this->assertSame(ProductField::DescriptionJapanese->value, $layout[2]['field']);
         $this->assertTrue($layout[2]['visible']);
-        $this->assertSame(ProductField::DescriptionEnglish->value, $layout[3]['field']);
+        $this->assertSame(ProductField::DescriptionLocalized->value, $layout[3]['field']);
         $this->assertFalse($layout[3]['visible']);
         $this->assertSame(ProductField::Score->value, $layout[4]['field']);
         $this->assertFalse($layout[4]['visible']);
@@ -389,6 +447,95 @@ class OptionMetadataSettingsTest extends TestCase
         $this->assertArrayNotHasKey('width', $stored[ProductField::Title->value]);
         $this->assertSame(ProductFieldLayout::INDEX_WIDTH_MODE_CUSTOM, $stored[ProductField::Tags->value]['width_mode']);
         $this->assertSame('180px', $stored[ProductField::Tags->value]['width']);
+    }
+
+    public function test_dlsite_metadata_option_key_migration_renames_persisted_keys_and_rolls_back(): void
+    {
+        DB::table('options')->insert([
+            ['key' => 'fetched_tag_language_follows_ui', 'value' => '0'],
+            ['key' => 'fetched_tag_language', 'value' => 'ja'],
+        ]);
+
+        $migration = require database_path('migrations/2026_11_19_000000_rename_dlsite_metadata_option_keys.php');
+        $migration->up();
+
+        $this->assertDatabaseMissing('options', ['key' => 'fetched_tag_language_follows_ui']);
+        $this->assertDatabaseMissing('options', ['key' => 'fetched_tag_language']);
+        $this->assertDatabaseHas('options', [
+            'key' => Option::DLSITE_METADATA_LANGUAGE_FOLLOWS_UI,
+            'value' => '0',
+        ]);
+        $this->assertDatabaseHas('options', [
+            'key' => Option::DLSITE_METADATA_LANGUAGE,
+            'value' => 'ja',
+        ]);
+
+        $migration->down();
+
+        $this->assertDatabaseHas('options', ['key' => 'fetched_tag_language_follows_ui', 'value' => '0']);
+        $this->assertDatabaseHas('options', ['key' => 'fetched_tag_language', 'value' => 'ja']);
+        $this->assertDatabaseMissing('options', ['key' => Option::DLSITE_METADATA_LANGUAGE_FOLLOWS_UI]);
+        $this->assertDatabaseMissing('options', ['key' => Option::DLSITE_METADATA_LANGUAGE]);
+    }
+
+    public function test_dlsite_metadata_option_key_migration_preserves_existing_canonical_rows_on_collision(): void
+    {
+        DB::table('options')->insert([
+            ['key' => 'fetched_tag_language', 'value' => 'ja'],
+            ['key' => Option::DLSITE_METADATA_LANGUAGE, 'value' => 'en'],
+        ]);
+
+        $migration = require database_path('migrations/2026_11_19_000000_rename_dlsite_metadata_option_keys.php');
+        $migration->up();
+
+        $this->assertDatabaseMissing('options', ['key' => 'fetched_tag_language']);
+        $this->assertDatabaseHas('options', [
+            'key' => Option::DLSITE_METADATA_LANGUAGE,
+            'value' => 'en',
+        ]);
+    }
+
+    public function test_localized_description_field_migration_updates_all_saved_layouts_without_reordering(): void
+    {
+        $keys = [
+            Option::INDEX_FIELD_LAYOUT,
+            Option::EDIT_FIELD_LAYOUT,
+            Option::FILTER_FIELD_LAYOUT,
+            Option::QUICK_ADD_FIELD_LAYOUT,
+            Option::BULK_IMPORT_FIELD_LAYOUT,
+            Option::CUSTOM_QUICK_ADD_FIELD_LAYOUT,
+        ];
+        $legacy = [
+            ['field' => 'notes', 'visible' => false],
+            ['field' => 'description_english', 'visible' => true, 'editable' => true],
+            ['field' => 'title', 'visible' => true],
+        ];
+
+        foreach ($keys as $key) {
+            DB::table('options')->insert([
+                'key' => $key,
+                'value' => json_encode($legacy, JSON_THROW_ON_ERROR),
+            ]);
+        }
+
+        $migration = require database_path('migrations/2026_11_19_000001_rename_localized_description_field_in_saved_layouts.php');
+        $migration->up();
+
+        foreach ($keys as $key) {
+            $stored = json_decode(DB::table('options')->where('key', $key)->value('value'), true);
+            $this->assertSame([
+                ['field' => 'notes', 'visible' => false],
+                ['field' => ProductField::DescriptionLocalized->value, 'visible' => true, 'editable' => true],
+                ['field' => 'title', 'visible' => true],
+            ], $stored, $key);
+        }
+
+        $migration->down();
+
+        foreach ($keys as $key) {
+            $stored = json_decode(DB::table('options')->where('key', $key)->value('value'), true);
+            $this->assertSame($legacy, $stored, $key);
+        }
     }
 
     public function test_product_code_field_migration_preserves_existing_custom_layouts(): void
@@ -600,7 +747,7 @@ class OptionMetadataSettingsTest extends TestCase
         Option::setIndexFieldLayout([
             ['field' => ProductField::Title->value, 'visible' => true, 'notes_visible' => false],
             ['field' => ProductField::DescriptionJapanese->value, 'visible' => true],
-            ['field' => ProductField::DescriptionEnglish->value, 'visible' => true],
+            ['field' => ProductField::DescriptionLocalized->value, 'visible' => true],
             ['field' => ProductField::Score->value, 'visible' => false],
         ]);
         Option::setFilterFieldLayout([
@@ -637,9 +784,9 @@ class OptionMetadataSettingsTest extends TestCase
 
         $this->assertSame(250, $settings->perPage);
         $this->assertSame(ProductField::DescriptionJapanese->value, $settings->indexColumns[2]['field']);
-        $this->assertSame(ProductField::DescriptionEnglish->value, $settings->indexColumns[3]['field']);
+        $this->assertSame(ProductField::DescriptionLocalized->value, $settings->indexColumns[3]['field']);
         $this->assertContains(ProductField::DescriptionJapanese->value, $settings->visibleIndexFields);
-        $this->assertContains(ProductField::DescriptionEnglish->value, $settings->visibleIndexFields);
+        $this->assertContains(ProductField::DescriptionLocalized->value, $settings->visibleIndexFields);
         $this->assertNotContains(ProductField::Score->value, $settings->visibleIndexFields);
         $this->assertFalse($settings->titleNotesVisible);
         $filterFieldIds = collect($settings->filterFields)->pluck('field')->all();
@@ -856,7 +1003,7 @@ class OptionMetadataSettingsTest extends TestCase
     {
         $resetCases = [
             [[Option::INDEX_PER_PAGE], fn() => Option::resetIndexPerPageToDefault()],
-            [[Option::FETCHED_TAG_LANGUAGE_FOLLOWS_UI, Option::FETCHED_TAG_LANGUAGE], fn() => Option::resetFetchedTagLanguageSettingsToDefault()],
+            [[Option::DLSITE_METADATA_LANGUAGE_FOLLOWS_UI, Option::DLSITE_METADATA_LANGUAGE], fn() => Option::resetDlsiteMetadataLanguageSettingsToDefault()],
             [[Option::INDEX_SEARCH_HIDDEN_DESCRIPTIONS_ENABLED], fn() => Option::resetIndexSearchHiddenDescriptionsEnabledToDefault()],
             [[Option::RATING_SCALE, Option::RATING_VISUAL_STYLE], fn() => Option::resetRatingSettingsToDefault()],
             [[Option::TAG_AUTOCOMPLETE_ORDER, Option::SERIES_AUTOCOMPLETE_ORDER], fn() => Option::resetAutocompleteToDefault()],

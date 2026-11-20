@@ -4,7 +4,8 @@ namespace App\Support\Transfers;
 
 use App\Enums\AutocompleteOrder;
 use App\Enums\ContentFocus;
-use App\Enums\FetchedTagLanguage;
+use App\Enums\DlsiteLanguage;
+use App\Enums\ProductField;
 use App\Enums\ProductIndexSortField;
 use App\Enums\RatingScale;
 use App\Enums\RatingVisualStyle;
@@ -23,8 +24,9 @@ final class PortableOptions
 {
     private const PORTABLE_KEYS = [
         Option::UI_LANGUAGE,
-        Option::FETCHED_TAG_LANGUAGE_FOLLOWS_UI,
-        Option::FETCHED_TAG_LANGUAGE,
+        Option::DLSITE_METADATA_LANGUAGE_FOLLOWS_UI,
+        Option::DLSITE_METADATA_LANGUAGE,
+        Option::DLSITE_METADATA_FETCH_LANGUAGES,
         Option::CONTENT_FOCUS,
         Option::INDEX_PER_PAGE,
         Option::INDEX_SEARCH_HIDDEN_DESCRIPTIONS_ENABLED,
@@ -94,6 +96,9 @@ final class PortableOptions
         if ($value instanceof BackedEnum) {
             return $value->value;
         }
+        if ($key === Option::DLSITE_METADATA_FETCH_LANGUAGES) {
+            return array_column($value, 'value');
+        }
         if (isset($this->layouts()[$key])) {
             return ProductFieldLayout::storageLayout($value, $this->layouts()[$key]);
         }
@@ -101,8 +106,38 @@ final class PortableOptions
         return $key === Option::INDEX_SORT_FIELD_LAYOUT ? ProductIndexSortField::storageLayout($value) : $value;
     }
 
-    /** Normalize field names from released schema v1 Options archives before review. */
-    public function normalizeLegacy(string $key, mixed $value): mixed
+    /** Normalize historical portable Option keys before current-key validation. */
+    public function normalizeKeyCompatibility(string $key): string
+    {
+        return match ($key) {
+            'fetched_tag_language_follows_ui' => Option::DLSITE_METADATA_LANGUAGE_FOLLOWS_UI,
+            'fetched_tag_language' => Option::DLSITE_METADATA_LANGUAGE,
+            default => $key,
+        };
+    }
+
+    /** Normalize compatibility values that can appear in any supported archive version. */
+    public function normalizeCompatibility(string $key, mixed $value): mixed
+    {
+        if ($key === Option::DLSITE_METADATA_LANGUAGE && $value === 'jp') {
+            return DlsiteLanguage::Japanese->value;
+        }
+        if (isset($this->layouts()[$key]) && is_array($value)) {
+            foreach ($value as &$row) {
+                if (is_array($row) && is_string($row['field'] ?? null)) {
+                    if ($row['field'] === 'description_english') {
+                        $row['field'] = ProductField::DescriptionLocalized->value;
+                    }
+                }
+            }
+            unset($row);
+        }
+
+        return $value;
+    }
+
+    /** Normalize field names that only existed in transfer schema v1. */
+    public function normalizeSchemaV1(string $key, mixed $value): mixed
     {
         if (! is_array($value)) {
             return $value;
@@ -143,7 +178,7 @@ final class PortableOptions
     {
         return match ($key) {
             Option::UI_LANGUAGE => ['value' => ['required', Rule::enum(UiLanguage::class)]],
-            Option::FETCHED_TAG_LANGUAGE => ['value' => ['required', Rule::enum(FetchedTagLanguage::class)]],
+            Option::DLSITE_METADATA_LANGUAGE => ['value' => ['required', Rule::enum(DlsiteLanguage::class)]],
             Option::CONTENT_FOCUS => ['value' => ['required', Rule::enum(ContentFocus::class)]],
             Option::RATING_SCALE => ['value' => ['required', Rule::enum(RatingScale::class)]],
             Option::RATING_VISUAL_STYLE => ['value' => ['required', Rule::enum(RatingVisualStyle::class)]],
@@ -157,7 +192,7 @@ final class PortableOptions
                     ),
                 ],
             ],
-            Option::FETCHED_TAG_LANGUAGE_FOLLOWS_UI,
+            Option::DLSITE_METADATA_LANGUAGE_FOLLOWS_UI,
             Option::INDEX_SEARCH_HIDDEN_DESCRIPTIONS_ENABLED,
             Option::INDEX_IMAGE_VIEWER_ENABLED,
             Option::AUTO_SERIES_FROM_TITLE_NAME,
@@ -171,6 +206,14 @@ final class PortableOptions
             Option::PRODUCT_FORM_THEME => ['value' => ['required', Rule::in(array_keys(Option::PRODUCT_FORM_THEME_OPTIONS))]],
             Option::AUTHENTICATION_PAGE_THEME => ['value' => ['required', Rule::in(array_keys(Option::AUTHENTICATION_PAGE_THEME_OPTIONS))]],
             Option::PRODUCT_FORM_MODAL_COMPLETION_ACTION => ['value' => ['required', Rule::in(array_keys(Option::PRODUCT_FORM_MODAL_COMPLETION_OPTIONS))]],
+            Option::DLSITE_METADATA_FETCH_LANGUAGES => [
+                'value' => ['array', 'list'],
+                'value.*' => [
+                    'required',
+                    Rule::enum(DlsiteLanguage::class)->except(DlsiteLanguage::Japanese),
+                    'distinct:strict',
+                ],
+            ],
             Option::OPTIONAL_PRODUCT_STATUSES => [
                 'value' => ['required', 'array:' . implode(',', array_keys(Option::DEFAULT_OPTIONAL_PRODUCT_STATUSES))],
                 'value.*' => ['sometimes', 'boolean:strict'],
@@ -269,6 +312,11 @@ final class PortableOptions
         $base = $decision === 'overwrite' ? Option::defaultFor($key) : ($current ?? $this->current($key));
         if (! is_array($value)) {
             return $value;
+        }
+        if ($key === Option::DLSITE_METADATA_FETCH_LANGUAGES) {
+            return $decision === 'overwrite'
+                ? array_values($value)
+                : collect([...(is_array($base) ? $base : []), ...$value])->unique()->values()->all();
         }
         if (isset($this->layouts()[$key]) || $key === Option::INDEX_SORT_FIELD_LAYOUT) {
             $byField = array_column($base, null, 'field');

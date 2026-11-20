@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use App\Enums\DlsiteLanguage;
 use App\Models\Genre;
 use App\Models\Product;
 use App\Support\ProductGenreSync;
@@ -35,7 +36,7 @@ class ProductGenreMigrationTest extends TestCase
             'description' => null,
             'order' => null,
             'type' => Genre::TYPE_AUTO_GENERATED_ENGLISH,
-            'language' => Genre::LANGUAGE_ENGLISH,
+            'language' => DlsiteLanguage::English->value,
             'created_at' => $now,
             'updated_at' => $now,
         ]);
@@ -45,6 +46,7 @@ class ProductGenreMigrationTest extends TestCase
 
         $this->runGenreIdMigration();
         $this->runLanguageBucketMigration();
+        $this->runLanguageCodeNormalizationMigration();
 
         $this->assertFalse(Schema::hasColumn('products', 'genre'));
         $this->assertFalse(Schema::hasColumn('products', 'genre_english'));
@@ -74,8 +76,8 @@ class ProductGenreMigrationTest extends TestCase
                 ->pluck('source', 'genre_id')
                 ->all()
         );
-        $this->assertPivotLanguages($product, $japaneseGenre->id, [Genre::LANGUAGE_JAPANESE]);
-        $this->assertPivotLanguages($product, $sharedGenreId, [Genre::LANGUAGE_ENGLISH]);
+        $this->assertPivotLanguages($product, $japaneseGenre->id, [DlsiteLanguage::Japanese->value]);
+        $this->assertPivotLanguages($product, $sharedGenreId, [DlsiteLanguage::English->value]);
         $this->assertPivotLanguages($product, $customGenre->id, []);
         $this->assertSame(
             1,
@@ -96,7 +98,7 @@ class ProductGenreMigrationTest extends TestCase
             'description' => null,
             'order' => null,
             'type' => Genre::TYPE_CUSTOM,
-            'language' => Genre::LANGUAGE_ENGLISH,
+            'language' => DlsiteLanguage::English->value,
             'created_at' => $now,
             'updated_at' => $now,
         ]);
@@ -106,6 +108,7 @@ class ProductGenreMigrationTest extends TestCase
 
         $this->runGenreIdMigration();
         $this->runLanguageBucketMigration();
+        $this->runLanguageCodeNormalizationMigration();
 
         $sharedGenre = DB::table('genres')->where('id', $sharedGenreId)->firstOrFail();
 
@@ -125,7 +128,69 @@ class ProductGenreMigrationTest extends TestCase
         );
         $this->assertObjectNotHasProperty('type', $sharedGenre);
         $this->assertObjectNotHasProperty('language', $sharedGenre);
-        $this->assertPivotLanguages($product, $sharedGenreId, [Genre::LANGUAGE_ENGLISH]);
+        $this->assertPivotLanguages($product, $sharedGenreId, [DlsiteLanguage::English->value]);
+    }
+
+    public function test_language_code_normalization_merges_existing_jp_and_ja_rows(): void
+    {
+        $product = Product::factory()->create();
+        $genre = Genre::query()->create(['title' => 'Japanese Collision']);
+        app(ProductGenreSync::class)->sync($product, [
+            DlsiteLanguage::Japanese->value => [$genre->getKey()],
+        ], []);
+
+        $attachmentId = DB::table('genre_product')
+            ->where('product_id', $product->getKey())
+            ->where('genre_id', $genre->getKey())
+            ->value('id');
+        DB::table('genre_product_languages')->insert([
+            'genre_product_id' => $attachmentId,
+            'language' => 'jp',
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+
+        $this->runLanguageCodeNormalizationMigration();
+
+        $this->assertSame(1, DB::table('genre_product_languages')
+            ->where('genre_product_id', $attachmentId)
+            ->where('language', 'ja')
+            ->count());
+        $this->assertSame(0, DB::table('genre_product_languages')
+            ->where('genre_product_id', $attachmentId)
+            ->where('language', 'jp')
+            ->count());
+    }
+
+    public function test_language_code_normalization_down_merges_existing_ja_and_jp_rows(): void
+    {
+        $product = Product::factory()->create();
+        $genre = Genre::query()->create(['title' => 'Japanese Rollback Collision']);
+        app(ProductGenreSync::class)->sync($product, [
+            DlsiteLanguage::Japanese->value => [$genre->getKey()],
+        ], []);
+
+        $attachmentId = DB::table('genre_product')
+            ->where('product_id', $product->getKey())
+            ->where('genre_id', $genre->getKey())
+            ->value('id');
+        DB::table('genre_product_languages')->insert([
+            'genre_product_id' => $attachmentId,
+            'language' => 'jp',
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+
+        $this->runLanguageCodeNormalizationMigrationDown();
+
+        $this->assertSame(1, DB::table('genre_product_languages')
+            ->where('genre_product_id', $attachmentId)
+            ->where('language', 'jp')
+            ->count());
+        $this->assertSame(0, DB::table('genre_product_languages')
+            ->where('genre_product_id', $attachmentId)
+            ->where('language', 'ja')
+            ->count());
     }
 
     public function test_language_bucket_migration_down_restores_old_genre_metadata_best_effort(): void
@@ -150,10 +215,12 @@ class ProductGenreMigrationTest extends TestCase
         ]);
 
         app(ProductGenreSync::class)->sync($product, [
-            Genre::LANGUAGE_JAPANESE => [$japaneseGenre->getKey()],
-            Genre::LANGUAGE_ENGLISH => [$englishGenre->getKey()],
+            DlsiteLanguage::Japanese->value => [$japaneseGenre->getKey()],
+            DlsiteLanguage::English->value => [$englishGenre->getKey()],
         ], [$customGenre->getKey()]);
 
+        // Roll migrations back in reverse order: canonical ja -> historical jp, then remove the bucket table.
+        $this->runLanguageCodeNormalizationMigrationDown();
         $this->runLanguageBucketMigrationDown();
 
         $this->assertTrue(Schema::hasColumn('genres', 'type'));
@@ -165,11 +232,11 @@ class ProductGenreMigrationTest extends TestCase
         $customGenre = DB::table('genres')->where('id', $customGenre->id)->firstOrFail();
 
         $this->assertSame(Genre::TYPE_AUTO_GENERATED_JAPANESE, $japaneseGenre->type);
-        $this->assertSame(Genre::LANGUAGE_JAPANESE, $japaneseGenre->language);
+        $this->assertSame('jp', $japaneseGenre->language);
         $this->assertSame(Genre::TYPE_AUTO_GENERATED_ENGLISH, $englishGenre->type);
-        $this->assertSame(Genre::LANGUAGE_ENGLISH, $englishGenre->language);
+        $this->assertSame(DlsiteLanguage::English->value, $englishGenre->language);
         $this->assertSame(Genre::TYPE_CUSTOM, $customGenre->type);
-        $this->assertSame(Genre::LANGUAGE_ENGLISH, $customGenre->language);
+        $this->assertSame(DlsiteLanguage::English->value, $customGenre->language);
     }
 
     private function runGenreIdMigration(): void
@@ -184,6 +251,20 @@ class ProductGenreMigrationTest extends TestCase
         $migration = require database_path('migrations/2026_05_24_000000_create_genre_product_languages_table.php');
 
         $migration->up();
+    }
+
+    private function runLanguageCodeNormalizationMigration(): void
+    {
+        $migration = require database_path('migrations/2026_11_15_000000_normalize_dlsite_language_codes.php');
+
+        $migration->up();
+    }
+
+    private function runLanguageCodeNormalizationMigrationDown(): void
+    {
+        $migration = require database_path('migrations/2026_11_15_000000_normalize_dlsite_language_codes.php');
+
+        $migration->down();
     }
 
     private function runLanguageBucketMigrationDown(): void

@@ -59,7 +59,7 @@ final readonly class ProductIndexRowBuilder
             $attributes = $product->attributesToArray();
             $id = Arr::string($attributes, 'id');
             $workName = Arr::string($attributes, 'work_name');
-            $workNameEnglish = $attributes['english_title'] ?? null;
+            $localizedTitle = $attributes['localized_title'] ?? null;
 
             $series = $attributes['series'] ?? null;
             $circle = $attributes['circle'] ?? null;
@@ -84,7 +84,7 @@ final readonly class ProductIndexRowBuilder
             return new ProductIndexRow(
                 id: $id,
                 workName: $workName,
-                workNameEnglish: $workNameEnglish,
+                localizedTitle: $localizedTitle,
                 notes: $attributes['notes'] ?? null,
                 progress: $attributes['progress'] ?? null,
                 workImage: blank($workImage)
@@ -109,7 +109,7 @@ final readonly class ProductIndexRowBuilder
                 makerNames: $makerNames,
                 makerId: $attributes['maker_id'] ?? null,
                 description: $attributes['description'] ?? null,
-                descriptionEnglish: $attributes['english_description'] ?? null,
+                localizedDescription: $attributes['localized_description'] ?? null,
                 contributors: $this->buildContributors(
                     $contributorsByProductId->get($id) ?? collect(),
                     $indexUrl,

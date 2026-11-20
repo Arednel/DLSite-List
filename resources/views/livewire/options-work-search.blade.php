@@ -20,8 +20,8 @@
                 <span>
                     <strong>{{ $product->id }} - </strong>
                     {{ $product->japanese_title }}
-                    @if ($product->english_title)
-                        <span class="work-checklist__muted">{{ $product->english_title }}</span>
+                    @if ($product->localized_title)
+                        <span class="work-checklist__muted">{{ $product->localized_title }}</span>
                     @endif
                 </span>
             </label>

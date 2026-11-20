@@ -8,9 +8,13 @@ use Illuminate\Support\Facades\Process;
 
 class DLSitePythonRunner
 {
+    /**
+     * @param  array{canonical: string, locales: array<string, ?string>}  $localeConfig
+     */
     public function fetchWork(
         string $workId,
         string $jsonPath,
+        array $localeConfig,
         ?string $imageDirectory = null,
         ?int $timeoutSeconds = null,
     ): ProcessResult {
@@ -21,6 +25,8 @@ class DLSitePythonRunner
             $jsonPath,
             '--log-directory',
             storage_path('logs'),
+            '--locale-config',
+            json_encode($localeConfig, JSON_THROW_ON_ERROR),
         ];
 
         if ($imageDirectory !== null) {

@@ -2,6 +2,7 @@
 
 namespace App\Support\Transfers;
 
+use App\Enums\DlsiteLanguage;
 use App\Enums\ProductAgeCategory;
 use App\Enums\ProductFormat;
 use App\Enums\ProductPriority;
@@ -11,6 +12,7 @@ use App\Enums\ProductScore;
 use App\Models\LibraryImportItem;
 use App\Models\Product;
 use App\Support\DLSite\DLSiteRating;
+use App\Support\LocalizedMetadataField;
 use App\Support\ContentTerminology;
 use Illuminate\Support\Arr;
 
@@ -19,11 +21,18 @@ final class ImportValue
 {
     public static function label(string $key): string
     {
+        $localizedField = LocalizedMetadataField::parse($key);
+        if ($localizedField !== null) {
+            return $localizedField['attribute'] === LocalizedMetadataField::TITLE
+                ? $localizedField['language']->titleLabel()
+                : $localizedField['language']->descriptionLabel();
+        }
+
+        if ($language = DlsiteLanguage::tryFrom($key)) {
+            return $language->label();
+        }
+
         return match ($key) {
-            'work_name' => __('Japanese Title'),
-            'work_name_english' => __('English Title'),
-            'description' => __('Japanese Description'),
-            'description_english' => __('English Description'),
             'maker_id', 'maker' => __('Maker ID'),
             'publisher' => __('Publisher'),
             'brand' => __('Brand'),
@@ -33,8 +42,6 @@ final class ImportValue
             'product_code' => __('Product Code'),
             'site_id' => __('Site ID'),
             'tag-library' => __('Tag Library'),
-            'jp' => __('Japanese'),
-            'en' => __('English'),
             'scenario' => __('Scenario Author'),
             'voice_actor' => __('Voice Actor'),
             'illustration' => __('Illustration Author'),
@@ -96,7 +103,10 @@ final class ImportValue
             ),
             isset(ImportReview::WORK_SCALAR_CATEGORIES[$category]) => [implode('->', ImportReview::WORK_SCALAR_CATEGORIES[$category])],
             in_array($category, ImportReview::WORK_CONTRIBUTOR_CATEGORIES, true) => ['contributors->' . $category],
-            $category === 'tags' => ['tags->jp', 'tags->en'],
+            $category === 'tags' => array_map(
+                fn(string $locale): string => 'tags->' . $locale,
+                DlsiteLanguage::values(),
+            ),
             $category === 'custom_tags' => ['tags->custom'],
             in_array($category, ['cover', 'sample_images'], true) => [$category],
             default => [],
@@ -134,7 +144,9 @@ final class ImportValue
                 $values[$category] = $record['contributors'][$category];
             }
         } elseif ($category === 'tags') {
-            $tags = is_array($record['tags'] ?? null) ? Arr::only($record['tags'], ['jp', 'en']) : [];
+            $tags = is_array($record['tags'] ?? null)
+                ? Arr::only($record['tags'], DlsiteLanguage::values())
+                : [];
             if ($tags !== []) {
                 $values['tags'] = $tags;
             }
@@ -148,14 +160,30 @@ final class ImportValue
 
         $changes = [];
         foreach ($values as $field => $value) {
+            $label = in_array($category, ['titles', 'descriptions'], true)
+                ? self::localizedMetadataLabel($category, (string) $field)
+                : self::label((string) $field);
             $changes[] = [
                 'key' => $field,
-                'label' => self::label($field),
+                'label' => $label,
                 'preview' => self::previewValue($value, $category, (string) $field, $item->library_transfer_run_id),
             ];
         }
 
         return $changes;
+    }
+
+    private static function localizedMetadataLabel(string $category, string $locale): string
+    {
+        $language = DlsiteLanguage::tryFrom($locale);
+
+        if ($language === null) {
+            return self::label($locale);
+        }
+
+        return $category === 'titles'
+            ? $language->titleLabel()
+            : $language->descriptionLabel();
     }
 
     private static function display(mixed $value, string $field): mixed

@@ -31,7 +31,7 @@ enum ProductField: string
     case VoiceActor = 'voice_actor';
     case Author = 'author';
     case DescriptionJapanese = 'description_japanese';
-    case DescriptionEnglish = 'description_english';
+    case DescriptionLocalized = 'description_localized';
     case Tags = 'tags';
     case FetchedTags = 'fetched_tags';
     case Notes = 'notes';
@@ -69,7 +69,7 @@ enum ProductField: string
             self::VoiceActor => __('Voice Actor'),
             self::Author => __('Author'),
             self::DescriptionJapanese => __('Japanese Description'),
-            self::DescriptionEnglish => __('English Description'),
+            self::DescriptionLocalized => __('Localized Description'),
             self::Tags => __('Tags'),
             self::FetchedTags => __('Fetched Tags'),
             self::Notes => __('Notes'),
@@ -207,7 +207,7 @@ enum ProductField: string
                     self::VoiceActor,
                     self::Author,
                     self::DescriptionJapanese,
-                    self::DescriptionEnglish,
+                    self::DescriptionLocalized,
                 ],
                 'visibility_locked' => [self::Title],
                 'hidden_by_default' => [
@@ -263,7 +263,7 @@ enum ProductField: string
                     self::VoiceActor,
                     self::Author,
                     self::DescriptionJapanese,
-                    self::DescriptionEnglish,
+                    self::DescriptionLocalized,
                 ],
                 'visibility_locked' => [],
                 'hidden_by_default' => [
@@ -304,7 +304,7 @@ enum ProductField: string
                     self::VoiceActor,
                     self::Author,
                     self::DescriptionJapanese,
-                    self::DescriptionEnglish,
+                    self::DescriptionLocalized,
                 ],
                 'visibility_locked' => [self::ProductCode],
                 'hidden_by_default' => self::metadataFields(hiddenAgeCategory: true),
@@ -338,7 +338,7 @@ enum ProductField: string
                     self::VoiceActor,
                     self::Author,
                     self::DescriptionJapanese,
-                    self::DescriptionEnglish,
+                    self::DescriptionLocalized,
                 ],
                 'visibility_locked' => [
                     self::ProductCode,
@@ -370,7 +370,7 @@ enum ProductField: string
                     self::VoiceActor,
                     self::Author,
                     self::DescriptionJapanese,
-                    self::DescriptionEnglish,
+                    self::DescriptionLocalized,
                     self::Tags,
                     self::Notes,
                     self::StartDate,
@@ -422,7 +422,7 @@ enum ProductField: string
             self::VoiceActor,
             self::Author,
             self::DescriptionJapanese,
-            self::DescriptionEnglish,
+            self::DescriptionLocalized,
         ];
     }
 }

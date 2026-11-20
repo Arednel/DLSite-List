@@ -2,6 +2,7 @@
 
 namespace Tests\Unit\Support;
 
+use App\Enums\DlsiteLanguage;
 use App\Enums\UiLanguage;
 use App\Models\Genre;
 use App\Models\Product;
@@ -23,8 +24,8 @@ class ProductGenreSyncTest extends TestCase
         ]);
 
         app(ProductGenreSync::class)->sync($product, [
-            Genre::LANGUAGE_JAPANESE => [$genre->getKey()],
-            Genre::LANGUAGE_ENGLISH => [$genre->getKey()],
+            DlsiteLanguage::Japanese->value => [$genre->getKey()],
+            DlsiteLanguage::English->value => [$genre->getKey()],
         ], []);
 
         $pivot = DB::table('genre_product')
@@ -34,7 +35,7 @@ class ProductGenreSyncTest extends TestCase
 
         $this->assertSame(Genre::PIVOT_SOURCE_FETCHED, $pivot->source);
         $this->assertEqualsCanonicalizing(
-            [Genre::LANGUAGE_JAPANESE, Genre::LANGUAGE_ENGLISH],
+            [DlsiteLanguage::Japanese->value, DlsiteLanguage::English->value],
             DB::table('genre_product_languages')
                 ->where('genre_product_id', $pivot->id)
                 ->pluck('language')
@@ -53,16 +54,16 @@ class ProductGenreSyncTest extends TestCase
         $sync = app(ProductGenreSync::class);
 
         $sync->sync($product, [
-            Genre::LANGUAGE_ENGLISH => [$englishGenre->getKey()],
-            Genre::LANGUAGE_JAPANESE => [$japaneseGenre->getKey()],
+            DlsiteLanguage::English->value => [$englishGenre->getKey()],
+            DlsiteLanguage::Japanese->value => [$japaneseGenre->getKey()],
         ], []);
 
         $changed = $sync->syncCustom($product, [$customGenre->getKey()]);
 
         $this->assertTrue($changed);
-        $product->refresh()->load(['englishGenres', 'japaneseGenres', 'customGenres']);
-        $this->assertSame(['English Fetched'], $product->englishGenres->pluck('title')->all());
-        $this->assertSame(['Japanese Fetched'], $product->japaneseGenres->pluck('title')->all());
+        $product->refresh()->load('customGenres');
+        $this->assertSame(['English Fetched'], $product->fetchedGenresForLanguage(DlsiteLanguage::English)->pluck('genres.title')->all());
+        $this->assertSame(['Japanese Fetched'], $product->fetchedGenresForLanguage(DlsiteLanguage::Japanese)->pluck('genres.title')->all());
         $this->assertSame(['Custom'], $product->customGenres->pluck('title')->all());
     }
 
@@ -120,21 +121,21 @@ class ProductGenreSyncTest extends TestCase
         $sync = app(ProductGenreSync::class);
 
         $sync->sync($product, [
-            Genre::LANGUAGE_JAPANESE => [$japaneseGenre->getKey()],
-            Genre::LANGUAGE_ENGLISH => [$oldEnglishGenre->getKey()],
+            DlsiteLanguage::Japanese->value => [$japaneseGenre->getKey()],
+            DlsiteLanguage::English->value => [$oldEnglishGenre->getKey()],
         ], [$customGenre->getKey()]);
 
         $changed = $sync->syncEditableTagBuckets(
             $product,
-            Genre::LANGUAGE_ENGLISH,
+            DlsiteLanguage::English->value,
             [$newEnglishGenre->getKey()],
             null,
         );
 
         $this->assertTrue($changed);
-        $product->refresh()->load(['japaneseGenres', 'englishGenres', 'customGenres']);
-        $this->assertSame(['Japanese Only'], $product->japaneseGenres->pluck('title')->all());
-        $this->assertSame(['New English'], $product->englishGenres->pluck('title')->all());
+        $product->refresh()->load('customGenres');
+        $this->assertSame(['Japanese Only'], $product->fetchedGenresForLanguage(DlsiteLanguage::Japanese)->pluck('genres.title')->all());
+        $this->assertSame(['New English'], $product->fetchedGenresForLanguage(DlsiteLanguage::English)->pluck('genres.title')->all());
         $this->assertSame(['Custom Preserved'], $product->customGenres->pluck('title')->all());
         $this->assertDatabaseMissing('genre_product', [
             'product_id' => $product->getKey(),
@@ -151,25 +152,45 @@ class ProductGenreSyncTest extends TestCase
         $sync = app(ProductGenreSync::class);
 
         $sync->sync($product, [
-            Genre::LANGUAGE_JAPANESE => [$oldJapaneseGenre->getKey()],
-            Genre::LANGUAGE_ENGLISH => [$englishGenre->getKey()],
+            DlsiteLanguage::Japanese->value => [$oldJapaneseGenre->getKey()],
+            DlsiteLanguage::English->value => [$englishGenre->getKey()],
         ], []);
 
         $changed = $sync->syncEditableTagBuckets(
             $product,
-            Genre::LANGUAGE_JAPANESE,
+            DlsiteLanguage::Japanese->value,
             [$newJapaneseGenre->getKey()],
             null,
         );
 
         $this->assertTrue($changed);
-        $product->refresh()->load(['japaneseGenres', 'englishGenres']);
-        $this->assertSame(['New Japanese'], $product->japaneseGenres->pluck('title')->all());
-        $this->assertSame(['English Preserved'], $product->englishGenres->pluck('title')->all());
+        $this->assertSame(['New Japanese'], $product->fetchedGenresForLanguage(DlsiteLanguage::Japanese)->pluck('genres.title')->all());
+        $this->assertSame(['English Preserved'], $product->fetchedGenresForLanguage(DlsiteLanguage::English)->pluck('genres.title')->all());
         $this->assertDatabaseMissing('genre_product', [
             'product_id' => $product->getKey(),
             'genre_id' => $oldJapaneseGenre->getKey(),
         ]);
+    }
+
+    public function test_sync_preserves_unknown_existing_language_buckets(): void
+    {
+        $product = Product::factory()->create();
+        $canonicalJapanese = Genre::query()->create(['title' => 'Canonical Japanese']);
+        $future = Genre::query()->create(['title' => 'Future Korean']);
+        $custom = Genre::query()->create(['title' => 'Custom']);
+        $sync = app(ProductGenreSync::class);
+
+        $sync->sync($product, [
+            'ja' => [$canonicalJapanese->id],
+            'ko' => [$future->id],
+        ], [$custom->id]);
+
+        $this->assertFalse($sync->syncCustom($product, [$custom->id]));
+
+        $this->assertSame([
+            'ja' => [$canonicalJapanese->id],
+            'ko' => [$future->id],
+        ], $sync->currentFetchedGenreIdsByLanguage($product));
     }
 
     public function test_editable_sync_keeps_fetched_over_custom_precedence_across_languages(): void
@@ -180,20 +201,20 @@ class ProductGenreSyncTest extends TestCase
         $sync = app(ProductGenreSync::class);
 
         $sync->sync($product, [
-            Genre::LANGUAGE_JAPANESE => [$sharedGenre->getKey()],
+            DlsiteLanguage::Japanese->value => [$sharedGenre->getKey()],
         ], []);
 
         $changed = $sync->syncEditableTagBuckets(
             $product,
-            Genre::LANGUAGE_ENGLISH,
+            DlsiteLanguage::English->value,
             [$sharedGenre->getKey()],
             [$sharedGenre->getKey(), $customGenre->getKey()],
         );
 
         $this->assertTrue($changed);
-        $product->refresh()->load(['englishGenres', 'japaneseGenres', 'customGenres']);
-        $this->assertSame(['Shared'], $product->englishGenres->pluck('title')->all());
-        $this->assertSame(['Shared'], $product->japaneseGenres->pluck('title')->all());
+        $product->refresh()->load('customGenres');
+        $this->assertSame(['Shared'], $product->fetchedGenresForLanguage(DlsiteLanguage::English)->pluck('genres.title')->all());
+        $this->assertSame(['Shared'], $product->fetchedGenresForLanguage(DlsiteLanguage::Japanese)->pluck('genres.title')->all());
         $this->assertSame(['Custom'], $product->customGenres->pluck('title')->all());
 
         $pivots = DB::table('genre_product')
@@ -204,8 +225,8 @@ class ProductGenreSyncTest extends TestCase
         $this->assertCount(1, $pivots);
         $this->assertSame(Genre::PIVOT_SOURCE_FETCHED, $pivots[0]->source);
         $this->assertEqualsCanonicalizing([
-            Genre::LANGUAGE_ENGLISH,
-            Genre::LANGUAGE_JAPANESE,
+            DlsiteLanguage::English->value,
+            DlsiteLanguage::Japanese->value,
         ], DB::table('genre_product_languages')
             ->where('genre_product_id', $pivots[0]->id)
             ->pluck('language')
@@ -213,7 +234,7 @@ class ProductGenreSyncTest extends TestCase
 
         $this->assertFalse($sync->syncEditableTagBuckets(
             $product,
-            Genre::LANGUAGE_ENGLISH,
+            DlsiteLanguage::English->value,
             [$sharedGenre->getKey()],
             [$sharedGenre->getKey(), $customGenre->getKey()],
         ));
@@ -230,7 +251,7 @@ class ProductGenreSyncTest extends TestCase
         $product = Product::factory()->create();
 
         app(ProductGenreSync::class)->sync($product, [
-            Genre::LANGUAGE_ENGLISH => [$child->getKey()],
+            DlsiteLanguage::English->value => [$child->getKey()],
         ], []);
 
         $sources = DB::table('genre_product')
@@ -268,8 +289,8 @@ class ProductGenreSyncTest extends TestCase
         $product = Product::factory()->create();
 
         app(ProductGenreSync::class)->sync($product, [
-            Genre::LANGUAGE_ENGLISH => [$parent->getKey()],
-            Genre::LANGUAGE_JAPANESE => [$child->getKey()],
+            DlsiteLanguage::English->value => [$parent->getKey()],
+            DlsiteLanguage::Japanese->value => [$child->getKey()],
         ], []);
 
         $parentPivot = DB::table('genre_product')
@@ -279,7 +300,7 @@ class ProductGenreSyncTest extends TestCase
 
         $this->assertSame(Genre::PIVOT_SOURCE_FETCHED, $parentPivot->source);
         $this->assertSame(
-            [Genre::LANGUAGE_ENGLISH],
+            [DlsiteLanguage::English->value],
             DB::table('genre_product_languages')
                 ->where('genre_product_id', $parentPivot->id)
                 ->pluck('language')

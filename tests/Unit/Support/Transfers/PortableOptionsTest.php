@@ -2,6 +2,8 @@
 
 namespace Tests\Unit\Support\Transfers;
 
+use App\Enums\DlsiteLanguage;
+use App\Enums\ProductField;
 use App\Models\Option;
 use App\Support\Transfers\PortableOptions;
 use Illuminate\Validation\ValidationException;
@@ -10,6 +12,101 @@ use Tests\TestCase;
 
 class PortableOptionsTest extends TestCase
 {
+    public function test_dlsite_metadata_language_options_accept_canonical_codes_and_normalize_legacy_japanese(): void
+    {
+        $options = app(PortableOptions::class);
+
+        $options->validate(Option::DLSITE_METADATA_LANGUAGE, 'ja');
+        $options->validate(Option::DLSITE_METADATA_FETCH_LANGUAGES, ['en']);
+        $options->validate(Option::DLSITE_METADATA_FETCH_LANGUAGES, []);
+
+        $this->assertSame(
+            Option::DLSITE_METADATA_LANGUAGE,
+            $options->normalizeKeyCompatibility('fetched_tag_language'),
+        );
+        $this->assertSame(
+            Option::DLSITE_METADATA_LANGUAGE_FOLLOWS_UI,
+            $options->normalizeKeyCompatibility('fetched_tag_language_follows_ui'),
+        );
+        $this->assertSame('ja', $options->normalizeCompatibility(Option::DLSITE_METADATA_LANGUAGE, 'jp'));
+        $this->assertSame(
+            ['jp', 'ja', 'en'],
+            $options->normalizeCompatibility(Option::DLSITE_METADATA_FETCH_LANGUAGES, ['jp', 'ja', 'en']),
+        );
+    }
+
+    public function test_empty_optional_fetch_language_list_roundtrips_through_portable_options(): void
+    {
+        $options = app(PortableOptions::class);
+
+        $options->validate(Option::DLSITE_METADATA_FETCH_LANGUAGES, []);
+        $options->apply(Option::DLSITE_METADATA_FETCH_LANGUAGES, []);
+
+        $this->assertSame([], $options->current(Option::DLSITE_METADATA_FETCH_LANGUAGES));
+    }
+
+    public function test_optional_fetch_language_validation_rejects_japanese_duplicates_and_non_lists(): void
+    {
+        $options = app(PortableOptions::class);
+
+        foreach (
+            [
+                [DlsiteLanguage::Japanese->value],
+                [DlsiteLanguage::English->value, DlsiteLanguage::English->value],
+                ['language' => DlsiteLanguage::English->value],
+            ] as $value
+        ) {
+            try {
+                $options->validate(Option::DLSITE_METADATA_FETCH_LANGUAGES, $value);
+                $this->fail('Expected optional fetch language validation to fail.');
+            } catch (ValidationException) {
+                $this->addToAssertionCount(1);
+            }
+        }
+    }
+
+    public function test_fetched_metadata_languages_merge_as_a_set_and_overwrite_as_a_whole(): void
+    {
+        $options = app(PortableOptions::class);
+
+        $this->assertSame(
+            ['en'],
+            $options->combine(Option::DLSITE_METADATA_FETCH_LANGUAGES, ['en'], 'merge', []),
+        );
+        $this->assertSame(
+            [],
+            $options->combine(Option::DLSITE_METADATA_FETCH_LANGUAGES, [], 'overwrite', ['en']),
+        );
+    }
+
+    public function test_legacy_english_description_field_layout_is_normalized_before_validation(): void
+    {
+        $options = app(PortableOptions::class);
+        $legacyLayout = [['field' => 'description_english', 'visible' => true]];
+
+        foreach (array_keys($options->layouts()) as $key) {
+            $normalized = $options->normalizeCompatibility($key, $legacyLayout);
+
+            $this->assertSame(ProductField::DescriptionLocalized->value, $normalized[0]['field'], $key);
+            $options->validate($key, $normalized);
+        }
+    }
+
+    public function test_schema_v1_field_name_normalization_is_separate_from_cross_version_compatibility(): void
+    {
+        $options = app(PortableOptions::class);
+        $legacyLayout = [['field' => 'rj_code', 'visible' => true]];
+
+        $this->assertSame(
+            $legacyLayout,
+            $options->normalizeCompatibility(Option::QUICK_ADD_FIELD_LAYOUT, $legacyLayout),
+        );
+        $this->assertSame(
+            [['field' => 'product_code', 'visible' => true]],
+            $options->normalizeSchemaV1(Option::QUICK_ADD_FIELD_LAYOUT, $legacyLayout),
+        );
+    }
+
     #[DataProvider('columnWidths')]
     public function test_index_column_width_import_validation(array $width, bool $valid): void
     {

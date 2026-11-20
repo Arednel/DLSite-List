@@ -39,9 +39,9 @@ enum ProductFormat: string
     case VoicedComic = 'VCM';
     case Webtoon = 'WBT';
 
-    public function label(?string $locale = null): string
+    public function label(?UiLanguage $language = null): string
     {
-        return __($this->labelKey(), [], $locale);
+        return __($this->labelKey(), [], $language?->value);
     }
 
     private function labelKey(): string
@@ -272,11 +272,10 @@ enum ProductFormat: string
     /** @return list<string> */
     private function labels(): array
     {
-        return array_values(array_unique([
-            $this->label(),
-            $this->label('en'),
-            $this->label('ja'),
-        ]));
+        return array_values(array_unique(array_map(
+            fn(UiLanguage $language): string => $this->label($language),
+            UiLanguage::cases(),
+        )));
     }
 
     private static function inputValueForStoredValue(string $value, bool $additional): string

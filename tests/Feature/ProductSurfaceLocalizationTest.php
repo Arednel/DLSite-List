@@ -3,6 +3,7 @@
 namespace Tests\Feature;
 
 use App\Enums\ContentFocus;
+use App\Enums\DlsiteLanguage;
 use App\Enums\ProductContributorRole;
 use App\Enums\ProductField;
 use App\Enums\ProductProgress;
@@ -157,6 +158,8 @@ class ProductSurfaceLocalizationTest extends TestCase
     public function test_japanese_ui_preserves_library_content_values_verbatim(): void
     {
         Option::setUiLanguage(UiLanguage::Japanese);
+        Option::setDlsiteMetadataLanguageFollowsUi(false);
+        Option::setDlsiteMetadataLanguage(DlsiteLanguage::English);
         Option::setEditFieldLayout([
             ['field' => ProductField::Series->value, 'visible' => true, 'editable' => true],
             ['field' => ProductField::Title->value, 'visible' => true, 'editable' => true],
@@ -199,6 +202,7 @@ class ProductSurfaceLocalizationTest extends TestCase
         $workId = Product::factory()->make()->id;
 
         $response = $this->post(route('products.store.custom'), [
+            'metadata_language' => DlsiteLanguage::Japanese->value,
             'id' => $workId,
             'work_name' => 'COMPLETION_USER_TOKEN',
             'age_category' => 'ALL_AGES',
@@ -224,7 +228,7 @@ class ProductSurfaceLocalizationTest extends TestCase
         Option::setUiLanguage(UiLanguage::Japanese);
 
         $this->from(route('products.create.custom'))
-            ->post(route('products.store.custom'), [])
+            ->post(route('products.store.custom'), ['metadata_language' => DlsiteLanguage::Japanese->value])
             ->assertRedirect(route('products.create.custom'))
             ->assertSessionHasErrors([
                 'id' => '作品コードまたは作品コードを含むリンクを入力してください。',
@@ -233,6 +237,7 @@ class ProductSurfaceLocalizationTest extends TestCase
 
         $this->from(route('products.create'))
             ->post(route('products.store'), [
+                'metadata_language' => DlsiteLanguage::Japanese->value,
                 'id' => 'RJ987654321',
                 'add' => [
                     'start_date' => [

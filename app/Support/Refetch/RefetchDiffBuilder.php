@@ -2,14 +2,17 @@
 
 namespace App\Support\Refetch;
 
+use App\Enums\DlsiteLanguage;
 use App\Enums\ProductContributorRole;
 use App\Enums\ProductFormat;
 use App\Enums\RefetchCategory;
 use App\Models\Genre;
 use App\Models\Product;
+use App\Support\LocalizedMetadataField;
 use App\Support\DLSite\DLSiteFetchResult;
 use App\Support\DLSite\DLSiteRating;
 use App\Support\ProductContributorSync;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 
 final class RefetchDiffBuilder
@@ -28,16 +31,48 @@ final class RefetchDiffBuilder
     ): array {
         $work = $fetch->workData;
         $contributors = $this->contributorSync->namesByRole($product);
-        $englishLocalization = $product->englishLocalization()
-            ->first(['title', 'description']);
         $changes = [];
+        $translatedLocales = collect(array_keys($work->localizedMetadata))
+            ->filter(fn(string $locale): bool => $locale !== DlsiteLanguage::Japanese->value)
+            ->values()
+            ->all();
+        $currentLocalizations = $translatedLocales === []
+            ? collect()
+            : $product->localizations()
+            ->whereIn('locale', $translatedLocales)
+            ->get(['locale', 'title', 'description'])
+            ->keyBy('locale');
 
-        if ($work->workName !== null) {
-            $this->add($changes, RefetchCategory::Titles, 'work_name', 'Japanese Title', $product->work_name, $work->workName);
+        foreach ($work->localizedMetadata as $locale => $metadata) {
+            $language = DlsiteLanguage::tryFrom($locale);
+            if ($language === null) {
+                continue;
+            }
+
+            $currentLocalization = $language === DlsiteLanguage::Japanese
+                ? null
+                : $currentLocalizations->get($language->value);
+            $title = $metadata['title'] ?? null;
+            if ($language !== DlsiteLanguage::Japanese || $title !== null) {
+                $this->add(
+                    $changes,
+                    RefetchCategory::Titles,
+                    LocalizedMetadataField::format($language, LocalizedMetadataField::TITLE),
+                    $language->titleLabel(),
+                    $language === DlsiteLanguage::Japanese ? $product->work_name : $currentLocalization?->title,
+                    $title,
+                );
+            }
+
+            $this->add(
+                $changes,
+                RefetchCategory::Descriptions,
+                LocalizedMetadataField::format($language, LocalizedMetadataField::DESCRIPTION),
+                $language->descriptionLabel(),
+                $language === DlsiteLanguage::Japanese ? $product->description : $currentLocalization?->description,
+                $metadata['description'] ?? null,
+            );
         }
-        $this->add($changes, RefetchCategory::Titles, 'work_name_english', 'English Title', $englishLocalization?->title, $work->englishWorkName);
-        $this->add($changes, RefetchCategory::Descriptions, 'description', 'Japanese Description', $product->description, $work->description);
-        $this->add($changes, RefetchCategory::Descriptions, 'description_english', 'English Description', $englishLocalization?->description, $work->englishDescription);
         $this->add($changes, RefetchCategory::Series, 'series', 'Series', $product->series, $work->autoSeries());
         $this->add($changes, RefetchCategory::Age, 'age_category', 'Age', $product->age_category, $work->ageCategory);
         $this->add($changes, RefetchCategory::SiteId, 'site_id', 'Site ID', $product->site_id, $work->siteId);
@@ -88,7 +123,7 @@ final class RefetchDiffBuilder
             );
         }
 
-        $tagChange = $this->tagChange($product, $work->japaneseGenres, $work->englishGenres);
+        $tagChange = $this->tagChange($product, $work->genresByLocale());
 
         if ($tagChange !== null) {
             $changes[RefetchCategory::Tags->value]['tags'] = $tagChange;
@@ -179,46 +214,84 @@ final class RefetchDiffBuilder
     }
 
     /**
-     * @param  list<string>  $japanese
-     * @param  list<string>  $english
+     * @param array<string, list<string>> $fetchedByLocale
      * @return array<string, mixed>|null
      */
-    private function tagChange(Product $product, array $japanese, array $english): ?array
+    private function tagChange(Product $product, array $fetchedByLocale): ?array
     {
-        $oldJapanese = $product->japaneseGenres()->orderBy('genres.title')->pluck('genres.title')->all();
-        $oldEnglish = $product->englishGenres()->orderBy('genres.title')->pluck('genres.title')->all();
+        $fetchedByLocale = collect($fetchedByLocale)
+            ->map(fn(array $tags): array => $this->normalizeTags($tags))
+            ->all();
+        $oldByLocale = $this->currentFetchedTagsByLocale($product, array_keys($fetchedByLocale));
         $custom = $product->customGenres()->orderBy('genres.title')->pluck('genres.title')->all();
-        $japanese = $this->normalizeTags($japanese);
-        $english = $this->normalizeTags($english);
 
-        if (
-            $this->tagKeys($oldJapanese) === $this->tagKeys($japanese)
-            && $this->tagKeys($oldEnglish) === $this->tagKeys($english)
-        ) {
+        $changedLocales = collect($fetchedByLocale)
+            ->filter(function (array $tags, string $locale) use ($oldByLocale): bool {
+                return $this->tagKeys($oldByLocale[$locale] ?? []) !== $this->tagKeys($tags);
+            })
+            ->keys()
+            ->values()
+            ->all();
+
+        if ($changedLocales === []) {
             return null;
+        }
+
+        $added = [];
+        $stale = [];
+        $customToFetched = [];
+        foreach ($fetchedByLocale as $locale => $tags) {
+            $old = $oldByLocale[$locale] ?? [];
+            $added[$locale] = $this->tagDiff($tags, $old, $custom);
+            $stale[$locale] = $this->tagDiff($old, $tags);
+            $customToFetched[$locale] = $this->tagIntersection($tags, $custom);
         }
 
         return [
             'label' => 'Fetched Tags',
             'old' => [
-                'japanese' => $oldJapanese,
-                'english' => $oldEnglish,
+                'fetched' => $oldByLocale,
                 'custom' => $custom,
             ],
             'new' => [
-                'japanese' => $japanese,
-                'english' => $english,
+                'fetched' => $fetchedByLocale,
                 'custom' => $custom,
             ],
             'details' => [
-                'added_japanese' => $this->tagDiff($japanese, $oldJapanese, $custom),
-                'added_english' => $this->tagDiff($english, $oldEnglish, $custom),
-                'stale_japanese' => $this->tagDiff($oldJapanese, $japanese),
-                'stale_english' => $this->tagDiff($oldEnglish, $english),
-                'custom_to_fetched_japanese' => $this->tagIntersection($japanese, $custom),
-                'custom_to_fetched_english' => $this->tagIntersection($english, $custom),
+                'changed_locales' => $changedLocales,
+                'added' => $added,
+                'stale' => $stale,
+                'custom_to_fetched' => $customToFetched,
             ],
         ];
+    }
+
+    /**
+     * @param list<string> $locales
+     * @return array<string, list<string>>
+     */
+    private function currentFetchedTagsByLocale(Product $product, array $locales): array
+    {
+        if ($locales === []) {
+            return [];
+        }
+
+        $grouped = DB::table('genre_product')
+            ->join('genres', 'genres.id', '=', 'genre_product.genre_id')
+            ->join('genre_product_languages', 'genre_product_languages.genre_product_id', '=', 'genre_product.id')
+            ->where('genre_product.product_id', $product->getKey())
+            ->where('genre_product.source', Genre::PIVOT_SOURCE_FETCHED)
+            ->whereIn('genre_product_languages.language', $locales)
+            ->orderBy('genre_product_languages.language')
+            ->orderBy('genres.title')
+            ->get(['genre_product_languages.language', 'genres.title'])
+            ->groupBy('language')
+            ->map(fn($rows): array => $rows->pluck('title')->values()->all())
+            ->all();
+
+        return collect($locales)
+            ->mapWithKeys(fn(string $locale): array => [$locale => $grouped[$locale] ?? []])
+            ->all();
     }
 
     /**

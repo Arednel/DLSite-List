@@ -472,16 +472,18 @@ Choices:
 - `日本語` (`ja`)
 - `繁體中文` (`zh_TW`)
 
-The setting is application-wide, not per browser/user.
+`UI Language` sets the interface language for the whole application.
 
 `Follow UI language automatically` is enabled by default:
-- `en` UI -> `en` fetched tags
-- `ja` UI -> `jp` fetched tags
-- `zh_TW` UI -> `en` fetched tags
+- `en` UI → English DLsite metadata
+- `ja` UI → Japanese DLsite metadata
+- `zh_TW` UI → English DLsite metadata
 
-When disabled, `Fetched Tags language` selects which fetched tags are shown and available for editing:
-- `English` (`en`)
-- `日本語` (`jp`)
+Turn off automatic selection to choose `Preferred metadata language` independently.
+
+`Preferred metadata language` controls which title, description, and fetched tags are shown on work forms and the Index. Japanese uses the canonical Japanese metadata, so the additional translated title and description fields and translated description filter are hidden. Changing the preferred language only changes which already-stored metadata is shown. Use Refetch to retrieve missing translations for existing works.
+
+`Fetched languages` controls which translated titles, descriptions, and tags Quick Add, Bulk Import, and Refetch request from DLsite. Japanese and the preferred metadata language are always fetched. English is selected by default and can be turned off when Japanese is preferred.
 
 #### Index Pagination
 
@@ -503,16 +505,18 @@ A custom positive integer is also accepted.
 
 #### Index Search
 
+General Index search always checks the Japanese title and all stored translated titles. The Title filter checks Japanese and the preferred metadata language.
+
 `Search hidden descriptions` is disabled by default.
 
 When disabled:
 - general Index search includes Japanese Description only when that Index column is visible
-- general Index search includes English Description only when that Index column is visible
+- general Index search includes the preferred translated Description only when that Index column is visible
 
 When enabled:
-- general Index search can match both description languages even while their Index columns are hidden
+- general Index search can match all stored descriptions even while their Index columns are hidden
 
-The explicit Japanese/English description filters are independent of this setting.
+The explicit Japanese and localized Description filters are independent of this setting. The Japanese Description filter always searches Japanese. The localized Description filter searches the preferred metadata language and is hidden when Japanese is selected.
 
 #### Optional Statuses
 
@@ -653,7 +657,7 @@ Fetched Tags are readonly by default. If made editable, editing changes only the
 - `voice_actor` - hidden
 - `author` - hidden
 - `description_japanese` - hidden
-- `description_english` - hidden
+- `description_localized` - hidden
 - `tags` - Custom and selected-language Fetched Tags visible
 - `notes` - hidden
 - `start_date` - hidden
@@ -701,7 +705,7 @@ Custom widths for `rating`, `score`, and `dlsite_rating` take precedence over th
 - `voice_actor` - hidden
 - `author` - hidden
 - `description_japanese` - hidden
-- `description_english` - hidden
+- `description_localized` - hidden
 
 ##### Index Sort Menu Default Order
 
@@ -760,7 +764,7 @@ Hiding a value from the Index Sort Menu only removes it from that dropdown. It d
 - `voice_actor` - hidden
 - `author` - hidden
 - `description_japanese` - hidden
-- `description_english` - hidden
+- `description_localized` - hidden
 
 ##### Quick Add Default Order
 
@@ -787,7 +791,7 @@ Hiding a value from the Index Sort Menu only removes it from that dropdown. It d
 - `voice_actor` - hidden
 - `author` - hidden
 - `description_japanese` - hidden
-- `description_english` - hidden
+- `description_localized` - hidden
 
 Hidden DLsite Quick Add metadata fields are not accepted as user overrides, but their scraped values are still preserved.
 
@@ -816,7 +820,7 @@ Hidden DLsite Quick Add metadata fields are not accepted as user overrides, but 
 - `voice_actor` - hidden
 - `author` - hidden
 - `description_japanese` - hidden
-- `description_english` - hidden
+- `description_localized` - hidden
 
 ##### Custom Quick Add Default Order
 
@@ -845,7 +849,7 @@ Hidden DLsite Quick Add metadata fields are not accepted as user overrides, but 
 - `voice_actor` - hidden
 - `author` - hidden
 - `description_japanese` - hidden
-- `description_english` - hidden
+- `description_localized` - hidden
 
 Custom Quick Add has no scraper fallback.
 

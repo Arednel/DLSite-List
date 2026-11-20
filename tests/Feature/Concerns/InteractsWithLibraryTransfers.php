@@ -12,6 +12,7 @@ use App\Models\LibraryTransferRun;
 use App\Support\Transfers\ImportReview;
 use App\Support\Transfers\LibraryTransferService;
 use App\Support\Transfers\TransferArchive;
+use App\Support\Transfers\WorkArchiveData;
 use Closure;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
@@ -78,6 +79,25 @@ trait InteractsWithLibraryTransfers
         return $run->fresh();
     }
 
+    private function exportedWorkDocument(LibraryTransferRun $export, string $productCode): array
+    {
+        $entry = $export->entries()->with('part')
+            ->where('section', 'works')
+            ->where('logical_key', $productCode)
+            ->firstOrFail();
+
+        $zip = new ZipArchive;
+        $this->assertTrue($zip->open(Storage::disk('local')->path($entry->part->path), ZipArchive::RDONLY));
+        try {
+            $document = $zip->getFromName($entry->path);
+            $this->assertIsString($document);
+
+            return json_decode($document, true, flags: JSON_THROW_ON_ERROR);
+        } finally {
+            $zip->close();
+        }
+    }
+
     private function imported(LibraryTransferRun $export): LibraryTransferRun
     {
         $run = $this->service()->startImport();
@@ -118,6 +138,39 @@ trait InteractsWithLibraryTransfers
     private function rewriteWorkData(LibraryTransferPart $part, Closure $change): void
     {
         $this->rewriteArchiveEntryPath($part->path, $change, 'works');
+    }
+
+    /** Convert complete current exports to the named-locale work format used by v1-v3. */
+    private function convertToLegacyWorkFormat(LibraryTransferRun $export, int $schemaVersion): void
+    {
+        foreach ($export->parts as $part) {
+            $zip = new ZipArchive;
+            $this->assertTrue($zip->open(Storage::disk('local')->path($part->path)));
+            $manifest = json_decode($zip->getFromName('manifest.json'), true);
+            $manifest['schema_version'] = $schemaVersion;
+            if (in_array('works', $manifest['scopes'], true)) {
+                $manifest['work_entry_format'] = WorkArchiveData::LEGACY_FORMAT;
+            }
+            foreach ($manifest['entries'] as &$entry) {
+                if ($entry['section'] !== 'works') {
+                    continue;
+                }
+                $work = json_decode($zip->getFromName($entry['path']), true);
+                $work = [
+                    'japanese' => $work['locales']['ja'],
+                    'english' => $work['locales']['en'] ?? [],
+                    'dlsite_list' => $work['dlsite_list'],
+                ];
+                $bytes = json_encode($work, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_THROW_ON_ERROR);
+                $entry['bytes'] = strlen($bytes);
+                $entry['sha256'] = hash('sha256', $bytes);
+                $zip->addFromString($entry['path'], $bytes);
+                $zip->setCompressionName($entry['path'], ZipArchive::CM_STORE);
+            }
+            unset($entry);
+            $zip->addFromString('manifest.json', json_encode($manifest, JSON_THROW_ON_ERROR));
+            $this->assertTrue($zip->close());
+        }
     }
 
     private function rewriteArchiveEntryPath(string $archivePath, Closure $change, ?string $section = null): void

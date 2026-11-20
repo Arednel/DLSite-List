@@ -1,3 +1,4 @@
+import asyncio
 import sys
 import unittest
 from pathlib import Path
@@ -14,7 +15,14 @@ from dlsite_async.work import (
     WorkOption,
     WorkType,
 )
-from DLSiteScraper import map_known_error, product_format_codes, run, to_serializable
+from DLSiteScraper import (
+    fetch_work_data,
+    map_known_error,
+    parse_locale_config,
+    product_format_codes,
+    run,
+    to_serializable,
+)
 
 
 class DLSiteScraperProductFormatTest(unittest.TestCase):
@@ -131,6 +139,84 @@ class DLSiteScraperErrorCodeTest(unittest.TestCase):
         self.assertIsNone(map_known_error("Unexpected upstream error", "RJ123456"))
 
 
+class DLSiteScraperLanguageFetchTest(unittest.TestCase):
+    def test_fetch_work_data_executes_supplied_locale_map_in_order_without_whitelisting(
+        self,
+    ):
+        with patch(
+            "DLSiteScraper.dlsite_for_locale",
+            AsyncMock(side_effect=["ja-work", "future-work"]),
+        ) as fetch:
+            works = asyncio.run(
+                fetch_work_data(
+                    "RJ123456",
+                    {"ja": None, "future": "future_API"},
+                )
+            )
+
+        self.assertEqual({"ja": "ja-work", "future": "future-work"}, works)
+        self.assertEqual(
+            [("RJ123456", None), ("RJ123456", "future_API")],
+            [call.args for call in fetch.await_args_list],
+        )
+
+    def test_fetch_work_data_reports_output_and_api_locale_when_fetch_fails(self):
+        with patch(
+            "DLSiteScraper.dlsite_for_locale",
+            AsyncMock(side_effect=RuntimeError("Bad Request")),
+        ):
+            with self.assertRaisesRegex(
+                RuntimeError,
+                "Failed to fetch locale 'future' using DLsite API locale 'future_API': Bad Request",
+            ) as raised:
+                asyncio.run(
+                    fetch_work_data(
+                        "RJ123456",
+                        {"future": "future_API"},
+                    )
+                )
+
+        self.assertEqual(
+            ("dlsite.work.missing", 2),
+            map_known_error(str(raised.exception), "RJ123456"),
+        )
+
+
+class DLSiteScraperLocaleConfigTest(unittest.TestCase):
+    def test_locale_config_returns_laravel_supplied_execution_plan(self):
+        self.assertEqual(
+            ("future", {"future": "future_API", "secondary": None}),
+            parse_locale_config(
+                '{"canonical":"future","locales":{"future":"future_API","secondary":null}}'
+            ),
+        )
+
+    def test_locale_config_only_validates_transport_shape(self):
+        self.assertEqual(
+            ("", {"": 123}),
+            parse_locale_config('{"canonical":"","locales":{"":123}}'),
+        )
+
+        cases = [
+            ("not-json", "Invalid locale config JSON"),
+            ("[]", "Locale config must be an object"),
+            (
+                '{"canonical":123,"locales":{"ja":null}}',
+                "canonical key must be a string",
+            ),
+            ('{"canonical":"ja","locales":[]}', "locales must be an object"),
+            (
+                '{"canonical":"ja","locales":{"en":"en_US"}}',
+                "canonical key must exist in locales",
+            ),
+        ]
+
+        for raw_config, message in cases:
+            with self.subTest(raw_config=raw_config):
+                with self.assertRaisesRegex(ValueError, message):
+                    parse_locale_config(raw_config)
+
+
 class DLSiteScraperOutputTest(unittest.TestCase):
     def test_language_editions_keep_original_work_reference(self):
         work = SimpleNamespace(
@@ -163,32 +249,50 @@ class DLSiteScraperOutputTest(unittest.TestCase):
         self.assertFalse(serialized["translation_info"]["is_original"])
 
     def test_output_preserves_serialized_fields_without_fetch_metadata(self):
-        work = SimpleNamespace(
+        canonical_work = SimpleNamespace(
             product_id="VJ015443", scenario=["天宮りつ"], work_type=WorkType.VOICE_ASMR
         )
-        expected = to_serializable(work) | {
-            "product_format": product_format_codes(work)
+        secondary_work = SimpleNamespace(
+            product_id="RJ999999", scenario=["Secondary"], work_type=WorkType.MANGA
+        )
+        expected_canonical = to_serializable(canonical_work) | {
+            "product_format": product_format_codes(canonical_work)
+        }
+        expected_secondary = to_serializable(secondary_work) | {
+            "product_format": product_format_codes(secondary_work)
         }
         arguments = SimpleNamespace(
-            work_id="VJ015443", json_output="unused/work.json", image_output=None
+            work_id="VJ015443",
+            json_output="unused/work.json",
+            image_output=None,
+            locale_config='{"canonical":"future","locales":{"future":"future_API","en":"en_US"}}',
         )
         with (
             patch(
-                "DLSiteScraper.fetch_work_data", AsyncMock(return_value=(work, work))
-            ),
+                "DLSiteScraper.fetch_work_data",
+                AsyncMock(
+                    return_value={"future": canonical_work, "en": secondary_work}
+                ),
+            ) as fetch,
             patch("DLSiteScraper.Path.mkdir"),
             patch("builtins.open", mock_open()),
             patch("DLSiteScraper.json.dump") as dump,
         ):
             manifest = run(arguments)
         document = dump.call_args.args[0]
-        self.assertEqual({"japanese", "english"}, set(document))
-        for locale in ("japanese", "english"):
-            self.assertEqual(expected, document[locale])
+        self.assertEqual({"locales"}, set(document))
+        self.assertEqual({"future", "en"}, set(document["locales"]))
+        self.assertEqual(expected_canonical, document["locales"]["future"])
+        self.assertEqual(expected_secondary, document["locales"]["en"])
+        fetch.assert_awaited_once_with(
+            "VJ015443",
+            {"future": "future_API", "en": "en_US"},
+        )
         self.assertEqual(
             {"product_id", "json_path", "downloaded_images", "failed_images"},
             set(manifest),
         )
+        self.assertEqual("VJ015443", manifest["product_id"])
 
 
 if __name__ == "__main__":

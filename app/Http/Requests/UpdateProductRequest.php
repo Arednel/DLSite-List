@@ -2,6 +2,7 @@
 
 namespace App\Http\Requests;
 
+use App\Enums\DlsiteLanguage;
 use App\Enums\ProductField;
 use App\Models\Option;
 use App\Support\ProductFieldLayout;
@@ -26,19 +27,19 @@ class UpdateProductRequest extends BaseProductRequest
     public function rules(): array
     {
         $editFieldLayout = Option::editFieldLayout();
-        $validateFetchedLanguage = ProductFieldLayout::fetchedTagsEditable($editFieldLayout)
-            && $this->wasSubmitted('genre_fetched');
         $coverEditable = ProductFieldLayout::editable($editFieldLayout, ProductField::Image);
         $samplesEditable = ProductFieldLayout::editable($editFieldLayout, ProductField::SampleImages);
-        $fetchedLanguageRules = [
-            Rule::requiredIf($validateFetchedLanguage),
-        ];
 
-        if ($validateFetchedLanguage) {
-            $fetchedLanguageRules[] = Rule::in([Option::effectiveFetchedTagLanguage()->value]);
-        }
-
-        return array_merge([
+        return array_merge($this->commonRules(), [
+            'metadata_language' => [
+                Rule::requiredIf(
+                    $this->wasSubmitted('localized_title')
+                        || $this->wasSubmitted('description_localized')
+                        || $this->wasSubmitted('genre_fetched')
+                ),
+                'nullable',
+                Rule::enum(DlsiteLanguage::class),
+            ],
             'work_name' => [
                 Rule::requiredIf(fn(): bool => ProductFieldLayout::editable(
                     $editFieldLayout,
@@ -48,7 +49,6 @@ class UpdateProductRequest extends BaseProductRequest
                 'string',
             ],
             'genre_fetched' => ['nullable', 'array'],
-            'genre_fetched_language' => $fetchedLanguageRules,
             'work_image' => [Rule::excludeIf(! $coverEditable), 'nullable', File::image()->max('20mb')],
             'remove_work_image' => [Rule::excludeIf(! $coverEditable), 'nullable', 'boolean'],
             'sample_images' => [Rule::excludeIf(! $samplesEditable), 'nullable', 'array'],
@@ -56,7 +56,7 @@ class UpdateProductRequest extends BaseProductRequest
             'sample_images_submitted' => [Rule::excludeIf(! $samplesEditable), 'nullable', 'boolean'],
             'sample_image_order' => [Rule::excludeIf(! $samplesEditable), 'nullable', 'array'],
             'sample_image_order.*' => ['string', 'max:512'],
-        ], $this->commonRules());
+        ]);
     }
 
     protected function prepareForValidation(): void

@@ -47,6 +47,8 @@
                                             action="{{ route('products.update', ['product' => $product]) }}"
                                             enctype="multipart/form-data">
                                             @csrf
+                                            <input type="hidden" name="metadata_language"
+                                                value="{{ $metadataLanguageValue }}">
                                             @if ($isModal)
                                                 <input type="hidden" name="modal" value="1">
                                             @endif
@@ -69,12 +71,13 @@
                                                         :work-name="$product->work_name" />
                                                     @foreach ($editFields as $field)
                                                         <x-fields.edit-configurable-row :field="$field"
-                                                            :product="$product" :english-title="$englishTitle" :english-description="$englishDescription"
+                                                            :product="$product" :localized-title="$localizedTitle" :localized-description="$localizedDescription"
                                                             :age-category-options="$ageCategoryOptions" :contributor-inputs="$contributorInputs" :fetched-genres="$fetchedGenres"
-                                                            :custom-genres="$customGenres" :genre-fetched-input="$genreFetchedInput" :genre-fetched-language="$genreFetchedLanguage"
-                                                            :genre-custom-input="$genreCustomInput" :readonly-field-values="$readonlyFieldValues" :month-labels="$monthLabels"
-                                                            :days="$days" :years="$years" :show-readonly-genre-colors="$showReadonlyGenreColors"
-                                                            :progress-options="$progressOptions" :rating-scale="$ratingScale" :dlsite-rating-value="$dlsiteRatingValue" />
+                                                            :custom-genres="$customGenres" :genre-fetched-input="$genreFetchedInput" :localized-title-label="$localizedTitleLabel"
+                                                            :localized-description-label="$localizedDescriptionLabel" :genre-custom-input="$genreCustomInput" :readonly-field-values="$readonlyFieldValues"
+                                                            :month-labels="$monthLabels" :days="$days" :years="$years"
+                                                            :show-readonly-genre-colors="$showReadonlyGenreColors" :progress-options="$progressOptions" :rating-scale="$ratingScale"
+                                                            :dlsite-rating-value="$dlsiteRatingValue" />
                                                     @endforeach
                                                 </tbody>
                                             </table>

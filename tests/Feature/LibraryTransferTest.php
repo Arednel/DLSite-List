@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use App\Enums\DlsiteLanguage;
 use App\Enums\LibraryImportDecision;
 use App\Enums\LibraryImportItemStatus;
 use App\Enums\LibraryTransferAction;
@@ -143,6 +144,25 @@ class LibraryTransferTest extends TestCase
             ImportValue::preview($item, 'incoming'),
             ImportValue::previewValue('Imported title', 'titles', 'work_name', 42),
         );
+    }
+
+    public function test_empty_dlsite_metadata_fetch_language_list_roundtrips_through_transfer(): void
+    {
+        Option::setDlsiteMetadataFetchLanguages([]);
+        $export = $this->exported(['options']);
+
+        Option::setDlsiteMetadataFetchLanguages([DlsiteLanguage::English]);
+        $run = $this->imported($export);
+        $item = $run->items()
+            ->where('section', 'options')
+            ->where('entity_key', Option::DLSITE_METADATA_FETCH_LANGUAGES)
+            ->firstOrFail();
+
+        $this->assertSame([], $item->incoming);
+
+        $this->apply($run);
+
+        $this->assertSame([], Option::dlsiteMetadataFetchLanguages());
     }
 
     public function test_options_registry_roundtrips_effective_values_and_excludes_security_and_local_size(): void

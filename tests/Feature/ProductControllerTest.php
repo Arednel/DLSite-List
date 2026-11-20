@@ -2,7 +2,7 @@
 
 namespace Tests\Feature;
 
-use App\Enums\FetchedTagLanguage;
+use App\Enums\DlsiteLanguage;
 use App\Enums\ProductContributorRole;
 use App\Enums\ProductField;
 use App\Enums\ProductPriority;
@@ -16,7 +16,6 @@ use App\Livewire\TagLibraryManager;
 use App\Models\Genre;
 use App\Models\Option;
 use App\Models\Product;
-use App\Models\ProductLocalization;
 use App\Support\ProductContributorSync;
 use App\Support\ProductGenreSync;
 use DOMDocument;
@@ -185,8 +184,8 @@ class ProductControllerTest extends TestCase
 
         $this->get('/?search=' . strtolower($enToken))
             ->assertOk()
-            ->assertSee($target->titleForLocale('en'))
-            ->assertDontSee($noise->titleForLocale('en'));
+            ->assertSee($target->localizations()->where('locale', 'en')->value('title'))
+            ->assertDontSee($noise->localizations()->where('locale', 'en')->value('title'));
 
         $this->get('/?search=' . strtolower($seriesToken))
             ->assertOk()
@@ -543,10 +542,10 @@ class ProductControllerTest extends TestCase
         $custom = Product::factory()->create(['work_name' => 'TAG_LANGUAGE_CUSTOM_WORK']);
 
         app(ProductGenreSync::class)->sync($english, [
-            Genre::LANGUAGE_ENGLISH => [$shared->id],
+            DlsiteLanguage::English->value => [$shared->id],
         ], [$required->id]);
         app(ProductGenreSync::class)->sync($japanese, [
-            Genre::LANGUAGE_JAPANESE => [$shared->id],
+            DlsiteLanguage::Japanese->value => [$shared->id],
         ], [$required->id]);
         app(ProductGenreSync::class)->sync($custom, [], [$shared->id, $required->id]);
 
@@ -758,7 +757,7 @@ class ProductControllerTest extends TestCase
                 'name="score"',
                 'name="series"',
                 'name="work_name"',
-                'name="work_name_english"',
+                'name="localized_title"',
                 'name="genre_custom"',
                 'name="notes"',
                 'name="add[start_date][month]"',
@@ -779,7 +778,7 @@ class ProductControllerTest extends TestCase
                 'name="score"',
                 'name="series"',
                 'name="work_name"',
-                'name="work_name_english"',
+                'name="localized_title"',
                 'name="genre_custom"',
                 'name="notes"',
                 'name="age_category"',
@@ -842,7 +841,7 @@ class ProductControllerTest extends TestCase
             ['field' => ProductField::AgeCategory->value, 'visible' => true],
             ['field' => ProductField::Circle->value, 'visible' => true],
             ['field' => ProductField::DescriptionJapanese->value, 'visible' => true],
-            ['field' => ProductField::DescriptionEnglish->value, 'visible' => true],
+            ['field' => ProductField::DescriptionLocalized->value, 'visible' => true],
         ]);
 
         $this->get('/create/custom')
@@ -851,7 +850,7 @@ class ProductControllerTest extends TestCase
             ->assertDontSee('id="age_category" name="age_category" class="form-control form-field-long"', false)
             ->assertSee('placeholder="Circle name"', false)
             ->assertSee('placeholder="Japanese description"', false)
-            ->assertSee('placeholder="English description"', false);
+            ->assertSee('placeholder="English Description"', false);
     }
 
     public function test_create_preserves_index_return_state_for_go_back_and_mode_switch(): void
@@ -895,7 +894,7 @@ class ProductControllerTest extends TestCase
     public function test_modal_create_validation_redirect_keeps_modal_url(): void
     {
         $this->from('/create/custom?modal=1')
-            ->post('/store/custom', ['modal' => '1'])
+            ->post('/store/custom', ['metadata_language' => DlsiteLanguage::English->value, 'modal' => '1'])
             ->assertRedirect('/create/custom?modal=1')
             ->assertSessionHasErrors(['id' => 'Enter a product code or a link containing one.'])
             ->assertSessionHasErrors(['id', 'work_name', 'age_category']);
@@ -965,6 +964,7 @@ class ProductControllerTest extends TestCase
         $this->followingRedirects()
             ->from('/create')
             ->post('/store', [
+                'metadata_language' => DlsiteLanguage::English->value,
                 'id' => 'RJ000000404',
                 'return_url' => 'http://localhost/?progress=Listening',
                 'return_query' => [
@@ -1005,6 +1005,7 @@ class ProductControllerTest extends TestCase
 
         $this->from($createUrl)
             ->post('/store', [
+                'metadata_language' => DlsiteLanguage::English->value,
                 'id' => 'RJ000000406',
                 'notes' => 'Keep my entered notes',
                 'modal' => $modal ? '1' : '0',
@@ -1058,7 +1059,7 @@ class ProductControllerTest extends TestCase
             ])->preventStrayProcesses();
 
             $this->from('/create')
-                ->post('/store', ['id' => 'RJ000000405'])
+                ->post('/store', ['metadata_language' => DlsiteLanguage::English->value, 'id' => 'RJ000000405'])
                 ->assertSessionHasErrors(['id' => $localized]);
         }
 
@@ -1068,7 +1069,7 @@ class ProductControllerTest extends TestCase
             ])->preventStrayProcesses();
 
             $this->from('/create')
-                ->post('/store', ['id' => 'RJ000000405'])
+                ->post('/store', ['metadata_language' => DlsiteLanguage::English->value, 'id' => 'RJ000000405'])
                 ->assertSessionHasErrors(['id' => $stderr]);
         }
     }
@@ -1130,13 +1131,13 @@ class ProductControllerTest extends TestCase
             ->assertOk()
             ->assertViewIs('Edit')
             ->assertViewHas('product', fn(Product $shown): bool => $shown->is($product) && ! $shown->relationLoaded('localizations'))
-            ->assertViewHas('englishTitle', 'EDIT_VIEW_EN_TOKEN')
+            ->assertViewHas('localizedTitle', 'EDIT_VIEW_EN_TOKEN')
             ->assertViewHas('returnQuery', ['progress' => ProductProgress::Listening->value])
             ->assertViewHas('returnFragment', $product->id)
             ->assertSee('action="' . route('products.update', $product) . '"', false)
             ->assertSee($product->id)
             ->assertSee($product->work_name)
-            ->assertSee($product->titleForLocale('en'))
+            ->assertSee($product->localizations()->where('locale', 'en')->value('title'))
             ->assertDontSee('name="work_image"', false)
             ->assertDontSee('name="sample_images[]"', false)
             ->assertSee('index-image-viewer-dialog', false)
@@ -1145,7 +1146,7 @@ class ProductControllerTest extends TestCase
                 'name="score"',
                 'name="series"',
                 'name="work_name"',
-                'name="work_name_english"',
+                'name="localized_title"',
                 'name="genre_custom"',
                 'name="notes"',
                 'name="add[start_date][month]"',
@@ -1195,7 +1196,7 @@ class ProductControllerTest extends TestCase
     {
         Option::setEditFieldLayout([
             ['field' => ProductField::DescriptionJapanese->value, 'visible' => true, 'editable' => false],
-            ['field' => ProductField::DescriptionEnglish->value, 'visible' => true, 'editable' => false],
+            ['field' => ProductField::DescriptionLocalized->value, 'visible' => true, 'editable' => false],
         ]);
 
         $product = Product::factory()->withEnglishDescription('READONLY_EN_DESCRIPTION_TOKEN')->create([
@@ -1211,7 +1212,7 @@ class ProductControllerTest extends TestCase
             ->assertSee('READONLY_EN_DESCRIPTION_TOKEN')
             ->assertSee('readonly', false)
             ->assertDontSee('name="description"', false)
-            ->assertDontSee('name="description_english"', false);
+            ->assertDontSee('name="description_localized"', false);
     }
 
     public function test_edit_layout_can_hide_new_configurable_edit_rows(): void
@@ -1253,7 +1254,7 @@ class ProductControllerTest extends TestCase
             ['field' => ProductField::Illustration->value, 'visible' => true, 'editable' => true],
             ['field' => ProductField::Author->value, 'visible' => true, 'editable' => true],
             ['field' => ProductField::DescriptionJapanese->value, 'visible' => true, 'editable' => true],
-            ['field' => ProductField::DescriptionEnglish->value, 'visible' => true, 'editable' => true],
+            ['field' => ProductField::DescriptionLocalized->value, 'visible' => true, 'editable' => true],
         ]);
 
         $product = Product::factory()->create([
@@ -1280,11 +1281,12 @@ class ProductControllerTest extends TestCase
             ->assertSee('name="illustration"', false)
             ->assertSee('name="author"', false)
             ->assertSee('name="description"', false)
-            ->assertSee('name="description_english"', false)
+            ->assertSee('name="description_localized"', false)
             ->assertSee('placeholder="Japanese description"', false)
-            ->assertSee('placeholder="English description"', false);
+            ->assertSee('placeholder="English Description"', false);
 
         $this->post("/update/{$product->id}", [
+            'metadata_language' => DlsiteLanguage::English->value,
             'work_name' => $product->work_name,
             'product_format' => 'Video, Voice, Music, Publication, Audiobook',
             'circle' => 'New Circle',
@@ -1296,7 +1298,7 @@ class ProductControllerTest extends TestCase
             'illustration' => 'Illustration One',
             'author' => 'Author One',
             'description' => 'Japanese metadata description',
-            'description_english' => 'English metadata description',
+            'description_localized' => 'English metadata description',
         ])->assertSessionHasNoErrors();
 
         $product->refresh();
@@ -1308,7 +1310,7 @@ class ProductControllerTest extends TestCase
         $this->assertSame('New Brand', $product->brand);
         $this->assertSame('RG_EDITABLE_METADATA', $product->maker_id);
         $this->assertSame('Japanese metadata description', $product->description);
-        $this->assertSame('English metadata description', $product->descriptionForLocale(ProductLocalization::LOCALE_ENGLISH));
+        $this->assertSame('English metadata description', $product->localizations()->where('locale', DlsiteLanguage::English->value)->value('description'));
         $this->assertSame(['New Circle'], $namesByRole[ProductContributorRole::Circle->value]);
         $this->assertSame(['Scenario One', 'Scenario Two'], $namesByRole[ProductContributorRole::Scenario->value]);
         $this->assertSame(['Voice One'], $namesByRole[ProductContributorRole::VoiceActor->value]);
@@ -1372,11 +1374,68 @@ class ProductControllerTest extends TestCase
         ]);
     }
 
-    public function test_update_collapses_duplicate_english_description_to_null(): void
+    public function test_japanese_metadata_language_hides_extra_localized_title_and_description_fields(): void
+    {
+        Option::setDlsiteMetadataLanguageFollowsUi(false);
+        Option::setDlsiteMetadataLanguage(DlsiteLanguage::Japanese);
+        Option::setEditFieldLayout([
+            ['field' => ProductField::Title->value, 'visible' => true, 'editable' => true],
+            ['field' => ProductField::DescriptionJapanese->value, 'visible' => true, 'editable' => true],
+            ['field' => ProductField::DescriptionLocalized->value, 'visible' => true, 'editable' => true],
+        ]);
+
+        $product = Product::factory()
+            ->withTitles('Japanese title', 'English title')
+            ->withEnglishDescription('English description')
+            ->create(['description' => 'Japanese description']);
+
+        $this->get("/edit/{$product->id}")
+            ->assertOk()
+            ->assertSeeInOrder([
+                'name="metadata_language"',
+                'value="ja"',
+            ], false)
+            ->assertSee('name="work_name"', false)
+            ->assertSee('name="description"', false)
+            ->assertDontSee('name="localized_title"', false)
+            ->assertDontSee('name="description_localized"', false);
+    }
+
+    public function test_updating_selected_localization_preserves_other_locale_rows(): void
+    {
+        Option::setDlsiteMetadataLanguageFollowsUi(false);
+        Option::setDlsiteMetadataLanguage(DlsiteLanguage::English);
+        Option::setEditFieldLayout([
+            ['field' => ProductField::Title->value, 'visible' => true, 'editable' => true],
+            ['field' => ProductField::DescriptionLocalized->value, 'visible' => true, 'editable' => true],
+        ]);
+
+        $product = Product::factory()->withTitles('Japanese title', 'Old English title')->create();
+        $product->syncLocalization('en', ['description' => 'Old English description']);
+        $product->syncLocalization('ko', [
+            'title' => 'Future Korean title',
+            'description' => 'Future Korean description',
+        ]);
+
+        $this->post("/update/{$product->id}", [
+            'metadata_language' => DlsiteLanguage::English->value,
+            'work_name' => $product->work_name,
+            'localized_title' => 'New English title',
+            'description_localized' => 'New English description',
+        ])->assertSessionHasNoErrors();
+
+        $product->refresh();
+        $this->assertSame('New English title', $product->localizations()->where('locale', 'en')->value('title'));
+        $this->assertSame('New English description', $product->localizations()->where('locale', 'en')->value('description'));
+        $this->assertSame('Future Korean title', $product->localizations()->where('locale', 'ko')->value('title'));
+        $this->assertSame('Future Korean description', $product->localizations()->where('locale', 'ko')->value('description'));
+    }
+
+    public function test_update_preserves_explicit_localized_description_equal_to_japanese(): void
     {
         Option::setEditFieldLayout([
             ['field' => ProductField::DescriptionJapanese->value, 'visible' => true, 'editable' => true],
-            ['field' => ProductField::DescriptionEnglish->value, 'visible' => true, 'editable' => true],
+            ['field' => ProductField::DescriptionLocalized->value, 'visible' => true, 'editable' => true],
         ]);
 
         $product = Product::factory()->withEnglishDescription('Old English description')->create([
@@ -1385,22 +1444,23 @@ class ProductControllerTest extends TestCase
         ]);
 
         $this->post("/update/{$product->id}", [
+            'metadata_language' => DlsiteLanguage::English->value,
             'work_name' => $product->work_name,
             'description' => 'Same description',
-            'description_english' => 'Same description',
+            'description_localized' => 'Same description',
         ])->assertSessionHasNoErrors();
 
         $product->refresh();
 
         $this->assertSame('Same description', $product->description);
-        $this->assertNull($product->descriptionForLocale(ProductLocalization::LOCALE_ENGLISH));
+        $this->assertSame('Same description', $product->localizations()->where('locale', DlsiteLanguage::English->value)->value('description'));
     }
 
-    public function test_update_collapses_english_description_against_hidden_japanese_description(): void
+    public function test_update_preserves_explicit_localized_description_equal_to_hidden_japanese(): void
     {
         Option::setEditFieldLayout([
             ['field' => ProductField::DescriptionJapanese->value, 'visible' => false, 'editable' => false],
-            ['field' => ProductField::DescriptionEnglish->value, 'visible' => true, 'editable' => true],
+            ['field' => ProductField::DescriptionLocalized->value, 'visible' => true, 'editable' => true],
         ]);
 
         $product = Product::factory()->withEnglishDescription('Old English description')->create([
@@ -1409,21 +1469,22 @@ class ProductControllerTest extends TestCase
         ]);
 
         $this->post("/update/{$product->id}", [
+            'metadata_language' => DlsiteLanguage::English->value,
             'work_name' => $product->work_name,
-            'description_english' => 'Stored duplicate description',
+            'description_localized' => 'Stored duplicate description',
         ])->assertSessionHasNoErrors();
 
         $product->refresh();
 
         $this->assertSame('Stored duplicate description', $product->description);
-        $this->assertNull($product->descriptionForLocale(ProductLocalization::LOCALE_ENGLISH));
+        $this->assertSame('Stored duplicate description', $product->localizations()->where('locale', DlsiteLanguage::English->value)->value('description'));
     }
 
     public function test_update_preserves_hidden_and_readonly_split_descriptions(): void
     {
         Option::setEditFieldLayout([
             ['field' => ProductField::DescriptionJapanese->value, 'visible' => false, 'editable' => true],
-            ['field' => ProductField::DescriptionEnglish->value, 'visible' => true, 'editable' => false],
+            ['field' => ProductField::DescriptionLocalized->value, 'visible' => true, 'editable' => false],
         ]);
 
         $product = Product::factory()->withEnglishDescription('Stored English description')->create([
@@ -1432,15 +1493,16 @@ class ProductControllerTest extends TestCase
         ]);
 
         $this->post("/update/{$product->id}", [
+            'metadata_language' => DlsiteLanguage::English->value,
             'work_name' => $product->work_name,
             'description' => 'Malicious hidden Japanese overwrite',
-            'description_english' => 'Malicious readonly English overwrite',
+            'description_localized' => 'Malicious readonly English overwrite',
         ])->assertSessionHasNoErrors();
 
         $product->refresh();
 
         $this->assertSame('Stored Japanese description', $product->description);
-        $this->assertSame('Stored English description', $product->descriptionForLocale(ProductLocalization::LOCALE_ENGLISH));
+        $this->assertSame('Stored English description', $product->localizations()->where('locale', DlsiteLanguage::English->value)->value('description'));
     }
 
     public function test_edit_defaults_go_back_fragment_to_current_product_when_not_provided(): void
@@ -1486,22 +1548,23 @@ class ProductControllerTest extends TestCase
         $product = Product::factory()->create();
         $this->attachGenres($product, [$englishGenre, $japaneseGenre]);
 
-        $visibleGenre = $expectedFetchedLanguage === Genre::LANGUAGE_ENGLISH ? $englishGenre : $japaneseGenre;
-        $hiddenGenre = $expectedFetchedLanguage === Genre::LANGUAGE_ENGLISH ? $japaneseGenre : $englishGenre;
+        $visibleGenre = $expectedFetchedLanguage === DlsiteLanguage::English->value ? $englishGenre : $japaneseGenre;
+        $hiddenGenre = $expectedFetchedLanguage === DlsiteLanguage::English->value ? $japaneseGenre : $englishGenre;
         $response = $this->get("/edit/{$product->id}")
             ->assertOk()
             ->assertSee($expectedLabel)
             ->assertSee($visibleGenre->title)
             ->assertDontSee($hiddenGenre->title);
 
+        $response->assertSeeInOrder([
+            'name="metadata_language"',
+            'value="' . $expectedFetchedLanguage . '"',
+        ], false);
+
         if ($editable) {
-            $response
-                ->assertSee('name="genre_fetched"', false)
-                ->assertSee('name="genre_fetched_language" value="' . $expectedFetchedLanguage . '"', false);
+            $response->assertSee('name="genre_fetched"', false);
         } else {
-            $response
-                ->assertDontSee('name="genre_fetched"', false)
-                ->assertDontSee('name="genre_fetched_language"', false);
+            $response->assertDontSee('name="genre_fetched"', false);
         }
     }
 
@@ -1601,8 +1664,8 @@ class ProductControllerTest extends TestCase
             'work_name' => 'CUSTOM_ONLY_TAG_UPDATE',
         ]);
 
-        $fetchedLanguageOptionQueries = [];
-        DB::listen(function ($query) use (&$fetchedLanguageOptionQueries): void {
+        $metadataLanguageQueries = [];
+        DB::listen(function ($query) use (&$metadataLanguageQueries): void {
             $bindings = array_map('strval', $query->bindings);
 
             // Return navigation loads these options in the existing Index settings batch.
@@ -1611,10 +1674,10 @@ class ProductControllerTest extends TestCase
             }
 
             if (array_intersect([
-                Option::FETCHED_TAG_LANGUAGE_FOLLOWS_UI,
-                Option::FETCHED_TAG_LANGUAGE,
+                Option::DLSITE_METADATA_LANGUAGE_FOLLOWS_UI,
+                Option::DLSITE_METADATA_LANGUAGE,
             ], $bindings) !== []) {
-                $fetchedLanguageOptionQueries[] = $query->sql;
+                $metadataLanguageQueries[] = $query->sql;
             }
         });
 
@@ -1623,11 +1686,92 @@ class ProductControllerTest extends TestCase
             'genre_custom' => 'CUSTOM_ONLY_TAG',
         ])->assertRedirect()->assertSessionHasNoErrors();
 
-        $this->assertSame([], $fetchedLanguageOptionQueries, implode("\n", $fetchedLanguageOptionQueries));
+        $this->assertSame([], $metadataLanguageQueries, implode("\n", $metadataLanguageQueries));
         $this->assertSame(['CUSTOM_ONLY_TAG'], $product->customGenres()->pluck('title')->all());
     }
 
-    public function test_update_rejects_a_fetched_language_that_no_longer_matches_the_selected_fetched_tag_language(): void
+    public function test_submitted_metadata_language_does_not_query_metadata_language_options(): void
+    {
+        $product = Product::factory()->create([
+            'work_name' => 'SUBMITTED_METADATA_LANGUAGE_QUERY_TEST',
+        ]);
+
+        $metadataLanguageQueries = [];
+        DB::listen(function ($query) use (&$metadataLanguageQueries): void {
+            $bindings = array_map('strval', $query->bindings);
+
+            // Return navigation legitimately loads these values in the Index settings batch.
+            if (in_array(Option::INDEX_PER_PAGE, $bindings, true)) {
+                return;
+            }
+
+            if (array_intersect([
+                Option::DLSITE_METADATA_LANGUAGE_FOLLOWS_UI,
+                Option::DLSITE_METADATA_LANGUAGE,
+            ], $bindings) !== []) {
+                $metadataLanguageQueries[] = $query->sql;
+            }
+        });
+
+        $this->post("/update/{$product->id}", [
+            'work_name' => $product->work_name,
+            'metadata_language' => DlsiteLanguage::English->value,
+        ])->assertRedirect()->assertSessionHasNoErrors();
+
+        $this->assertSame([], $metadataLanguageQueries, implode("\n", $metadataLanguageQueries));
+    }
+
+    public function test_invalid_metadata_language_array_redirect_renders_with_configured_language(): void
+    {
+        Option::setDlsiteMetadataLanguageFollowsUi(false);
+        Option::setDlsiteMetadataLanguage(DlsiteLanguage::Japanese);
+        $product = Product::factory()->create();
+        $editUrl = "/edit/{$product->id}";
+
+        $this->from($editUrl)
+            ->post("/update/{$product->id}", [
+                'work_name' => $product->work_name,
+                'metadata_language' => ['en'],
+            ])
+            ->assertRedirect($editUrl)
+            ->assertSessionHasErrors(['metadata_language']);
+
+        $this->get($editUrl)
+            ->assertOk()
+            ->assertSeeInOrder([
+                'name="metadata_language"',
+                'value="ja"',
+            ], false);
+    }
+
+    public function test_required_metadata_language_rejects_missing_or_null_values(): void
+    {
+        $product = Product::factory()
+            ->withEnglishTitle(null)
+            ->create();
+        $editUrl = "/edit/{$product->id}";
+
+        $this->from($editUrl)
+            ->post("/update/{$product->id}", [
+                'work_name' => $product->work_name,
+                'localized_title' => 'Should not save',
+            ])
+            ->assertRedirect($editUrl)
+            ->assertSessionHasErrors(['metadata_language']);
+
+        $this->from($editUrl)
+            ->post("/update/{$product->id}", [
+                'work_name' => $product->work_name,
+                'localized_title' => 'Should not save',
+                'metadata_language' => null,
+            ])
+            ->assertRedirect($editUrl)
+            ->assertSessionHasErrors(['metadata_language']);
+
+        $this->assertNull($product->localizations()->where('locale', DlsiteLanguage::English->value)->value('title'));
+    }
+
+    public function test_update_uses_rendered_metadata_language_snapshot_when_options_change(): void
     {
         $this->setTagEditLayout(visible: true, customEditable: false, fetchedEditable: true);
         [$product, $englishGenre, $japaneseGenre] = $this->createBilingualFetchedProduct('RENDERED_LANGUAGE');
@@ -1637,42 +1781,42 @@ class ProductControllerTest extends TestCase
         $this->get($editUrl)
             ->assertOk()
             ->assertSee('Fetched Tags')
-            ->assertSee('name="genre_fetched_language" value="en"', false)
+            ->assertSeeInOrder([
+                'name="metadata_language"',
+                'value="en"',
+            ], false)
             ->assertSee($englishGenre->title)
             ->assertDontSee($japaneseGenre->title);
 
-        Option::setFetchedTagLanguageFollowsUi(false);
-        Option::setFetchedTagLanguage(FetchedTagLanguage::Japanese);
+        Option::setDlsiteMetadataLanguageFollowsUi(false);
+        Option::setDlsiteMetadataLanguage(DlsiteLanguage::Japanese);
 
         $this->from($editUrl)
             ->post("/update/{$product->id}", [
                 'work_name' => $product->work_name,
                 'genre_fetched' => 'RENDERED_LANGUAGE_REPLACEMENT_EN',
-                'genre_fetched_language' => Genre::LANGUAGE_ENGLISH,
+                'metadata_language' => DlsiteLanguage::English->value,
             ])
-            ->assertRedirect($editUrl)
-            ->assertSessionHasErrors(['genre_fetched_language']);
+            ->assertRedirect("/#{$product->id}")
+            ->assertSessionHasNoErrors();
+
+        $this->assertSame(['RENDERED_LANGUAGE_REPLACEMENT_EN'], $product->fetchedGenresForLanguage(DlsiteLanguage::English)->pluck('genres.title')->all());
+        $this->assertSame([$japaneseGenre->title], $product->fetchedGenresForLanguage(DlsiteLanguage::Japanese)->pluck('genres.title')->all());
 
         $this->get($editUrl)
             ->assertOk()
-            ->assertSee('Fetched Tags')
-            ->assertSee('name="genre_fetched_language" value="jp"', false)
+            ->assertSeeInOrder([
+                'name="metadata_language"',
+                'value="ja"',
+            ], false)
             ->assertSee($japaneseGenre->title)
-            ->assertDontSee($englishGenre->title)
-            ->assertDontSee('RENDERED_LANGUAGE_REPLACEMENT_EN')
-            ->assertSee('The selected genre fetched language is invalid.');
-
-        $product->refresh()->load(['englishGenres', 'japaneseGenres']);
-
-        $this->assertSame([$englishGenre->title], $product->englishGenres->pluck('title')->all());
-        $this->assertSame([$japaneseGenre->title], $product->japaneseGenres->pluck('title')->all());
-        $this->assertDatabaseMissing('genres', [
-            'title' => 'RENDERED_LANGUAGE_REPLACEMENT_EN',
-        ]);
+            ->assertDontSee('RENDERED_LANGUAGE_REPLACEMENT_EN');
     }
 
-    public function test_validation_retry_reloads_persisted_fetched_tags_instead_of_unsaved_input(): void
+    public function test_validation_retry_uses_current_metadata_language_and_reloads_persisted_fetched_tags(): void
     {
+        Option::setDlsiteMetadataLanguageFollowsUi(false);
+        Option::setDlsiteMetadataLanguage(DlsiteLanguage::English);
         $this->setTagEditLayout(visible: true, customEditable: false, fetchedEditable: true);
         [$product, $englishGenre, $japaneseGenre] = $this->createBilingualFetchedProduct('RETRY_LANGUAGE');
 
@@ -1681,29 +1825,32 @@ class ProductControllerTest extends TestCase
         $this->get($editUrl)
             ->assertOk()
             ->assertSee('Fetched Tags')
-            ->assertSee('name="genre_fetched_language" value="en"', false)
+            ->assertSeeInOrder([
+                'name="metadata_language"',
+                'value="en"',
+            ], false)
             ->assertSee($englishGenre->title);
+
+        Option::setDlsiteMetadataLanguage(DlsiteLanguage::Japanese);
 
         $this->from($editUrl)
             ->post("/update/{$product->id}", [
+                'localized_title' => 'RETRY_LANGUAGE_DRAFT_EN_TITLE',
                 'genre_fetched' => 'RETRY_LANGUAGE_TYPED_EN',
-                'genre_fetched_language' => Genre::LANGUAGE_ENGLISH,
+                'metadata_language' => DlsiteLanguage::English->value,
             ])
             ->assertRedirect($editUrl)
             ->assertSessionHasErrors(['work_name']);
 
         $this->get($editUrl)
             ->assertOk()
-            ->assertSee('Fetched Tags')
-            ->assertSee('name="genre_fetched_language" value="en"', false)
-            ->assertSee($englishGenre->title)
+            ->assertSeeInOrder([
+                'name="metadata_language"',
+                'value="ja"',
+            ], false)
+            ->assertSee($japaneseGenre->title)
             ->assertDontSee('RETRY_LANGUAGE_TYPED_EN')
-            ->assertDontSee($japaneseGenre->title);
-
-        $product->refresh()->load(['englishGenres', 'japaneseGenres']);
-
-        $this->assertSame([$englishGenre->title], $product->englishGenres->pluck('title')->all());
-        $this->assertSame([$japaneseGenre->title], $product->japaneseGenres->pluck('title')->all());
+            ->assertDontSee($englishGenre->title);
     }
 
     public function test_edit_renders_custom_and_fetched_tag_rows_in_layout_order(): void
@@ -1766,41 +1913,34 @@ class ProductControllerTest extends TestCase
             'work_name' => $product->work_name,
             'genre_custom' => 'SPLIT_MALICIOUS_CUSTOM_TAG',
             'genre_fetched' => 'SPLIT_NEW_FETCHED_EN_TAG',
-            'genre_fetched_language' => Genre::LANGUAGE_ENGLISH,
+            'metadata_language' => DlsiteLanguage::English->value,
         ])->assertSessionHasNoErrors();
 
-        $product->refresh()->load(['englishGenres', 'customGenres']);
+        $product->refresh()->load('customGenres');
 
-        $this->assertSame(['SPLIT_NEW_FETCHED_EN_TAG'], $product->englishGenres->pluck('title')->all());
+        $this->assertSame(['SPLIT_NEW_FETCHED_EN_TAG'], $product->fetchedGenresForLanguage(DlsiteLanguage::English)->pluck('genres.title')->all());
         $this->assertSame(['SPLIT_PRESERVED_CUSTOM_TAG'], $product->customGenres->pluck('title')->all());
         $this->assertDatabaseMissing('genres', [
             'title' => 'SPLIT_MALICIOUS_CUSTOM_TAG',
         ]);
     }
 
-    #[DataProvider('invalidFetchedLanguageProvider')]
-    public function test_update_rejects_missing_or_invalid_fetched_language(?string $submittedLanguage): void
+    public function test_update_rejects_unsupported_metadata_language(): void
     {
         $this->setTagEditLayout(visible: true, customEditable: false, fetchedEditable: true);
         [$product, $englishGenre, $japaneseGenre] = $this->createBilingualFetchedProduct('REJECTED_LANGUAGE');
-        $payload = [
-            'work_name' => $product->work_name,
-            'genre_fetched' => 'REJECTED_LANGUAGE_REPLACEMENT',
-        ];
-
-        if ($submittedLanguage !== null) {
-            $payload['genre_fetched_language'] = $submittedLanguage;
-        }
 
         $this->from("/edit/{$product->id}")
-            ->post("/update/{$product->id}", $payload)
+            ->post("/update/{$product->id}", [
+                'work_name' => $product->work_name,
+                'genre_fetched' => 'REJECTED_LANGUAGE_REPLACEMENT',
+                'metadata_language' => 'unsupported',
+            ])
             ->assertRedirect("/edit/{$product->id}")
-            ->assertSessionHasErrors(['genre_fetched_language']);
+            ->assertSessionHasErrors(['metadata_language']);
 
-        $product->refresh()->load(['englishGenres', 'japaneseGenres']);
-
-        $this->assertSame([$englishGenre->title], $product->englishGenres->pluck('title')->all());
-        $this->assertSame([$japaneseGenre->title], $product->japaneseGenres->pluck('title')->all());
+        $this->assertSame([$englishGenre->title], $product->fetchedGenresForLanguage(DlsiteLanguage::English)->pluck('genres.title')->all());
+        $this->assertSame([$japaneseGenre->title], $product->fetchedGenresForLanguage(DlsiteLanguage::Japanese)->pluck('genres.title')->all());
         $this->assertDatabaseMissing('genres', ['title' => 'REJECTED_LANGUAGE_REPLACEMENT']);
     }
 
@@ -1815,11 +1955,10 @@ class ProductControllerTest extends TestCase
         $this->post("/update/{$product->id}", [
             'work_name' => $product->work_name,
             'genre_fetched' => 'MALICIOUS_FETCHED_EN_TOKEN',
-            'genre_fetched_language' => Genre::LANGUAGE_ENGLISH,
+            'metadata_language' => DlsiteLanguage::English->value,
         ])->assertSessionHasNoErrors();
 
-        $product->refresh()->load('englishGenres');
-        $this->assertSame(['UNCHANGED_FETCHED_EN_TOKEN'], $product->englishGenres->pluck('title')->all());
+        $this->assertSame(['UNCHANGED_FETCHED_EN_TOKEN'], $product->fetchedGenresForLanguage(DlsiteLanguage::English)->pluck('genres.title')->all());
         $this->assertDatabaseMissing('genres', [
             'title' => 'MALICIOUS_FETCHED_EN_TOKEN',
         ]);
@@ -1837,7 +1976,7 @@ class ProductControllerTest extends TestCase
         Genre::query()->create(['title' => 'New, Editable EN']);
 
         app(ProductGenreSync::class)->sync($product, [
-            Genre::LANGUAGE_ENGLISH => [
+            DlsiteLanguage::English->value => [
                 $oldEnglishGenre->getKey(),
                 $keptEnglishGenre->getKey(),
             ],
@@ -1846,14 +1985,14 @@ class ProductControllerTest extends TestCase
         $this->post("/update/{$product->id}", [
             'work_name' => $product->work_name,
             'genre_fetched' => 'Kept Editable EN, "New, Editable EN"',
-            'genre_fetched_language' => Genre::LANGUAGE_ENGLISH,
+            'metadata_language' => DlsiteLanguage::English->value,
             'genre_custom' => 'Custom Editable Tag',
         ])->assertSessionHasNoErrors();
 
-        $product->refresh()->load(['englishGenres', 'customGenres']);
+        $product->refresh()->load('customGenres');
         $this->assertEqualsCanonicalizing(
             ['Kept Editable EN', 'New, Editable EN'],
-            $product->englishGenres->pluck('title')->all()
+            $product->fetchedGenresForLanguage(DlsiteLanguage::English)->pluck('genres.title')->all()
         );
         $this->assertSame(['Custom Editable Tag'], $product->customGenres->pluck('title')->all());
         $this->assertDatabaseMissing('genre_product', [
@@ -1876,20 +2015,20 @@ class ProductControllerTest extends TestCase
         Genre::query()->create(['title' => 'Replacement Visible JP']);
 
         app(ProductGenreSync::class)->sync($product, [
-            Genre::LANGUAGE_ENGLISH => [$englishGenre->getKey()],
-            Genre::LANGUAGE_JAPANESE => [$oldJapaneseGenre->getKey()],
+            DlsiteLanguage::English->value => [$englishGenre->getKey()],
+            DlsiteLanguage::Japanese->value => [$oldJapaneseGenre->getKey()],
         ], [$customGenre->getKey()]);
 
         $this->post("/update/{$product->id}", [
             'work_name' => $product->work_name,
             'genre_fetched' => 'Replacement Visible JP',
-            'genre_fetched_language' => Genre::LANGUAGE_JAPANESE,
+            'metadata_language' => DlsiteLanguage::Japanese->value,
             'genre_custom' => 'MALICIOUS_CUSTOM_REPLACEMENT',
         ])->assertSessionHasNoErrors();
 
-        $product->refresh()->load(['japaneseGenres', 'englishGenres', 'customGenres']);
-        $this->assertSame(['Replacement Visible JP'], $product->japaneseGenres->pluck('title')->all());
-        $this->assertSame(['Hidden EN Preserved'], $product->englishGenres->pluck('title')->all());
+        $product->refresh()->load('customGenres');
+        $this->assertSame(['Replacement Visible JP'], $product->fetchedGenresForLanguage(DlsiteLanguage::Japanese)->pluck('genres.title')->all());
+        $this->assertSame(['Hidden EN Preserved'], $product->fetchedGenresForLanguage(DlsiteLanguage::English)->pluck('genres.title')->all());
         $this->assertSame(['Custom Preserved'], $product->customGenres->pluck('title')->all());
         $this->assertDatabaseMissing('genre_product', [
             'product_id' => $product->getKey(),
@@ -1915,12 +2054,12 @@ class ProductControllerTest extends TestCase
             'work_name' => $product->work_name,
             'genre_custom' => 'CUSTOM_ONLY_NEW_CUSTOM',
             'genre_fetched' => 'CUSTOM_ONLY_MALICIOUS_FETCHED',
-            'genre_fetched_language' => Genre::LANGUAGE_ENGLISH,
+            'metadata_language' => DlsiteLanguage::English->value,
         ])->assertSessionHasNoErrors();
 
-        $product->refresh()->load(['englishGenres', 'customGenres']);
+        $product->refresh()->load('customGenres');
 
-        $this->assertSame(['CUSTOM_ONLY_PRESERVED_FETCHED_EN'], $product->englishGenres->pluck('title')->all());
+        $this->assertSame(['CUSTOM_ONLY_PRESERVED_FETCHED_EN'], $product->fetchedGenresForLanguage(DlsiteLanguage::English)->pluck('genres.title')->all());
         $this->assertSame(['CUSTOM_ONLY_NEW_CUSTOM'], $product->customGenres->pluck('title')->all());
         $this->assertDatabaseMissing('genres', [
             'title' => 'CUSTOM_ONLY_MALICIOUS_FETCHED',
@@ -1941,13 +2080,13 @@ class ProductControllerTest extends TestCase
         $this->post("/update/{$product->id}", [
             'work_name' => $product->work_name,
             'genre_fetched' => 'FETCHED_ONLY_NEW_FETCHED_EN',
-            'genre_fetched_language' => Genre::LANGUAGE_ENGLISH,
+            'metadata_language' => DlsiteLanguage::English->value,
             'genre_custom' => 'FETCHED_ONLY_MALICIOUS_CUSTOM',
         ])->assertSessionHasNoErrors();
 
-        $product->refresh()->load(['englishGenres', 'customGenres']);
+        $product->refresh()->load('customGenres');
 
-        $this->assertSame(['FETCHED_ONLY_NEW_FETCHED_EN'], $product->englishGenres->pluck('title')->all());
+        $this->assertSame(['FETCHED_ONLY_NEW_FETCHED_EN'], $product->fetchedGenresForLanguage(DlsiteLanguage::English)->pluck('genres.title')->all());
         $this->assertSame(['FETCHED_ONLY_PRESERVED_CUSTOM'], $product->customGenres->pluck('title')->all());
         $this->assertDatabaseMissing('genres', [
             'title' => 'FETCHED_ONLY_MALICIOUS_CUSTOM',
@@ -1968,13 +2107,13 @@ class ProductControllerTest extends TestCase
         $this->post("/update/{$product->id}", [
             'work_name' => $product->work_name,
             'genre_fetched' => 'HIDDEN_TAGS_MALICIOUS_FETCHED',
-            'genre_fetched_language' => Genre::LANGUAGE_ENGLISH,
+            'metadata_language' => DlsiteLanguage::English->value,
             'genre_custom' => 'HIDDEN_TAGS_MALICIOUS_CUSTOM',
         ])->assertSessionHasNoErrors();
 
-        $product->refresh()->load(['englishGenres', 'customGenres']);
+        $product->refresh()->load('customGenres');
 
-        $this->assertSame(['HIDDEN_TAGS_PRESERVED_FETCHED_EN'], $product->englishGenres->pluck('title')->all());
+        $this->assertSame(['HIDDEN_TAGS_PRESERVED_FETCHED_EN'], $product->fetchedGenresForLanguage(DlsiteLanguage::English)->pluck('genres.title')->all());
         $this->assertSame(['HIDDEN_TAGS_PRESERVED_CUSTOM'], $product->customGenres->pluck('title')->all());
         $this->assertDatabaseMissing('genres', [
             'title' => 'HIDDEN_TAGS_MALICIOUS_FETCHED',
@@ -1987,6 +2126,7 @@ class ProductControllerTest extends TestCase
     public function test_store_rejects_invalid_product_code(): void
     {
         $response = $this->from('/create')->post('/store', [
+            'metadata_language' => DlsiteLanguage::English->value,
             'id' => 'not-an-rj-code',
         ]);
 
@@ -1999,6 +2139,7 @@ class ProductControllerTest extends TestCase
         $existing = Product::factory()->create();
 
         $response = $this->from('/create')->post('/store', [
+            'metadata_language' => DlsiteLanguage::English->value,
             'id' => $existing->id,
         ]);
 
@@ -2012,6 +2153,7 @@ class ProductControllerTest extends TestCase
         $urlInput = 'https://www.dlsite.com/maniax/work/=/product_id/' . strtolower($existing->id) . '.html';
 
         $response = $this->from('/create')->post('/store', [
+            'metadata_language' => DlsiteLanguage::English->value,
             'id' => $urlInput,
         ]);
 
@@ -2039,6 +2181,7 @@ class ProductControllerTest extends TestCase
             ], JSON_THROW_ON_ERROR));
 
             $this->post('/store', [
+                'metadata_language' => DlsiteLanguage::English->value,
                 'id' => "https://www.dlsite.com/{$siteId}/work/=/product_id/" . strtolower($productCode) . '.html',
             ])->assertSessionHasNoErrors()->assertRedirect("/#{$productCode}");
 
@@ -2106,6 +2249,7 @@ class ProductControllerTest extends TestCase
         ]));
 
         $response = $this->post('/store', [
+            'metadata_language' => DlsiteLanguage::English->value,
             'id' => strtolower($workId),
             'progress' => 'Completed',
             'genre_custom' => 'Scraped Custom Tag',
@@ -2124,16 +2268,24 @@ class ProductControllerTest extends TestCase
                 Storage::disk('local')->path("Works/{$workId}.json"),
                 '--log-directory',
                 storage_path('logs'),
+                '--locale-config',
+                json_encode([
+                    'canonical' => 'ja',
+                    'locales' => [
+                        'ja' => null,
+                        'en' => 'en_US',
+                    ],
+                ], JSON_THROW_ON_ERROR),
                 '--image-output',
                 Storage::disk('public')->path("Works/{$workId}"),
             ] && $process->timeout === null;
         });
 
         $product = Product::query()->whereKey($workId)->firstOrFail();
-        $product->load(['japaneseGenres', 'englishGenres', 'customGenres']);
+        $product->load('customGenres');
 
         $this->assertSame('SCRAPED_JP_TITLE_TOKEN', $product->work_name);
-        $this->assertSame('SCRAPED_EN_TITLE_TOKEN', $product->titleForLocale('en'));
+        $this->assertSame('SCRAPED_EN_TITLE_TOKEN', $product->localizations()->where('locale', 'en')->value('title'));
         $this->assertSame('SCRAPED_TITLE_NAME_SERIES', $product->series);
         $this->assertSame(['MOV', 'SND', 'MS2'], $product->product_format);
         $this->assertSame('Completed', $product->progress);
@@ -2142,8 +2294,8 @@ class ProductControllerTest extends TestCase
             "storage/Works/{$workId}/sample_1.jpg",
             "storage/Works/{$workId}/sample_2.jpg",
         ], $product->sample_images);
-        $this->assertEqualsCanonicalizing(['ASMR', 'Scraped JP Tag'], $product->japaneseGenres->pluck('title')->all());
-        $this->assertEqualsCanonicalizing(['ASMR', 'Scraped EN Tag'], $product->englishGenres->pluck('title')->all());
+        $this->assertEqualsCanonicalizing(['ASMR', 'Scraped JP Tag'], $product->fetchedGenresForLanguage(DlsiteLanguage::Japanese)->pluck('genres.title')->all());
+        $this->assertEqualsCanonicalizing(['ASMR', 'Scraped EN Tag'], $product->fetchedGenresForLanguage(DlsiteLanguage::English)->pluck('genres.title')->all());
         $this->assertSame(['Scraped Custom Tag'], $product->customGenres->pluck('title')->all());
         $this->assertSame(1, Genre::query()->where('title', 'ASMR')->count());
 
@@ -2154,7 +2306,7 @@ class ProductControllerTest extends TestCase
             ->value('id');
 
         $this->assertEqualsCanonicalizing(
-            [Genre::LANGUAGE_JAPANESE, Genre::LANGUAGE_ENGLISH],
+            [DlsiteLanguage::Japanese->value, DlsiteLanguage::English->value],
             DB::table('genre_product_languages')
                 ->where('genre_product_id', $asmrPivotId)
                 ->pluck('language')
@@ -2199,7 +2351,7 @@ class ProductControllerTest extends TestCase
             ], JSON_THROW_ON_ERROR)),
         ])->preventStrayProcesses();
 
-        $this->post('/store', ['id' => $workId])
+        $this->post('/store', ['metadata_language' => DlsiteLanguage::English->value, 'id' => $workId])
             ->assertSessionHasNoErrors()
             ->assertRedirect("/#{$workId}")
             ->assertSessionHas(
@@ -2226,6 +2378,7 @@ class ProductControllerTest extends TestCase
         );
 
         $this->post('/store', [
+            'metadata_language' => DlsiteLanguage::English->value,
             'id' => $workId,
             'product_format' => 'Role-playing, Music, Audiobook',
         ])->assertSessionHasNoErrors();
@@ -2247,7 +2400,7 @@ class ProductControllerTest extends TestCase
             ]), JSON_THROW_ON_ERROR),
         );
 
-        $this->post('/store', ['id' => $workId])->assertSessionHasNoErrors();
+        $this->post('/store', ['metadata_language' => DlsiteLanguage::English->value, 'id' => $workId])->assertSessionHasNoErrors();
 
         $this->assertSame('2026-09-24 00:00:00', Product::findOrFail($workId)->announce_date?->format('Y-m-d H:i:s'));
         $this->assertSame('home', Product::findOrFail($workId)->site_id);
@@ -2270,6 +2423,7 @@ class ProductControllerTest extends TestCase
         );
 
         $this->post('/store', [
+            'metadata_language' => DlsiteLanguage::English->value,
             'id' => $workId,
             'product_format' => '',
         ])->assertSessionHasNoErrors();
@@ -2298,6 +2452,7 @@ class ProductControllerTest extends TestCase
             ->assertSee('name="product_format"', false);
 
         $this->post('/store', [
+            'metadata_language' => DlsiteLanguage::English->value,
             'id' => $workId,
             'product_format' => 'Role-playing, Animation, Audiobook',
         ])->assertSessionHasNoErrors();
@@ -2321,7 +2476,7 @@ class ProductControllerTest extends TestCase
             ['field' => ProductField::Brand->value, 'visible' => false],
             ['field' => ProductField::Scenario->value, 'visible' => true],
             ['field' => ProductField::DescriptionJapanese->value, 'visible' => true],
-            ['field' => ProductField::DescriptionEnglish->value, 'visible' => true],
+            ['field' => ProductField::DescriptionLocalized->value, 'visible' => true],
             ['field' => ProductField::VoiceActor->value, 'visible' => false],
         ]);
 
@@ -2339,6 +2494,7 @@ class ProductControllerTest extends TestCase
         ])));
 
         $response = $this->post('/store', [
+            'metadata_language' => DlsiteLanguage::English->value,
             'id' => $workId,
             'age_category' => 'ALL_AGES',
             'circle' => 'MANUAL_CREATE_CIRCLE_TOKEN',
@@ -2348,7 +2504,7 @@ class ProductControllerTest extends TestCase
             'scenario' => 'MANUAL_CREATE_SCENARIO_TOKEN',
             'voice_actor' => 'MALICIOUS_CREATE_VOICE_TOKEN',
             'description' => 'MANUAL_CREATE_DESCRIPTION_TOKEN',
-            'description_english' => 'MANUAL_CREATE_EN_DESCRIPTION_TOKEN',
+            'description_localized' => 'MANUAL_CREATE_EN_DESCRIPTION_TOKEN',
         ]);
 
         $response->assertSessionHasNoErrors();
@@ -2361,7 +2517,7 @@ class ProductControllerTest extends TestCase
         $this->assertSame('SCRAPED_CREATE_BRAND_TOKEN', $product->brand);
         $this->assertSame('RG_MANUAL_CREATE', $product->maker_id);
         $this->assertSame('MANUAL_CREATE_DESCRIPTION_TOKEN', $product->description);
-        $this->assertSame('MANUAL_CREATE_EN_DESCRIPTION_TOKEN', $product->descriptionForLocale(ProductLocalization::LOCALE_ENGLISH));
+        $this->assertSame('MANUAL_CREATE_EN_DESCRIPTION_TOKEN', $product->localizations()->where('locale', DlsiteLanguage::English->value)->value('description'));
         $this->assertDatabaseHas('contributors', ['name' => 'MANUAL_CREATE_SCENARIO_TOKEN']);
         $this->assertDatabaseHas('contributors', ['name' => 'SCRAPED_CREATE_VOICE_TOKEN']);
         $this->assertDatabaseMissing('contributors', ['name' => 'MALICIOUS_CREATE_VOICE_TOKEN']);
@@ -2375,7 +2531,7 @@ class ProductControllerTest extends TestCase
 
         Option::setQuickAddFieldLayout([
             ['field' => ProductField::DescriptionJapanese->value, 'visible' => true],
-            ['field' => ProductField::DescriptionEnglish->value, 'visible' => false],
+            ['field' => ProductField::DescriptionLocalized->value, 'visible' => false],
         ]);
 
         $workId = Product::factory()->make()->id;
@@ -2386,15 +2542,16 @@ class ProductControllerTest extends TestCase
         ])));
 
         $this->post('/store', [
+            'metadata_language' => DlsiteLanguage::English->value,
             'id' => $workId,
             'description' => 'VISIBLE_SPLIT_JP_OVERRIDE',
-            'description_english' => 'MALICIOUS_HIDDEN_SPLIT_EN_OVERRIDE',
+            'description_localized' => 'MALICIOUS_HIDDEN_SPLIT_EN_OVERRIDE',
         ])->assertSessionHasNoErrors();
 
         $product = Product::query()->whereKey($workId)->firstOrFail();
 
         $this->assertSame('VISIBLE_SPLIT_JP_OVERRIDE', $product->description);
-        $this->assertSame('SCRAPED_HIDDEN_SPLIT_EN_DESCRIPTION', $product->descriptionForLocale(ProductLocalization::LOCALE_ENGLISH));
+        $this->assertSame('SCRAPED_HIDDEN_SPLIT_EN_DESCRIPTION', $product->localizations()->where('locale', DlsiteLanguage::English->value)->value('description'));
     }
 
     public function test_store_keeps_manual_series_when_title_name_is_fetched(): void
@@ -2409,6 +2566,7 @@ class ProductControllerTest extends TestCase
         ])));
 
         $this->post('/store', [
+            'metadata_language' => DlsiteLanguage::English->value,
             'id' => $workId,
             'series' => 'MANUAL_SERIES_TOKEN',
         ])->assertSessionHasNoErrors();
@@ -2429,6 +2587,7 @@ class ProductControllerTest extends TestCase
         ])));
 
         $this->post('/store', [
+            'metadata_language' => DlsiteLanguage::English->value,
             'id' => $workId,
         ])->assertSessionHasNoErrors();
 
@@ -2438,6 +2597,7 @@ class ProductControllerTest extends TestCase
     public function test_store_rejects_invalid_date_order(): void
     {
         $response = $this->from('/create')->post('/store', [
+            'metadata_language' => DlsiteLanguage::English->value,
             'id' => Product::factory()->make()->id,
             'add' => [
                 'start_date' => [
@@ -2460,6 +2620,7 @@ class ProductControllerTest extends TestCase
     public function test_store_rejects_impossible_date(): void
     {
         $response = $this->from('/create')->post('/store', [
+            'metadata_language' => DlsiteLanguage::English->value,
             'id' => Product::factory()->make()->id,
             'add' => [
                 'start_date' => [
@@ -2477,6 +2638,7 @@ class ProductControllerTest extends TestCase
     public function test_store_rejects_invalid_progress(): void
     {
         $response = $this->from('/create')->post('/store', [
+            'metadata_language' => DlsiteLanguage::English->value,
             'id' => Product::factory()->make()->id,
             'progress' => 'Paused',
         ]);
@@ -2488,6 +2650,7 @@ class ProductControllerTest extends TestCase
     public function test_store_rejects_invalid_score(): void
     {
         $response = $this->from('/create')->post('/store', [
+            'metadata_language' => DlsiteLanguage::English->value,
             'id' => Product::factory()->make()->id,
             'score' => '999',
         ]);
@@ -2501,6 +2664,7 @@ class ProductControllerTest extends TestCase
         $existing = Product::factory()->create();
 
         $response = $this->from('/create')->post('/store', [
+            'metadata_language' => DlsiteLanguage::English->value,
             'id' => $existing->id,
             'add' => [
                 'num_re_listen_times' => '-1',
@@ -2517,6 +2681,7 @@ class ProductControllerTest extends TestCase
 
         foreach (['0', '6'] as $value) {
             $response = $this->from('/create')->post('/store', [
+                'metadata_language' => DlsiteLanguage::English->value,
                 'id' => $existing->id,
                 'add' => [
                     're_listen_value' => $value,
@@ -2534,6 +2699,7 @@ class ProductControllerTest extends TestCase
 
         foreach (['-1', '3'] as $value) {
             $response = $this->from('/create')->post('/store', [
+                'metadata_language' => DlsiteLanguage::English->value,
                 'id' => $existing->id,
                 'add' => [
                     'priority' => $value,
@@ -2559,9 +2725,10 @@ class ProductControllerTest extends TestCase
         ];
 
         $response = $this->post('/store/custom', [
+            'metadata_language' => DlsiteLanguage::English->value,
             'id' => strtolower($workId),
             'work_name' => 'CUSTOM_STORE_JP_TOKEN',
-            'work_name_english' => 'CUSTOM_STORE_EN_TOKEN',
+            'localized_title' => 'CUSTOM_STORE_EN_TOKEN',
             'age_category' => 'R18',
             'progress' => 'Completed',
             'score' => 8,
@@ -2598,7 +2765,7 @@ class ProductControllerTest extends TestCase
 
         $this->assertSame("storage/Works/{$workId}/cover.png", $product->work_image);
         $this->assertSame('CUSTOM_STORE_JP_TOKEN', $product->work_name);
-        $this->assertSame('CUSTOM_STORE_EN_TOKEN', $product->titleForLocale('en'));
+        $this->assertSame('CUSTOM_STORE_EN_TOKEN', $product->localizations()->where('locale', 'en')->value('title'));
         $this->assertSame('R18', $product->age_category);
         $this->assertNull($product->product_format);
         $this->assertSame('CUSTOM_STORE_SERIES_TOKEN', $product->series);
@@ -2786,7 +2953,7 @@ class ProductControllerTest extends TestCase
             ['field' => ProductField::Circle->value, 'visible' => true],
             ['field' => ProductField::Author->value, 'visible' => true],
             ['field' => ProductField::DescriptionJapanese->value, 'visible' => true],
-            ['field' => ProductField::DescriptionEnglish->value, 'visible' => true],
+            ['field' => ProductField::DescriptionLocalized->value, 'visible' => true],
             ['field' => ProductField::VoiceActor->value, 'visible' => false],
             ['field' => ProductField::SampleImages->value, 'visible' => false],
         ]);
@@ -2800,7 +2967,7 @@ class ProductControllerTest extends TestCase
             'author' => 'CUSTOM_VISIBLE_AUTHOR_TOKEN',
             'voice_actor' => 'MALICIOUS_CUSTOM_VOICE_TOKEN',
             'description' => 'CUSTOM_VISIBLE_DESCRIPTION_TOKEN',
-            'description_english' => 'CUSTOM_VISIBLE_EN_DESCRIPTION_TOKEN',
+            'description_localized' => 'CUSTOM_VISIBLE_EN_DESCRIPTION_TOKEN',
             'sample_images' => [
                 UploadedFile::fake()->create('hidden-sample.txt', 1, 'text/plain'),
             ],
@@ -2814,7 +2981,7 @@ class ProductControllerTest extends TestCase
         $this->assertSame('CUSTOM_VISIBLE_CIRCLE_TOKEN', $product->circle);
         $this->assertSame('RG_CUSTOM_VISIBLE', $product->maker_id);
         $this->assertSame('CUSTOM_VISIBLE_DESCRIPTION_TOKEN', $product->description);
-        $this->assertSame('CUSTOM_VISIBLE_EN_DESCRIPTION_TOKEN', $product->descriptionForLocale(ProductLocalization::LOCALE_ENGLISH));
+        $this->assertSame('CUSTOM_VISIBLE_EN_DESCRIPTION_TOKEN', $product->localizations()->where('locale', DlsiteLanguage::English->value)->value('description'));
         $this->assertSame([], $product->sample_images);
         $this->assertDatabaseHas('contributors', ['name' => 'CUSTOM_VISIBLE_AUTHOR_TOKEN']);
         $this->assertDatabaseMissing('contributors', ['name' => 'MALICIOUS_CUSTOM_VOICE_TOKEN']);
@@ -2827,7 +2994,7 @@ class ProductControllerTest extends TestCase
 
         Option::setCustomQuickAddFieldLayout([
             ['field' => ProductField::DescriptionJapanese->value, 'visible' => true],
-            ['field' => ProductField::DescriptionEnglish->value, 'visible' => false],
+            ['field' => ProductField::DescriptionLocalized->value, 'visible' => false],
         ]);
 
         $workId = Product::factory()->make()->id;
@@ -2835,13 +3002,13 @@ class ProductControllerTest extends TestCase
         $this->post('/store/custom', $this->customStorePayload($workId, [
             'work_name' => 'CUSTOM_SPLIT_DESCRIPTION_TOKEN',
             'description' => 'CUSTOM_VISIBLE_SPLIT_JP_DESCRIPTION',
-            'description_english' => 'MALICIOUS_HIDDEN_SPLIT_EN_DESCRIPTION',
+            'description_localized' => 'MALICIOUS_HIDDEN_SPLIT_EN_DESCRIPTION',
         ]))->assertSessionHasNoErrors();
 
         $product = Product::query()->whereKey($workId)->firstOrFail();
 
         $this->assertSame('CUSTOM_VISIBLE_SPLIT_JP_DESCRIPTION', $product->description);
-        $this->assertNull($product->descriptionForLocale(ProductLocalization::LOCALE_ENGLISH));
+        $this->assertNull($product->localizations()->where('locale', DlsiteLanguage::English->value)->value('description'));
     }
 
     public function test_custom_store_accepts_missing_cover_image(): void
@@ -2853,6 +3020,7 @@ class ProductControllerTest extends TestCase
         $this->assertCount(0, $this->responseXPath($form)->query('//input[@type="file" and @required]'));
 
         $response = $this->from('/create/custom')->post('/store/custom', [
+            'metadata_language' => DlsiteLanguage::English->value,
             'id' => $workId,
             'work_name' => 'CUSTOM_NO_COVER_TOKEN',
             'age_category' => 'ALL_AGES',
@@ -2897,10 +3065,10 @@ class ProductControllerTest extends TestCase
         $response->assertSessionHasNoErrors();
 
         $product = Product::query()->whereKey($workId)->firstOrFail();
-        $product->load(['genres', 'englishGenres', 'customGenres']);
+        $product->load(['genres', 'customGenres']);
 
         $this->assertSame([$existingGenre->getKey()], $product->genres->pluck('id')->all());
-        $this->assertSame([], $product->englishGenres->pluck('title')->all());
+        $this->assertSame([], $product->fetchedGenresForLanguage(DlsiteLanguage::English)->pluck('genres.title')->all());
         $this->assertSame(['Existing Store Auto Genre'], $product->customGenres->pluck('title')->all());
 
         $this->get("/edit/{$product->id}")
@@ -3040,6 +3208,7 @@ class ProductControllerTest extends TestCase
     public function test_custom_store_rejects_missing_required_fields(): void
     {
         $response = $this->from('/create/custom')->post('/store/custom', [
+            'metadata_language' => DlsiteLanguage::English->value,
             'id' => Product::factory()->make()->id,
         ]);
 
@@ -3054,6 +3223,7 @@ class ProductControllerTest extends TestCase
         $existing = Product::factory()->create();
 
         $response = $this->from('/create/custom')->post('/store/custom', [
+            'metadata_language' => DlsiteLanguage::English->value,
             'id' => $existing->id,
             'work_name' => 'CUSTOM_DUPLICATE_TOKEN',
             'age_category' => 'ALL_AGES',
@@ -3068,6 +3238,7 @@ class ProductControllerTest extends TestCase
         Storage::fake('public');
 
         $response = $this->from('/create/custom')->post('/store/custom', [
+            'metadata_language' => DlsiteLanguage::English->value,
             'id' => Product::factory()->make()->id,
             'work_name' => 'CUSTOM_INVALID_AGE_TOKEN',
             'age_category' => 'NOT_VALID',
@@ -3082,6 +3253,7 @@ class ProductControllerTest extends TestCase
         Storage::fake('public');
 
         $response = $this->from('/create/custom')->post('/store/custom', [
+            'metadata_language' => DlsiteLanguage::English->value,
             'id' => Product::factory()->make()->id,
             'work_name' => 'CUSTOM_INVALID_IMAGE_TOKEN',
             'age_category' => 'ALL_AGES',
@@ -3118,8 +3290,9 @@ class ProductControllerTest extends TestCase
         $this->attachGenres($product, [$oldCustomGenre, $existingEnglishGenre]);
 
         $response = $this->post("/update/{$product->id}", [
+            'metadata_language' => DlsiteLanguage::English->value,
             'work_name' => 'UPDATE_NEW_NAME_TOKEN',
-            'work_name_english' => 'UPDATE_NEW_EN_TOKEN',
+            'localized_title' => 'UPDATE_NEW_EN_TOKEN',
             'progress' => 'Completed',
             'score' => 9,
             'series' => 'UPDATE_SERIES_TOKEN',
@@ -3149,10 +3322,10 @@ class ProductControllerTest extends TestCase
 
         $response->assertSessionHasNoErrors();
 
-        $product->refresh()->load(['customGenres', 'englishGenres']);
+        $product->refresh()->load('customGenres');
 
         $this->assertSame('UPDATE_NEW_NAME_TOKEN', $product->work_name);
-        $this->assertSame('UPDATE_NEW_EN_TOKEN', $product->titleForLocale('en'));
+        $this->assertSame('UPDATE_NEW_EN_TOKEN', $product->localizations()->where('locale', 'en')->value('title'));
         $this->assertSame('Completed', $product->progress);
         $this->assertSame(9, $product->score);
         $this->assertSame('UPDATE_SERIES_TOKEN', $product->series);
@@ -3162,7 +3335,7 @@ class ProductControllerTest extends TestCase
         );
         $this->assertSame(
             ['Existing English Genre'],
-            $product->englishGenres->pluck('title')->all()
+            $product->fetchedGenresForLanguage(DlsiteLanguage::English)->pluck('genres.title')->all()
         );
         $this->assertSame("Line 1\nLine 2", $product->notes);
         $this->assertSame('03', (string) data_get($product->start_date, 'month'));
@@ -3532,15 +3705,16 @@ class ProductControllerTest extends TestCase
         ]);
 
         $this->post("/update/{$product->id}", [
+            'metadata_language' => DlsiteLanguage::English->value,
             'work_name' => 'MALICIOUS_READONLY_TITLE_TOKEN',
-            'work_name_english' => 'MALICIOUS_READONLY_EN_TITLE_TOKEN',
+            'localized_title' => 'MALICIOUS_READONLY_EN_TITLE_TOKEN',
             'progress' => 'Completed',
         ])->assertSessionHasNoErrors();
 
         $product->refresh();
 
         $this->assertSame('READONLY_UPDATE_JP_TITLE_TOKEN', $product->work_name);
-        $this->assertSame('READONLY_UPDATE_EN_TITLE_TOKEN', $product->titleForLocale('en'));
+        $this->assertSame('READONLY_UPDATE_EN_TITLE_TOKEN', $product->localizations()->where('locale', 'en')->value('title'));
         $this->assertSame('Completed', $product->progress);
     }
 
@@ -3666,13 +3840,13 @@ class ProductControllerTest extends TestCase
 
         $response->assertSessionHasNoErrors();
 
-        $product->refresh()->load(['genres', 'englishGenres', 'customGenres']);
+        $product->refresh()->load(['genres', 'customGenres']);
 
         $this->assertSame(
             [$existingGenre->getKey()],
             $product->genres->pluck('id')->all()
         );
-        $this->assertSame([], $product->englishGenres->pluck('title')->all());
+        $this->assertSame([], $product->fetchedGenresForLanguage(DlsiteLanguage::English)->pluck('genres.title')->all());
         $this->assertSame(
             ['Existing Auto Genre'],
             $product->customGenres->pluck('title')->all()
@@ -3890,8 +4064,9 @@ class ProductControllerTest extends TestCase
         $this->attachGenres($product, [$visibleTag]);
 
         $this->post("/update/{$product->id}", [
+            'metadata_language' => DlsiteLanguage::English->value,
             'work_name' => $product->work_name,
-            'work_name_english' => $product->titleForLocale('en'),
+            'localized_title' => $product->localizations()->where('locale', 'en')->value('title'),
             'progress' => $product->progress,
             'genre_custom' => 'StableVisibleTag',
             'return_query' => [
@@ -3951,8 +4126,9 @@ class ProductControllerTest extends TestCase
         ]);
 
         $response = $this->post("/update/{$product->id}", [
+            'metadata_language' => DlsiteLanguage::English->value,
             'work_name' => $product->work_name,
-            'work_name_english' => 'NEW_ENGLISH_RETURN_TARGET_TOKEN',
+            'localized_title' => 'NEW_ENGLISH_RETURN_TARGET_TOKEN',
             'work_image' => UploadedFile::fake()->image('replacement.jpg'),
             'return_query' => [
                 'title' => 'OLD_ENGLISH_RETURN_TARGET_TOKEN',
@@ -3964,7 +4140,7 @@ class ProductControllerTest extends TestCase
         $response->assertRedirect("/#{$product->id}");
         $this->assertSame(
             'NEW_ENGLISH_RETURN_TARGET_TOKEN',
-            $product->fresh()->titleForLocale('en'),
+            $product->localizations()->where('locale', 'en')->value('title'),
         );
     }
 
@@ -3993,8 +4169,9 @@ class ProductControllerTest extends TestCase
             ]);
 
             $response = $this->post("/update/{$product->id}", [
+                'metadata_language' => DlsiteLanguage::English->value,
                 'work_name' => $product->work_name,
-                'work_name_english' => "VISIBLE_ENGLISH_{$name}",
+                'localized_title' => "VISIBLE_ENGLISH_{$name}",
                 'progress' => 'Listening',
                 'score' => 8,
                 'series' => "VISIBLE_SERIES_{$name}",
@@ -4020,7 +4197,7 @@ class ProductControllerTest extends TestCase
     {
         Option::setIndexFieldLayout([
             ['field' => ProductField::DescriptionJapanese->value, 'visible' => false],
-            ['field' => ProductField::DescriptionEnglish->value, 'visible' => false],
+            ['field' => ProductField::DescriptionLocalized->value, 'visible' => false],
         ]);
 
         $product = Product::factory()->create([
@@ -4071,7 +4248,7 @@ class ProductControllerTest extends TestCase
     {
         Option::setIndexFieldLayout([
             ['field' => ProductField::DescriptionJapanese->value, 'visible' => false],
-            ['field' => ProductField::DescriptionEnglish->value, 'visible' => false],
+            ['field' => ProductField::DescriptionLocalized->value, 'visible' => false],
         ]);
         Option::setIndexSearchHiddenDescriptionsEnabled(true);
 
@@ -4155,8 +4332,9 @@ class ProductControllerTest extends TestCase
         ]);
 
         $response = $this->post("/update/{$product->id}", [
+            'metadata_language' => DlsiteLanguage::English->value,
             'work_name' => $product->work_name,
-            'work_name_english' => $product->titleForLocale('en'),
+            'localized_title' => $product->localizations()->where('locale', 'en')->value('title'),
             'progress' => $product->progress,
             'score' => 5,
             'series' => $product->series,
@@ -4481,7 +4659,7 @@ class ProductControllerTest extends TestCase
         Option::setIndexPerPage(2);
         Option::setIndexFieldLayout([
             ['field' => ProductField::DescriptionJapanese->value, 'visible' => false],
-            ['field' => ProductField::DescriptionEnglish->value, 'visible' => false],
+            ['field' => ProductField::DescriptionLocalized->value, 'visible' => false],
         ]);
         Option::setIndexSearchHiddenDescriptionsEnabled(true);
 
@@ -4685,30 +4863,24 @@ class ProductControllerTest extends TestCase
 
     public static function fetchedTagRenderingProvider(): iterable
     {
-        yield 'English readonly' => [UiLanguage::English, false, 'Fetched Tags', Genre::LANGUAGE_ENGLISH];
-        yield 'Japanese readonly' => [UiLanguage::Japanese, false, '取得タグ', Genre::LANGUAGE_JAPANESE];
-        yield 'English editable' => [UiLanguage::English, true, 'Fetched Tags', Genre::LANGUAGE_ENGLISH];
-        yield 'Japanese editable' => [UiLanguage::Japanese, true, '取得タグ', Genre::LANGUAGE_JAPANESE];
-    }
-
-    public static function invalidFetchedLanguageProvider(): iterable
-    {
-        yield 'missing' => [null];
-        yield 'unsupported' => ['unsupported'];
+        yield 'English readonly' => [UiLanguage::English, false, 'Fetched Tags', DlsiteLanguage::English->value];
+        yield 'Japanese readonly' => [UiLanguage::Japanese, false, '取得タグ', DlsiteLanguage::Japanese->value];
+        yield 'English editable' => [UiLanguage::English, true, 'Fetched Tags', DlsiteLanguage::English->value];
+        yield 'Japanese editable' => [UiLanguage::Japanese, true, '取得タグ', DlsiteLanguage::Japanese->value];
     }
 
     private function attachGenres(Product $product, array $genres): void
     {
         $fetchedByLanguage = [
-            Genre::LANGUAGE_JAPANESE => [],
-            Genre::LANGUAGE_ENGLISH => [],
+            DlsiteLanguage::Japanese->value => [],
+            DlsiteLanguage::English->value => [],
         ];
         $customGenreIds = [];
 
         foreach ($genres as $genre) {
             match ($genre->getAttribute('type')) {
-                Genre::TYPE_AUTO_GENERATED_JAPANESE => $fetchedByLanguage[Genre::LANGUAGE_JAPANESE][] = $genre->getKey(),
-                Genre::TYPE_AUTO_GENERATED_ENGLISH => $fetchedByLanguage[Genre::LANGUAGE_ENGLISH][] = $genre->getKey(),
+                Genre::TYPE_AUTO_GENERATED_JAPANESE => $fetchedByLanguage[DlsiteLanguage::Japanese->value][] = $genre->getKey(),
+                Genre::TYPE_AUTO_GENERATED_ENGLISH => $fetchedByLanguage[DlsiteLanguage::English->value][] = $genre->getKey(),
                 default => $customGenreIds[] = $genre->getKey(),
             };
         }
@@ -4752,8 +4924,8 @@ class ProductControllerTest extends TestCase
         ]);
 
         app(ProductGenreSync::class)->sync($product, [
-            Genre::LANGUAGE_ENGLISH => [$englishGenre->getKey()],
-            Genre::LANGUAGE_JAPANESE => [$japaneseGenre->getKey()],
+            DlsiteLanguage::English->value => [$englishGenre->getKey()],
+            DlsiteLanguage::Japanese->value => [$japaneseGenre->getKey()],
         ], []);
 
         return [$product, $englishGenre, $japaneseGenre];
@@ -4762,6 +4934,7 @@ class ProductControllerTest extends TestCase
     private function customStorePayload(string $workId, array $overrides = []): array
     {
         return array_replace_recursive([
+            'metadata_language' => DlsiteLanguage::English->value,
             'id' => strtolower($workId),
             'work_name' => 'CUSTOM_RETURN_TARGET_TOKEN',
             'age_category' => 'ALL_AGES',

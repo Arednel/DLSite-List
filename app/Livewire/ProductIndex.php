@@ -2,6 +2,7 @@
 
 namespace App\Livewire;
 
+use App\Enums\DlsiteLanguage;
 use App\Enums\ProductField;
 use App\Enums\ProductIndexSortDirection;
 use App\Enums\ProductIndexSortField;
@@ -17,9 +18,11 @@ use App\Support\ProductFieldLayout;
 use App\Support\ProductIndexFilters;
 use App\Support\ProductIndexResults;
 use App\Support\ProductIndexRowBuilder;
+use App\Support\ProductIndexSettings;
 use App\Support\TagColor;
 use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\View\View;
+use Livewire\Attributes\Computed;
 use Livewire\Attributes\Json;
 use Livewire\Component;
 use Livewire\WithPagination;
@@ -58,7 +61,7 @@ class ProductIndex extends Component
 
     public string $description = '';
 
-    public string $description_english = '';
+    public string $description_localized = '';
 
     public string $tags = '';
 
@@ -119,6 +122,12 @@ class ProductIndex extends Component
             ->all();
     }
 
+    #[Computed]
+    public function indexSettings(): ProductIndexSettings
+    {
+        return Option::productIndexSettings();
+    }
+
     /**
      * @var array<string, string>
      */
@@ -129,6 +138,7 @@ class ProductIndex extends Component
         $this->fill(
             ProductIndexFilters::fromQuery($this->only(ProductIndexFilters::INPUT_KEYS))->toInput()
         );
+        $this->normalizeLanguageDependentFilterState();
         $this->searchInput = $this->search;
         $this->syncDraftFromCurrent();
     }
@@ -137,9 +147,11 @@ class ProductIndex extends Component
     {
         $productIndexResults = app(ProductIndexResults::class);
 
+        $this->normalizeLanguageDependentFilterState();
         $filters = $this->currentFilters();
         $filterQuery = $filters->toQuery();
-        $settings = Option::productIndexSettings();
+        $settings = $this->indexSettings;
+        $metadataLanguage = DlsiteLanguage::from($settings->metadataLanguage);
 
         $hydratedIndexFields = $settings->visibleIndexFields;
 
@@ -155,7 +167,7 @@ class ProductIndex extends Component
             $settings->ratingScale,
             $settings->ratingVisualStyle,
             $settings->searchHiddenDescriptionsEnabled,
-            $settings->fetchedTagLanguage,
+            $settings->metadataLanguage,
         );
 
         $isUnlimited = $settings->perPage === Option::INDEX_PER_PAGE_UNLIMITED;
@@ -182,7 +194,7 @@ class ProductIndex extends Component
                 $indexTagColorsEnabled,
                 $visibleProductIds !== [] && GenreGroup::query()->hiddenOnIndex()->exists(),
                 $visibleTagBuckets,
-                $settings->fetchedTagLanguage,
+                $settings->metadataLanguage,
             )
             : collect();
 
@@ -234,6 +246,7 @@ class ProductIndex extends Component
             'titleNotesVisible' => $settings->titleNotesVisible,
             'indexColumns' => $settings->indexColumns,
             'filterFields' => $settings->filterFields,
+            'metadataLanguage' => $metadataLanguage,
             'filterActive' => $filterQuery !== [],
             'hasCurrentTagFilter' => $filters->genre !== '',
             'progressHeading' => $filters->progressHeading(),
@@ -379,6 +392,24 @@ class ProductIndex extends Component
 
     private function currentFilters(): ProductIndexFilters
     {
-        return ProductIndexFilters::fromQuery($this->only(ProductIndexFilters::INPUT_KEYS));
+        $query = $this->only(ProductIndexFilters::INPUT_KEYS);
+
+        if ($this->indexSettings->metadataLanguage === DlsiteLanguage::Japanese->value) {
+            $query['description_localized'] = '';
+        }
+
+        return ProductIndexFilters::fromQuery($query);
+    }
+
+    private function normalizeLanguageDependentFilterState(): void
+    {
+        if ($this->indexSettings->metadataLanguage !== DlsiteLanguage::Japanese->value) {
+            return;
+        }
+
+        $this->description_localized = '';
+        if (array_key_exists('description_localized', $this->draft)) {
+            $this->draft['description_localized'] = '';
+        }
     }
 }

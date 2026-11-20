@@ -2,13 +2,109 @@
 
 namespace Tests\Unit\Support\Transfers;
 
+use App\Enums\DlsiteLanguage;
+use App\Enums\UiLanguage;
 use App\Models\LibraryImportItem;
 use App\Support\Transfers\ImportReview;
 use App\Support\Transfers\ImportValue;
+use Illuminate\Support\Facades\File;
 use Tests\TestCase;
 
 class ImportValueTest extends TestCase
 {
+    public function test_metadata_catalogs_cover_supported_languages_and_attributes(): void
+    {
+        $expectedKeys = [
+            ...array_column(DlsiteLanguage::cases(), 'name'),
+            ':language Title',
+            ':language Description',
+            'Localized Title',
+            'Localized Description',
+            'Localized tags',
+            'Localized titles',
+            'Localized descriptions',
+        ];
+
+        foreach (UiLanguage::cases() as $language) {
+            $catalog = File::json(lang_path("{$language->value}.json"));
+
+            foreach ($expectedKeys as $key) {
+                $this->assertArrayHasKey($key, $catalog);
+                $this->assertIsString($catalog[$key], $key);
+                $this->assertNotSame('', trim($catalog[$key]), $key);
+            }
+        }
+    }
+
+    public function test_localized_metadata_labels_follow_the_current_ui_catalog(): void
+    {
+        foreach (
+            [
+                'en' => ['Japanese', 'English', 'Japanese Title', 'English Title', 'Japanese Description', 'English Description'],
+                'ja' => ['日本語', '英語', '日本語タイトル', '英語タイトル', '日本語の説明', '英語の説明'],
+                'zh_TW' => ['日文', '英文', '日文標題', '英文標題', '日文說明', '英文說明'],
+            ] as $locale => [$japanese, $english, $japaneseTitle, $englishTitle, $japaneseDescription, $englishDescription]
+        ) {
+            app()->setLocale($locale);
+
+            $this->assertSame($japanese, ImportValue::label('ja'));
+            $this->assertSame($english, ImportValue::label('en'));
+            $this->assertSame($japaneseTitle, ImportValue::label('work_name'));
+            $this->assertSame($englishTitle, ImportValue::label('localization:en:title'));
+            $this->assertSame($japaneseDescription, ImportValue::label('description'));
+            $this->assertSame($englishDescription, ImportValue::label('localization:en:description'));
+        }
+    }
+
+    public function test_unrecognized_field_identifiers_keep_the_existing_label_fallback(): void
+    {
+        foreach (
+            [
+                'metadata' => 'Metadata',
+                'localization:en' => 'Localization:en',
+                'localization::title' => 'Localization::title',
+                'localization:en:title:extra' => 'Localization:en:title:extra',
+                'localization:en:notes' => 'Localization:en:notes',
+                'other:en:title' => 'Other:en:title',
+                'localization:zz:title' => 'Localization:zz:title',
+            ] as $key => $label
+        ) {
+            $this->assertSame($label, ImportValue::label($key));
+        }
+    }
+
+    public function test_new_work_title_and_description_labels_are_translated_in_each_ui_language(): void
+    {
+        $item = new LibraryImportItem([
+            'library_transfer_run_id' => 42,
+            'incoming' => [
+                'titles' => ['ja' => 'Japanese title', 'en' => 'English title'],
+                'descriptions' => ['ja' => 'Japanese description', 'en' => 'English description'],
+            ],
+        ]);
+
+        foreach (
+            [
+                'en' => ['Japanese Title', 'English Title', 'Japanese Description', 'English Description'],
+                'ja' => ['日本語タイトル', '英語タイトル', '日本語の説明', '英語の説明'],
+                'zh_TW' => ['日文標題', '英文標題', '日文說明', '英文說明'],
+            ] as $locale => $labels
+        ) {
+            app()->setLocale($locale);
+
+            $changes = [
+                ...ImportValue::newWorkChanges($item, 'titles'),
+                ...ImportValue::newWorkChanges($item, 'descriptions'),
+            ];
+
+            $this->assertSame($labels, array_column($changes, 'label'));
+            $this->assertSame(
+                ['Japanese title', 'English title', 'Japanese description', 'English description'],
+                array_column(array_column($changes, 'preview'), 'value'),
+            );
+        }
+    }
+
     public function test_every_new_work_review_category_has_json_paths(): void
     {
         foreach (array_slice(ImportReview::CATEGORIES['works'], 1) as $category) {

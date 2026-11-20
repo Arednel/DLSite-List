@@ -13,7 +13,7 @@ final readonly class ProductIndexRow
     public function __construct(
         public string $id,
         public string $workName,
-        public ?string $workNameEnglish,
+        public ?string $localizedTitle,
         public ?string $notes,
         public ?string $progress,
         public ?string $workImage,
@@ -30,7 +30,7 @@ final readonly class ProductIndexRow
         public array $makerNames,
         public ?string $makerId,
         public ?string $description,
-        public ?string $descriptionEnglish,
+        public ?string $localizedDescription,
         public Collection $contributors,
         public string $dlsiteWorkUrl,
         public string $editUrl,

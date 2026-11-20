@@ -2,6 +2,7 @@
 
 namespace App\Support\DLSite;
 
+use App\Enums\DlsiteLanguage;
 use App\Enums\ProductContributorRole;
 use App\Enums\ProductField;
 use App\Enums\RatingScale;
@@ -9,6 +10,7 @@ use App\Http\Requests\BaseProductRequest;
 use App\Models\Option;
 use App\Support\ProductFieldLayout;
 use Illuminate\Support\Arr;
+use InvalidArgumentException;
 
 final readonly class DLSiteProductImportInput
 {
@@ -23,6 +25,11 @@ final readonly class DLSiteProductImportInput
         public array $submitted,
         public bool $autoSeriesFromTitleName,
         public RatingScale $ratingScale = RatingScale::Ten,
+        public DlsiteLanguage $metadataLanguage = DlsiteLanguage::English,
+        public array $fetchLanguages = [
+            DlsiteLanguage::Japanese->value,
+            DlsiteLanguage::English->value,
+        ],
     ) {}
 
     public static function fromRequest(
@@ -32,7 +39,7 @@ final readonly class DLSiteProductImportInput
     ): self {
         $submissionKeys = [
             'work_name',
-            'work_name_english',
+            'localized_title',
             'age_category',
             'product_format',
             'circle',
@@ -40,7 +47,7 @@ final readonly class DLSiteProductImportInput
             'brand',
             'maker_id',
             'description',
-            'description_english',
+            'description_localized',
             'notes',
             'series',
             'score',
@@ -64,12 +71,20 @@ final readonly class DLSiteProductImportInput
             $submitted[$key] = $request->wasSubmitted($key);
         }
 
+        $metadataLanguage = DlsiteLanguage::from($validated['metadata_language']);
+        $fetchLanguages = array_column(Option::effectiveDlsiteMetadataFetchLanguages(), 'value');
+        if (! in_array($metadataLanguage->value, $fetchLanguages, true)) {
+            $fetchLanguages[] = $metadataLanguage->value;
+        }
+
         return new self(
             values: Arr::except($validated, ['id', 'product_code_list', 'product_codes']),
             visibleFields: ProductFieldLayout::visibleFields($layout),
             submitted: $submitted,
             autoSeriesFromTitleName: Option::autoSeriesFromTitleName(),
             ratingScale: $request->enum('dlsite_rating_scale', RatingScale::class, RatingScale::Ten),
+            metadataLanguage: $metadataLanguage,
+            fetchLanguages: $fetchLanguages,
         );
     }
 
@@ -79,7 +94,9 @@ final readonly class DLSiteProductImportInput
      *     visible_fields: list<string>,
      *     submitted: array<string, bool>,
      *     auto_series_from_title_name: bool,
-     *     rating_scale: string
+     *     rating_scale: string,
+     *     metadata_language: string,
+     *     fetch_languages: list<string>
      * }
      */
     public function toSnapshot(): array
@@ -90,20 +107,57 @@ final readonly class DLSiteProductImportInput
             'submitted' => $this->submitted,
             'auto_series_from_title_name' => $this->autoSeriesFromTitleName,
             'rating_scale' => $this->ratingScale->value,
+            'metadata_language' => $this->metadataLanguage->value,
+            'fetch_languages' => $this->fetchLanguages,
         ];
     }
 
     public static function fromSnapshot(array $snapshot): self
     {
+        $metadataLanguageValue = $snapshot['metadata_language'] ?? null;
+        $metadataLanguage = is_string($metadataLanguageValue)
+            ? DlsiteLanguage::tryFrom($metadataLanguageValue)
+            : null;
+        if ($metadataLanguage === null) {
+            throw new InvalidArgumentException('Bulk Import snapshot has an invalid metadata_language.');
+        }
+
+        $fetchLanguages = $snapshot['fetch_languages'] ?? null;
+        if (! is_array($fetchLanguages) || ! array_is_list($fetchLanguages)) {
+            throw new InvalidArgumentException('Bulk Import snapshot has invalid fetch_languages.');
+        }
+
+        $seenLanguages = [];
+        foreach ($fetchLanguages as $language) {
+            if (
+                ! is_string($language)
+                || DlsiteLanguage::tryFrom($language) === null
+                || isset($seenLanguages[$language])
+            ) {
+                throw new InvalidArgumentException('Bulk Import snapshot has invalid fetch_languages.');
+            }
+
+            $seenLanguages[$language] = true;
+        }
+
+        if (
+            ! isset($seenLanguages[DlsiteLanguage::Japanese->value])
+            || ! isset($seenLanguages[$metadataLanguage->value])
+        ) {
+            throw new InvalidArgumentException('Bulk Import snapshot has incomplete fetch_languages.');
+        }
+
         return new self(
             values: is_array($snapshot['values'] ?? null) ? $snapshot['values'] : [],
-            visibleFields: array_values(array_filter(
+            visibleFields: array_values(array_unique(array_filter(
                 is_array($snapshot['visible_fields'] ?? null) ? $snapshot['visible_fields'] : [],
                 'is_string',
-            )),
+            ))),
             submitted: is_array($snapshot['submitted'] ?? null) ? $snapshot['submitted'] : [],
             autoSeriesFromTitleName: (bool) ($snapshot['auto_series_from_title_name'] ?? false),
             ratingScale: RatingScale::tryFrom((string) ($snapshot['rating_scale'] ?? '')) ?? RatingScale::Ten,
+            metadataLanguage: $metadataLanguage,
+            fetchLanguages: $fetchLanguages,
         );
     }
 

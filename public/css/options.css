@@ -371,6 +371,45 @@ body.options-page {
     font-weight: bold;
 }
 
+
+.options-page .metadata-language-block {
+    display: grid;
+    gap: 12px;
+    margin: 0;
+    padding: 12px;
+    border: 1px solid rgba(var(--options-border-rgb), 0.72);
+    border-radius: var(--options-radius);
+    background: rgba(var(--options-surface-rgb), 0.78);
+}
+
+.options-page .metadata-language-block__heading {
+    margin: 0;
+    color: var(--options-text);
+    font-size: 12px;
+    font-weight: bold;
+}
+
+.options-page .metadata-language-select {
+    width: min(100%, 22rem);
+}
+
+.options-page .metadata-language-nested {
+    margin-top: 2px;
+    border-color: rgba(var(--options-border-rgb), 0.5);
+    background: rgba(var(--options-warm-surface-rgb), 0.62);
+}
+
+.options-page .metadata-language-nested .field-layout-summary {
+    grid-template-columns: minmax(0, 1fr) 12px;
+    padding-left: 12px;
+}
+
+.options-page .metadata-language-block .field-layout-lock-note {
+    font-size: 10px;
+    font-weight: normal;
+    opacity: 0.82;
+}
+
 .options-page .theme-settings-fieldset {
     display: grid;
     gap: 10px;
@@ -1595,6 +1634,177 @@ body.options-page {
     font-weight: 700;
 }
 
+/* Locale-grouped Refetch review */
+.options-page .refetch-review-card>header {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.options-page .refetch-review-card>header span {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.options-page .refetch-localized-block {
+    display: grid;
+    gap: 12px;
+    margin-top: 14px;
+    padding: 12px;
+    border: 1px solid rgba(var(--options-border-rgb), 0.5);
+    border-radius: var(--options-radius);
+    background: rgba(var(--options-bg-rgb), 0.22);
+}
+
+.options-page .refetch-localized-header,
+.options-page .refetch-locale-header {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+}
+
+.options-page .refetch-localized-header {
+    padding-bottom: 10px;
+    border-bottom: 1px solid rgba(var(--options-border-rgb), 0.4);
+}
+
+.options-page .refetch-localized-header>span {
+    color: rgba(var(--options-text-rgb), 0.7);
+    font-size: 11px;
+}
+
+.options-page .refetch-localized-list {
+    display: grid;
+    gap: 12px;
+}
+
+.options-page .refetch-localized-row,
+.options-page .refetch-tag-locale {
+    display: grid;
+    gap: 9px;
+    min-width: 0;
+}
+
+.options-page .refetch-localized-row+.refetch-localized-row,
+.options-page .refetch-tag-locale+.refetch-tag-locale {
+    padding-top: 12px;
+    border-top: 1px solid rgba(var(--options-border-rgb), 0.35);
+}
+
+.options-page .refetch-locale-header h4 {
+    margin: 0;
+    color: var(--options-text);
+    font: bold 12px/1.25 Verdana, Arial, sans-serif;
+}
+
+.options-page .refetch-locale-choice {
+    display: grid;
+    gap: 5px;
+    width: 100%;
+    margin-top: 10px;
+}
+
+.options-page .refetch-locale-choice select,
+.options-page .refetch-tag-detailed-actions select,
+.options-page .refetch-custom-to-fetched select {
+    width: 100%;
+}
+
+.options-page .refetch-tag-counts {
+    display: inline-flex;
+    gap: 5px;
+    align-items: center;
+}
+
+.options-page .refetch-tag-count {
+    display: inline-grid;
+    place-items: center;
+    min-height: 20px;
+    padding: 2px 7px;
+    border: 1px solid rgba(var(--options-border-rgb), 0.72);
+    border-radius: 999px;
+    background: rgba(var(--options-bg-rgb), 0.5);
+    color: var(--options-text);
+    font-size: 10px;
+    font-weight: bold;
+}
+
+.options-page .refetch-tag-count--added {
+    color: #166534;
+}
+
+.options-page .refetch-tag-count--stale {
+    color: #991b1b;
+}
+
+.options-page .refetch-tag-delta-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 10px;
+    margin-top: 10px;
+}
+
+.options-page .refetch-tag-delta {
+    min-width: 0;
+    padding: 10px;
+    border: 1px solid rgba(var(--options-border-rgb), 0.5);
+    border-radius: var(--options-radius);
+    background: rgba(var(--options-bg-rgb), 0.38);
+}
+
+.options-page .refetch-tag-delta>strong {
+    display: block;
+    margin-bottom: 8px;
+}
+
+.options-page .refetch-tag-delta--added {
+    border-left: 3px solid rgba(22, 101, 52, 0.7);
+}
+
+.options-page .refetch-tag-delta--stale {
+    border-left: 3px solid rgba(153, 27, 27, 0.7);
+}
+
+.options-page .refetch-tag-detailed-actions {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px;
+    margin-top: 10px;
+    padding-top: 10px;
+    border-top: 1px dashed rgba(var(--options-border-rgb), 0.5);
+}
+
+.options-page .refetch-tag-detailed-actions label {
+    display: grid;
+    gap: 5px;
+}
+
+.options-page .refetch-custom-to-fetched {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(180px, 0.7fr);
+    gap: 10px;
+    align-items: end;
+    margin-top: 14px;
+    padding: 11px;
+    border: 1px solid rgba(var(--options-border-rgb), 0.5);
+    border-radius: var(--options-radius);
+    background: rgba(var(--options-bg-rgb), 0.25);
+}
+
+.options-page .refetch-custom-to-fetched>div>strong {
+    display: block;
+    margin-bottom: 8px;
+}
+
+.options-page .refetch-custom-to-fetched label {
+    display: grid;
+    gap: 5px;
+}
+
 @media (max-width: 768px) {
     .options-shell {
         width: 100%;
@@ -1779,6 +1989,12 @@ body.options-page {
 
     .options-page .index-pagination__controls {
         justify-content: center;
+    }
+
+    .options-page .refetch-tag-delta-grid,
+    .options-page .refetch-tag-detailed-actions,
+    .options-page .refetch-custom-to-fetched {
+        grid-template-columns: 1fr;
     }
 }
 

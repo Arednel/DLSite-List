@@ -1,7 +1,7 @@
 <div>
     <form wire:submit.prevent="save" class="option-form">
         <x-options.switch wire:model.live="searchHiddenDescriptions" :help="__(
-            'When enabled, general Index search can match Japanese and English description text even when both description columns are hidden.',
+            'When enabled, general Index search can match Japanese and all stored localized description text even when description columns are hidden.',
         )">
             {{ __('Search hidden descriptions') }}
         </x-options.switch>

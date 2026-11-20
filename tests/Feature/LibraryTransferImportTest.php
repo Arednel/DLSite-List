@@ -2,23 +2,27 @@
 
 namespace Tests\Feature;
 
+use App\Enums\DlsiteLanguage;
 use App\Enums\LibraryImportDecision;
 use App\Enums\LibraryImportItemStatus;
 use App\Enums\LibraryTransferAction;
 use App\Enums\LibraryTransferOperation;
 use App\Enums\LibraryTransferPartStatus;
 use App\Enums\LibraryTransferRunStatus;
+use App\Enums\ProductField;
 use App\Jobs\LibraryTransferJob;
 use App\Livewire\OptionsTransferRun;
 use App\Models\LibraryImportItem;
+use App\Models\Genre;
 use App\Models\LibraryTransferRun;
 use App\Models\Option;
 use App\Models\Product;
-use App\Models\ProductLocalization;
 use App\Support\DLSite\DLSiteRating;
 use App\Support\ProductContributorSync;
+use App\Support\ProductGenreSync;
 use App\Support\Transfers\InvalidArchive;
 use App\Support\Transfers\PortableOptions;
+use App\Support\Transfers\WorkArchiveData;
 use App\Support\UserStylesheet;
 use App\Support\UserStylesheetPromotion;
 use Exception;
@@ -176,7 +180,7 @@ class LibraryTransferImportTest extends TestCase
         Product::factory()->create(['id' => 'RJ123457', 'product_format' => ['ADV']]);
         $export = $this->exported();
         $this->rewriteWorkData($export->parts()->firstOrFail(), function (array $work) use ($formats): array {
-            $work['japanese']['product_format'] = $formats;
+            $work['locales']['ja']['product_format'] = $formats;
 
             return $work;
         });
@@ -819,6 +823,7 @@ class LibraryTransferImportTest extends TestCase
         $this->assertTrue($zip->open($path));
         $manifest = json_decode($zip->getFromName('manifest.json'), true);
         $manifest['schema_version'] = 1; // product_code is invalid in the released v1 work manifest.
+        $manifest['work_entry_format'] = WorkArchiveData::LEGACY_FORMAT;
         $zip->addFromString('manifest.json', json_encode($manifest, JSON_THROW_ON_ERROR));
         $zip->close();
 
@@ -826,7 +831,7 @@ class LibraryTransferImportTest extends TestCase
         $this->archive()->inspect($path, true);
     }
 
-    public function test_schema_v3_image_entry_requires_product_code(): void
+    public function test_schema_v4_image_entry_requires_product_code(): void
     {
         Product::factory()->create(['id' => 'RJ123456', 'work_image' => 'storage/Works/RJ123456/cover.png']);
         $this->saveImage('Works/RJ123456/cover.png');
@@ -855,6 +860,7 @@ class LibraryTransferImportTest extends TestCase
         $this->assertTrue($zip->open($path));
         $manifest = json_decode($zip->getFromName('manifest.json'), true);
         $manifest['schema_version'] = 1;
+        $manifest['work_entry_format'] = WorkArchiveData::LEGACY_FORMAT;
         unset($manifest['entries'][0]['product_code']);
         $zip->addFromString('manifest.json', json_encode($manifest, JSON_THROW_ON_ERROR));
         $this->assertTrue($zip->close());
@@ -872,6 +878,7 @@ class LibraryTransferImportTest extends TestCase
         $this->assertTrue($zip->open(Storage::disk('local')->path($imagePart->path)));
         $manifest = json_decode($zip->getFromName('manifest.json'), true);
         $manifest['schema_version'] = 1;
+        $manifest['work_entry_format'] = WorkArchiveData::LEGACY_FORMAT;
         foreach ($manifest['entries'] as &$entry) {
             $entry['rj_code'] = $entry['product_code'];
             unset($entry['product_code']);
@@ -888,7 +895,335 @@ class LibraryTransferImportTest extends TestCase
         $this->service()->upload($run->fresh(), new UploadedFile(Storage::disk('local')->path($imagePart->path), $imagePart->filename, 'application/zip', null, true));
     }
 
-    public function test_v3_updates_existing_and_creates_new_bj_vj_products(): void
+    public function test_schema_v3_legacy_english_description_layout_field_is_normalized(): void
+    {
+        $export = $this->exported(['options']);
+        $part = $export->parts()->firstOrFail();
+        $this->rewriteData($part, function (array $records): array {
+            $records = array_values(array_filter(
+                $records,
+                fn(array $record): bool => ($record['key'] ?? null) === Option::INDEX_FIELD_LAYOUT,
+            ));
+
+            foreach ($records[0]['value'] as &$row) {
+                if (($row['field'] ?? null) === ProductField::DescriptionLocalized->value) {
+                    $row['field'] = 'description_english';
+                }
+            }
+            unset($row);
+
+            return $records;
+        });
+
+        $zip = new ZipArchive;
+        $this->assertTrue($zip->open(Storage::disk('local')->path($part->path)));
+        $manifest = json_decode($zip->getFromName('manifest.json'), true);
+        $manifest['schema_version'] = 3;
+        $zip->addFromString('manifest.json', json_encode($manifest, JSON_THROW_ON_ERROR));
+        $this->assertTrue($zip->close());
+
+        $run = $this->imported($export);
+        $item = $run->items()
+            ->where('section', 'options')
+            ->where('entity_key', Option::INDEX_FIELD_LAYOUT)
+            ->firstOrFail();
+
+        $this->assertContains(ProductField::DescriptionLocalized->value, array_column($item->incoming, 'field'));
+        $this->assertNotContains('description_english', array_column($item->incoming, 'field'));
+
+        $this->apply($run);
+
+        $layout = app(PortableOptions::class)->current(Option::INDEX_FIELD_LAYOUT);
+        $this->assertContains(ProductField::DescriptionLocalized->value, array_column($layout, 'field'));
+        $this->assertNotContains('description_english', array_column($layout, 'field'));
+    }
+
+    public function test_schema_v3_legacy_japanese_metadata_language_option_is_normalized(): void
+    {
+        $export = $this->exported(['options']);
+        $part = $export->parts()->firstOrFail();
+        $this->rewriteData($part, function (array $records): array {
+            foreach ($records as &$record) {
+                if (($record['key'] ?? null) === Option::DLSITE_METADATA_LANGUAGE) {
+                    $record['key'] = 'fetched_tag_language';
+                    $record['value'] = 'jp';
+                }
+            }
+            unset($record);
+
+            return $records;
+        });
+
+        $zip = new ZipArchive;
+        $this->assertTrue($zip->open(Storage::disk('local')->path($part->path)));
+        $manifest = json_decode($zip->getFromName('manifest.json'), true);
+        $manifest['schema_version'] = 3;
+        $zip->addFromString('manifest.json', json_encode($manifest, JSON_THROW_ON_ERROR));
+        $zip->close();
+
+        Option::setDlsiteMetadataLanguage(DlsiteLanguage::English);
+        $run = $this->imported($export);
+        $item = $run->items()
+            ->where('section', 'options')
+            ->where('entity_key', Option::DLSITE_METADATA_LANGUAGE)
+            ->firstOrFail();
+
+        $this->assertSame('ja', $item->incoming);
+        $this->apply($run);
+        $this->assertSame(DlsiteLanguage::Japanese, Option::dlsiteMetadataLanguage());
+    }
+
+    #[DataProvider('legacyWorkSchemaVersions')]
+    public function test_legacy_work_archive_imports_into_canonical_locale_keyed_transfer_data(int $schemaVersion): void
+    {
+        $product = Product::factory()->withEnglishTitle('English title')->create([
+            'id' => 'RJ123456',
+            'work_name' => 'Japanese title',
+        ]);
+        $japanese = Genre::resolveByTitle('Japanese fetched');
+        $english = Genre::resolveByTitle('English fetched');
+        app(ProductGenreSync::class)->sync($product, [
+            DlsiteLanguage::Japanese->value => [$japanese->id],
+            DlsiteLanguage::English->value => [$english->id],
+        ], []);
+
+        $export = $this->exported(['works']);
+        $this->convertToLegacyWorkFormat($export, $schemaVersion);
+
+        $product->delete();
+
+        $run = $this->imported($export);
+        $item = $run->items()->where('category', 'new_works')->firstOrFail();
+
+        $this->assertSame('Japanese title', data_get($item->incoming, 'titles.ja'));
+        $this->assertSame('English title', data_get($item->incoming, 'titles.en'));
+        $this->assertSame(['Japanese fetched'], data_get($item->incoming, 'tags.ja'));
+        $this->assertSame(['English fetched'], data_get($item->incoming, 'tags.en'));
+
+        $this->apply($run);
+
+        $product = Product::findOrFail('RJ123456');
+        $this->assertSame('English title', $product->localizations()->where('locale', DlsiteLanguage::English->value)->value('title'));
+        $this->assertSame(['Japanese fetched'], $product->fetchedGenresForLanguage(DlsiteLanguage::Japanese)->pluck('title')->all());
+        $this->assertSame(['English fetched'], $product->fetchedGenresForLanguage(DlsiteLanguage::English)->pluck('title')->all());
+    }
+
+    public static function legacyWorkSchemaVersions(): array
+    {
+        return ['v2' => [2], 'v3' => [3]];
+    }
+
+    public function test_v3_legacy_english_fallback_values_are_not_manufactured_as_translations(): void
+    {
+        $data = app(WorkArchiveData::class);
+        $japanese = [
+            'product_id' => 'RJ123456',
+            'work_name' => 'Japanese title',
+            'description' => 'Japanese description',
+        ];
+
+        $fallback = $data->import([
+            'japanese' => $japanese,
+            'english' => [
+                'product_id' => 'RJ123456',
+                'work_name' => 'Japanese title',
+                'description' => 'Japanese description',
+            ],
+        ], 'RJ123456', 3);
+
+        $this->assertNull(data_get($fallback, 'titles.en'));
+        $this->assertNull(data_get($fallback, 'descriptions.en'));
+
+        $translated = $data->import([
+            'japanese' => $japanese,
+            'english' => [
+                'product_id' => 'RJ123456',
+                'work_name' => 'English title',
+                'description' => 'English description',
+            ],
+        ], 'RJ123456', 3);
+
+        $this->assertSame('English title', data_get($translated, 'titles.en'));
+        $this->assertSame('English description', data_get($translated, 'descriptions.en'));
+
+        $omitted = $data->import([
+            'japanese' => $japanese,
+            'english' => ['product_id' => 'RJ123456'],
+        ], 'RJ123456', 3);
+
+        $this->assertArrayNotHasKey('en', $omitted['titles']);
+        $this->assertArrayNotHasKey('en', $omitted['descriptions']);
+
+        $cleared = $data->import([
+            'japanese' => $japanese,
+            'english' => [
+                'product_id' => 'RJ123456',
+                'work_name' => null,
+                'description' => null,
+            ],
+        ], 'RJ123456', 3);
+
+        $this->assertArrayHasKey('en', $cleared['titles']);
+        $this->assertArrayHasKey('en', $cleared['descriptions']);
+        $this->assertNull($cleared['titles']['en']);
+        $this->assertNull($cleared['descriptions']['en']);
+    }
+
+    public function test_v4_round_trip_preserves_every_enabled_metadata_locale(): void
+    {
+        $product = Product::factory()->create([
+            'id' => 'RJ123456',
+            'work_name' => 'Japanese title',
+            'description' => 'Japanese description',
+        ]);
+        $tagIds = [];
+        foreach (DlsiteLanguage::cases() as $language) {
+            if ($language !== DlsiteLanguage::Japanese) {
+                $product->syncLocalization($language->value, [
+                    'title' => "Title {$language->value}",
+                    'description' => "Description {$language->value}",
+                ]);
+            }
+            $tagIds[$language->value] = [Genre::resolveByTitle("Tag {$language->value}")->id];
+        }
+        app(ProductGenreSync::class)->sync($product, $tagIds, []);
+        $productCode = $product->id;
+        $export = $this->exported();
+        $original = $this->exportedWorkDocument($export, $productCode);
+        $product->delete();
+
+        $run = $this->imported($export);
+        $item = $run->items()->where('category', 'new_works')->firstOrFail();
+        foreach (DlsiteLanguage::cases() as $language) {
+            $locale = $language->value;
+            $title = $language === DlsiteLanguage::Japanese ? 'Japanese title' : "Title {$locale}";
+            $description = $language === DlsiteLanguage::Japanese ? 'Japanese description' : "Description {$locale}";
+            $this->assertSame($title, $item->incoming['titles'][$locale]);
+            $this->assertSame($description, $item->incoming['descriptions'][$locale]);
+            $this->assertSame(["Tag {$locale}"], $item->incoming['tags'][$locale]);
+        }
+        $this->apply($run);
+
+        $this->assertSame($original, $this->exportedWorkDocument($this->exported(), $productCode));
+    }
+
+    public static function partialLocaleDocuments(): array
+    {
+        $japanese = ['product_id' => 'RJ123456', 'work_name' => 'Japanese title'];
+
+        return [
+            'omitted extra locale' => [['ja' => $japanese], 'English title', 'English description'],
+            'empty extra document' => [['ja' => $japanese, 'en' => []], 'English title', 'English description'],
+            'omitted extra fields' => [['ja' => $japanese, 'en' => ['product_id' => 'RJ123456']], 'English title', 'English description'],
+            'explicit null fields' => [['ja' => $japanese, 'en' => ['work_name' => null, 'description' => null]], null, null],
+            'explicit empty fields' => [['ja' => $japanese, 'en' => ['work_name' => '', 'description' => '']], null, null],
+            'explicit localized text equal to Japanese' => [[
+                'en' => ['work_name' => 'Japanese title', 'description' => 'Japanese description'],
+                'ja' => $japanese + ['description' => 'Japanese description'],
+            ], 'Japanese title', 'Japanese description'],
+        ];
+    }
+
+    #[DataProvider('partialLocaleDocuments')]
+    public function test_v4_partial_locales_preserve_omissions_and_apply_explicit_clears(array $locales, ?string $title, ?string $description): void
+    {
+        $product = Product::factory()->withEnglishTitle('English title')->withEnglishDescription('English description')->create([
+            'id' => 'RJ123456',
+            'work_name' => 'Japanese title',
+            'description' => 'Japanese description',
+        ]);
+        $export = $this->exported();
+        $this->rewriteWorkData($export->parts()->firstOrFail(), fn(): array => ['locales' => $locales]);
+
+        $this->apply($this->imported($export));
+
+        $product->refresh();
+        $this->assertSame('Japanese title', $product->work_name);
+        $this->assertSame('Japanese description', $product->description);
+        $this->assertSame($title, $product->localizations()->where('locale', 'en')->value('title'));
+        $this->assertSame($description, $product->localizations()->where('locale', 'en')->value('description'));
+    }
+
+    public function test_v4_requires_japanese_canonical_title_instead_of_falling_back_to_localized_title(): void
+    {
+        Product::factory()->create(['id' => 'RJ123456', 'publisher' => 'Japanese publisher']);
+        $export = $this->exported();
+        $this->rewriteWorkData($export->parts()->firstOrFail(), fn(): array => ['locales' => [
+            'ja' => ['product_id' => 'RJ123456', 'work_name' => null],
+            'en' => ['work_name' => 'Fallback title', 'publisher' => 'Ignored English publisher'],
+        ]]);
+
+        $run = $this->imported($export);
+
+        $this->assertSame(LibraryTransferRunStatus::Review, $run->status);
+        $this->assertSame(1, $run->items()->where('status', 'unavailable')->count());
+        $error = (string) $run->items()->where('status', 'unavailable')->firstOrFail()->error;
+        $this->assertStringContainsString('dlsite.work.missing_name', $error);
+        $this->assertSame(0, $run->items()->where('status', 'pending')->count());
+        $this->assertSame('Japanese publisher', Product::findOrFail('RJ123456')->publisher);
+    }
+
+    public static function invalidWorkLayouts(): array
+    {
+        $japanese = ['product_id' => 'RJ123456', 'work_name' => 'Title'];
+        $valid = ['ja' => $japanese, 'en' => []];
+
+        return [
+            'missing Japanese' => [4, ['locales' => ['en' => $japanese]], 'invalid_work_json'],
+            'unsupported locale' => [4, ['locales' => $valid + ['fr' => []]], 'invalid_work_json'],
+            'historical alias in new format' => [4, ['locales' => $valid + ['jp' => []]], 'invalid_work_json'],
+            'mixed formats' => [4, ['locales' => $valid, 'japanese' => $japanese], 'invalid_work_json'],
+            'legacy shape in v4' => [4, ['japanese' => $japanese, 'english' => []], 'invalid_work_json'],
+            'new shape in legacy' => [3, ['locales' => $valid], 'invalid_work_json'],
+            'blank legacy English document' => [3, ['japanese' => $japanese, 'english' => ''], 'invalid_work_json'],
+            'list document' => [4, ['locales' => ['ja' => $japanese, 'en' => ['text']]], 'invalid_work_json'],
+            'null document' => [4, ['locales' => ['ja' => $japanese, 'en' => null]], 'invalid_work_json'],
+            'non-string ID' => [4, ['locales' => ['ja' => ['product_id' => 123456]]], 'invalid_work_product_id'],
+            'mismatched extra ID' => [4, ['locales' => ['ja' => $japanese, 'en' => ['product_id' => 'RJ999999']]], 'work_path_product_id_mismatch'],
+            'no IDs' => [4, ['locales' => ['ja' => ['work_name' => 'Title']]], 'work_path_product_id_mismatch'],
+        ];
+    }
+
+    #[DataProvider('invalidWorkLayouts')]
+    public function test_work_layout_is_validated_against_its_manifest_version(int $version, array $document, string $error): void
+    {
+        Product::factory()->create(['id' => 'RJ123456']);
+        $export = $this->exported();
+        if ($version < 4) {
+            $this->convertToLegacyWorkFormat($export, $version);
+        }
+        $this->rewriteWorkData($export->parts()->firstOrFail(), fn(): array => $document);
+
+        $this->expectException(InvalidArchive::class);
+        $this->expectExceptionMessage('transfer.archive.' . $error);
+        $this->imported($export);
+    }
+
+    public static function mismatchedWorkFormats(): array
+    {
+        return [[4, WorkArchiveData::LEGACY_FORMAT], [3, WorkArchiveData::FORMAT]];
+    }
+
+    #[DataProvider('mismatchedWorkFormats')]
+    public function test_work_format_marker_must_match_the_schema_version(int $version, string $format): void
+    {
+        Product::factory()->create(['id' => 'RJ123456']);
+        $export = $this->exported();
+        $part = $export->parts()->firstOrFail();
+        $zip = new ZipArchive;
+        $this->assertTrue($zip->open(Storage::disk('local')->path($part->path)));
+        $manifest = json_decode($zip->getFromName('manifest.json'), true);
+        $manifest['schema_version'] = $version;
+        $manifest['work_entry_format'] = $format;
+        $zip->addFromString('manifest.json', json_encode($manifest, JSON_THROW_ON_ERROR));
+        $this->assertTrue($zip->close());
+
+        $this->expectException(InvalidArchive::class);
+        $this->expectExceptionMessage('transfer.archive.missing_work_entry_format');
+        $this->archive()->inspect(Storage::disk('local')->path($part->path), true);
+    }
+
+    public function test_v4_updates_existing_and_creates_new_bj_vj_products(): void
     {
         $bj = Product::factory()->create(['id' => 'BJ123456', 'site_id' => 'books', 'work_image' => 'storage/Works/BJ123456/cover.png']);
         $vj = Product::factory()->create(['id' => 'VJ234567', 'site_id' => 'pro']);
@@ -896,7 +1231,7 @@ class LibraryTransferImportTest extends TestCase
         $export = $this->exported(['works', 'images']);
         $data = $export->parts()->where('kind', 'data')->firstOrFail();
         $this->assertEqualsCanonicalizing(['BJ123456', 'VJ234567'], array_column($data->manifest['entries'], 'product_code'));
-        $this->assertSame(3, $this->archive()->inspect(Storage::disk('local')->path($data->path), true)['schema_version']);
+        $this->assertSame(4, $this->archive()->inspect(Storage::disk('local')->path($data->path), true)['schema_version']);
 
         $bj->update(['site_id' => null, 'work_image' => null]);
         $vj->update(['site_id' => null]);
@@ -922,6 +1257,7 @@ class LibraryTransferImportTest extends TestCase
     /** Convert a current test export to the released v1 archive contract, not any intermediate branch format. */
     private function convertToReleasedSchemaV1(LibraryTransferRun $export): void
     {
+        $this->convertToLegacyWorkFormat($export, 1);
         foreach ($export->parts as $part) {
             $zip = new ZipArchive;
             $this->assertTrue($zip->open(Storage::disk('local')->path($part->path)));
@@ -986,9 +1322,9 @@ class LibraryTransferImportTest extends TestCase
 
         $this->rewriteWorkData($export->parts()->firstOrFail(), function (array $work): array {
             unset($work['dlsite_list']['site_id']);
-            $work['japanese']['site_id'] = 'maniax'; // Old exports inferred this value from age.
-            $work['english']['site_id'] = 'maniax';
-            $work['japanese']['work_name'] = 'Legacy title';
+            $work['locales']['ja']['site_id'] = 'maniax'; // Old exports inferred this value from age.
+            $work['locales']['en']['site_id'] = 'maniax';
+            $work['locales']['ja']['work_name'] = 'Legacy title';
 
             return $work;
         });
@@ -1022,7 +1358,7 @@ class LibraryTransferImportTest extends TestCase
                 'title_name_masked' => 'Masked series',
             ];
 
-            return ['japanese' => $locale, 'english' => $locale, 'dlsite_list' => $work['dlsite_list']];
+            return ['locales' => ['ja' => $locale, 'en' => $locale], 'dlsite_list' => $work['dlsite_list']];
         });
         $run = $this->imported($export);
         $this->assertSame(0, $run->items()->where('status', 'unavailable')->count());
@@ -1031,7 +1367,7 @@ class LibraryTransferImportTest extends TestCase
         $roles = app(ProductContributorSync::class)->namesByRole($product);
         $this->assertSame('Imported', $product->work_name);
         $this->assertSame("Imported description\nSecond line", $product->description);
-        $this->assertNull($product->descriptionForLocale(ProductLocalization::LOCALE_ENGLISH));
+        $this->assertSame("Imported description\nSecond line", $product->localizations()->where('locale', DlsiteLanguage::English->value)->value('description'));
         $this->assertSame('2026-05-27 00:00:00', $product->announce_date?->format('Y-m-d H:i:s'));
         $this->assertSame('Masked series', $product->series);
         $this->assertSame('Keep personal notes', $product->notes);
@@ -1064,14 +1400,16 @@ class LibraryTransferImportTest extends TestCase
         app(ProductContributorSync::class)->sync($product, ['author' => ['Clear author'], 'scenario' => ['Keep scenario']]);
         $export = $this->exported();
         $this->rewriteWorkData($export->parts()->firstOrFail(), fn(array $work): array => [
-            'japanese' => [
-                'product_id' => 'RJ123456',
-                'work_name' => 'Partial',
-                'publisher' => null,
-                'intro_s' => null,
-                'author' => [],
+            'locales' => [
+                'ja' => [
+                    'product_id' => 'RJ123456',
+                    'work_name' => 'Partial',
+                    'publisher' => null,
+                    'intro_s' => null,
+                    'author' => [],
+                ],
+                'en' => ['product_id' => 'RJ123456'],
             ],
-            'english' => ['product_id' => 'RJ123456'],
         ]);
         $this->apply($this->imported($export));
         $product = $product->fresh();
@@ -1138,8 +1476,8 @@ class LibraryTransferImportTest extends TestCase
         ]);
         $export = $this->exported();
         $this->rewriteWorkData($export->parts()->firstOrFail(), function (array $work): array {
-            unset($work['japanese']['announce_date'], $work['english']['announce_date']);
-            $work['japanese']['work_name'] = 'Imported legacy title';
+            unset($work['locales']['ja']['announce_date'], $work['locales']['en']['announce_date']);
+            $work['locales']['ja']['work_name'] = 'Imported legacy title';
 
             return $work;
         });
@@ -1159,8 +1497,8 @@ class LibraryTransferImportTest extends TestCase
         ]);
         $export = $this->exported();
         $this->rewriteWorkData($export->parts()->firstOrFail(), function (array $work): array {
-            $work['japanese']['announce_date'] = null;
-            $work['english']['announce_date'] = null;
+            $work['locales']['ja']['announce_date'] = null;
+            $work['locales']['en']['announce_date'] = null;
 
             return $work;
         });
@@ -1179,8 +1517,8 @@ class LibraryTransferImportTest extends TestCase
         Product::factory()->create(['id' => 'RJ123457']);
         $export = $this->exported();
         $this->rewriteWorkData($export->parts()->firstOrFail(), function (array $work) use ($value): array {
-            $work['japanese']['announce_date'] = $value;
-            $work['japanese']['work_name'] = 'Corrupted archive title';
+            $work['locales']['ja']['announce_date'] = $value;
+            $work['locales']['ja']['work_name'] = 'Corrupted archive title';
 
             return $work;
         });
@@ -1188,7 +1526,7 @@ class LibraryTransferImportTest extends TestCase
         $run = $this->imported($export);
         $this->assertSame(1, $run->items()->where('status', 'unavailable')->count());
         $error = (string) $run->items()->where('status', 'unavailable')->firstOrFail()->error;
-        $this->assertStringContainsString('japanese', $error);
+        $this->assertStringContainsString('locales.ja', $error);
         $this->assertStringContainsString(is_string($value) ? 'Y-m-d H:i:s' : 'string', $error);
         $this->apply($run);
 
@@ -1212,8 +1550,8 @@ class LibraryTransferImportTest extends TestCase
         ]);
         $export = $this->exported();
         $this->rewriteWorkData($export->parts()->firstOrFail(), function (array $work): array {
-            unset($work['japanese']['product_format'], $work['english']['product_format']);
-            $work['japanese']['work_name'] = 'Imported legacy title';
+            unset($work['locales']['ja']['product_format'], $work['locales']['en']['product_format']);
+            $work['locales']['ja']['work_name'] = 'Imported legacy title';
 
             return $work;
         });
@@ -1233,7 +1571,7 @@ class LibraryTransferImportTest extends TestCase
         Product::factory()->create(['id' => 'RJ123456']);
         $export = $this->exported();
         $this->rewriteWorkData($export->parts()->first(), function ($work) {
-            $work['japanese']['product_id'] = 'RJ999999';
+            $work['locales']['ja']['product_id'] = 'RJ999999';
 
             return $work;
         });
@@ -1257,7 +1595,7 @@ class LibraryTransferImportTest extends TestCase
         $entry = $manifest['entries'][0]['path'];
         switch ($case) {
             case 'schema':
-                $manifest['schema_version'] = 4;
+                $manifest['schema_version'] = 6;
                 break;
             case 'checksum':
                 $manifest['entries'][0]['sha256'] = str_repeat('0', 64);
@@ -1621,5 +1959,68 @@ class LibraryTransferImportTest extends TestCase
         $item->update([
             'result' => $committed ? ['_user_stylesheet_promotion' => $token] : [],
         ]);
+    }
+
+    #[DataProvider('malformedV4LocalizedWorkValues')]
+    public function test_malformed_v4_localized_values_are_quarantined_before_normalization(string $field, mixed $value): void
+    {
+        Product::factory()->create(['id' => 'RJ123456']);
+        Product::factory()->create(['id' => 'RJ123457']);
+        $export = $this->exported();
+        $this->rewriteWorkData($export->parts()->firstOrFail(), function (array $work) use ($field, $value): array {
+            $work['locales']['en'][$field] = $value;
+
+            return $work;
+        });
+
+        $run = $this->imported($export);
+
+        $this->assertSame(1, $run->items()->where('status', LibraryImportItemStatus::Unavailable)->count());
+        $this->assertGreaterThan(0, $run->items()->where('status', LibraryImportItemStatus::Pending)->count());
+        $this->apply($run);
+        $this->assertSame(LibraryTransferRunStatus::CompletedWithWarnings, $run->fresh()->status);
+    }
+
+    public static function malformedV4LocalizedWorkValues(): array
+    {
+        return [
+            'localized title array' => ['work_name', ['bad']],
+            'localized description array' => ['description', ['bad']],
+            'genre scalar' => ['genre', 'Tag'],
+            'genre associative map' => ['genre', ['name' => 'Tag']],
+            'genre non-string item' => ['genre', [null]],
+        ];
+    }
+
+    #[DataProvider('invalidPortableFetchLanguageLists')]
+    public function test_invalid_optional_fetch_language_lists_are_quarantined_before_option_normalization(mixed $value): void
+    {
+        $export = $this->exported(['options']);
+        $this->rewriteData($export->parts()->firstOrFail(), function (array $records) use ($value): array {
+            foreach ($records as &$record) {
+                if (($record['key'] ?? null) === Option::DLSITE_METADATA_FETCH_LANGUAGES) {
+                    $record['value'] = $value;
+                }
+            }
+            unset($record);
+
+            return $records;
+        });
+
+        $run = $this->imported($export);
+        $item = $run->items()
+            ->where('section', 'options')
+            ->where('entity_key', Option::DLSITE_METADATA_FETCH_LANGUAGES)
+            ->firstOrFail();
+
+        $this->assertSame(LibraryImportItemStatus::Unavailable, $item->status);
+    }
+
+    public static function invalidPortableFetchLanguageLists(): array
+    {
+        return [
+            'duplicate locale' => [[DlsiteLanguage::English->value, DlsiteLanguage::English->value]],
+            'associative map' => [['language' => DlsiteLanguage::English->value]],
+        ];
     }
 }

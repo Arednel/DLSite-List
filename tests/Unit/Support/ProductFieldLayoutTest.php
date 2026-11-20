@@ -3,6 +3,7 @@
 namespace Tests\Unit\Support;
 
 use App\Enums\ContentFocus;
+use App\Enums\DlsiteLanguage;
 use App\Enums\ProductField;
 use App\Enums\UiLanguage;
 use App\Support\ContentTerminology;
@@ -56,7 +57,7 @@ class ProductFieldLayoutTest extends TestCase
                 ProductField::VoiceActor,
                 ProductField::Author,
                 ProductField::DescriptionJapanese,
-                ProductField::DescriptionEnglish,
+                ProductField::DescriptionLocalized,
                 ProductField::Tags,
                 ProductField::Notes,
                 ProductField::StartDate,
@@ -96,7 +97,7 @@ class ProductFieldLayoutTest extends TestCase
                 ProductField::VoiceActor,
                 ProductField::Author,
                 ProductField::DescriptionJapanese,
-                ProductField::DescriptionEnglish,
+                ProductField::DescriptionLocalized,
             ],
             ProductFieldLayout::SURFACE_FILTER => [
                 ProductField::Title,
@@ -127,7 +128,7 @@ class ProductFieldLayoutTest extends TestCase
                 ProductField::VoiceActor,
                 ProductField::Author,
                 ProductField::DescriptionJapanese,
-                ProductField::DescriptionEnglish,
+                ProductField::DescriptionLocalized,
             ],
             ProductFieldLayout::SURFACE_QUICK_ADD => [
                 ProductField::ProductCode,
@@ -154,7 +155,7 @@ class ProductFieldLayoutTest extends TestCase
                 ProductField::VoiceActor,
                 ProductField::Author,
                 ProductField::DescriptionJapanese,
-                ProductField::DescriptionEnglish,
+                ProductField::DescriptionLocalized,
             ],
             ProductFieldLayout::SURFACE_CUSTOM_QUICK_ADD => [
                 ProductField::ProductCode,
@@ -183,7 +184,7 @@ class ProductFieldLayoutTest extends TestCase
                 ProductField::VoiceActor,
                 ProductField::Author,
                 ProductField::DescriptionJapanese,
-                ProductField::DescriptionEnglish,
+                ProductField::DescriptionLocalized,
             ],
         ];
 
@@ -261,7 +262,7 @@ class ProductFieldLayoutTest extends TestCase
         $this->assertTrue(ProductField::AgeCategory->isHiddenByDefault(ProductFieldLayout::SURFACE_BULK_IMPORT));
         $this->assertFalse(ProductField::AgeCategory->isHiddenByDefault(ProductFieldLayout::SURFACE_CUSTOM_QUICK_ADD));
         $this->assertTrue(ProductField::DescriptionJapanese->isHiddenByDefault(ProductFieldLayout::SURFACE_FILTER));
-        $this->assertTrue(ProductField::DescriptionEnglish->isHiddenByDefault(ProductFieldLayout::SURFACE_FILTER));
+        $this->assertTrue(ProductField::DescriptionLocalized->isHiddenByDefault(ProductFieldLayout::SURFACE_FILTER));
         $this->assertTrue(ProductField::StartDate->isHiddenByDefault(ProductFieldLayout::SURFACE_FILTER));
         $this->assertTrue(ProductField::ProductFormat->isHiddenByDefault(ProductFieldLayout::SURFACE_INDEX));
         $this->assertTrue(ProductField::ProductFormat->isHiddenByDefault(ProductFieldLayout::SURFACE_EDIT));
@@ -314,7 +315,7 @@ class ProductFieldLayoutTest extends TestCase
             ProductField::VoiceActor->value,
             ProductField::Author->value,
             ProductField::DescriptionJapanese->value,
-            ProductField::DescriptionEnglish->value,
+            ProductField::DescriptionLocalized->value,
             ProductField::Tags->value,
             ProductField::Notes->value,
             ProductField::StartDate->value,
@@ -417,7 +418,7 @@ class ProductFieldLayoutTest extends TestCase
             ProductField::VoiceActor->value,
             ProductField::Author->value,
             ProductField::DescriptionJapanese->value,
-            ProductField::DescriptionEnglish->value,
+            ProductField::DescriptionLocalized->value,
         ], collect($editLayout)->pluck('field')->all());
 
         $this->assertSame([
@@ -479,7 +480,7 @@ class ProductFieldLayoutTest extends TestCase
             ProductField::VoiceActor->value,
             ProductField::Author->value,
             ProductField::DescriptionJapanese->value,
-            ProductField::DescriptionEnglish->value,
+            ProductField::DescriptionLocalized->value,
         ], collect(ProductFieldLayout::normalize(null, ProductFieldLayout::SURFACE_FILTER))->pluck('field')->all());
 
         $this->assertSame([
@@ -538,7 +539,7 @@ class ProductFieldLayoutTest extends TestCase
             ProductField::VoiceActor->value,
             ProductField::Author->value,
             ProductField::DescriptionJapanese->value,
-            ProductField::DescriptionEnglish->value,
+            ProductField::DescriptionLocalized->value,
         ], collect($layout)->pluck('field')->all());
 
         $this->assertSame([
@@ -593,7 +594,7 @@ class ProductFieldLayoutTest extends TestCase
             ProductField::VoiceActor->value,
             ProductField::Author->value,
             ProductField::DescriptionJapanese->value,
-            ProductField::DescriptionEnglish->value,
+            ProductField::DescriptionLocalized->value,
         ], collect($layout)->pluck('field')->all());
 
         $this->assertSame([
@@ -685,7 +686,7 @@ class ProductFieldLayoutTest extends TestCase
             ['field' => 'not_real', 'visible' => true],
             ['field' => 'description', 'visible' => true],
             ['field' => ProductField::DescriptionJapanese->value, 'visible' => true],
-            ['field' => ProductField::DescriptionEnglish->value, 'visible' => true, 'editable' => true],
+            ['field' => ProductField::DescriptionLocalized->value, 'visible' => true, 'editable' => true],
         ], ProductFieldLayout::SURFACE_EDIT);
 
         $this->assertSame('voice_actor', $layout[0]['field']);
@@ -694,7 +695,7 @@ class ProductFieldLayoutTest extends TestCase
         $this->assertSame(ProductField::DescriptionJapanese->value, $layout[1]['field']);
         $this->assertTrue($layout[1]['visible']);
         $this->assertFalse($layout[1]['editable']);
-        $this->assertSame(ProductField::DescriptionEnglish->value, $layout[2]['field']);
+        $this->assertSame(ProductField::DescriptionLocalized->value, $layout[2]['field']);
         $this->assertTrue($layout[2]['visible']);
         $this->assertTrue($layout[2]['editable']);
         $this->assertNotContains('description', collect($layout)->pluck('field')->all());
@@ -705,7 +706,7 @@ class ProductFieldLayoutTest extends TestCase
     {
         $columns = ProductFieldLayout::indexColumns([
             ['field' => ProductField::DescriptionJapanese->value, 'label' => 'Japanese Description', 'visible' => false],
-            ['field' => ProductField::DescriptionEnglish->value, 'label' => 'English Description', 'visible' => true],
+            ['field' => ProductField::DescriptionLocalized->value, 'label' => 'Localized Description', 'visible' => true],
             ['field' => ProductField::Circle->value, 'label' => 'Circle', 'visible' => true],
             ['field' => ProductField::Score->value, 'label' => 'Score', 'visible' => true],
             ['field' => ProductField::StartDate->value, 'label' => 'Start Date', 'visible' => true],
@@ -717,9 +718,9 @@ class ProductFieldLayoutTest extends TestCase
 
         $this->assertSame([
             [
-                'field' => ProductField::DescriptionEnglish->value,
-                'label' => 'English Description',
-                'class' => 'description-english',
+                'field' => ProductField::DescriptionLocalized->value,
+                'label' => 'Localized Description',
+                'class' => 'description-localized',
                 'sort_field' => null,
                 'contributor_role' => null,
             ],
@@ -772,7 +773,7 @@ class ProductFieldLayoutTest extends TestCase
     {
         $fields = ProductFieldLayout::editFields([
             ['field' => ProductField::DescriptionJapanese->value, 'label' => 'Japanese Description', 'visible' => false, 'editable' => true],
-            ['field' => ProductField::DescriptionEnglish->value, 'label' => 'English Description', 'visible' => true, 'editable' => true],
+            ['field' => ProductField::DescriptionLocalized->value, 'label' => 'Localized Description', 'visible' => true, 'editable' => true],
             ['field' => ProductField::VoiceActor->value, 'label' => 'Voice Actor', 'visible' => true, 'editable' => true],
             ['field' => ProductField::Tags->value, 'label' => 'Tags', 'visible' => true, 'editable' => false, 'fetched_editable' => true],
             ['field' => 'not_real', 'label' => 'Broken', 'visible' => true, 'editable' => true],
@@ -780,8 +781,8 @@ class ProductFieldLayoutTest extends TestCase
 
         $this->assertSame([
             [
-                'field' => ProductField::DescriptionEnglish->value,
-                'label' => 'English Description',
+                'field' => ProductField::DescriptionLocalized->value,
+                'label' => 'Localized Description',
                 'editable' => true,
                 'contributor_role' => null,
             ],
@@ -804,7 +805,7 @@ class ProductFieldLayoutTest extends TestCase
     {
         $fields = ProductFieldLayout::filterFields([
             ['field' => ProductField::DescriptionJapanese->value, 'label' => 'Japanese Description', 'visible' => false],
-            ['field' => ProductField::DescriptionEnglish->value, 'label' => 'English Description', 'visible' => true],
+            ['field' => ProductField::DescriptionLocalized->value, 'label' => 'Localized Description', 'visible' => true],
             ['field' => ProductField::VoiceActor->value, 'label' => 'Voice Actor', 'visible' => true],
             ['field' => ProductField::AgeCategory->value, 'label' => 'Age', 'visible' => true],
             ['field' => 'not_real', 'label' => 'Broken', 'visible' => true],
@@ -812,9 +813,9 @@ class ProductFieldLayoutTest extends TestCase
 
         $this->assertSame([
             [
-                'field' => ProductField::DescriptionEnglish->value,
-                'label' => 'English Description',
-                'class' => 'description-english',
+                'field' => ProductField::DescriptionLocalized->value,
+                'label' => 'Localized Description',
+                'class' => 'description-localized',
             ],
             [
                 'field' => ProductField::VoiceActor->value,
@@ -827,5 +828,37 @@ class ProductFieldLayoutTest extends TestCase
                 'class' => 'age-category',
             ],
         ], $fields);
+    }
+
+    public function test_metadata_language_resolves_localized_description_columns_and_filters_once(): void
+    {
+        $indexLayout = [
+            ['field' => ProductField::DescriptionLocalized->value, 'visible' => true],
+            ['field' => ProductField::Title->value, 'visible' => true],
+        ];
+        $filterLayout = [
+            ['field' => ProductField::DescriptionLocalized->value, 'visible' => true],
+            ['field' => ProductField::Title->value, 'visible' => true],
+        ];
+
+        $this->assertNotContains(
+            ProductField::DescriptionLocalized->value,
+            array_column(ProductFieldLayout::indexColumns($indexLayout, DlsiteLanguage::Japanese), 'field'),
+        );
+        $this->assertNotContains(
+            ProductField::DescriptionLocalized->value,
+            array_column(ProductFieldLayout::filterFields($filterLayout, DlsiteLanguage::Japanese), 'field'),
+        );
+
+        $englishColumns = ProductFieldLayout::indexColumns($indexLayout, DlsiteLanguage::English);
+        $englishFilters = ProductFieldLayout::filterFields($filterLayout, DlsiteLanguage::English);
+        $this->assertSame(
+            DlsiteLanguage::English->descriptionLabel(),
+            collect($englishColumns)->firstWhere('field', ProductField::DescriptionLocalized->value)['label'],
+        );
+        $this->assertSame(
+            DlsiteLanguage::English->descriptionLabel(),
+            collect($englishFilters)->firstWhere('field', ProductField::DescriptionLocalized->value)['label'],
+        );
     }
 }

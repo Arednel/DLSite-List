@@ -22,6 +22,11 @@ enum UiLanguage: string
         };
     }
 
+    public function dlsiteLanguage(): ?DlsiteLanguage
+    {
+        return DlsiteLanguage::tryFrom($this->value);
+    }
+
     public static function current(): self
     {
         return self::tryFrom(App::currentLocale()) ?? self::English;

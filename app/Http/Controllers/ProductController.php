@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Enums\DlsiteLanguage;
 use App\Enums\ProductAgeCategory;
 use App\Enums\ProductContributorRole;
 use App\Enums\ProductField;
@@ -17,7 +18,6 @@ use App\Http\Requests\UpdateProductRequest;
 use App\Models\Genre;
 use App\Models\Option;
 use App\Models\Product;
-use App\Models\ProductLocalization;
 use App\Support\DLSite\DLSiteFetchResult;
 use App\Support\DLSite\DLSiteProductAlreadyExistsException;
 use App\Support\DLSite\DLSiteProductImportException;
@@ -135,11 +135,12 @@ class ProductController extends Controller
     public function store_custom(StoreCustomProductRequest $request)
     {
         $validated = $request->validated();
+        $metadataLanguage = DlsiteLanguage::from($validated['metadata_language']);
         $workID = $validated['id'];
         $visibleCreateFields = ProductFieldLayout::visibleFields(Option::customQuickAddFieldLayout());
         $coverVisible = $this->createFieldVisible($visibleCreateFields, ProductField::Image);
         $samplesVisible = $this->createFieldVisible($visibleCreateFields, ProductField::SampleImages);
-        [$description, $descriptionEnglish] = $this->customCreateDescriptionValues(
+        [$description, $localizedDescription] = $this->customCreateDescriptionValues(
             $request,
             $validated,
             $visibleCreateFields,
@@ -170,10 +171,11 @@ class ProductController extends Controller
                 $visibleCreateFields,
                 $workID,
                 $description,
-                $descriptionEnglish,
+                $localizedDescription,
                 $circle,
                 $makerId,
                 $dlsiteRating,
+                $metadataLanguage,
             ): Product {
                 $product = Product::create([
                     'id' => $workID,
@@ -221,13 +223,15 @@ class ProductController extends Controller
                         : null,
                 ]);
 
-                Product::withoutTouching(fn() => $product->syncLocalization(
-                    ProductLocalization::LOCALE_ENGLISH,
-                    [
-                        'title' => blank($validated['work_name_english'] ?? null) ? null : $validated['work_name_english'],
-                        'description' => blank($descriptionEnglish) ? null : $descriptionEnglish,
-                    ],
-                ));
+                if ($metadataLanguage !== DlsiteLanguage::Japanese) {
+                    Product::withoutTouching(fn() => $product->syncLocalization(
+                        $metadataLanguage,
+                        [
+                            'title' => blank($validated['localized_title'] ?? null) ? null : $validated['localized_title'],
+                            'description' => blank($localizedDescription) ? null : $localizedDescription,
+                        ],
+                    ));
+                }
 
                 $this->genreSync->syncCustom(
                     $product,
@@ -258,11 +262,18 @@ class ProductController extends Controller
      */
     public function edit(Request $request, Product $product)
     {
-        $englishLocalization = $product->englishLocalization()
+        $metadataLanguage = Option::effectiveDlsiteMetadataLanguage();
+        $metadataLanguageValue = $metadataLanguage->value;
+        $localizedTitleLabel = $metadataLanguage === DlsiteLanguage::Japanese ? null : $metadataLanguage->titleLabel();
+        $localizedDescriptionLabel = $metadataLanguage === DlsiteLanguage::Japanese ? null : $metadataLanguage->descriptionLabel();
+        $localization = $metadataLanguage === DlsiteLanguage::Japanese
+            ? null
+            : $product->localizations()
+            ->where('locale', $metadataLanguage->value)
             ->first(['title', 'description']);
-        $englishTitle = $englishLocalization?->title;
-        $englishDescription = $englishLocalization?->description;
-        $fetchedLanguage = Option::effectiveFetchedTagLanguage()->value;
+        $localizedTitle = $localization?->title;
+        $localizedDescription = $localization?->description;
+        $fetchedLanguage = $metadataLanguage->value;
         $editGenres = $this->loadEditGenresForProduct($product->getKey(), $fetchedLanguage);
         $showReadonlyGenreColors = Option::tagColorSurfaceEnabled(Option::TAG_COLOR_SURFACE_EDIT_READONLY);
         $genreColorPairs = $showReadonlyGenreColors
@@ -300,14 +311,16 @@ class ProductController extends Controller
 
         return view('Edit', [
             'product' => $product,
-            'englishTitle' => $englishTitle,
-            'englishDescription' => $englishDescription,
+            'localizedTitle' => $localizedTitle,
+            'localizedDescription' => $localizedDescription,
+            'metadataLanguageValue' => $metadataLanguageValue,
+            'localizedTitleLabel' => $localizedTitleLabel,
+            'localizedDescriptionLabel' => $localizedDescriptionLabel,
             'isModal' => $request->boolean('modal'),
             'productFormThemeClass' => $this->productFormThemeClass(),
             'fetchedGenres' => $fetchedGenres,
             'customGenres' => $customGenres,
             'genreFetchedInput' => $persistedFetchedInput !== '' ? $persistedFetchedInput . ', ' : '',
-            'genreFetchedLanguage' => $fetchedLanguage,
             'genreCustomInput' => TagInput::format($customGenres->pluck('title')),
             'showReadonlyGenreColors' => $showReadonlyGenreColors,
             'editFields' => $editFields,
@@ -319,7 +332,7 @@ class ProductController extends Controller
                 $ratingScale,
                 $dlsiteRatingValue,
                 $readonlyDLSiteRatingVisible,
-                $englishDescription,
+                $localizedDescription,
             ),
             'progressOptions' => ProductProgress::visibleOptions(
                 Option::optionalProductStatuses(),
@@ -341,6 +354,7 @@ class ProductController extends Controller
         $oldProgress = $product->progress;
 
         $data = $request->validated();
+        $metadataLanguage = $request->enum('metadata_language', DlsiteLanguage::class);
 
         $editFieldLayout = Option::editFieldLayout();
         $editableFields = ProductFieldLayout::editableFields($editFieldLayout);
@@ -352,21 +366,22 @@ class ProductController extends Controller
             $editableFields,
             $editFieldLayout,
             $updatePayload,
+            $metadataLanguage,
         ): array {
             $localizationAttributes = [];
 
-            if (array_key_exists('work_name_english', $updatePayload)) {
-                $englishTitle = $updatePayload['work_name_english'];
-                $localizationAttributes['title'] = blank($englishTitle) ? null : $englishTitle;
+            if (array_key_exists('localized_title', $updatePayload)) {
+                $localizedTitle = $updatePayload['localized_title'];
+                $localizationAttributes['title'] = blank($localizedTitle) ? null : $localizedTitle;
             }
 
-            if (array_key_exists('description_english', $updatePayload)) {
-                $englishDescription = $updatePayload['description_english'];
-                $localizationAttributes['description'] = blank($englishDescription) ? null : $englishDescription;
+            if (array_key_exists('description_localized', $updatePayload)) {
+                $localizedDescription = $updatePayload['description_localized'];
+                $localizationAttributes['description'] = blank($localizedDescription) ? null : $localizedDescription;
             }
 
             $product->fill([
-                ...Arr::except($updatePayload, ['work_name_english', 'description_english']),
+                ...Arr::except($updatePayload, ['localized_title', 'description_localized']),
                 'work_image' => $images['work_image'],
                 'sample_images' => $images['sample_images'],
             ]);
@@ -379,9 +394,9 @@ class ProductController extends Controller
 
             $localizationChanged = false;
 
-            if ($localizationAttributes !== []) {
+            if ($metadataLanguage !== null && $metadataLanguage !== DlsiteLanguage::Japanese && $localizationAttributes !== []) {
                 $syncLocalization = fn(): bool => $product->syncLocalization(
-                    ProductLocalization::LOCALE_ENGLISH,
+                    $metadataLanguage,
                     $localizationAttributes,
                 );
 
@@ -508,7 +523,7 @@ class ProductController extends Controller
         RatingScale $ratingScale,
         ?string $dlsiteRatingValue,
         bool $readonlyDLSiteRatingVisible,
-        ?string $englishDescription,
+        ?string $localizedDescription,
     ): array {
         $dlsiteRatingDisplay = null;
 
@@ -525,7 +540,7 @@ class ProductController extends Controller
                 ? null
                 : implode(', ', ProductFormat::labelsFor($product->product_format)),
             ProductField::DescriptionJapanese->value => $product->description,
-            ProductField::DescriptionEnglish->value => $englishDescription,
+            ProductField::DescriptionLocalized->value => $localizedDescription,
             ProductField::Notes->value => $product->notes,
             ProductField::StartDate->value => PartialDateFormatter::format($product->start_date),
             ProductField::FinishDate->value => PartialDateFormatter::format($product->end_date),
@@ -561,19 +576,16 @@ class ProductController extends Controller
         $description = $this->createFieldSubmitted($request, $visibleFields, ProductField::DescriptionJapanese, 'description')
             ? ($data['description'] ?? null)
             : null;
-        $englishDescription = $this->createFieldSubmitted(
+        $localizedDescription = $this->createFieldSubmitted(
             $request,
             $visibleFields,
-            ProductField::DescriptionEnglish,
-            'description_english'
+            ProductField::DescriptionLocalized,
+            'description_localized'
         )
-            ? ($data['description_english'] ?? null)
+            ? ($data['description_localized'] ?? null)
             : null;
 
-        return [
-            $description,
-            $englishDescription === $description ? null : $englishDescription,
-        ];
+        return [$description, $localizedDescription];
     }
 
     /**
@@ -635,6 +647,10 @@ class ProductController extends Controller
             $returnParameters['return_query'] = $returnTarget->query;
         }
 
+        $metadataLanguage = Option::effectiveDlsiteMetadataLanguage();
+        $metadataLanguageValue = $metadataLanguage->value;
+        $localizedTitleLabel = $metadataLanguage === DlsiteLanguage::Japanese ? null : $metadataLanguage->titleLabel();
+        $localizedDescriptionLabel = $metadataLanguage === DlsiteLanguage::Japanese ? null : $metadataLanguage->descriptionLabel();
         $quickAddFields = $isCustomCreate
             ? ProductFieldLayout::customQuickAddFields(Option::customQuickAddFieldLayout())
             : ProductFieldLayout::quickAddFields(Option::quickAddFieldLayout());
@@ -651,6 +667,9 @@ class ProductController extends Controller
             'isModal' => $request->boolean('modal'),
             'productFormThemeClass' => $this->productFormThemeClass(),
             'quickAddFields' => $quickAddFields,
+            'metadataLanguageValue' => $metadataLanguageValue,
+            'localizedTitleLabel' => $localizedTitleLabel,
+            'localizedDescriptionLabel' => $localizedDescriptionLabel,
             'returnQuery' => $returnTarget->query,
             'returnUrl' => $returnUrl,
             'returnParameters' => $returnParameters,
@@ -709,10 +728,11 @@ class ProductController extends Controller
             in_array(ProductField::Title->value, $editableFields, true)
             && $request->wasSubmitted('work_name')
         ) {
-            $payload = [
-                'work_name' => $data['work_name'],
-                'work_name_english' => $data['work_name_english'] ?? null,
-            ];
+            $payload['work_name'] = $data['work_name'];
+
+            if ($request->wasSubmitted('localized_title')) {
+                $payload['localized_title'] = $data['localized_title'] ?? null;
+            }
         }
 
         if (in_array(ProductField::DLSiteRating->value, $editableFields, true)) {
@@ -745,13 +765,6 @@ class ProductController extends Controller
             }
         }
 
-        $japaneseDescriptionForDuplicateCheck = $this->effectiveJapaneseDescriptionForUpdate(
-            $request,
-            $data,
-            $editableFields,
-            $product,
-        );
-
         foreach ($this->updatePayloadFieldMap() as $field => $submittedColumns) {
             if (
                 ! in_array($field, $editableFields, true)
@@ -762,7 +775,7 @@ class ProductController extends Controller
 
             $payload = [
                 ...$payload,
-                ...$this->updatePayloadForField($field, $data, $submittedColumns, $japaneseDescriptionForDuplicateCheck),
+                ...$this->updatePayloadForField($field, $data, $submittedColumns),
             ];
         }
 
@@ -796,7 +809,7 @@ class ProductController extends Controller
                 'maker_id' => 'maker_id',
             ],
             ProductField::DescriptionJapanese->value => ['description' => 'description'],
-            ProductField::DescriptionEnglish->value => ['description_english' => 'description_english'],
+            ProductField::DescriptionLocalized->value => ['description_localized' => 'description_localized'],
             ProductField::Notes->value => ['notes' => 'notes'],
             ProductField::StartDate->value => ['add.start_date' => 'start_date'],
             ProductField::FinishDate->value => ['add.finish_date' => 'end_date'],
@@ -813,12 +826,7 @@ class ProductController extends Controller
         string $field,
         array $data,
         array $submittedColumns,
-        ?string $japaneseDescriptionForDuplicateCheck,
     ): array {
-        if ($field === ProductField::DescriptionEnglish->value) {
-            return $this->descriptionUpdatePayload($data, $japaneseDescriptionForDuplicateCheck);
-        }
-
         if ($field === ProductField::ProductFormat->value) {
             return ['product_format' => ($data['product_format'] ?? []) ?: null];
         }
@@ -826,35 +834,6 @@ class ProductController extends Controller
         return collect($submittedColumns)
             ->mapWithKeys(fn(string $column): array => [$column => $data[$column] ?? null])
             ->all();
-    }
-
-    private function effectiveJapaneseDescriptionForUpdate(
-        UpdateProductRequest $request,
-        array $data,
-        array $editableFields,
-        Product $product,
-    ): ?string {
-        if (
-            in_array(ProductField::DescriptionJapanese->value, $editableFields, true)
-            && $request->wasSubmitted('description')
-        ) {
-            return $data['description'] ?? null;
-        }
-
-        return $product->description;
-    }
-
-    private function descriptionUpdatePayload(array $data, ?string $japaneseDescription): array
-    {
-        $englishDescription = $data['description_english'] ?? null;
-
-        if ($englishDescription === $japaneseDescription) {
-            $englishDescription = null;
-        }
-
-        return [
-            'description_english' => $englishDescription,
-        ];
     }
 
     private function syncProductEditContributors(
@@ -946,14 +925,6 @@ class ProductController extends Controller
             });
     }
 
-    private function syncProductGenres(Product $product, array $japaneseTitles, array $englishTitles, array $customTitles): void
-    {
-        $this->genreSync->sync($product, [
-            Genre::LANGUAGE_JAPANESE => Genre::resolveIdsFromTitles($japaneseTitles),
-            Genre::LANGUAGE_ENGLISH => Genre::resolveIdsFromTitles($englishTitles),
-        ], Genre::resolveIdsFromTitles($customTitles));
-    }
-
     private function syncProductEditGenres(
         UpdateProductRequest $request,
         Product $product,
@@ -976,7 +947,7 @@ class ProductController extends Controller
             && $request->wasSubmitted('genre_fetched')
         ) {
             $fetchedGenreIds = Genre::resolveIdsFromTitles($data['genre_fetched'] ?? []);
-            $fetchedLanguage = $data['genre_fetched_language'];
+            $fetchedLanguage = $data['metadata_language'];
         }
 
         if ($customGenreIds === null && $fetchedGenreIds === null) {

@@ -10,7 +10,7 @@ final class VisibleGenreAttachment
 {
     public static function query(?string $fetchedLanguage = null): Closure
     {
-        $fetchedLanguage ??= Option::effectiveFetchedTagLanguage()->value;
+        $fetchedLanguage ??= Option::effectiveDlsiteMetadataLanguage()->value;
 
         return function ($query) use ($fetchedLanguage): void {
             $query->where(function ($visibleQuery) use ($fetchedLanguage): void {

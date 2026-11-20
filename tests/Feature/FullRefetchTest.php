@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use App\Enums\DlsiteLanguage;
 use App\Enums\ProductContributorRole;
 use App\Enums\RefetchCategory;
 use App\Enums\RatingScale;
@@ -10,7 +11,6 @@ use App\Livewire\OptionsRefetchReview;
 use App\Models\Genre;
 use App\Models\Option;
 use App\Models\Product;
-use App\Models\ProductLocalization;
 use App\Models\RefetchRun;
 use App\Models\RefetchWorkResult;
 use App\Support\ProductContributorSync;
@@ -67,7 +67,10 @@ class FullRefetchTest extends TestCase
                 && $batch->allowsFailures()
                 && $batch->jobs->map(
                     fn(FetchProductWorkJob $job): string => $job->productId
-                )->all() === [$dlsite->id, $custom->id];
+                )->all() === [$dlsite->id, $custom->id]
+                && $batch->jobs->every(
+                    fn(FetchProductWorkJob $job): bool => $job->languages === ['ja', 'en']
+                );
         });
     }
 
@@ -455,7 +458,7 @@ class FullRefetchTest extends TestCase
             ], JSON_THROW_ON_ERROR)),
         ])->preventStrayProcesses();
 
-        app(RefetchService::class)->fetchAndRecordResult($result);
+        app(RefetchService::class)->fetchAndRecordResult($result, ['ja', 'en']);
 
         $this->assertTrue($result->refresh()->isFetched());
         $this->assertArrayHasKey(RefetchCategory::Titles->value, $result->changes);
@@ -491,7 +494,7 @@ class FullRefetchTest extends TestCase
             ], JSON_THROW_ON_ERROR)),
         ])->preventStrayProcesses();
 
-        app(RefetchService::class)->fetchAndRecordResult($result);
+        app(RefetchService::class)->fetchAndRecordResult($result, ['ja', 'en']);
 
         $result->refresh();
         $this->assertTrue($result->isFetched());
@@ -675,9 +678,9 @@ class FullRefetchTest extends TestCase
     {
         [$run, $product, $result] = $this->reviewRun();
         $changes = $result->changes;
-        $changes['titles']['work_name_english'] = [
+        $changes['titles']['localization:en:title'] = [
             'label' => 'English Title',
-            'old' => $product->titleForLocale('en'),
+            'old' => $product->localizations()->where('locale', 'en')->value('title'),
             'new' => 'New English Title',
         ];
         $result->forceFill(['changes' => $changes])->save();
@@ -685,18 +688,57 @@ class FullRefetchTest extends TestCase
         Livewire::test(OptionsRefetchReview::class, ['run' => $run])
             ->set('globalActions.titles', 'overwrite')
             ->set("actions.titles.{$result->id}.work_name", 'ignore')
-            ->set("actions.titles.{$result->id}.work_name_english", 'overwrite')
+            ->set("actions.titles.{$result->id}.localization:en:title", 'overwrite')
             ->call('askApplyTab', 'titles')
             ->call('applyTab')
             ->assertNoRedirect();
 
         $this->assertSame('Old Title', $product->refresh()->work_name);
-        $this->assertSame('New English Title', $product->titleForLocale('en'));
+        $this->assertSame('New English Title', $product->localizations()->where('locale', 'en')->value('title'));
         $result->refresh();
         $this->assertSame('ignore', data_get($result->decisions, 'titles.work_name.action'));
-        $this->assertSame('overwrite', data_get($result->decisions, 'titles.work_name_english.action'));
+        $this->assertSame('overwrite', data_get($result->decisions, 'titles.localization:en:title.action'));
         $this->assertFalse(data_get($result->decisions, 'titles.work_name.changed'));
-        $this->assertTrue(data_get($result->decisions, 'titles.work_name_english.changed'));
+        $this->assertTrue(data_get($result->decisions, 'titles.localization:en:title.changed'));
+    }
+
+    public function test_generic_english_identifiers_can_clear_both_localized_fields_without_changing_japanese(): void
+    {
+        Storage::fake('local');
+        [$run, $product, $result] = $this->reviewRun();
+        $product->syncLocalization(DlsiteLanguage::English, [
+            'title' => 'Optional English title',
+            'description' => 'Optional English description',
+        ]);
+        $result->forceFill(['changes' => [
+            'titles' => [
+                'localization:en:title' => [
+                    'label' => 'English Title',
+                    'old' => 'Optional English title',
+                    'new' => null,
+                ],
+            ],
+            'descriptions' => [
+                'localization:en:description' => [
+                    'label' => 'English Description',
+                    'old' => 'Optional English description',
+                    'new' => null,
+                ],
+            ],
+        ]])->save();
+        Storage::disk('local')->put($this->stagedJsonPath($run, $product), '{}');
+        $service = app(RefetchService::class);
+
+        $service->applyTab($run, RefetchCategory::Titles, RefetchService::ACTION_OVERWRITE);
+        $this->assertNull($product->localizations()->where('locale', 'en')->value('title'));
+        $this->assertSame('Optional English description', $product->localizations()->where('locale', 'en')->value('description'));
+
+        $service->applyTab($run->fresh(), RefetchCategory::Descriptions, RefetchService::ACTION_OVERWRITE);
+        $this->assertFalse($product->localizations()->where('locale', 'en')->exists());
+        $this->assertSame('Old Title', $product->fresh()->work_name);
+        $this->assertSame('Old Description', $product->fresh()->description);
+        $this->assertTrue(data_get($result->fresh()->decisions, 'titles.localization:en:title.changed'));
+        $this->assertTrue(data_get($result->fresh()->decisions, 'descriptions.localization:en:description.changed'));
     }
 
     #[DataProvider('nonCircleContributorProvider')]
@@ -876,8 +918,8 @@ class FullRefetchTest extends TestCase
             ProductContributorRole::Author->value => ['Old Author'],
         ], 'RGOLD');
         app(ProductGenreSync::class)->sync($product, [
-            Genre::LANGUAGE_JAPANESE => Genre::resolveIdsFromTitles(['Old JP Tag']),
-            Genre::LANGUAGE_ENGLISH => Genre::resolveIdsFromTitles(['Old EN Tag']),
+            DlsiteLanguage::Japanese->value => Genre::resolveIdsFromTitles(['Old JP Tag']),
+            DlsiteLanguage::English->value => Genre::resolveIdsFromTitles(['Old EN Tag']),
         ], Genre::resolveIdsFromTitles(['Custom Tag']));
         $userOwnedFields = [
             'progress',
@@ -898,11 +940,11 @@ class FullRefetchTest extends TestCase
             'changes' => [
                 'titles' => [
                     'work_name' => ['label' => 'Japanese Title', 'old' => 'Old JP', 'new' => 'New JP'],
-                    'work_name_english' => ['label' => 'English Title', 'old' => 'Old EN', 'new' => 'New EN'],
+                    'localization:en:title' => ['label' => 'English Title', 'old' => 'Old EN', 'new' => 'New EN'],
                 ],
                 'descriptions' => [
                     'description' => ['label' => 'Japanese Description', 'old' => 'Old Description', 'new' => 'New Description'],
-                    'description_english' => ['label' => 'English Description', 'old' => 'Old English Description', 'new' => 'New English Description'],
+                    'localization:en:description' => ['label' => 'English Description', 'old' => 'Old English Description', 'new' => 'New English Description'],
                 ],
                 'series' => [
                     'series' => ['label' => 'Series', 'old' => 'Old Series', 'new' => 'New Series'],
@@ -932,14 +974,18 @@ class FullRefetchTest extends TestCase
                     'tags' => [
                         'label' => 'Fetched Tags',
                         'old' => [
-                            'japanese' => ['Old JP Tag'],
-                            'english' => ['Old EN Tag'],
+                            'fetched' => ['ja' => ['Old JP Tag'], 'en' => ['Old EN Tag']],
                             'custom' => ['Custom Tag'],
                         ],
                         'new' => [
-                            'japanese' => ['New JP Tag'],
-                            'english' => ['New EN Tag'],
+                            'fetched' => ['ja' => ['New JP Tag'], 'en' => ['New EN Tag']],
                             'custom' => ['Custom Tag'],
+                        ],
+                        'details' => [
+                            'changed_locales' => ['ja', 'en'],
+                            'added' => ['ja' => ['New JP Tag'], 'en' => ['New EN Tag']],
+                            'stale' => ['ja' => ['Old JP Tag'], 'en' => ['Old EN Tag']],
+                            'custom_to_fetched' => ['ja' => [], 'en' => []],
                         ],
                     ],
                 ],
@@ -971,25 +1017,25 @@ class FullRefetchTest extends TestCase
         $this->assertSame([
             'maker_id' => 'RGNEW',
             'work_name' => 'New JP',
-            'work_name_english' => 'New EN',
+            'localized_title' => 'New EN',
             'description' => 'New Description',
-            'description_english' => 'New English Description',
+            'description_localized' => 'New English Description',
             'series' => 'New Series',
             'age_category' => 'R18',
             'circle' => 'New Circle',
         ], [
             'maker_id' => $product->maker_id,
             'work_name' => $product->work_name,
-            'work_name_english' => $product->titleForLocale(ProductLocalization::LOCALE_ENGLISH),
+            'localized_title' => $product->localizations()->where('locale', DlsiteLanguage::English->value)->value('title'),
             'description' => $product->description,
-            'description_english' => $product->descriptionForLocale(ProductLocalization::LOCALE_ENGLISH),
+            'description_localized' => $product->localizations()->where('locale', DlsiteLanguage::English->value)->value('description'),
             'series' => $product->series,
             'age_category' => $product->age_category,
             'circle' => $product->circle,
         ]);
         $this->assertSame($userOwnedValues, $product->only($userOwnedFields));
-        $this->assertSame(['New JP Tag'], $product->japaneseGenres()->pluck('genres.title')->all());
-        $this->assertSame(['New EN Tag'], $product->englishGenres()->pluck('genres.title')->all());
+        $this->assertSame(['New JP Tag'], $product->fetchedGenresForLanguage(DlsiteLanguage::Japanese)->pluck('genres.title')->all());
+        $this->assertSame(['New EN Tag'], $product->fetchedGenresForLanguage(DlsiteLanguage::English)->pluck('genres.title')->all());
         $this->assertSame(['Custom Tag'], $product->customGenres()->pluck('genres.title')->all());
         $contributors = app(ProductContributorSync::class)->namesByRole($product);
         $this->assertSame(['New Circle'], $contributors['circle']);
@@ -1184,8 +1230,8 @@ class FullRefetchTest extends TestCase
         Storage::fake('local');
         $product = Product::factory()->create();
         app(ProductGenreSync::class)->sync($product, [
-            Genre::LANGUAGE_JAPANESE => Genre::resolveIdsFromTitles(['Stale JP']),
-            Genre::LANGUAGE_ENGLISH => Genre::resolveIdsFromTitles(['Stale EN']),
+            DlsiteLanguage::Japanese->value => Genre::resolveIdsFromTitles(['Stale JP']),
+            DlsiteLanguage::English->value => Genre::resolveIdsFromTitles(['Stale EN']),
         ], Genre::resolveIdsFromTitles(['Overlap', 'Keep Custom']));
         $run = app(RefetchService::class)->createRun([$product->id], false);
         $result = $run->results()->firstOrFail();
@@ -1196,22 +1242,18 @@ class FullRefetchTest extends TestCase
                     'tags' => [
                         'label' => 'Fetched Tags',
                         'old' => [
-                            'japanese' => ['Stale JP'],
-                            'english' => ['Stale EN'],
+                            'fetched' => ['ja' => ['Stale JP'], 'en' => ['Stale EN']],
                             'custom' => ['Keep Custom', 'Overlap'],
                         ],
                         'new' => [
-                            'japanese' => ['Added JP', 'Overlap'],
-                            'english' => ['Added EN'],
+                            'fetched' => ['ja' => ['Added JP', 'Overlap'], 'en' => ['Added EN']],
                             'custom' => ['Keep Custom', 'Overlap'],
                         ],
                         'details' => [
-                            'added_japanese' => ['Added JP'],
-                            'added_english' => ['Added EN'],
-                            'stale_japanese' => ['Stale JP'],
-                            'stale_english' => ['Stale EN'],
-                            'custom_to_fetched_japanese' => ['Overlap'],
-                            'custom_to_fetched_english' => [],
+                            'changed_locales' => ['ja', 'en'],
+                            'added' => ['ja' => ['Added JP'], 'en' => ['Added EN']],
+                            'stale' => ['ja' => ['Stale JP'], 'en' => ['Stale EN']],
+                            'custom_to_fetched' => ['ja' => ['Overlap'], 'en' => []],
                         ],
                     ],
                 ],
@@ -1229,14 +1271,15 @@ class FullRefetchTest extends TestCase
 
         Livewire::test(OptionsRefetchReview::class, ['run' => $run])
             ->set('globalActions.tags', 'ignore')
-            ->set("actions.tags.{$result->id}.tags", 'detailed')
+            ->set("actions.tags.{$result->id}.ja", 'detailed')
+            ->set("actions.tags.{$result->id}.en", 'detailed')
             ->set(
                 "tagActions.{$result->id}",
                 [
-                    'added_japanese' => 'ignore',
-                    'added_english' => 'add_as_fetched',
-                    'stale_japanese' => 'move_to_custom',
-                    'stale_english' => 'remove',
+                    'locales' => [
+                        'ja' => ['added' => 'ignore', 'stale' => 'move_to_custom'],
+                        'en' => ['added' => 'add_as_fetched', 'stale' => 'remove'],
+                    ],
                     'custom_to_fetched' => 'keep_custom',
                 ],
             )
@@ -1246,15 +1289,78 @@ class FullRefetchTest extends TestCase
 
         $product->refresh();
         $this->assertTrue($product->updated_at->greaterThan($updatedAtBeforeApply));
-        $this->assertSame([], $product->japaneseGenres()->pluck('genres.title')->all());
-        $this->assertSame(['Added EN'], $product->englishGenres()->pluck('genres.title')->all());
+        $this->assertSame([], $product->fetchedGenresForLanguage(DlsiteLanguage::Japanese)->pluck('genres.title')->all());
+        $this->assertSame(['Added EN'], $product->fetchedGenresForLanguage(DlsiteLanguage::English)->pluck('genres.title')->all());
         $this->assertEqualsCanonicalizing(
             ['Keep Custom', 'Overlap', 'Stale JP'],
             $product->customGenres()->pluck('genres.title')->all(),
         );
-        $this->assertSame('detailed', data_get($result->fresh()->decisions, 'tags.tags.action'));
+        $this->assertSame('detailed', data_get($result->fresh()->decisions, 'tags.tags.locales.ja.action'));
+        $this->assertSame('detailed', data_get($result->fresh()->decisions, 'tags.tags.locales.en.action'));
         $this->assertSame(RefetchRun::STATUS_APPLIED, $run->refresh()->status);
         $this->travelBack();
+    }
+
+
+    public function test_detailed_tag_move_to_custom_ignores_tags_still_fetched_in_an_unrefreshed_language(): void
+    {
+        Storage::fake('local');
+        $product = Product::factory()->create();
+        $shared = Genre::resolveByTitle('Shared Fetched Tag');
+        app(ProductGenreSync::class)->sync($product, [
+            DlsiteLanguage::Japanese->value => [$shared->getKey()],
+            DlsiteLanguage::English->value => [$shared->getKey()],
+        ], []);
+
+        $run = app(RefetchService::class)->createRun([$product->id], false);
+        $result = $run->results()->firstOrFail();
+        $result->forceFill([
+            'status' => RefetchWorkResult::STATUS_FETCHED,
+            'changes' => [
+                'tags' => [
+                    'tags' => [
+                        'label' => 'Fetched Tags',
+                        'old' => [
+                            'fetched' => [
+                                'ja' => ['Shared Fetched Tag'],
+                            ],
+                            'custom' => [],
+                        ],
+                        'new' => [
+                            'fetched' => [
+                                'ja' => [],
+                            ],
+                            'custom' => [],
+                        ],
+                        'details' => [
+                            'changed_locales' => ['ja'],
+                            'added' => ['ja' => []],
+                            'stale' => ['ja' => ['Shared Fetched Tag']],
+                            'custom_to_fetched' => ['ja' => []],
+                        ],
+                    ],
+                ],
+            ],
+        ])->save();
+        $run->forceFill([
+            'status' => RefetchRun::STATUS_REVIEW,
+            'processed_count' => 1,
+            'fetched_count' => 1,
+            'resolved_tabs' => array_values(array_diff(RefetchCategory::values(), ['tags'])),
+        ])->save();
+        Storage::disk('local')->put($this->stagedJsonPath($run, $product), '{"version":"new"}');
+
+        Livewire::test(OptionsRefetchReview::class, ['run' => $run])
+            ->set("actions.tags.{$result->id}.ja", RefetchService::ACTION_DETAILED)
+            ->set("tagActions.{$result->id}.locales.ja.stale", RefetchService::TAG_STALE_MOVE_TO_CUSTOM)
+            ->call('askApplyTab', 'tags')
+            ->call('applyTab')
+            ->assertNoRedirect();
+
+        $product->refresh();
+        $this->assertSame([], $product->fetchedGenresForLanguage(DlsiteLanguage::Japanese)->pluck('genres.title')->all());
+        $this->assertSame(['Shared Fetched Tag'], $product->fetchedGenresForLanguage(DlsiteLanguage::English)->pluck('genres.title')->all());
+        $this->assertSame([], $product->customGenres()->pluck('genres.title')->all());
     }
 
     public function test_invalid_tab_key_is_rejected_by_livewire_validation(): void
@@ -1282,9 +1388,14 @@ class FullRefetchTest extends TestCase
                 'tags' => [
                     'tags' => [
                         'label' => 'Fetched Tags',
-                        'old' => ['japanese' => [], 'english' => [], 'custom' => []],
-                        'new' => ['japanese' => [$tag->title], 'english' => [], 'custom' => []],
-                        'details' => ['added_japanese' => [$tag->title]],
+                        'old' => ['fetched' => ['ja' => [], 'en' => []], 'custom' => []],
+                        'new' => ['fetched' => ['ja' => [$tag->title], 'en' => []], 'custom' => []],
+                        'details' => [
+                            'changed_locales' => ['ja'],
+                            'added' => ['ja' => [$tag->title], 'en' => []],
+                            'stale' => ['ja' => [], 'en' => []],
+                            'custom_to_fetched' => ['ja' => [], 'en' => []],
+                        ],
                     ],
                 ],
             ],
@@ -1375,5 +1486,222 @@ class FullRefetchTest extends TestCase
             RefetchCategory::Author,
             ProductContributorRole::Author,
         ];
+    }
+
+    public function test_all_ignore_tag_review_is_a_true_no_op(): void
+    {
+        Storage::fake('local');
+        $product = Product::factory()->create();
+        app(ProductGenreSync::class)->sync($product, [
+            'ja' => Genre::resolveIdsFromTitles(['Ignore Existing Fetched']),
+        ], Genre::resolveIdsFromTitles(['Ignore Existing Custom']));
+        $product = $product->fresh();
+        $updatedAt = $product->updated_at;
+
+        $run = app(RefetchService::class)->createRun([$product->id], false);
+        $result = $run->results()->firstOrFail();
+        $result->forceFill([
+            'status' => RefetchWorkResult::STATUS_FETCHED,
+            'changes' => [
+                'tags' => [
+                    'tags' => [
+                        'label' => 'Fetched Tags',
+                        'old' => ['fetched' => ['ja' => ['Ignore Existing Fetched']], 'custom' => ['Ignore Existing Custom']],
+                        'new' => ['fetched' => ['ja' => ['Ignore Incoming Fetched']], 'custom' => ['Ignore Existing Custom']],
+                        'details' => [
+                            'changed_locales' => ['ja'],
+                            'added' => ['ja' => ['Ignore Incoming Fetched']],
+                            'stale' => ['ja' => ['Ignore Existing Fetched']],
+                            'custom_to_fetched' => ['ja' => []],
+                        ],
+                    ],
+                ],
+            ],
+        ])->save();
+        $run->forceFill([
+            'status' => RefetchRun::STATUS_REVIEW,
+            'processed_count' => 1,
+            'fetched_count' => 1,
+            'resolved_tabs' => array_values(array_diff(RefetchCategory::values(), ['tags'])),
+        ])->save();
+        Storage::disk('local')->put($this->stagedJsonPath($run, $product), '{"version":"ignored"}');
+
+        $this->travelTo($updatedAt->copy()->addMinute());
+        app(RefetchService::class)->applyTab($run->fresh(), RefetchCategory::Tags, RefetchService::ACTION_IGNORE);
+
+        $product->refresh();
+        $this->assertTrue($product->updated_at->equalTo($updatedAt));
+        $this->assertSame(['Ignore Existing Fetched'], $product->fetchedGenresForLanguage('ja')->pluck('genres.title')->all());
+        $this->assertSame(['Ignore Existing Custom'], $product->customGenres()->pluck('genres.title')->all());
+        $this->assertFalse((bool) data_get($result->fresh()->decisions, 'tags.tags.changed'));
+        $this->assertSame(RefetchService::ACTION_IGNORE, data_get($result->fresh()->decisions, 'tags.tags.locales.ja.action'));
+        $this->travelBack();
+    }
+
+    public function test_custom_tag_promotion_uses_the_same_effective_locale_actions_in_review_and_apply(): void
+    {
+        Storage::fake('local');
+        $product = Product::factory()->create();
+        app(ProductGenreSync::class)->sync($product, [
+            DlsiteLanguage::Japanese->value => Genre::resolveIdsFromTitles(['Old JP']),
+            DlsiteLanguage::English->value => Genre::resolveIdsFromTitles(['Old EN']),
+        ], Genre::resolveIdsFromTitles(['Shared Promotion Overlap']));
+        $run = app(RefetchService::class)->createRun([$product->id], false);
+        $result = $run->results()->firstOrFail();
+        $result->forceFill([
+            'status' => RefetchWorkResult::STATUS_FETCHED,
+            'changes' => [
+                'tags' => [
+                    'tags' => [
+                        'label' => 'Fetched Tags',
+                        'old' => [
+                            'fetched' => ['ja' => ['Old JP'], 'en' => ['Old EN']],
+                            'custom' => ['Shared Promotion Overlap'],
+                        ],
+                        'new' => [
+                            'fetched' => ['ja' => ['Shared Promotion Overlap'], 'en' => ['Shared Promotion Overlap']],
+                            'custom' => ['Shared Promotion Overlap'],
+                        ],
+                        'details' => [
+                            'changed_locales' => ['ja', 'en'],
+                            'added' => ['ja' => [], 'en' => []],
+                            'stale' => ['ja' => ['Old JP'], 'en' => ['Old EN']],
+                            'custom_to_fetched' => [
+                                'ja' => ['Shared Promotion Overlap'],
+                                'en' => ['Shared Promotion Overlap'],
+                            ],
+                        ],
+                    ],
+                ],
+            ],
+        ])->save();
+        $run->forceFill([
+            'status' => RefetchRun::STATUS_REVIEW,
+            'processed_count' => 1,
+            'fetched_count' => 1,
+            'resolved_tabs' => array_values(array_diff(RefetchCategory::values(), ['tags'])),
+        ])->save();
+        Storage::disk('local')->put($this->stagedJsonPath($run, $product), '{"version":"new"}');
+
+        $component = Livewire::test(OptionsRefetchReview::class, ['run' => $run])
+            ->call('showCategory', 'tags')
+            ->set('globalActions.tags', RefetchService::ACTION_IGNORE)
+            ->set("actions.tags.{$result->id}.en", RefetchService::ACTION_DETAILED)
+            ->set("tagActions.{$result->id}.locales.en.stale", RefetchService::TAG_STALE_REMOVE)
+            ->assertSet("actions.tags.{$result->id}.ja", RefetchService::ACTION_INHERIT);
+
+        preg_match('/<section class="refetch-custom-to-fetched">(.*?)<\/section>/s', $component->html(), $matches);
+        $this->assertNotEmpty($matches);
+        $this->assertStringContainsString('Shared Promotion Overlap', $matches[1]);
+
+        $component
+            ->call('askApplyTab', 'tags')
+            ->call('applyTab')
+            ->assertNoRedirect();
+
+        $this->assertSame(
+            ['Old JP'],
+            $product->fresh()->fetchedGenresForLanguage(DlsiteLanguage::Japanese)->pluck('genres.title')->all(),
+        );
+        $this->assertSame(
+            ['Shared Promotion Overlap'],
+            $product->fresh()->fetchedGenresForLanguage(DlsiteLanguage::English)->pluck('genres.title')->all(),
+        );
+        $this->assertSame([], $product->fresh()->customGenres()->pluck('genres.title')->all());
+        $this->assertSame(
+            RefetchService::ACTION_IGNORE,
+            data_get($result->fresh()->decisions, 'tags.tags.locales.ja.action'),
+        );
+        $this->assertSame(
+            RefetchService::ACTION_DETAILED,
+            data_get($result->fresh()->decisions, 'tags.tags.locales.en.action'),
+        );
+    }
+
+    public function test_detailed_custom_promotion_does_not_leak_into_inherited_overwrite_locale(): void
+    {
+        Storage::fake('local');
+        $product = Product::factory()->create();
+        app(ProductGenreSync::class)->sync($product, [
+            DlsiteLanguage::Japanese->value => Genre::resolveIdsFromTitles(['Old JP']),
+            DlsiteLanguage::English->value => Genre::resolveIdsFromTitles(['Old EN']),
+        ], Genre::resolveIdsFromTitles(['Shared Promotion Overlap']));
+        $run = app(RefetchService::class)->createRun([$product->id], false);
+        $result = $run->results()->firstOrFail();
+        $result->forceFill([
+            'status' => RefetchWorkResult::STATUS_FETCHED,
+            'changes' => [
+                'tags' => [
+                    'tags' => [
+                        'label' => 'Fetched Tags',
+                        'old' => [
+                            'fetched' => ['ja' => ['Old JP'], 'en' => ['Old EN']],
+                            'custom' => ['Shared Promotion Overlap'],
+                        ],
+                        'new' => [
+                            'fetched' => [
+                                'ja' => ['Japanese Incoming', 'Shared Promotion Overlap'],
+                                'en' => ['English Incoming', 'Shared Promotion Overlap'],
+                            ],
+                            'custom' => ['Shared Promotion Overlap'],
+                        ],
+                        'details' => [
+                            'changed_locales' => ['ja', 'en'],
+                            'added' => [
+                                'ja' => ['Japanese Incoming'],
+                                'en' => ['English Incoming'],
+                            ],
+                            'stale' => ['ja' => ['Old JP'], 'en' => ['Old EN']],
+                            'custom_to_fetched' => [
+                                'ja' => ['Shared Promotion Overlap'],
+                                'en' => ['Shared Promotion Overlap'],
+                            ],
+                        ],
+                    ],
+                ],
+            ],
+        ])->save();
+        $run->forceFill([
+            'status' => RefetchRun::STATUS_REVIEW,
+            'processed_count' => 1,
+            'fetched_count' => 1,
+            'resolved_tabs' => array_values(array_diff(RefetchCategory::values(), ['tags'])),
+        ])->save();
+        Storage::disk('local')->put($this->stagedJsonPath($run, $product), '{"version":"new"}');
+
+        $component = Livewire::test(OptionsRefetchReview::class, ['run' => $run])
+            ->call('showCategory', 'tags')
+            ->set('globalActions.tags', RefetchService::ACTION_OVERWRITE)
+            ->set("actions.tags.{$result->id}.en", RefetchService::ACTION_DETAILED)
+            ->set("tagActions.{$result->id}.locales.en.stale", RefetchService::TAG_STALE_REMOVE)
+            ->assertSet("actions.tags.{$result->id}.ja", RefetchService::ACTION_INHERIT);
+
+        preg_match('/<section class="refetch-custom-to-fetched">(.*?)<\/section>/s', $component->html(), $matches);
+        $this->assertNotEmpty($matches);
+        $this->assertStringContainsString('Shared Promotion Overlap', $matches[1]);
+
+        $component
+            ->call('askApplyTab', 'tags')
+            ->call('applyTab')
+            ->assertNoRedirect();
+
+        $product->refresh();
+        $this->assertEqualsCanonicalizing(
+            ['Japanese Incoming'],
+            $product->fetchedGenresForLanguage(DlsiteLanguage::Japanese)->pluck('genres.title')->all(),
+        );
+        $this->assertEqualsCanonicalizing(
+            ['English Incoming', 'Shared Promotion Overlap'],
+            $product->fetchedGenresForLanguage(DlsiteLanguage::English)->pluck('genres.title')->all(),
+        );
+        $this->assertSame([], $product->customGenres()->pluck('genres.title')->all());
+        $this->assertSame(
+            RefetchService::ACTION_OVERWRITE,
+            data_get($result->fresh()->decisions, 'tags.tags.locales.ja.action'),
+        );
+        $this->assertSame(
+            RefetchService::ACTION_DETAILED,
+            data_get($result->fresh()->decisions, 'tags.tags.locales.en.action'),
+        );
     }
 }

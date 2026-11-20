@@ -2,18 +2,23 @@
 
 namespace App\Support\Transfers;
 
+use App\Enums\DlsiteLanguage;
 use App\Enums\ProductAgeCategory;
 use App\Enums\ProductContributorRole;
 use App\Support\DLSite\DLSiteRating;
 use App\Models\Product;
+use App\Rules\MaxBytes;
 use App\Support\DLSite\DLSiteWorkData;
 use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\Validator;
+use Illuminate\Validation\Rule;
 use InvalidArgumentException;
 
 final class WorkArchiveData
 {
-    public const FORMAT = 'dlsite-async+dlsite-list';
+    public const FORMAT = 'dlsite-async-locales+dlsite-list';
+
+    public const LEGACY_FORMAT = 'dlsite-async+dlsite-list';
 
     private const DLSITE_FIELDS = [
         'product_id',
@@ -71,31 +76,18 @@ final class WorkArchiveData
 
     public function __construct(private readonly LibraryData $data) {}
 
-    public function exportSnapshot(Product $product, bool $images = false): array
-    {
-        return $this->buildExportSnapshot($product, $images, false);
-    }
-
     /**
-     * Export using the preloaded English localization and contributor/tag relations in canonical attachment order.
+     * Export using preloaded localizations/contributors and prepared tag buckets in attachment order.
+     *
+     * @param array<string, list<string>> $tags
      */
-    public function exportSnapshotFromPreorderedRelations(Product $product, bool $images = false): array
+    public function exportSnapshotFromLoadedData(Product $product, array $tags, bool $images = false): array
     {
-        return $this->buildExportSnapshot($product, $images, true);
-    }
-
-    private function buildExportSnapshot(Product $product, bool $images, bool $usePreorderedRelations): array
-    {
-        if ($usePreorderedRelations && ! $product->relationLoaded('englishLocalization')) {
-            throw new \LogicException('Preordered English localization export relation is not loaded.');
+        if (! $product->relationLoaded('localizations')) {
+            throw new \LogicException('Preordered localization export relation is not loaded.');
         }
 
-        $contributors = $usePreorderedRelations
-            ? $this->data->preorderedLoadedCategory($product, 'contributors')
-            : $this->data->category($product, 'contributors');
-        $tags = $usePreorderedRelations
-            ? $this->data->preorderedLoadedCategory($product, 'tags')
-            : $this->data->category($product, 'tags');
+        $contributors = $this->data->preorderedLoadedContributors($product);
         $coverInspection = $images ? $this->data->inspectImageCategory($product, 'cover') : null;
         $sampleInspection = $images ? $this->data->inspectImageCategory($product, 'sample_images') : null;
         $cover = $coverInspection === null ? null : Arr::except($coverInspection, ['unavailable']);
@@ -103,32 +95,26 @@ final class WorkArchiveData
         $coverPath = $cover['files'][0]['path'] ?? null;
         $samplePaths = $samples === null ? null : array_column($samples['files'], 'path');
 
-        $englishLocalization = $usePreorderedRelations
-            ? $product->getRelation('englishLocalization')
-            : $product->englishLocalization()
-            ->first(['title', 'description']);
-        $japaneseTitle = $product->work_name;
-        $englishTitle = $englishLocalization?->title ?? $japaneseTitle;
-        $englishDescription = $englishLocalization?->description ?? $product->description;
+        $localizations = $product->getRelation('localizations')->keyBy('locale');
 
-        $japanese = $this->locale(
-            $product,
-            $japaneseTitle,
-            $product->description,
-            $tags['jp'],
-            $contributors,
-            $coverPath,
-            $samplePaths,
-        );
-        $english = $this->locale(
-            $product,
-            $englishTitle,
-            $englishDescription,
-            $tags['en'],
-            $contributors,
-            $coverPath,
-            $samplePaths,
-        );
+        $workSections = [];
+        foreach (DlsiteLanguage::cases() as $language) {
+            $locale = $language->value;
+            $isJapanese = $language === DlsiteLanguage::Japanese;
+            $localization = $isJapanese ? null : $localizations->get($locale);
+            $title = $isJapanese ? $product->work_name : $localization?->title;
+            $description = $isJapanese ? $product->description : $localization?->description;
+
+            $workSections[$locale] = $this->locale(
+                $product,
+                $title,
+                $description,
+                $tags[$locale] ?? [],
+                $contributors,
+                $coverPath,
+                $samplePaths,
+            );
+        }
         $custom = [
             'notes' => $product->notes,
             'score' => $product->score,
@@ -152,7 +138,7 @@ final class WorkArchiveData
         $custom['updated_at'] = $product->updated_at?->utc()->toIso8601ZuluString();
 
         return [
-            'work' => ['japanese' => $japanese, 'english' => $english, 'dlsite_list' => $custom],
+            'work' => ['locales' => $workSections, 'dlsite_list' => $custom],
             'image_warnings' => [
                 ...($coverInspection['unavailable'] ?? []),
                 ...($sampleInspection['unavailable'] ?? []),
@@ -160,37 +146,49 @@ final class WorkArchiveData
         ];
     }
 
-    public function assertLayout(array $document, string $expectedCode): void
+    public function assertLayout(array $document, string $expectedCode, int $schemaVersion): void
     {
+        $currentFormat = $schemaVersion >= 4;
+        $rules = $currentFormat ? [
+            'work' => [Rule::array(['locales', 'dlsite_list'])],
+            'work.locales' => ['required', Rule::array(DlsiteLanguage::cases())],
+            'work.locales.ja' => ['present', 'array'],
+            'work.locales.*' => ['array'],
+        ] : [
+            'work' => [Rule::array(['japanese', 'english', 'dlsite_list'])],
+            'work.japanese' => ['present', 'array'],
+            'work.english' => ['present', 'array'],
+        ];
         if (
-            Validator::make(['work' => $document], [
-                'work' => ['array:japanese,english,dlsite_list'],
-            ])->fails()
-            || ! is_array($document['japanese'] ?? null) || ($document['japanese'] !== [] && array_is_list($document['japanese']))
-            || ! is_array($document['english'] ?? null) || ($document['english'] !== [] && array_is_list($document['english']))
+            ! in_array($schemaVersion, TransferArchive::SUPPORTED_SCHEMA_VERSIONS, true)
+            || Validator::make(['work' => $document], $rules)->fails()
             || (array_key_exists('dlsite_list', $document) && (! is_array($document['dlsite_list']) || ($document['dlsite_list'] !== [] && array_is_list($document['dlsite_list']))))
         ) {
             throw new InvalidArchive('transfer.archive.invalid_work_json');
         }
 
         $codes = [];
-        foreach (['japanese', 'english'] as $locale) {
-            if (! array_key_exists('product_id', $document[$locale]) || $document[$locale]['product_id'] === null) {
+        foreach ($this->localeDocuments($document, $schemaVersion) as $locale) {
+            if (! is_array($locale) || ($locale !== [] && array_is_list($locale))) {
+                throw new InvalidArchive('transfer.archive.invalid_work_json');
+            }
+            if (! array_key_exists('product_id', $locale) || $locale['product_id'] === null) {
                 continue;
             }
-            if (! is_string($document[$locale]['product_id'])) {
+            if (! is_string($locale['product_id'])) {
                 throw new InvalidArchive('transfer.archive.invalid_work_product_id');
             }
-            $codes[] = strtoupper(trim($document[$locale]['product_id']));
+            $codes[] = strtoupper(trim($locale['product_id']));
         }
         if ($codes === [] || collect($codes)->contains(fn(string $code): bool => $code !== $expectedCode)) {
             throw new InvalidArchive('transfer.archive.work_path_product_id_mismatch');
         }
     }
 
-    public function import(array $document, string $expectedCode): array
+    public function import(array $document, string $expectedCode, int $schemaVersion): array
     {
-        $this->assertLayout($document, $expectedCode);
+        $this->assertLayout($document, $expectedCode, $schemaVersion);
+        $document = ['locales' => $this->localeDocuments($document, $schemaVersion), 'dlsite_list' => $document['dlsite_list'] ?? []];
         $custom = $document['dlsite_list'] ?? [];
         if (Validator::make(['dlsite_list' => $custom], [
             'dlsite_list' => ['array:' . implode(',', self::CUSTOM_FIELDS)],
@@ -199,16 +197,30 @@ final class WorkArchiveData
         }
 
         // Validate raw values before normalization; accept plain dates and the scraper's Japan offset.
-        Validator::make($document, [
-            ...LibraryWorkValidator::productFormatRules('japanese.product_format'),
-            'japanese.announce_date' => ['sometimes', 'nullable', 'string', 'date_format:Y-m-d H:i:s,Y-m-d H:i:s\+09:00'],
+        $rawRules = [
+            ...LibraryWorkValidator::productFormatRules('locales.ja.product_format'),
+            'locales.ja.announce_date' => ['sometimes', 'nullable', 'string', 'date_format:Y-m-d H:i:s,Y-m-d H:i:s\+09:00'],
             'dlsite_list.site_id' => ['sometimes', 'nullable', 'string', 'max:255', 'regex:/\A[a-z][a-z0-9_-]*\z/'],
-        ])->validate();
+        ];
+        if ($schemaVersion >= 4) {
+            $rawRules += [
+                'locales.*.work_name' => ['sometimes', 'nullable', 'string', 'max:1000'],
+                'locales.*.description' => ['sometimes', 'nullable', 'string', 'max:65535', new MaxBytes(65535)],
+                'locales.*.genre' => ['sometimes', 'array', 'list', 'max:10000'],
+                'locales.*.genre.*' => ['required', 'string', 'max:255'],
+            ];
+        }
+        Validator::make($document, $rawRules)->validate();
 
         $document = DLSiteWorkData::normalizePayload($document);
+        $locales = $document['locales'];
+        $japanese = $locales[DlsiteLanguage::Japanese->value];
 
         $work = DLSiteWorkData::fromArray($document, $expectedCode);
-        $title = $this->localeText($document['japanese'], 'work_name') ?? $work->workName ?? $work->englishWorkName;
+        $title = $this->localeText($japanese, 'work_name');
+        if ($title === null && $schemaVersion < 4) {
+            $title = $work->workName ?? $work->titleForLocale(DlsiteLanguage::English);
+        }
         if ($title === null) {
             throw new InvalidArgumentException('dlsite.work.missing_name');
         }
@@ -220,19 +232,36 @@ final class WorkArchiveData
             }
         }
 
-        $record['titles'] = ['work_name' => $title];
-        if (array_key_exists('work_name', $document['english'])) {
-            $englishTitle = $this->localeText($document['english'], 'work_name');
-            $record['titles']['work_name_english'] = $englishTitle === $title ? null : $englishTitle;
+        $record['titles'] = [DlsiteLanguage::Japanese->value => $title];
+        foreach ($locales as $locale => $payload) {
+            if ($locale === DlsiteLanguage::Japanese->value || ! array_key_exists('work_name', $payload)) {
+                continue;
+            }
+            $localizedTitle = $this->localeText($payload, 'work_name');
+            if (
+                $schemaVersion <= 3
+                && $locale === DlsiteLanguage::English->value
+                && $localizedTitle === $title
+            ) {
+                $localizedTitle = null;
+            }
+            $record['titles'][$locale] = $localizedTitle;
         }
 
         $descriptions = [];
-        if (array_key_exists('description', $document['japanese'])) {
-            $descriptions['description'] = $this->localeText($document['japanese'], 'description');
-        }
-        if (array_key_exists('description', $document['english'])) {
-            $englishDescription = $this->localeText($document['english'], 'description');
-            $descriptions['description_english'] = $englishDescription === ($descriptions['description'] ?? null) ? null : $englishDescription;
+        foreach ($locales as $locale => $payload) {
+            if (! array_key_exists('description', $payload)) {
+                continue;
+            }
+            $localizedDescription = $this->localeText($payload, 'description');
+            if (
+                $schemaVersion <= 3
+                && $locale === DlsiteLanguage::English->value
+                && $localizedDescription === ($descriptions[DlsiteLanguage::Japanese->value] ?? null)
+            ) {
+                $localizedDescription = null;
+            }
+            $descriptions[$locale] = $localizedDescription;
         }
         if ($descriptions !== []) {
             $record['descriptions'] = $descriptions;
@@ -241,28 +270,28 @@ final class WorkArchiveData
         $details = [];
         if (array_key_exists('site_id', $custom)) {
             $details['site_id'] = $custom['site_id'];
-        } elseif (array_key_exists('site_id', $document['japanese'])) {
+        } elseif (array_key_exists('site_id', $japanese)) {
             $details['site_id'] = $work->siteId;
         }
         foreach (['publisher', 'brand'] as $field) {
-            if (array_key_exists($field, $document['japanese'])) {
+            if (array_key_exists($field, $japanese)) {
                 $details[$field] = $work->{$field};
             }
         }
-        if (array_key_exists('maker_id', $document['japanese'])) {
+        if (array_key_exists('maker_id', $japanese)) {
             $details['maker_id'] = $work->makerId;
         }
-        if (array_key_exists('title_name', $document['japanese']) || array_key_exists('title_name_masked', $document['japanese'])) {
-            $details['series'] = $this->localeText($document['japanese'], 'title_name_masked')
-                ?? $this->localeText($document['japanese'], 'title_name');
+        if (array_key_exists('title_name', $japanese) || array_key_exists('title_name_masked', $japanese)) {
+            $details['series'] = $this->localeText($japanese, 'title_name_masked')
+                ?? $this->localeText($japanese, 'title_name');
         }
-        if (array_key_exists('age_category', $document['japanese'])) {
+        if (array_key_exists('age_category', $japanese)) {
             $details['age_category'] = $work->ageCategory;
         }
-        if (array_key_exists('product_format', $document['japanese'])) {
+        if (array_key_exists('product_format', $japanese)) {
             $details['product_format'] = $work->productFormat === [] ? null : $work->productFormat;
         }
-        if (array_key_exists('announce_date', $document['japanese'])) {
+        if (array_key_exists('announce_date', $japanese)) {
             $details['announce_date'] = $work->announceDate;
         }
         if (array_key_exists('notes', $custom)) {
@@ -279,17 +308,16 @@ final class WorkArchiveData
         }
 
         foreach (ProductContributorRole::cases() as $role) {
-            if (array_key_exists($role->dlsiteKey(), $document['japanese'])) {
+            if (array_key_exists($role->dlsiteKey(), $japanese)) {
                 $record['contributors'][$role->value] = $work->contributorsByRole[$role->value];
             }
         }
 
         $tags = [];
-        if (array_key_exists('genre', $document['japanese'])) {
-            $tags['jp'] = $work->japaneseGenres;
-        }
-        if (array_key_exists('genre', $document['english'])) {
-            $tags['en'] = $work->englishGenres;
+        foreach ($locales as $locale => $payload) {
+            if (array_key_exists('genre', $payload)) {
+                $tags[$locale] = $work->genresForLocale($locale);
+            }
         }
         if (array_key_exists('custom_tags', $custom)) {
             $tags['custom'] = $custom['custom_tags'];
@@ -307,7 +335,16 @@ final class WorkArchiveData
         return $record;
     }
 
-    private function locale(Product $product, string $title, ?string $description, array $tags, array $contributors, ?string $cover, ?array $samples): array
+    /** @return array<string, array<string, mixed>> */
+    private function localeDocuments(array $document, int $schemaVersion): array
+    {
+        return $schemaVersion >= 4 ? $document['locales'] : [
+            'ja' => $document['japanese'],
+            'en' => $document['english'],
+        ];
+    }
+
+    private function locale(Product $product, ?string $title, ?string $description, array $tags, array $contributors, ?string $cover, ?array $samples): array
     {
         $age = ProductAgeCategory::tryFrom((string) $product->age_category);
         $values = [

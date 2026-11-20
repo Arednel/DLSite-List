@@ -2,6 +2,7 @@
 
 namespace App\Support;
 
+use App\Enums\DlsiteLanguage;
 use App\Enums\ProductField;
 use Illuminate\Support\Arr;
 
@@ -251,12 +252,15 @@ final class ProductFieldLayout
     /**
      * @return list<array{field: string, label: string, class: string, sort_field: ?string, contributor_role: ?string}>
      */
-    public static function indexColumns(array $layout): array
+    public static function indexColumns(array $layout, ?DlsiteLanguage $metadataLanguage = null): array
     {
         return collect(self::visibleRows($layout, self::SURFACE_INDEX))
+            ->reject(fn(array $visibleRow): bool => $visibleRow['field'] === ProductField::DescriptionLocalized
+                && $metadataLanguage === DlsiteLanguage::Japanese)
             ->map(fn(array $visibleRow): array => self::fieldMeta(
                 $visibleRow['field'],
                 self::SURFACE_INDEX,
+                $metadataLanguage,
             ))
             ->values()
             ->all();
@@ -287,11 +291,13 @@ final class ProductFieldLayout
     /**
      * @return list<array{field: string, label: string, class: string}>
      */
-    public static function filterFields(array $layout): array
+    public static function filterFields(array $layout, ?DlsiteLanguage $metadataLanguage = null): array
     {
         return collect(self::visibleRows($layout, self::SURFACE_FILTER))
+            ->reject(fn(array $visibleRow): bool => $visibleRow['field'] === ProductField::DescriptionLocalized
+                && $metadataLanguage === DlsiteLanguage::Japanese)
             ->map(fn(array $visibleRow): array => Arr::only(
-                self::fieldMeta($visibleRow['field'], self::SURFACE_FILTER),
+                self::fieldMeta($visibleRow['field'], self::SURFACE_FILTER, $metadataLanguage),
                 ['field', 'label', 'class'],
             ))
             ->values()
@@ -395,7 +401,9 @@ final class ProductFieldLayout
                     return null;
                 }
 
-                $field = ProductField::tryFrom((string) ($row['field'] ?? ''));
+                $fieldValue = (string) ($row['field'] ?? '');
+
+                $field = ProductField::tryFrom($fieldValue);
 
                 if (! $field || ($allowedFieldValues !== null && ! in_array($field->value, $allowedFieldValues, true))) {
                     return null;
@@ -411,11 +419,23 @@ final class ProductFieldLayout
     /**
      * @return array{field: string, label: string, class: string, sort_field: ?string, contributor_role: ?string}
      */
-    private static function fieldMeta(ProductField $field, string $surface): array
-    {
+    private static function fieldMeta(
+        ProductField $field,
+        string $surface,
+        ?DlsiteLanguage $metadataLanguage = null,
+    ): array {
+        $label = self::label($field, $surface);
+        if (
+            $field === ProductField::DescriptionLocalized
+            && $metadataLanguage !== null
+            && $metadataLanguage !== DlsiteLanguage::Japanese
+        ) {
+            $label = $metadataLanguage->descriptionLabel();
+        }
+
         return [
             'field' => $field->value,
-            'label' => self::label($field, $surface),
+            'label' => $label,
             'class' => str_replace('_', '-', $field->value),
             'sort_field' => $field->sortField()?->value,
             'contributor_role' => $field->contributorRole()?->value,

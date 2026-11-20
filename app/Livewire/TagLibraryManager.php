@@ -179,7 +179,7 @@ class TagLibraryManager extends Component
     public function render(GenreHierarchy $hierarchy): View
     {
         $this->normalizeFilters();
-        $fetchedLanguage = Option::effectiveFetchedTagLanguage()->value;
+        $fetchedLanguage = Option::effectiveDlsiteMetadataLanguage()->value;
         $groups = $this->groups($fetchedLanguage);
         $this->syncGroupState($groups);
         $tagLibraryColorsEnabled = Option::tagColorSurfaceEnabled(Option::TAG_COLOR_SURFACE_TAG_LIBRARY);

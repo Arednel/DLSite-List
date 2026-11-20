@@ -6,6 +6,8 @@ All notable changes to this project are documented in this file.
 
 ### Upgrade notes
 
+* Before upgrading, let Bulk Imports finish and complete or cancel unfinished Refetches and Library Transfers, including pending reviews.
+
 For existing manual installations:
 
 * Run `php artisan migrate`.
@@ -18,9 +20,9 @@ For existing manual installations:
 
 * Reworked application error localization so user-facing errors are translated more consistently across the application.
 * Changed the mobile Edit column to use only half of the row instead of the full row.
-* English DLsite metadata is now used only for Title, Description, and fetched Tags. All other DLsite metadata uses the Japanese API response with no fallback.
-* Moved optional translated DLsite work titles to locale-based localization records, with English titles stored separately while the required Japanese title is stored as canonical Product data.
-* Moved optional translated DLsite work descriptions to locale-based localization records, with English descriptions stored separately while Japanese descriptions remain Product data.
+* Expanded DLsite language support from Tags to Titles and Descriptions across Quick Add, Edit, the Index, and work selectors. The preferred language can follow the UI language or be selected separately, while Japanese is always fetched for shared metadata.
+* Updated Refetch Review and Import Review to show localized changes by language and allow separate choices for each language.
+* Updated the Import / Export archive schema to v4.
 
 ### Performance
 

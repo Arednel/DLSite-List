@@ -2,6 +2,7 @@
 
 namespace App\Support;
 
+use App\Enums\DlsiteLanguage;
 use App\Enums\ProductContributorRole;
 use App\Enums\ProductField;
 use App\Enums\ProductFormat;
@@ -76,21 +77,27 @@ final class ProductIndexResults
         RatingScale $ratingScale,
         RatingVisualStyle $ratingVisualStyle,
         bool $searchHiddenDescriptionsEnabled = false,
-        ?string $fetchedLanguage = null,
+        ?string $metadataLanguage = null,
     ): EloquentCollection|LengthAwarePaginator {
         $query = $this->filteredQuery(
             $filters,
             $this->indexColumns($visibleFields, $ratingScale, $ratingVisualStyle),
-            $this->descriptionSearchColumns($visibleFields, $searchHiddenDescriptionsEnabled),
+            $this->descriptionSearchColumns($visibleFields, $searchHiddenDescriptionsEnabled, $metadataLanguage),
             in_array(ProductField::Tags->value, $visibleFields, true),
             $ratingScale,
-            $fetchedLanguage,
+            $metadataLanguage,
         );
-        $query = $this->applySqlSorting($query, $filters->sorts(), $ratingScale)
-            ->withAggregate('englishLocalization as english_title', 'title');
+        $query = $this->applySqlSorting($query, $filters->sorts(), $ratingScale);
+        $metadataLanguage ??= Option::effectiveDlsiteMetadataLanguage()->value;
 
-        if (in_array(ProductField::DescriptionEnglish->value, $visibleFields, true)) {
-            $query->withAggregate('englishLocalization as english_description', 'description');
+        if ($metadataLanguage !== DlsiteLanguage::Japanese->value) {
+            $query->withLocalizedTitle($metadataLanguage);
+
+            if (in_array(ProductField::DescriptionLocalized->value, $visibleFields, true)) {
+                $query->withAggregate([
+                    'localizations as localized_description' => fn(Builder $query) => $query->where('locale', $metadataLanguage),
+                ], 'description');
+            }
         }
 
         return $perPage === Option::INDEX_PER_PAGE_UNLIMITED
@@ -104,9 +111,9 @@ final class ProductIndexResults
         RatingScale $ratingScale,
         array $descriptionSearchColumns,
         bool $searchTags = true,
-        ?string $fetchedLanguage = null,
+        ?string $metadataLanguage = null,
     ): bool {
-        return $this->filteredQuery($filters, null, $descriptionSearchColumns, $searchTags, $ratingScale, $fetchedLanguage)
+        return $this->filteredQuery($filters, null, $descriptionSearchColumns, $searchTags, $ratingScale, $metadataLanguage)
             ->whereKey($product->getKey())
             ->exists();
     }
@@ -119,13 +126,13 @@ final class ProductIndexResults
         RatingScale $ratingScale,
         array $descriptionSearchColumns,
         bool $searchTags = true,
-        ?string $fetchedLanguage = null,
+        ?string $metadataLanguage = null,
     ): bool {
         if ($perPage === Option::INDEX_PER_PAGE_UNLIMITED) {
-            return $this->containsProduct($filters, $product, $ratingScale, $descriptionSearchColumns, $searchTags, $fetchedLanguage);
+            return $this->containsProduct($filters, $product, $ratingScale, $descriptionSearchColumns, $searchTags, $metadataLanguage);
         }
 
-        return $this->applySqlSorting($this->filteredQuery($filters, null, $descriptionSearchColumns, $searchTags, $ratingScale, $fetchedLanguage), $filters->sorts(), $ratingScale)
+        return $this->applySqlSorting($this->filteredQuery($filters, null, $descriptionSearchColumns, $searchTags, $ratingScale, $metadataLanguage), $filters->sorts(), $ratingScale)
             ->forPage(max(1, $page), max(1, (int) $perPage))
             ->pluck('id')
             ->containsStrict((string) $product->getKey());
@@ -138,13 +145,13 @@ final class ProductIndexResults
         RatingScale $ratingScale,
         array $descriptionSearchColumns,
         bool $searchTags = true,
-        ?string $fetchedLanguage = null,
+        ?string $metadataLanguage = null,
     ): ?int {
         if ($perPage === Option::INDEX_PER_PAGE_UNLIMITED) {
             return null;
         }
 
-        $position = $this->applySqlSorting($this->filteredQuery($filters, null, $descriptionSearchColumns, $searchTags, $ratingScale, $fetchedLanguage), $filters->sorts(), $ratingScale)
+        $position = $this->applySqlSorting($this->filteredQuery($filters, null, $descriptionSearchColumns, $searchTags, $ratingScale, $metadataLanguage), $filters->sorts(), $ratingScale)
             ->pluck('id')
             ->search((string) $product->getKey(), true);
 
@@ -159,32 +166,37 @@ final class ProductIndexResults
         RatingScale $ratingScale,
         array $descriptionSearchColumns,
         bool $searchTags = true,
-        ?string $fetchedLanguage = null,
+        ?string $metadataLanguage = null,
     ): ?int {
         if ($perPage === Option::INDEX_PER_PAGE_UNLIMITED) {
             return null;
         }
 
         $perPage = max(1, (int) $perPage);
-        $total = $this->filteredQuery($filters, null, $descriptionSearchColumns, $searchTags, $ratingScale, $fetchedLanguage)->count();
+        $total = $this->filteredQuery($filters, null, $descriptionSearchColumns, $searchTags, $ratingScale, $metadataLanguage)->count();
 
         return max(1, (int) ceil($total / $perPage));
     }
 
-    public function descriptionSearchColumns(array $visibleFields, bool $searchHiddenDescriptionsEnabled): array
-    {
-        if ($searchHiddenDescriptionsEnabled) {
-            return ['description', 'description_english'];
-        }
-
+    public function descriptionSearchColumns(
+        array $visibleFields,
+        bool $searchHiddenDescriptionsEnabled,
+        ?string $metadataLanguage = null,
+    ): array {
         $columns = [];
 
-        if (in_array(ProductField::DescriptionJapanese->value, $visibleFields, true)) {
+        if ($searchHiddenDescriptionsEnabled || in_array(ProductField::DescriptionJapanese->value, $visibleFields, true)) {
             $columns[] = 'description';
         }
 
-        if (in_array(ProductField::DescriptionEnglish->value, $visibleFields, true)) {
-            $columns[] = 'description_english';
+        if ($searchHiddenDescriptionsEnabled) {
+            $columns[] = 'description_localized_all';
+        } elseif (in_array(ProductField::DescriptionLocalized->value, $visibleFields, true)) {
+            $metadataLanguage ??= Option::effectiveDlsiteMetadataLanguage()->value;
+
+            if ($metadataLanguage !== DlsiteLanguage::Japanese->value) {
+                $columns[] = 'description_localized';
+            }
         }
 
         return $columns;
@@ -196,15 +208,11 @@ final class ProductIndexResults
         array $descriptionSearchColumns,
         bool $searchTags,
         RatingScale $ratingScale,
-        ?string $fetchedLanguage = null,
+        ?string $metadataLanguage = null,
     ): Builder {
-        if ($fetchedLanguage === null && (
-            $filters->genre !== ''
-            || $filters->tags !== ''
-            || ($filters->search !== '' && $searchTags)
-        )) {
-            $fetchedLanguage = Option::effectiveFetchedTagLanguage()->value;
-        }
+        $resolveMetadataLanguage = function () use (&$metadataLanguage): string {
+            return $metadataLanguage ??= Option::effectiveDlsiteMetadataLanguage()->value;
+        };
 
         return Product::query()
             ->select($columns ?? ['id'])
@@ -222,7 +230,7 @@ final class ProductIndexResults
             )
             ->when(
                 $filters->genre !== '',
-                fn($query) => $query->filterGenre($filters->genre, $fetchedLanguage)
+                fn($query) => $query->filterGenre($filters->genre, $resolveMetadataLanguage())
             )
             ->when(
                 $filters->series !== '',
@@ -269,12 +277,12 @@ final class ProductIndexResults
                 fn($query) => $query->filterDescription($filters->description)
             )
             ->when(
-                $filters->descriptionEnglish !== '',
-                fn($query) => $query->filterDescriptionEnglish($filters->descriptionEnglish)
+                $filters->descriptionLocalized !== '',
+                fn($query) => $query->filterDescriptionLocalized($filters->descriptionLocalized, $resolveMetadataLanguage())
             )
             ->when(
                 $filters->title !== '',
-                fn($query) => $query->filterTitle($filters->title)
+                fn($query) => $query->filterTitle($filters->title, $resolveMetadataLanguage())
             )
             ->when(
                 $filters->notes !== '',
@@ -349,12 +357,19 @@ final class ProductIndexResults
                 fn($query) => $query->filterTags(
                     $filters->parsedTags(),
                     $filters->resolvedTagMatch(),
-                    $fetchedLanguage,
+                    $resolveMetadataLanguage(),
                 )
             )
             ->when(
                 $filters->search !== '',
-                fn($query) => $query->searchIndex($filters->search, $descriptionSearchColumns, $searchTags, $fetchedLanguage)
+                fn($query) => $query->searchIndex(
+                    $filters->search,
+                    $descriptionSearchColumns,
+                    $searchTags,
+                    $searchTags || in_array('description_localized', $descriptionSearchColumns, true)
+                        ? $resolveMetadataLanguage()
+                        : $metadataLanguage,
+                )
             );
     }
 
@@ -364,13 +379,13 @@ final class ProductIndexResults
         bool $includeColors = false,
         bool $hasHiddenGroups = false,
         array $visibleTagBuckets = ['custom' => true, 'fetched' => true],
-        ?string $fetchedLanguage = null,
+        ?string $metadataLanguage = null,
     ): Collection {
         if ($productIds === [] || ! (($visibleTagBuckets['custom'] ?? false) || ($visibleTagBuckets['fetched'] ?? false))) {
             return collect();
         }
 
-        $fetchedLanguage ??= Option::effectiveFetchedTagLanguage()->value;
+        $metadataLanguage ??= Option::effectiveDlsiteMetadataLanguage()->value;
 
         // Index only needs visible selected-language/custom tags, so use one lightweight query
         // instead of hydrating genre relationships for every listed product.
@@ -378,7 +393,7 @@ final class ProductIndexResults
             $query = DB::table('genre_product')
                 ->join('genres', 'genres.id', '=', 'genre_product.genre_id')
                 ->whereIn('genre_product.product_id', $productIds)
-                ->where(VisibleGenreAttachment::query($fetchedLanguage))
+                ->where(VisibleGenreAttachment::query($metadataLanguage))
                 ->where('genres.hidden_on_index', false)
                 ->orderBy('genres.title')
                 ->orderBy('genres.id');
@@ -415,7 +430,7 @@ final class ProductIndexResults
             ->join('genre_group_genre', 'genre_group_genre.genre_id', '=', 'genres.id')
             ->join('genre_groups', 'genre_groups.id', '=', 'genre_group_genre.genre_group_id')
             ->whereIn('genre_product.product_id', $productIds)
-            ->where(VisibleGenreAttachment::query($fetchedLanguage))
+            ->where(VisibleGenreAttachment::query($metadataLanguage))
             ->where('genres.hidden_on_index', false)
             ->where('genre_groups.hidden_on_index', false)
             ->orderBy('genre_groups.order')
@@ -462,7 +477,7 @@ final class ProductIndexResults
         $ungroupedGenres = DB::table('genre_product')
             ->join('genres', 'genres.id', '=', 'genre_product.genre_id')
             ->whereIn('genre_product.product_id', $productIds)
-            ->where(VisibleGenreAttachment::query($fetchedLanguage))
+            ->where(VisibleGenreAttachment::query($metadataLanguage))
             ->where('genres.hidden_on_index', false)
             ->whereNotExists(function ($query): void {
                 $query

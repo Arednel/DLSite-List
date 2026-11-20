@@ -2,6 +2,7 @@
 
 namespace App\Livewire;
 
+use App\Enums\DlsiteLanguage;
 use App\Enums\ProductFormat;
 use App\Enums\RefetchCategory;
 use App\Models\Genre;
@@ -11,6 +12,7 @@ use App\Models\RefetchWorkResult;
 use App\Support\DLSite\DLSiteRating;
 use App\Support\ProductImageMessage;
 use App\Support\Refetch\RefetchService;
+use App\Support\LocalizedMetadataField;
 use App\Support\TagColor;
 use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Validation\Rule;
@@ -52,7 +54,7 @@ class OptionsRefetchReview extends Component
     public array $actions = [];
 
     /**
-     * @var array<int|string, array<string, string>>
+     * @var array<int|string, array<string, mixed>>
      */
     public array $tagActions = [];
 
@@ -239,7 +241,9 @@ class OptionsRefetchReview extends Component
             'globalActionOptions' => $this->globalActionOptions(),
             'changeActionOptions' => $this->changeActionOptions(),
             'tagChangeActionOptions' => $this->tagChangeActionOptions(),
-            'tagActionFields' => $this->tagActionFields(),
+            'tagAddedActionOptions' => $this->tagAddedActionOptions(),
+            'tagStaleActionOptions' => $this->tagStaleActionOptions(),
+            'tagCustomActionOptions' => $this->tagCustomActionOptions(),
             'finishAction' => $this->finishAction($run),
         ])->withErrors($this->displayErrors($run));
     }
@@ -279,7 +283,7 @@ class OptionsRefetchReview extends Component
      */
     protected function rules(): array
     {
-        return [
+        $rules = [
             'globalActions' => ['array'],
             'globalActions.*' => [Rule::in([
                 RefetchService::ACTION_IGNORE,
@@ -295,19 +299,12 @@ class OptionsRefetchReview extends Component
                 RefetchService::ACTION_DETAILED,
             ])],
             'tagActions' => ['array'],
-            'tagActions.*.added_japanese' => [Rule::in([
+            'tagActions.*.locales' => ['array'],
+            'tagActions.*.locales.*.added' => [Rule::in([
                 RefetchService::TAG_ADDED_ADD,
                 RefetchService::TAG_ADDED_IGNORE,
             ])],
-            'tagActions.*.added_english' => [Rule::in([
-                RefetchService::TAG_ADDED_ADD,
-                RefetchService::TAG_ADDED_IGNORE,
-            ])],
-            'tagActions.*.stale_japanese' => [Rule::in([
-                RefetchService::TAG_STALE_MOVE_TO_CUSTOM,
-                RefetchService::TAG_STALE_REMOVE,
-            ])],
-            'tagActions.*.stale_english' => [Rule::in([
+            'tagActions.*.locales.*.stale' => [Rule::in([
                 RefetchService::TAG_STALE_MOVE_TO_CUSTOM,
                 RefetchService::TAG_STALE_REMOVE,
             ])],
@@ -316,6 +313,8 @@ class OptionsRefetchReview extends Component
                 RefetchService::TAG_CUSTOM_KEEP,
             ])],
         ];
+
+        return $rules;
     }
 
     private function run(): RefetchRun
@@ -332,24 +331,43 @@ class OptionsRefetchReview extends Component
 
             foreach ($run->results as $result) {
                 foreach ($result->changesFor($category) as $field => $change) {
+                    if ($category === RefetchCategory::Tags) {
+                        $saved = data_get($result->decisions, "{$category->value}.{$field}", []);
+
+                        foreach ($result->changedTagLocales() as $locale) {
+                            $this->actions[$category->value][$result->getKey()][$locale] = data_get(
+                                $saved,
+                                "locales.{$locale}.action",
+                                RefetchService::ACTION_INHERIT,
+                            );
+                            $this->tagActions[$result->getKey()]['locales'][$locale] = [
+                                'added' => data_get(
+                                    $saved,
+                                    "tag_actions.locales.{$locale}.added",
+                                    RefetchService::TAG_ADDED_ADD,
+                                ),
+                                'stale' => data_get(
+                                    $saved,
+                                    "tag_actions.locales.{$locale}.stale",
+                                    RefetchService::TAG_STALE_MOVE_TO_CUSTOM,
+                                ),
+                            ];
+                        }
+
+                        $this->tagActions[$result->getKey()]['custom_to_fetched'] = data_get(
+                            $saved,
+                            'tag_actions.custom_to_fetched',
+                            RefetchService::TAG_CUSTOM_PROMOTE,
+                        );
+
+                        continue;
+                    }
+
                     $this->actions[$category->value][$result->getKey()][$field] = data_get(
                         $result->decisions,
                         "{$category->value}.{$field}.action",
                         RefetchService::ACTION_INHERIT,
                     );
-
-                    if ($category === RefetchCategory::Tags) {
-                        $savedTagActions = data_get(
-                            $result->decisions,
-                            "{$category->value}.{$field}.tag_actions",
-                            [],
-                        );
-
-                        $this->tagActions[$result->getKey()] = array_replace(
-                            $this->defaultTagActions(),
-                            is_array($savedTagActions) ? $savedTagActions : [],
-                        );
-                    }
                 }
             }
         }
@@ -418,37 +436,11 @@ class OptionsRefetchReview extends Component
         );
         $colors = $category === RefetchCategory::Tags ? $tagColors : [];
         $cards = $run->results
-            ->flatMap(function (RefetchWorkResult $result) use ($category): array {
-                return collect($result->changesFor($category))
-                    ->map(fn(array $change, string $field): array => [
-                        'result_id' => $result->getKey(),
-                        'product_id' => $result->product_id,
-                        'work_name' => $result->product?->work_name,
-                        'field' => $field,
-                        'label' => (string) $change['label'],
-                        'old' => $change['old'],
-                        'new' => $change['new'],
-                        'change' => $change,
-                    ])
-                    ->values()
-                    ->all();
-            })
+            ->flatMap(fn(RefetchWorkResult $result): array => $this->resultReviewCards($result, $category, $colors))
             ->values();
         $page = $this->getPage();
         $pageCards = $cards
             ->forPage($page, self::REVIEW_PAGE_SIZE)
-            ->map(fn(array $card): array => [
-                'result_id' => $card['result_id'],
-                'product_id' => $card['product_id'],
-                'work_name' => $card['work_name'],
-                'field' => $card['field'],
-                'label' => $card['label'],
-                'current' => $this->prepareCategoryReviewValue($card['old'], $category, $colors),
-                'refetched' => $this->prepareCategoryReviewValue($card['new'], $category, $colors),
-                'tag_details' => $category === RefetchCategory::Tags
-                    ? $this->tagDetails($card['change'], $colors)
-                    : [],
-            ])
             ->values();
         $paginator = new LengthAwarePaginator(
             $pageCards,
@@ -469,43 +461,146 @@ class OptionsRefetchReview extends Component
 
     /**
      * @param  array<string, array<string, mixed>>  $colors
-     * @return list<array{label: string, tags: mixed}>
+     * @return list<array<string, mixed>>
      */
-    private function tagDetails(array $change, array $colors): array
-    {
+    private function resultReviewCards(
+        RefetchWorkResult $result,
+        RefetchCategory $category,
+        array $colors,
+    ): array {
+        $changes = $result->changesFor($category);
+
+        if ($changes === []) {
+            return [];
+        }
+
+        if (in_array($category, [RefetchCategory::Titles, RefetchCategory::Descriptions], true)) {
+            return [$this->localizedTextReviewCard($result, $category, $changes)];
+        }
+
+        if ($category === RefetchCategory::Tags) {
+            $change = $changes['tags'] ?? null;
+
+            return is_array($change)
+                ? [$this->tagReviewCard($result, $change, $colors)]
+                : [];
+        }
+
+        return collect($changes)
+            ->map(fn(array $change, string $field): array => [
+                'kind' => 'default',
+                'result_id' => $result->getKey(),
+                'product_id' => $result->product_id,
+                'work_name' => $result->product?->work_name,
+                'field' => $field,
+                'label' => (string) $change['label'],
+                'current' => $this->prepareCategoryReviewValue($change['old'], $category, $colors),
+                'refetched' => $this->prepareCategoryReviewValue($change['new'], $category, $colors),
+            ])
+            ->values()
+            ->all();
+    }
+
+    /**
+     * @param  array<string, array<string, mixed>>  $changes
+     * @return array<string, mixed>
+     */
+    private function localizedTextReviewCard(
+        RefetchWorkResult $result,
+        RefetchCategory $category,
+        array $changes,
+    ): array {
+        $attribute = $category === RefetchCategory::Titles ? 'title' : 'description';
+        $japanese = null;
+        $localized = [];
+
+        foreach ($changes as $field => $change) {
+            $parsed = LocalizedMetadataField::parse($field);
+            if ($parsed === null || $parsed['attribute'] !== $attribute) {
+                continue;
+            }
+            $language = $parsed['language'];
+
+            $item = [
+                'field' => $field,
+                'language' => $language->value,
+                'language_label' => $language->label(),
+                'label' => $attribute === 'title' ? $language->titleLabel() : $language->descriptionLabel(),
+                'current' => $change['old'],
+                'refetched' => $change['new'],
+            ];
+
+            if ($language === DlsiteLanguage::Japanese) {
+                $japanese = $item;
+            } else {
+                $localized[$language->value] = $item;
+            }
+        }
+
         return [
-            [
-                'label' => 'New JP',
-                'tags' => $this->prepareReviewValue(data_get($change, 'details.added_japanese', []), false, $colors),
-            ],
-            [
-                'label' => 'New EN',
-                'tags' => $this->prepareReviewValue(data_get($change, 'details.added_english', []), false, $colors),
-            ],
-            [
-                'label' => 'Stale JP',
-                'tags' => $this->prepareReviewValue(data_get($change, 'details.stale_japanese', []), false, $colors),
-            ],
-            [
-                'label' => 'Stale EN',
-                'tags' => $this->prepareReviewValue(data_get($change, 'details.stale_english', []), false, $colors),
-            ],
-            [
-                'label' => 'Custom->Fetched JP',
-                'tags' => $this->prepareReviewValue(
-                    data_get($change, 'details.custom_to_fetched_japanese', []),
-                    false,
-                    $colors,
-                ),
-            ],
-            [
-                'label' => 'Custom->Fetched EN',
-                'tags' => $this->prepareReviewValue(
-                    data_get($change, 'details.custom_to_fetched_english', []),
-                    false,
-                    $colors,
-                ),
-            ],
+            'kind' => 'localized_text',
+            'result_id' => $result->getKey(),
+            'product_id' => $result->product_id,
+            'work_name' => $result->product?->work_name,
+            'japanese' => $japanese,
+            'localized' => DlsiteLanguage::orderedRows($localized),
+            'localized_label' => $category === RefetchCategory::Titles
+                ? __('Localized titles')
+                : __('Localized descriptions'),
+        ];
+    }
+
+    /**
+     * @param  array<string, array<string, mixed>>  $colors
+     * @return array<string, mixed>
+     */
+    private function tagReviewCard(RefetchWorkResult $result, array $change, array $colors): array
+    {
+        $oldFetched = is_array(data_get($change, 'old.fetched')) ? data_get($change, 'old.fetched') : [];
+        $newFetched = is_array(data_get($change, 'new.fetched')) ? data_get($change, 'new.fetched') : [];
+        $details = is_array($change['details'] ?? null) ? $change['details'] : [];
+        $resultActions = data_get(
+            $this->actions,
+            RefetchCategory::Tags->value . ".{$result->getKey()}",
+            [],
+        );
+        $localeActions = $result->resolvedTagActions(
+            is_array($resultActions) ? $resultActions : [],
+            $this->globalActions[RefetchCategory::Tags->value] ?? RefetchService::ACTION_IGNORE,
+        );
+        $locales = [];
+
+        foreach ($result->changedTagLocales() as $locale) {
+            $language = DlsiteLanguage::tryFrom($locale);
+            if ($language === null) {
+                continue;
+            }
+
+            $locales[$locale] = [
+                'locale' => $locale,
+                'language_label' => $language->label(),
+                'current' => $this->prepareReviewValue($oldFetched[$locale] ?? [], false, $colors),
+                'refetched' => $this->prepareReviewValue($newFetched[$locale] ?? [], false, $colors),
+                'added' => $this->prepareReviewValue($details['added'][$locale] ?? [], false, $colors),
+                'stale' => $this->prepareReviewValue($details['stale'][$locale] ?? [], false, $colors),
+                'show_detailed_actions' => ($localeActions[$locale] ?? RefetchService::ACTION_IGNORE)
+                    === RefetchService::ACTION_DETAILED,
+            ];
+        }
+
+        $japanese = $locales[DlsiteLanguage::Japanese->value] ?? null;
+        unset($locales[DlsiteLanguage::Japanese->value]);
+        $customToFetched = $result->promotableCustomTags($localeActions);
+
+        return [
+            'kind' => 'tags',
+            'result_id' => $result->getKey(),
+            'product_id' => $result->product_id,
+            'work_name' => $result->product?->work_name,
+            'japanese' => $japanese,
+            'localized' => DlsiteLanguage::orderedRows($locales),
+            'localized_label' => __('Localized tags'),
+            'custom_to_fetched' => $this->prepareReviewValue($customToFetched, false, $colors),
         ];
     }
 
@@ -591,69 +686,35 @@ class OptionsRefetchReview extends Component
     }
 
     /**
-     * @return list<array{
-     *     key: string,
-     *     label: string,
-     *     options: list<array{value: string, label: string}>
-     * }>
+     * @return list<array{value: string, label: string}>
      */
-    private function tagActionFields(): array
+    private function tagAddedActionOptions(): array
     {
         return [
-            [
-                'key' => 'added_japanese',
-                'label' => 'New JP',
-                'options' => [
-                    ['value' => RefetchService::TAG_ADDED_ADD, 'label' => 'Add as fetched'],
-                    ['value' => RefetchService::TAG_ADDED_IGNORE, 'label' => 'Ignore'],
-                ],
-            ],
-            [
-                'key' => 'added_english',
-                'label' => 'New EN',
-                'options' => [
-                    ['value' => RefetchService::TAG_ADDED_ADD, 'label' => 'Add as fetched'],
-                    ['value' => RefetchService::TAG_ADDED_IGNORE, 'label' => 'Ignore'],
-                ],
-            ],
-            [
-                'key' => 'stale_japanese',
-                'label' => 'Stale JP',
-                'options' => [
-                    ['value' => RefetchService::TAG_STALE_MOVE_TO_CUSTOM, 'label' => 'Move to custom tags'],
-                    ['value' => RefetchService::TAG_STALE_REMOVE, 'label' => 'Remove'],
-                ],
-            ],
-            [
-                'key' => 'stale_english',
-                'label' => 'Stale EN',
-                'options' => [
-                    ['value' => RefetchService::TAG_STALE_MOVE_TO_CUSTOM, 'label' => 'Move to custom tags'],
-                    ['value' => RefetchService::TAG_STALE_REMOVE, 'label' => 'Remove'],
-                ],
-            ],
-            [
-                'key' => 'custom_to_fetched',
-                'label' => 'Custom->Fetched',
-                'options' => [
-                    ['value' => RefetchService::TAG_CUSTOM_PROMOTE, 'label' => 'Promote to fetched'],
-                    ['value' => RefetchService::TAG_CUSTOM_KEEP, 'label' => 'Keep custom'],
-                ],
-            ],
+            ['value' => RefetchService::TAG_ADDED_ADD, 'label' => 'Add as fetched'],
+            ['value' => RefetchService::TAG_ADDED_IGNORE, 'label' => 'Ignore'],
         ];
     }
 
     /**
-     * @return array<string, string>
+     * @return list<array{value: string, label: string}>
      */
-    private function defaultTagActions(): array
+    private function tagStaleActionOptions(): array
     {
         return [
-            'added_japanese' => RefetchService::TAG_ADDED_ADD,
-            'added_english' => RefetchService::TAG_ADDED_ADD,
-            'stale_japanese' => RefetchService::TAG_STALE_MOVE_TO_CUSTOM,
-            'stale_english' => RefetchService::TAG_STALE_MOVE_TO_CUSTOM,
-            'custom_to_fetched' => RefetchService::TAG_CUSTOM_PROMOTE,
+            ['value' => RefetchService::TAG_STALE_MOVE_TO_CUSTOM, 'label' => 'Move to custom tags'],
+            ['value' => RefetchService::TAG_STALE_REMOVE, 'label' => 'Remove'],
+        ];
+    }
+
+    /**
+     * @return list<array{value: string, label: string}>
+     */
+    private function tagCustomActionOptions(): array
+    {
+        return [
+            ['value' => RefetchService::TAG_CUSTOM_PROMOTE, 'label' => 'Promote to fetched'],
+            ['value' => RefetchService::TAG_CUSTOM_KEEP, 'label' => 'Keep custom'],
         ];
     }
 
@@ -686,13 +747,13 @@ class OptionsRefetchReview extends Component
 
         $titles = $run->results
             ->flatMap(fn(RefetchWorkResult $result) => collect($result->changesFor(RefetchCategory::Tags))
-                ->flatMap(fn(array $change): array => [
-                    ...data_get($change, 'old.japanese', []),
-                    ...data_get($change, 'old.english', []),
-                    ...data_get($change, 'old.custom', []),
-                    ...data_get($change, 'new.japanese', []),
-                    ...data_get($change, 'new.english', []),
-                ]))
+                ->flatMap(function (array $change): array {
+                    return [
+                        ...collect(data_get($change, 'old.fetched', []))->flatten()->all(),
+                        ...data_get($change, 'old.custom', []),
+                        ...collect(data_get($change, 'new.fetched', []))->flatten()->all(),
+                    ];
+                }))
             ->map(fn(mixed $title): string => trim((string) $title))
             ->filter(fn(string $title): bool => $title !== '')
             ->unique()

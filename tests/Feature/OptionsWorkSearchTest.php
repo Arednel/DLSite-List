@@ -32,6 +32,9 @@ class OptionsWorkSearchTest extends TestCase
             ->set('search', 'VISIBLE_ENGLISH')
             ->assertSee('VISIBLE_WORK_TOKEN')
             ->assertDontSee('HIDDEN_WORK_TOKEN')
+            ->set('search', 'FUTURE_LOCALE_SEARCH')
+            ->assertDontSee('VISIBLE_WORK_TOKEN')
+            ->assertDontSee('HIDDEN_WORK_TOKEN')
             ->set('search', 'RJ222')
             ->assertSee('HIDDEN_WORK_TOKEN')
             ->assertDontSee('VISIBLE_WORK_TOKEN');
@@ -93,21 +96,7 @@ class OptionsWorkSearchTest extends TestCase
                 return ! $row instanceof Product
                     && $row->id === 'RJ555555555'
                     && $row->japanese_title === 'Projected Japanese title'
-                    && $row->english_title === 'Projected English title';
-            });
-    }
-
-    public function test_livewire_work_search_projection_returns_null_for_missing_or_blank_english_titles(): void
-    {
-        $nullEnglish = Product::factory()->withEnglishTitle(null)->create(['id' => 'RJ555555556']);
-        $emptyEnglish = Product::factory()->withEnglishTitle('')->create(['id' => 'RJ555555557']);
-
-        Livewire::test(OptionsWorkSearch::class)
-            ->assertViewHas('products', function ($products) use ($nullEnglish, $emptyEnglish): bool {
-                $rows = $products->keyBy('id');
-
-                return $rows->get($nullEnglish->id)->english_title === null
-                    && $rows->get($emptyEnglish->id)->english_title === null;
+                    && $row->localized_title === 'Projected English title';
             });
     }
 

@@ -2,6 +2,7 @@
 
 namespace App\Support\Transfers;
 
+use App\Enums\DlsiteLanguage;
 use App\Enums\LibraryImportDecision;
 use App\Enums\LibraryImportItemStatus;
 use App\Enums\LibraryTransferPartStatus;
@@ -11,10 +12,10 @@ use App\Models\LibraryImportItem;
 use App\Models\LibraryTransferEntry;
 use App\Models\LibraryTransferRun;
 use App\Models\Product;
-use App\Models\ProductLocalization;
 use App\Support\GraphCycleValidator;
 use App\Support\ProductContributorSync;
 use App\Support\ProductGenreSync;
+use App\Support\LocalizedMetadataField;
 use App\Support\DLSite\DLSiteRating;
 use App\Support\ProductImagePromotion;
 use App\Support\UserStylesheet;
@@ -231,7 +232,7 @@ final class ImportReview
                 }
             }
             $product = Product::find($record['product_code']);
-            $metadata = [...$source, 'title' => $record['titles']['work_name'], ...Arr::only($record, ['created_at', 'updated_at'])];
+            $metadata = [...$source, 'title' => $record['titles'][DlsiteLanguage::Japanese->value], ...Arr::only($record, ['created_at', 'updated_at'])];
             if (! $product) {
                 if ((isset($record['cover']) && ! $record['cover']['complete']) || (isset($record['sample_images']) && ! $record['sample_images']['complete'])) {
                     $metadata['warning'] = 'transfer.import.images_incomplete';
@@ -241,9 +242,19 @@ final class ImportReview
                 return;
             }
             $current = $this->data->work($product, isset($record['cover']) || isset($record['sample_images']));
-            foreach (['titles', 'descriptions'] as $category) {
-                foreach ($record[$category] ?? [] as $field => $value) {
-                    $this->item($run, $section, $category, $product->id, $current[$category][$field] ?? null, $value, [...$metadata, 'field' => $field]);
+            foreach (['titles' => 'title', 'descriptions' => 'description'] as $category => $attribute) {
+                foreach ($record[$category] ?? [] as $locale => $value) {
+                    $language = DlsiteLanguage::from($locale);
+                    $field = LocalizedMetadataField::format($language, $attribute);
+                    $this->item(
+                        $run,
+                        $section,
+                        $category,
+                        $product->id,
+                        $current[$category][$locale] ?? null,
+                        $value,
+                        [...$metadata, 'field' => $field],
+                    );
                 }
             }
             $ratingFields = DLSiteRating::ATTRIBUTE_KEYS;
@@ -269,9 +280,17 @@ final class ImportReview
                     $this->item($run, $section, $role, $product->id, $current['contributors'][$role] ?? [], $record['contributors'][$role], [...$metadata, 'domain' => 'contributors', 'bucket' => $role]);
                 }
             }
-            $fetchedTags = Arr::only($record['tags'] ?? [], ['jp', 'en']);
-            if ($fetchedTags !== []) {
-                $this->item($run, $section, 'tags', $product->id, Arr::only($current['tags'], array_keys($fetchedTags)), $fetchedTags, [...$metadata, 'domain' => 'tags']);
+            $fetchedTags = Arr::only($record['tags'] ?? [], DlsiteLanguage::values());
+            foreach ($fetchedTags as $locale => $tags) {
+                $this->item(
+                    $run,
+                    $section,
+                    'tags',
+                    $product->id,
+                    $current['tags'][$locale] ?? [],
+                    $tags,
+                    [...$metadata, 'domain' => 'tags', 'bucket' => $locale],
+                );
             }
             if (array_key_exists('custom', $record['tags'] ?? [])) {
                 $this->item($run, $section, 'custom_tags', $product->id, $current['tags']['custom'] ?? [], $record['tags']['custom'], [...$metadata, 'domain' => 'tags', 'bucket' => 'custom']);
@@ -469,6 +488,10 @@ final class ImportReview
             ? ['edge', ...self::normalizedEdge($metadata['edge'])]
             : ['entity', $key, $metadata['field'] ?? null];
 
+        if ($section === 'works' && $category === 'tags' && array_key_exists('bucket', $metadata)) {
+            $naturalIdentity[] = $metadata['bucket'];
+        }
+
         return LibraryData::hash([$section, $category, $naturalIdentity, (bool) ($metadata['collection'] ?? false)]);
     }
 
@@ -582,10 +605,17 @@ final class ImportReview
             return ['removed' => true];
         }
         if (isset($item->metadata['domain'])) {
-            $current = $this->data->category($product, $item->metadata['domain'], $this->locking);
+            $domain = $item->metadata['domain'];
+            $bucket = $item->metadata['bucket'] ?? null;
 
-            return isset($item->metadata['bucket'])
-                ? ($current[$item->metadata['bucket']] ?? [])
+            if ($domain === 'tags' && is_string($bucket)) {
+                return $this->data->tagBucket($product, $bucket, $this->locking);
+            }
+
+            $current = $this->data->category($product, $domain, $this->locking);
+
+            return is_string($bucket)
+                ? ($current[$bucket] ?? [])
                 : Arr::only($current, array_keys($incoming));
         }
         if (isset($item->metadata['field'])) {
@@ -594,12 +624,12 @@ final class ImportReview
                 return $product->announce_date?->format('Y-m-d H:i:s');
             }
 
-            $localizationField = $this->localizationField($field);
+            $localizationField = $this->localizationField($field, $item->category);
 
             if ($localizationField !== null) {
                 return $product->localizations()
                     ->when($this->locking, fn($query) => $query->lockForUpdate())
-                    ->where('locale', $localizationField['locale'])
+                    ->where('locale', $localizationField['language']->value)
                     ->value($localizationField['attribute']);
             }
 
@@ -859,27 +889,31 @@ final class ImportReview
         if ($item->category === 'new_works') {
             $product = new Product([
                 'id' => $item->entity_key,
-                'work_name' => $value['titles']['work_name'],
-                'description' => $value['descriptions']['description'] ?? null,
+                'work_name' => $value['titles'][DlsiteLanguage::Japanese->value],
+                'description' => $value['descriptions'][DlsiteLanguage::Japanese->value] ?? null,
             ]);
-            foreach (LibraryData::FIELDS as $category => $fields) {
-                if (in_array($category, ['titles', 'descriptions'], true)) {
-                    continue;
-                }
-
+            foreach (Arr::except(LibraryData::FIELDS, ['titles', 'descriptions']) as $category => $fields) {
                 $product->fill(Arr::only($value[$category] ?? [], $fields));
             }
             $product->save();
 
-            $englishTitle = $value['titles']['work_name_english'] ?? null;
-            $englishDescription = $value['descriptions']['description_english'] ?? null;
-            Product::withoutTouching(fn() => $product->syncLocalization(
-                ProductLocalization::LOCALE_ENGLISH,
-                [
-                    'title' => blank($englishTitle) ? null : $englishTitle,
-                    'description' => blank($englishDescription) ? null : $englishDescription,
-                ],
-            ));
+            Product::withoutTouching(function () use ($product, $value): void {
+                foreach (DlsiteLanguage::cases() as $language) {
+                    if ($language === DlsiteLanguage::Japanese) {
+                        continue;
+                    }
+                    $title = $value['titles'][$language->value] ?? null;
+                    $description = $value['descriptions'][$language->value] ?? null;
+                    if (blank($title) && blank($description)) {
+                        continue;
+                    }
+
+                    $product->syncLocalization($language, [
+                        'title' => blank($title) ? null : $title,
+                        'description' => blank($description) ? null : $description,
+                    ]);
+                }
+            });
             $this->contributors($product, $value['contributors'] ?? []);
             $this->tags($product, $value['tags'] ?? [], $item);
             foreach (['cover', 'sample_images'] as $category) {
@@ -894,12 +928,12 @@ final class ImportReview
         $merge = $item->decision === LibraryImportDecision::Merge;
         if (isset($item->metadata['field'])) {
             $field = $item->metadata['field'];
-            $localizationField = $this->localizationField($field);
+            $localizationField = $this->localizationField($field, $item->category);
 
             if ($merge) {
                 $current = $localizationField !== null
                     ? $product->localizations()
-                    ->where('locale', $localizationField['locale'])
+                    ->where('locale', $localizationField['language']->value)
                     ->value($localizationField['attribute'])
                     : $product->getAttribute($field);
 
@@ -910,7 +944,7 @@ final class ImportReview
 
             if ($localizationField !== null) {
                 $product->syncLocalization(
-                    $localizationField['locale'],
+                    $localizationField['language'],
                     [$localizationField['attribute'] => blank($value) ? null : $value],
                 );
             } else {
@@ -944,16 +978,32 @@ final class ImportReview
             $current[$bucket] = $merge ? $this->union($current[$bucket] ?? [], $value) : $value;
             $this->contributors($product, $current);
         } elseif (($item->metadata['domain'] ?? null) === 'tags') {
-            $current = $this->data->category($product, 'tags', true);
-            if (isset($item->metadata['bucket'])) {
-                $bucket = $item->metadata['bucket'];
-                $value = [$bucket => $merge ? $this->union($current[$bucket] ?? [], $value) : $value];
-            } elseif ($merge) {
-                foreach ($value as $bucket => $titles) {
-                    $value[$bucket] = $this->union($current[$bucket] ?? [], $titles);
+            $bucket = $item->metadata['bucket'] ?? null;
+
+            if (is_string($bucket)) {
+                $titles = $merge
+                    ? $this->union($this->data->tagBucket($product, $bucket, true), $value)
+                    : $value;
+                $resolved = $this->resolveTags($titles, $item);
+
+                if ($bucket === 'custom') {
+                    $this->genres->syncCustom($product, $resolved);
+                } else {
+                    $language = DlsiteLanguage::tryFrom($bucket);
+                    if ($language === null) {
+                        throw new InvalidArgumentException('transfer.review.invalid_tag_bucket');
+                    }
+                    $this->genres->syncEditableTagBuckets($product, $language, $resolved, null);
                 }
+            } else {
+                $current = $this->data->category($product, 'tags', true);
+                if ($merge) {
+                    foreach ($value as $tagBucket => $titles) {
+                        $value[$tagBucket] = $this->union($current[$tagBucket] ?? [], $titles);
+                    }
+                }
+                $this->tags($product, $value, $item);
             }
-            $this->tags($product, $value, $item);
         } else {
             $this->images($product, $item, $item->category, $value, $merge);
         }
@@ -980,7 +1030,12 @@ final class ImportReview
         $current = $this->data->category($product, 'tags', $this->locking);
         $values = array_replace($current, $values);
         $resolved = $this->resolveTagBuckets($values, $item);
-        $this->genres->sync($product, ['jp' => $resolved['jp'], 'en' => $resolved['en']], $resolved['custom']);
+        $fetched = collect(DlsiteLanguage::cases())
+            ->mapWithKeys(fn(DlsiteLanguage $language): array => [
+                $language->value => $resolved[$language->value] ?? [],
+            ])
+            ->all();
+        $this->genres->sync($product, $fetched, $resolved['custom'] ?? []);
     }
 
     /** @param array<string, list<string>> $buckets */
@@ -1019,7 +1074,7 @@ final class ImportReview
 
         return collect($buckets)->map(fn(array $bucket): array => collect($bucket)
             ->map(fn($title) => $existing->get(Genre::titleKey($title))?->id)
-            ->filter()->unique()->values()->all())->all();
+            ->filter(fn(?int $id): bool => $id !== null)->unique()->values()->all())->all();
     }
 
     private function resolveTags(array $titles, LibraryImportItem $item): array
@@ -1183,20 +1238,27 @@ final class ImportReview
         }
     }
 
-    /** @return array{locale: string, attribute: string}|null */
-    private function localizationField(string $field): ?array
+    /** @return array{language: DlsiteLanguage, attribute: string}|null */
+    private function localizationField(string $field, string $category): ?array
     {
-        return match ($field) {
-            'work_name_english' => [
-                'locale' => ProductLocalization::LOCALE_ENGLISH,
-                'attribute' => 'title',
-            ],
-            'description_english' => [
-                'locale' => ProductLocalization::LOCALE_ENGLISH,
-                'attribute' => 'description',
-            ],
+        $expectedAttribute = match ($category) {
+            'titles' => LocalizedMetadataField::TITLE,
+            'descriptions' => LocalizedMetadataField::DESCRIPTION,
             default => null,
         };
+
+        if ($expectedAttribute === null) {
+            return null;
+        }
+
+        $parsed = LocalizedMetadataField::parse($field);
+        if ($parsed === null || $parsed['attribute'] !== $expectedAttribute) {
+            throw new InvalidArgumentException('transfer.review.invalid_localized_field');
+        }
+
+        return $parsed['language'] === DlsiteLanguage::Japanese
+            ? null
+            : $parsed;
     }
 
     private function restoreTimestamps(Product $product, array $values): void

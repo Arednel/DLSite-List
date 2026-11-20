@@ -2,10 +2,11 @@
 
 namespace App\Livewire;
 
-use App\Enums\FetchedTagLanguage;
+use App\Enums\DlsiteLanguage;
 use App\Enums\UiLanguage;
 use App\Livewire\Concerns\ConfirmsOptionReset;
 use App\Models\Option;
+use Illuminate\Support\Arr;
 use Illuminate\Validation\Rule;
 use Illuminate\View\View;
 use Livewire\Component;
@@ -18,25 +19,38 @@ class UiLanguageSettings extends Component
 
     public string $language = UiLanguage::English->value;
 
-    public bool $followFetchedTagsLanguage = true;
+    public bool $followUiLanguage = true;
 
-    public string $fetchedTagLanguage = FetchedTagLanguage::English->value;
+    public string $metadataLanguage = DlsiteLanguage::English->value;
+
+    /** @var list<string> */
+    public array $fetchLanguages = [DlsiteLanguage::English->value];
 
     public function mount(): void
     {
         $this->language = Option::uiLanguage()->value;
-        $this->followFetchedTagsLanguage = Option::fetchedTagLanguageFollowsUi();
-        $this->fetchedTagLanguage = Option::fetchedTagLanguage()->value;
+        $this->followUiLanguage = Option::dlsiteMetadataLanguageFollowsUi();
+        $this->metadataLanguage = Option::dlsiteMetadataLanguage()->value;
+        $this->fetchLanguages = array_column(
+            Option::dlsiteMetadataFetchLanguages(),
+            'value',
+        );
     }
 
     public function render(): View
     {
         $uiLanguage = UiLanguage::tryFrom($this->language) ?? Option::uiLanguage();
+        $displayedMetadataLanguage = $this->followUiLanguage
+            ? ($uiLanguage->dlsiteLanguage() ?? DlsiteLanguage::English)
+            : (DlsiteLanguage::tryFrom($this->metadataLanguage) ?? DlsiteLanguage::English);
+        $metadataLanguageOptions = DlsiteLanguage::options();
 
         return view('livewire.ui-language-settings', [
             'languageOptions' => UiLanguage::options(),
-            'fetchedTagLanguageOptions' => FetchedTagLanguage::options(),
-            'followedFetchedTagLanguage' => FetchedTagLanguage::forUiLanguage($uiLanguage)->value,
+            'metadataLanguageOptions' => $metadataLanguageOptions,
+            'optionalFetchLanguageOptions' => Arr::except($metadataLanguageOptions, [DlsiteLanguage::Japanese->value]),
+            'alwaysFetchedLanguageLabel' => DlsiteLanguage::Japanese->label(),
+            'displayedMetadataLanguage' => $displayedMetadataLanguage->value,
         ]);
     }
 
@@ -44,13 +58,20 @@ class UiLanguageSettings extends Component
     {
         $this->validate([
             'language' => ['required', Rule::enum(UiLanguage::class)],
-            'followFetchedTagsLanguage' => ['boolean'],
-            'fetchedTagLanguage' => ['required', Rule::enum(FetchedTagLanguage::class)],
+            'followUiLanguage' => ['boolean'],
+            'metadataLanguage' => ['required', Rule::enum(DlsiteLanguage::class)],
+            'fetchLanguages' => ['array', 'list'],
+            'fetchLanguages.*' => [
+                'required',
+                Rule::enum(DlsiteLanguage::class)->except(DlsiteLanguage::Japanese),
+                'distinct:strict',
+            ],
         ]);
 
         Option::setUiLanguage($this->language);
-        Option::setFetchedTagLanguageFollowsUi($this->followFetchedTagsLanguage);
-        Option::setFetchedTagLanguage($this->fetchedTagLanguage);
+        Option::setDlsiteMetadataLanguageFollowsUi($this->followUiLanguage);
+        Option::setDlsiteMetadataLanguage($this->metadataLanguage);
+        Option::setDlsiteMetadataFetchLanguages($this->fetchLanguages);
 
         session()->flash(
             self::NOTICE_SESSION_KEY,
@@ -63,7 +84,7 @@ class UiLanguageSettings extends Component
     public function resetToDefault(): void
     {
         Option::resetUiLanguageToDefault();
-        Option::resetFetchedTagLanguageSettingsToDefault();
+        Option::resetDlsiteMetadataLanguageSettingsToDefault();
 
         session()->flash(
             self::NOTICE_SESSION_KEY,

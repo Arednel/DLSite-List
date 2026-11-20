@@ -4,6 +4,7 @@ namespace Tests\Feature;
 
 use App\Enums\BulkImportItemStatus;
 use App\Enums\BulkImportRunStatus;
+use App\Enums\DlsiteLanguage;
 use App\Enums\ProductField;
 use App\Enums\RatingScale;
 use App\Enums\UiLanguage;
@@ -28,6 +29,7 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Process;
 use Illuminate\Support\Facades\Storage;
+use InvalidArgumentException;
 use PHPUnit\Framework\Attributes\DataProvider;
 use RuntimeException;
 use Tests\TestCase;
@@ -35,6 +37,89 @@ use Tests\TestCase;
 class BulkImportTest extends TestCase
 {
     use RefreshDatabase;
+
+    public function test_current_fetch_language_snapshot_round_trips_without_repair(): void
+    {
+        $input = new DLSiteProductImportInput(
+            values: [],
+            visibleFields: [],
+            submitted: [],
+            autoSeriesFromTitleName: false,
+            metadataLanguage: DlsiteLanguage::English,
+            fetchLanguages: ['ja', 'en'],
+        );
+
+        $restored = DLSiteProductImportInput::fromSnapshot($input->toSnapshot());
+
+        $this->assertSame(DlsiteLanguage::English, $restored->metadataLanguage);
+        $this->assertSame(['ja', 'en'], $restored->fetchLanguages);
+    }
+
+    public function test_current_fetch_language_snapshot_rejects_an_incomplete_language_list(): void
+    {
+        $input = new DLSiteProductImportInput(
+            values: [],
+            visibleFields: [],
+            submitted: [],
+            autoSeriesFromTitleName: false,
+            metadataLanguage: DlsiteLanguage::English,
+            fetchLanguages: ['ja', 'en'],
+        );
+        $snapshot = $input->toSnapshot();
+        $snapshot['fetch_languages'] = ['ja'];
+
+        $this->expectException(InvalidArgumentException::class);
+        $this->expectExceptionMessage('Bulk Import snapshot has incomplete fetch_languages.');
+
+        DLSiteProductImportInput::fromSnapshot($snapshot);
+    }
+
+    public function test_bulk_import_keeps_the_rendered_metadata_language_in_the_fetch_snapshot_after_options_change(): void
+    {
+        Bus::fake();
+        Option::setDlsiteMetadataLanguageFollowsUi(false);
+        Option::setDlsiteMetadataLanguage(DlsiteLanguage::English);
+        Option::setDlsiteMetadataFetchLanguages([]);
+
+        $this->get(route('products.create.bulk'))
+            ->assertOk()
+            ->assertSeeInOrder([
+                'name="metadata_language"',
+                'value="en"',
+            ], false);
+
+        Option::setDlsiteMetadataLanguage(DlsiteLanguage::Japanese);
+
+        $this->post(route('products.store.bulk'), [
+            'product_code_list' => 'RJ000000109',
+            'metadata_language' => DlsiteLanguage::English->value,
+        ])->assertRedirect();
+
+        $run = BulkImportRun::query()->firstOrFail();
+        $this->assertSame(DlsiteLanguage::English->value, data_get($run->input_snapshot, 'metadata_language'));
+        $this->assertSame(['ja', 'en'], data_get($run->input_snapshot, 'fetch_languages'));
+    }
+
+    public function test_bulk_validation_retry_uses_current_configured_metadata_language(): void
+    {
+        Option::setDlsiteMetadataLanguageFollowsUi(false);
+        Option::setDlsiteMetadataLanguage(DlsiteLanguage::Japanese);
+
+        $this->from(route('products.create.bulk'))
+            ->post(route('products.store.bulk'), [
+                'product_code_list' => '',
+                'metadata_language' => DlsiteLanguage::English->value,
+            ])
+            ->assertRedirect(route('products.create.bulk'))
+            ->assertSessionHasErrors(['product_code_list']);
+
+        $this->get(route('products.create.bulk'))
+            ->assertOk()
+            ->assertSeeInOrder([
+                'name="metadata_language"',
+                'value="ja"',
+            ], false);
+    }
 
     public function test_bulk_job_uses_fixed_timeout_and_shared_overlap_lock(): void
     {
@@ -98,6 +183,7 @@ class BulkImportTest extends TestCase
             $this->from(route('products.create.bulk'))
                 ->post(route('products.store.bulk'), [
                     'product_code_list' => 'RJ000000099',
+                    'metadata_language' => DlsiteLanguage::Japanese->value,
                 ])
                 ->assertRedirect(route('products.create.bulk'))
                 ->assertSessionHasErrors([
@@ -122,6 +208,7 @@ class BulkImportTest extends TestCase
         try {
             $this->post(route('products.store.bulk'), [
                 'product_code_list' => 'RJ000000099',
+                'metadata_language' => DlsiteLanguage::English->value,
             ]);
             $this->fail('Expected the dispatch exception to propagate.');
         } catch (RuntimeException $exception) {
@@ -139,7 +226,10 @@ class BulkImportTest extends TestCase
         Option::setUiLanguage(UiLanguage::Japanese);
 
         $this->from(route('products.create.bulk'))
-            ->post(route('products.store.bulk'), ['product_code_list' => ''])
+            ->post(route('products.store.bulk'), [
+                'product_code_list' => '',
+                'metadata_language' => DlsiteLanguage::Japanese->value,
+            ])
             ->assertRedirect(route('products.create.bulk'))
             ->assertSessionHasErrors([
                 'product_code_list' => '作品コードを1つ以上含むテキストを入力してください。',
@@ -202,6 +292,7 @@ class BulkImportTest extends TestCase
         $productCode = 'RJ000000107';
         $this->post(route('products.store.bulk'), [
             'product_code_list' => $productCode,
+            'metadata_language' => DlsiteLanguage::English->value,
             'dlsite_rating' => '4.75',
             'dlsite_rating_count' => '321',
         ])->assertRedirect();
@@ -243,6 +334,7 @@ class BulkImportTest extends TestCase
                 'duplicate RJ000000101 and unrelated text',
                 'Copied row [VJ000000103] title',
             ]),
+            'metadata_language' => DlsiteLanguage::English->value,
             'progress' => 'Completed',
             'notes' => 'Shared bulk note',
             'product_format' => 'Simulation, Animation, Audiobook',
@@ -270,6 +362,7 @@ class BulkImportTest extends TestCase
         $this->assertTrue((bool) data_get($run->input_snapshot, 'submitted.progress'));
         $this->assertTrue((bool) data_get($run->input_snapshot, 'submitted.notes'));
         $this->assertTrue((bool) data_get($run->input_snapshot, 'submitted.product_format'));
+        $this->assertSame(['ja', 'en'], data_get($run->input_snapshot, 'fetch_languages'));
 
         Bus::assertChained([
             ImportBulkWorkJob::class,
@@ -289,6 +382,7 @@ class BulkImportTest extends TestCase
 
         $this->post(route('products.store.bulk'), [
             'product_code_list' => $codes,
+            'metadata_language' => DlsiteLanguage::English->value,
         ])->assertRedirect();
 
         $run = BulkImportRun::query()->firstOrFail();
@@ -307,6 +401,7 @@ class BulkImportTest extends TestCase
         $this->from(route('products.create.bulk'))
             ->post(route('products.store.bulk'), [
                 'product_code_list' => $codes,
+                'metadata_language' => DlsiteLanguage::English->value,
             ])
             ->assertRedirect(route('products.create.bulk'))
             ->assertSessionHasErrors([
@@ -324,6 +419,7 @@ class BulkImportTest extends TestCase
         $this->from(route('products.create.bulk'))
             ->post(route('products.store.bulk'), [
                 'product_code_list' => "DLsite links and copied text, but no work code here.",
+                'metadata_language' => DlsiteLanguage::English->value,
             ])
             ->assertRedirect(route('products.create.bulk'))
             ->assertSessionHasErrors([

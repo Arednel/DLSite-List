@@ -3,24 +3,38 @@
 namespace Tests\Unit\Enums;
 
 use App\Enums\ProductFormat;
+use App\Enums\UiLanguage;
 use Tests\TestCase;
 
 class ProductFormatTest extends TestCase
 {
     public function test_edit_input_round_trips_every_canonical_format_in_supported_locales(): void
     {
-        foreach (['en', 'ja', 'zh_TW'] as $locale) {
-            app()->setLocale($locale);
+        foreach (UiLanguage::cases() as $language) {
+            app()->setLocale($language->value);
 
             foreach (ProductFormat::cases() as $format) {
-                $this->assertRoundTrip([$format->value], $locale);
+                $this->assertRoundTrip([$format->value], $language->value);
 
                 $prefix = $format === ProductFormat::Adventure
                     ? ProductFormat::RolePlaying->value
                     : ProductFormat::Adventure->value;
 
-                $this->assertRoundTrip([$prefix, $format->value], $locale);
+                $this->assertRoundTrip([$prefix, $format->value], $language->value);
             }
+        }
+    }
+
+    public function test_input_recognizes_labels_from_every_supported_ui_language(): void
+    {
+        app()->setLocale(UiLanguage::English->value);
+
+        foreach (UiLanguage::cases() as $language) {
+            $this->assertSame(
+                [ProductFormat::Simulation->value],
+                ProductFormat::normalizeInput(ProductFormat::Simulation->label($language)),
+                "Failed Product Format input for {$language->value}",
+            );
         }
     }
 

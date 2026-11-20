@@ -28,7 +28,7 @@ For test commands and the current test inventory, see [TESTING.md](TESTING.md).
 
 Index state is kept in the query string so filtered/sorted views can be linked and restored.
 
-Index queries avoid hydrating localization models when only translated scalar values are needed. The main Index selects Japanese `work_name` and `description` normally, and projects the English title and visible English description through `withAggregate()` on the scoped English localization relationship. Global and Title search match the canonical Japanese title directly and translated titles through a product-ID localization subquery restricted to the configured searchable locales.
+The Index reads Japanese text from `products` and selects the preferred translation with locale-scoped subqueries when the layout needs it. General search can match any stored title. The Title filter and work selectors search Japanese and the preferred language. Description search follows the [Index Search settings](CONFIGURATION.md#index-search).
 
 `ProductIndexSettings` loads the Index-related `options` values in one batched lookup per render. It prepares:
 - Index field layout
@@ -49,7 +49,7 @@ Tag and contributor data is loaded only when the current visible fields need it.
 1. `StoreProductRequest` validates submitted form data.
 2. `ProductController` builds a `DLSiteProductImportInput` snapshot from the validated values and Quick Add layout.
 3. `DLSiteProductImporter` requests the product through `DLSiteWorkFetcher`.
-4. `DLSiteWorkFetcher` calls `DLSitePythonRunner`, which invokes `python/DLSiteScraper.py` with explicit JSON/image/log destinations.
+4. `DLSiteWorkFetcher` calls the Python scraper through `DLSitePythonRunner` with the requested languages and JSON, image, and log destinations.
 5. PHP owns the fetch retry loop and validates the scraper result.
 6. Scraped metadata is converted by `DLSiteWorkData`; explicit visible Quick Add values override the fetched values where supported.
 7. `DLSiteProductImporter` creates the Product, persists only successfully downloaded cover/sample image paths, and synchronizes tags/contributors.
@@ -63,9 +63,9 @@ The main DLsite `Product Format` is stored first; only SND (Voice), MS2 (Music),
 
 #### DLsite Work Data Mapping
 
-`python/DLSiteScraper.py` fetches work data through `dlsite-async`, serializes the returned `Work` fields, adds the calculated `product_format`, and writes the result as JSON. PHP reads this JSON without rewriting it.
+`DlsiteLanguage` defines the supported metadata languages and maps each to its `dlsite-async` locale. PHP always requests Japanese and tells the Python scraper which additional locales to fetch. The scraper writes one document per language under `locales` and uses Japanese for images. PHP also reads the historical `japanese` and `english` sections in saved scraper responses.
 
-`DLSiteWorkData::normalizePayload()` maps the fields used by DLSite List when constructing product metadata. Canonical aliases are normalized only in the Japanese payload, while Description aliases remain locale-specific:
+`DLSiteWorkData` maps the scraper response to Product fields. Shared metadata comes from the Japanese document. Title, Description, and fetched Tags come from each fetched locale.
 
 - Japanese `maker_name` is used as Circle, Publisher, or Brand when `maker_id` starts with `RG`, `BG`, or `VG` respectively
 - each locale's Description uses the first nonempty value from `intro_masked`, `intro_s`, then `intro` when `description` is absent
@@ -73,17 +73,9 @@ The main DLsite `Product Format` is stored first; only SND (Voice), MS2 (Music),
 - a trailing `+09:00` is removed from Japanese `announce_date` without otherwise changing the supplied date or time
 - `rate_count_detail` is normalized by `DLSiteRating`; its weighted vote distribution is used once to persist independent two-decimal 5-point and 10-point ratings plus the vote count
 
-Explicit `circle`, `publisher`, `brand`, and `description` fields remain authoritative when present, including explicit empty values. Canonical DLsite metadata is read from the Japanese payload only; English remains separate localized data for Title, Description, and fetched Tags. Creator-role metadata that is not exposed by `dlsite-async` is not reconstructed by DLSite List.
+Explicit Circle, Publisher, Brand, and Description fields take precedence over their aliases, even when empty. An unfetched locale is absent from the result, so Refetch can preserve its stored values. A fetched locale with empty values can produce a removal for review.
 
-The required Japanese Product title is stored in `products.work_name`, with a database-level `NOT NULL` constraint. Japanese Description is stored in nullable `products.description`. Optional translated titles and descriptions are stored in `product_localizations`, with one row per `(product_id, locale)` and a unique constraint on that pair. English is the supported translated locale.
-
-Japanese titles and descriptions are written through normal `Product` persistence. Optional localized fields are managed through `Product::syncLocalization()`, which uses the general `Product::localizations()` `HasMany` relationship. `Product::englishLocalization()` is the scoped `HasOne` read/query relationship for the unique English row. A localization row exists while at least one localized field contains data; `ProductLocalization::isEmpty()` defines that invariant, and rows with both blank Title and Description are removed. The localization foreign key cascades on Product deletion, and localization changes touch the parent Product.
-
-`Product::titleForLocale('ja')` reads `products.work_name`, and `Product::descriptionForLocale('ja')` reads `products.description`. Translated values are resolved through `product_localizations`.
-
-Whole-library selectors use lightweight Product queries with a scalar English-title projection and reuse the Product title-filter and numeric-code ordering scopes.
-
-For translated works, `DLSiteWorkFetcher` identifies the original work from the Japanese `language_editions` entry with `display_order: 1`. If no usable entry is available, it uses the Japanese `translation_info.original_workno` value instead. When the resolved ID differs from the fetched work, the original work is fetched and its `RG` maker metadata is used when available. If no original reference is available, the fetched work is used normally. A missing reference is logged only when Japanese `translation_info.is_original` is explicitly `false`. The original response is validated before use, and only Japanese `RG` maker metadata is used for the original-work override.
+For translated works, the fetcher looks for the original in the Japanese `language_editions` entry with `display_order` 1, then in `translation_info.original_workno`. When it finds a different work, it fetches that work in Japanese for its `RG` maker metadata.
 
 The original response is stored beside the translated JSON as `<translation-id> - <original-id>.json`. `DLSiteWorkData` uses the original Maker ID, Circle, and Circle contributor while retaining the remaining metadata from the translated work. If the original work cannot be resolved, the translated work's own metadata is used.
 
@@ -99,6 +91,8 @@ Custom Quick Add:
 
 Custom Quick Add and Edit keep newly selected image files in the browser until Save. Previews use browser object URLs, while removal/reordering state is represented by the form and submitted through the normal multipart request. `ProductImageSubmission` converts that submitted state into the final cover/sample image set and delegates filesystem-changing saves to `ProductImagePromotion`. Existing-image removal/order can be restored through Laravel old input after validation; newly selected local files must be selected again after a full redirect.
 
+Quick Add and Edit forms submit the metadata language they displayed. Validation redirects reuse that language so localized text and fetched Tags still refer to the same locale if someone changes Options in another tab.
+
 Custom works still use the normal product/tag/contributor model and can participate in the library and Refetch selection workflow.
 
 ### Bulk Import
@@ -106,7 +100,7 @@ Custom works still use the normal product/tag/contributor model and can particip
 `GET /create/bulk` opens Bulk Import and `POST /store/bulk` starts a background run.
 
 1. `StartBulkImportRequest` extracts, normalizes, de-duplicates, and validates up to 500 product codes plus the shared form values.
-2. `BulkImportService` snapshots the input, creates the run/items, and dispatches sequential `ImportBulkWorkJob` jobs on the database queue.
+2. `BulkImportService` snapshots the input, including the effective DLsite metadata fetch-language list, creates the run/items, and dispatches sequential `ImportBulkWorkJob` jobs on the database queue.
 3. Each item skips an existing product or uses the shared `DLSiteProductImporter`; expected DLsite work failures are recorded per item while unexpected failures stop the run.
 4. `FinishBulkImportRunJob` reconciles counts and completes the run.
 5. `OptionsBulkImports` paginates history and cleanup, while `BulkImportRunCard` updates only queued/running runs.
@@ -205,7 +199,7 @@ Refetch updates scraped DLsite-owned data without immediately overwriting the ex
 
 1. The user starts Refetch All Works or Refetch Selected Works from Options.
 2. `RefetchService::startRun()` creates a `refetch_runs` row and one `refetch_work_results` row per selected work.
-3. Laravel creates a batch containing one `FetchProductWorkJob` per work. Run creation and queue dispatch are committed atomically under the library mutation lock.
+3. Laravel creates a batch containing one `FetchProductWorkJob` per work. Each job carries the fetch languages selected when the run started. Run creation and queue dispatch commit together under the library mutation lock.
 4. Each job fetches staged metadata and, when image checking is enabled, staged cover/sample images into the Refetch storage roots.
 5. `RefetchDiffBuilder` compares staged data with the canonical product data and records changes by `RefetchCategory`.
 6. `OptionsRefetchProgress` shows running/cancelling progress.
@@ -215,7 +209,9 @@ Refetch updates scraped DLsite-owned data without immediately overwriting the ex
 10. For translated works, the matching staged original-work JSON is copied beside the canonical JSON when available.
 11. Obsolete images are cleaned only for works whose image state changed.
 
-Refetch requires the translated work JSON as its metadata artifact. The associated original-work JSON is promoted when available; if it is missing, it is skipped, while copy or existence-check failures are logged without undoing applied metadata or preventing other works from finalizing. If no accepted change modifies a work, neither its staged translated JSON nor its associated original-work JSON is promoted.
+Refetch groups Title and Description changes by work and keeps a separate decision for each changed language. Fetched Tag decisions also apply per language. Detailed review can promote a Custom Tag to Fetched. Ignoring every language leaves the tags unchanged.
+
+The work JSON is required for promotion. If the associated original-work JSON is missing or cannot be copied, applied metadata is retained and finalization continues for the other works.
 
 Refetch has nineteen ordered review categories defined by `RefetchCategory`.
 
@@ -240,7 +236,7 @@ The export flow is:
 3. `TransferArchive` packs deterministic data/image ZIP parts with a `manifest.json` per part.
 4. Completed parts are validated and atomically published from private transfer storage.
 
-Work export planning eager-loads each Product batch with the scoped English localization, contributors, and the custom, Japanese, and English tag relations. Contributor and tag relations are ordered by attachment ID during eager loading and consumed through a dedicated preloaded snapshot path that requires all expected relations to be loaded. Japanese titles/descriptions are read from Product columns, while the batched export path reads English titles/descriptions from the single preloaded English localization. Ordinary snapshot and category reads query current relation values rather than implicitly reusing loaded relations.
+Export planning loads Products, their translations, contributors, and tag attachments in batches. Each work document includes shared fetched tags in every supported language to which they belong and lists custom tags once.
 
 The import flow is:
 
@@ -255,21 +251,23 @@ Transfer jobs use persisted checkpoints and operation/validation tokens so retri
 
 Each bounded export planning phase locks and rechecks the run, then commits inventory/part changes, its checkpoint, and the successor job in one database transaction. Cancellation waits for the current batch. Staged JSON paths are deterministic and can be overwritten on retry after a rollback.
 
-Portable exports duplicate language-agnostic DLsite metadata into both locale documents. Partial work imports treat the Japanese document as canonical for that metadata: omitted Japanese fields are preserved, while explicitly empty or null Japanese values can be cleared with Overwrite. Title, Description, and fetched Tags keep their locale-specific handling.
+Partial work imports read shared DLsite fields from the Japanese document. Omitted fields preserve existing values. An explicit null for optional text or an empty fetched Tag list can clear that value on Overwrite. Import validates incoming fields before applying the same aliases used for scraped work data.
 
-`WorkArchiveData` validates raw announcement dates before normalization. It accepts the stored `Y-m-d H:i:s` form and the same value ending in `+09:00`, then applies the same DLsite field aliases used for fetched work data before import field-presence checks. Omitted fields remain omitted, while explicit `null` or empty values keep their normal clear semantics. Exports serialize the values already stored in the library and do not perform original-work lookups.
+Import Review keeps all languages for a work together when paging through Titles, Descriptions, or Tags. Each decision applies only to the reviewed field or tag bucket. Merge rereads that bucket under the apply lock and preserves unrelated language memberships.
 
 Incomplete image categories remain importable. Import applies the valid image files present in the archive and records a warning; an incomplete category with no available files is treated as unavailable data rather than an explicit empty category, so it does not clear existing images. New works follow the same rule and import any available images.
 
 #### Archive Boundary
 
-New exports use schema v3, while imports support the released schema v1, schema v2, and schema v3. All versions use one archive-set identity across independent data and image ZIP parts. Every part contains `manifest.json`, which identifies the schema, part kind/count, scopes, and declared entries with sizes and SHA-256 checksums. Parts from different schema versions cannot be mixed.
+Exports use schema v4. Imports accept schemas v1 through v4. All parts must share an archive-set identity and schema version. Each part has a `manifest.json` declaring its kind, part count, scopes, entry sizes, and SHA-256 checksums.
+
+In v4, `work.json` contains `locales` for DLsite metadata and `dlsite_list` for library fields. Each work must supply its Japanese title in `locales.ja.work_name`. Other supported locales are optional on import. Explicit translations that match Japanese are preserved. Schemas v1 through v3 used `japanese` and `english` sections and could copy Japanese into a missing English field. Import treats those matching legacy values as missing translations.
 
 Portable entries are domain-oriented:
 
-- each work is a deterministic `works/{product_code}/work.json` document using the `dlsite-async+dlsite-list` format; v2/v3 manifests use `product_code` (RJ/BJ/VJ), while v1 uses the historical `rj_code` (RJ only)
+- `works/{product_code}/work.json` holds one work. The manifest identifies its format as `dlsite-async-locales+dlsite-list` in v4 or `dlsite-async+dlsite-list` in earlier versions. Versions 2 and later use `product_code` for RJ, BJ, and VJ works. Version 1 uses `rj_code` and supports RJ works only.
 - Tag Library and Options are stored as bounded JSON fragments
-- schema v3 can include the independent `user_css` scope as one raw root-level `user.css` entry with `text/css` media type; imports keep that file in transfer staging through review and promote it only when Overwrite is applied. Publication uses a durable undo journal plus an import-item commit marker, so ordinary failures and interrupted workers restore uncommitted CSS while committed replacements survive recovery
+- since v3, the `user_css` scope can include a root-level `user.css` file. Import stages it until Overwrite is applied. A durable journal restores uncommitted replacements after interruption.
 - images are separate binary entries referenced by archive path, checksum, size, and media type
 
 The portable format excludes database IDs, authentication data, internal storage paths, and deployment-specific settings. Import reads explicitly declared entries rather than extracting archives wholesale, and rejects unsupported/mixed layouts, unsafe paths, undeclared or conflicting entries, and integrity mismatches before review.
@@ -454,7 +452,7 @@ Autocomplete:
 
 `products` stores the library work and user-owned tracking data, including:
 - product identifier
-- titles
+- required Japanese title (`work_name`)
 - series
 - age category
 - site ID
@@ -463,7 +461,7 @@ Autocomplete:
 - brand
 - product format
 - scheduled release date
-- Japanese and English descriptions
+- optional Japanese description (`description`)
 - progress
 - score
 - DLsite 5-point rating, 10-point rating, and vote count
@@ -476,6 +474,8 @@ Autocomplete:
 - maker ID metadata associated with the work/circle
 
 The product code (RJ, BJ or VJ) is the product identifier.
+
+`product_localizations` holds optional translated titles and descriptions, with one row per Product and locale. A row is removed when both fields are blank. Translation changes update the parent Product timestamp, and deleting a Product also deletes its translations.
 
 `sample_images` and `product_format` are stored as JSON and cast to PHP arrays by `Product`. DLsite ratings are stored as exact two-decimal values in `dlsite_rating_5` and `dlsite_rating_10`, with `dlsite_rating_count` stored separately so Index filtering, sorting, and display do not recalculate the weighted average.
 
@@ -502,24 +502,13 @@ Tags are normalized instead of stored as per-product text arrays.
 - `fetched`
 - `custom`
 
-`genre_product_languages` records which fetched language bucket supplied an attachment:
-- `jp`
-- `en`
-
-A fetched tag can belong to both language buckets for one product. Custom attachments have no fetched-language row.
-
-`Option::effectiveFetchedTagLanguage()` resolves the selected `FetchedTagLanguage` from the saved settings.
-
-When following the UI language, `FetchedTagLanguage` maps:
-- UI `en` -> fetched tag language `en`
-- UI `ja` -> fetched tag language `jp`
-- UI `zh_TW` -> fetched tag language `en`
+`genre_product_languages` records the metadata locales that supplied a fetched attachment. A fetched tag can belong to several languages on the same Product. Custom attachments have no language rows. Updating one language preserves the other memberships.
 
 `VisibleGenreAttachment` defines the normal visible set as:
 - all custom tags
 - fetched tags for the selected language
 
-A shared JP/EN fetched attachment is rendered once.
+A fetched tag shared across languages appears once.
 
 ### Tag Groups
 
@@ -582,6 +571,8 @@ Removing a relationship does not remove parent tags already attached to products
 - detected category changes
 - overwrite/ignore decisions
 - whether an accepted decision actually changed the work
+
+Refetch and Import share field identifiers for review decisions. Japanese text uses `work_name` and `description`. Translated text uses `localization:<locale>:title` and `localization:<locale>:description`. Both reviews translate the labels when displayed.
 
 Laravel queue infrastructure uses:
 - `jobs`
@@ -673,7 +664,7 @@ Laravel’s built-in validation messages use `lang/{locale}/validation.php`.
 
 Blade uses `str_replace('_', '-', app()->getLocale())` because HTML language tags use hyphens (`zh-TW`), while the application's locale uses an underscore (`zh_TW`). This only formats the HTML `lang` attribute; it does not change which translations Laravel loads.
 
-`SetUiLocale` applies the application-wide saved locale for web requests. Missing/invalid locale values fall back to English.
+`UiLanguage` defines interface languages independently of `DlsiteLanguage`. Automatic metadata selection matches their locale codes and falls back to English for a UI-only language. `SetUiLocale` applies the saved UI language to web requests. See [UI Language](CONFIGURATION.md#ui-language) for the display and fetch settings.
 
 Localized display labels are generated for enums, field layouts, and settings, while backed enum values, routes, query values, stored data, and user content remain stable.
 

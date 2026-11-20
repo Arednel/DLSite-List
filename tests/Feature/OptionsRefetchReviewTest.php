@@ -2,12 +2,12 @@
 
 namespace Tests\Feature;
 
+use App\Enums\DlsiteLanguage;
 use App\Enums\RefetchCategory;
 use App\Enums\UiLanguage;
 use App\Livewire\OptionsRefetchReview;
 use App\Models\Option;
 use App\Models\Product;
-use App\Models\ProductLocalization;
 use App\Models\RefetchRun;
 use App\Models\RefetchWorkResult;
 use App\Support\Refetch\RefetchService;
@@ -33,10 +33,33 @@ class OptionsRefetchReviewTest extends TestCase
             )
             ->call('showCategory', RefetchCategory::Tags->value)
             ->assertSet('activeCategory', RefetchCategory::Tags->value)
+            ->assertViewHas('activeReview', function (array $review): bool {
+                $card = $review['cards']->first();
+
+                return $card['kind'] === 'tags'
+                    && $card['japanese']['locale'] === DlsiteLanguage::Japanese->value
+                    && $card['localized'] === [];
+            })
             ->assertSet(
                 "actions.titles.{$result->getKey()}.work_name",
                 RefetchService::ACTION_IGNORE,
             );
+    }
+
+    public function test_tag_detailed_choice_uses_a_live_change_binding_and_renders_detailed_controls(): void
+    {
+        [$run,, $result] = $this->reviewRun();
+        $path = "actions.tags.{$result->getKey()}.ja";
+
+        Livewire::test(OptionsRefetchReview::class, ['run' => $run])
+            ->call('showCategory', RefetchCategory::Tags->value)
+            ->assertSee('wire:model.change.live="' . $path . '"', false)
+            ->set($path, RefetchService::ACTION_DETAILED)
+            ->assertSee('New tags')
+            ->assertSee('No longer fetched tags')
+            ->set($path, RefetchService::ACTION_OVERWRITE)
+            ->assertDontSee('New tags')
+            ->assertDontSee('No longer fetched tags');
     }
 
     public function test_failed_results_and_warnings_use_the_collapsed_error_list(): void
@@ -136,27 +159,20 @@ class OptionsRefetchReviewTest extends TestCase
             ->assertSee('No changes detected.');
     }
 
-    public function test_review_paginates_change_cards_instead_of_work_results(): void
+    public function test_review_groups_localized_title_changes_into_one_card_per_work(): void
     {
         [$run] = $this->reviewRunWithTitleChanges(51, true);
 
         Livewire::test(OptionsRefetchReview::class, ['run' => $run])
-            ->assertSee('Showing 1-100 of 102')
+            ->assertSee('Showing 1-51 of 51')
             ->assertViewHas(
                 'activeReview',
                 fn(array $review): bool =>
                 $review['count'] === 102
-                    && $review['cards']->count() === 100
-                    && $review['cards']->total() === 102
-            )
-            ->call('nextPage')
-            ->assertSee('Showing 101-102 of 102')
-            ->assertViewHas(
-                'activeReview',
-                fn(array $review): bool =>
-                $review['cards']->count() === 2
-                    && $review['cards']->total() === 102
-                    && $review['cards']->currentPage() === 2
+                    && $review['cards']->count() === 51
+                    && $review['cards']->total() === 51
+                    && $review['cards']->first()['kind'] === 'localized_text'
+                    && count($review['cards']->first()['localized']) === 1
             );
     }
 
@@ -355,18 +371,18 @@ class OptionsRefetchReviewTest extends TestCase
                     'tags' => [
                         'label' => 'Fetched Tags',
                         'old' => [
-                            'japanese' => ['Old JP'],
-                            'english' => [],
+                            'fetched' => ['ja' => ['Old JP'], 'en' => []],
                             'custom' => [],
                         ],
                         'new' => [
-                            'japanese' => ['New JP'],
-                            'english' => [],
+                            'fetched' => ['ja' => ['New JP'], 'en' => []],
                             'custom' => [],
                         ],
                         'details' => [
-                            'added_japanese' => ['New JP'],
-                            'stale_japanese' => ['Old JP'],
+                            'changed_locales' => ['ja'],
+                            'added' => ['ja' => ['New JP'], 'en' => []],
+                            'stale' => ['ja' => ['Old JP'], 'en' => []],
+                            'custom_to_fetched' => ['ja' => [], 'en' => []],
                         ],
                     ],
                 ],
@@ -402,7 +418,7 @@ class OptionsRefetchReviewTest extends TestCase
 
             if ($includeEnglishTitle) {
                 $product->localizations()->updateOrCreate(
-                    ['locale' => ProductLocalization::LOCALE_ENGLISH],
+                    ['locale' => DlsiteLanguage::English->value],
                     ['title' => "Old English Title for {$product->getKey()}"],
                 );
             }
@@ -422,7 +438,7 @@ class OptionsRefetchReviewTest extends TestCase
                         ],
                         ...($includeEnglishTitle
                             ? [
-                                'work_name_english' => [
+                                'localization:en:title' => [
                                     'label' => 'English Title',
                                     'old' => "Old English Title for {$result->product_id}",
                                     'new' => "New English Title for {$result->product_id}",

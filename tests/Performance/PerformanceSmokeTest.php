@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use App\Enums\DlsiteLanguage;
 use App\Enums\ProductContributorRole;
 use App\Enums\ProductField;
 use App\Models\Contributor;
@@ -142,7 +143,8 @@ class PerformanceSmokeTest extends TestCase
             'update redirect fast path',
             fn() => $this->post("/update/{$updateTargetId}", [
                 'work_name' => sprintf('PERF_WORK_%d', $updateTargetNumber),
-                'work_name_english' => sprintf('PERF_WORK_EN_%d', $updateTargetNumber),
+                'metadata_language' => DlsiteLanguage::English->value,
+                'localized_title' => sprintf('PERF_WORK_EN_%d', $updateTargetNumber),
                 'progress' => $this->progressForProductNumber($updateTargetNumber),
                 'score' => ($updateTargetNumber % 10) + 1,
                 'series' => 'PERF_SERIES_' . ($updateTargetNumber % 20),
@@ -157,7 +159,8 @@ class PerformanceSmokeTest extends TestCase
             'update redirect page recalculation',
             fn() => $this->post("/update/{$updateTargetId}", [
                 'work_name' => sprintf('PERF_WORK_%d', $updateTargetNumber),
-                'work_name_english' => sprintf('PERF_WORK_EN_%d', $updateTargetNumber),
+                'metadata_language' => DlsiteLanguage::English->value,
+                'localized_title' => sprintf('PERF_WORK_EN_%d', $updateTargetNumber),
                 'progress' => $this->progressForProductNumber($updateTargetNumber),
                 'score' => ($updateTargetNumber % 10) + 1,
                 'series' => 'PERF_SERIES_' . ($updateTargetNumber % 20),
@@ -172,7 +175,8 @@ class PerformanceSmokeTest extends TestCase
             'update redirect filter cleanup',
             fn() => $this->post("/update/{$updateTargetId}", [
                 'work_name' => sprintf('PERF_WORK_%d', $updateTargetNumber),
-                'work_name_english' => sprintf('PERF_WORK_EN_%d', $updateTargetNumber),
+                'metadata_language' => DlsiteLanguage::English->value,
+                'localized_title' => sprintf('PERF_WORK_EN_%d', $updateTargetNumber),
                 'progress' => $this->progressForProductNumber($updateTargetNumber),
                 'score' => ($updateTargetNumber % 10) + 1,
                 'series' => 'PERF_SERIES_' . ($updateTargetNumber % 20),
@@ -597,7 +601,7 @@ class PerformanceSmokeTest extends TestCase
             ProductField::VoiceActor,
             ProductField::Author,
             ProductField::DescriptionJapanese,
-            ProductField::DescriptionEnglish,
+            ProductField::DescriptionLocalized,
             ProductField::Tags,
         ])
             ->map(fn(ProductField $field): array => [

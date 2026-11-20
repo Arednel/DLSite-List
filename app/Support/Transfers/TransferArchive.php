@@ -2,6 +2,7 @@
 
 namespace App\Support\Transfers;
 
+use App\Enums\DlsiteLanguage;
 use App\Enums\LibraryTransferOperation;
 use App\Enums\LibraryTransferPartStatus;
 use App\Enums\LibraryTransferRunStatus;
@@ -24,6 +25,10 @@ use ZipArchive;
 
 final class TransferArchive
 {
+    public const SCHEMA_VERSION = 4;
+
+    public const SUPPORTED_SCHEMA_VERSIONS = [1, 2, 3, 4];
+
     public function __construct(
         private readonly LibraryData $data,
         private readonly WorkArchiveData $works,
@@ -129,23 +134,17 @@ final class TransferArchive
             ? collect()
             : Product::query()
             ->with([
-                'englishLocalization:id,product_id,title,description',
+                'localizations' => fn($query) => $query
+                    ->select(['id', 'product_id', 'locale', 'title', 'description'])
+                    ->whereIn('locale', DlsiteLanguage::values()),
                 'contributors' => fn($query) => $query
                     ->select(['contributors.id', 'contributors.name'])
                     ->orderBy('contributor_product.id'),
-                'customGenres' => fn($query) => $query
-                    ->select(['genres.id', 'genres.title'])
-                    ->orderBy('genre_product.id'),
-                'japaneseGenres' => fn($query) => $query
-                    ->select(['genres.id', 'genres.title'])
-                    ->orderBy('genre_product.id'),
-                'englishGenres' => fn($query) => $query
-                    ->select(['genres.id', 'genres.title'])
-                    ->orderBy('genre_product.id'),
             ])
             ->whereKey($batch)
             ->get()
             ->keyBy('id');
+        $tagBuckets = $this->data->tagBucketsForProducts($products->keys()->all());
 
         foreach ($batch as $id) {
             $product = $products->get($id);
@@ -155,7 +154,7 @@ final class TransferArchive
 
                 continue;
             }
-            $snapshot = $this->works->exportSnapshotFromPreorderedRelations($product, $withImages);
+            $snapshot = $this->works->exportSnapshotFromLoadedData($product, $tagBuckets[$id], $withImages);
             foreach ($snapshot['image_warnings'] as $image) {
                 $warnings[] = $id . ': ' . $image . ' is incomplete.';
             }
@@ -433,7 +432,7 @@ final class TransferArchive
             $name = self::filename($run->settings['exported_at'], $part->kind, $part->number, $counts[$part->kind]);
             $manifest = [
                 'format' => 'dlsite-list',
-                'schema_version' => 3,
+                'schema_version' => self::SCHEMA_VERSION,
                 'archive_set_id' => $run->archive_set_id,
                 'exported_at' => $run->settings['exported_at'],
                 'scopes' => $run->settings['scopes'],
@@ -866,7 +865,8 @@ final class TransferArchive
         if ($partCountExceeded || $partCountMismatch || $imagesWithoutWorks || $unexpectedImageParts || $userCssBeforeV3) {
             throw new InvalidArchive('transfer.archive.inconsistent_parts_or_scopes');
         }
-        if (in_array('works', $manifest['scopes'], true) && ($manifest['work_entry_format'] ?? null) !== WorkArchiveData::FORMAT) {
+        $workEntryFormat = $manifest['schema_version'] >= 4 ? WorkArchiveData::FORMAT : WorkArchiveData::LEGACY_FORMAT;
+        if (in_array('works', $manifest['scopes'], true) && ($manifest['work_entry_format'] ?? null) !== $workEntryFormat) {
             throw new InvalidArchive('transfer.archive.missing_work_entry_format');
         }
         foreach ($manifest['entries'] as $entry) {
@@ -881,7 +881,7 @@ final class TransferArchive
     {
         return [
             'format' => ['required', Rule::in(['dlsite-list'])],
-            'schema_version' => ['required', 'integer:strict', Rule::in([1, 2, 3])],
+            'schema_version' => ['required', 'integer:strict', Rule::in(self::SUPPORTED_SCHEMA_VERSIONS)],
             'archive_set_id' => ['required', 'uuid'],
             'exported_at' => ['required', 'date', 'regex:' . LibraryData::UTC_DATE_PATTERN],
             'work_entry_format' => ['sometimes', 'string'],

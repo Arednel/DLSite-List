@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use App\Enums\DlsiteLanguage;
 use App\Models\Option;
 use App\Models\Product;
 use App\Support\LibraryMutationLock;
@@ -117,6 +118,7 @@ class ProductImageEditorTest extends TestCase
         $secondBytes = file_get_contents($sampleTwo->getRealPath());
 
         $this->post(route('products.store.custom'), [
+            'metadata_language' => DlsiteLanguage::English->value,
             'id' => 'RJ123456',
             'work_name' => 'Browser image editor',
             'age_category' => 'ALL_AGES',
@@ -143,6 +145,7 @@ class ProductImageEditorTest extends TestCase
         Storage::fake('public');
 
         $this->post(route('products.store.custom'), [
+            'metadata_language' => DlsiteLanguage::English->value,
             'id' => 'RJ123457',
             'work_name' => 'Coverless work',
             'age_category' => 'ALL_AGES',
@@ -163,6 +166,7 @@ class ProductImageEditorTest extends TestCase
         Storage::fake('public');
 
         $this->post(route('products.store.custom'), [
+            'metadata_language' => DlsiteLanguage::English->value,
             'id' => 'RJ123473',
             'work_name' => 'Hidden cover upload',
             'age_category' => 'ALL_AGES',
@@ -267,7 +271,8 @@ class ProductImageEditorTest extends TestCase
 
         $this->post(route('products.update', $product), [
             'work_name' => $product->work_name,
-            'work_name_english' => $product->titleForLocale('en'),
+            'metadata_language' => DlsiteLanguage::English->value,
+            'localized_title' => $product->localizations()->where('locale', 'en')->value('title'),
             'work_image' => $cover,
             'sample_images' => ['7' => $sample],
             'sample_image_order' => [
@@ -314,7 +319,8 @@ class ProductImageEditorTest extends TestCase
 
         $this->post(route('products.update', $product), [
             'work_name' => $product->work_name,
-            'work_name_english' => $product->titleForLocale('en'),
+            'metadata_language' => DlsiteLanguage::English->value,
+            'localized_title' => $product->localizations()->where('locale', 'en')->value('title'),
             'remove_work_image' => '1',
             'sample_image_order' => ['existing:storage/Works/RJ123459/sample_2.jpg'],
         ])->assertRedirect()->assertSessionHasNoErrors();
@@ -343,7 +349,8 @@ class ProductImageEditorTest extends TestCase
 
         $this->post(route('products.update', $product), [
             'work_name' => $product->work_name,
-            'work_name_english' => $product->titleForLocale('en'),
+            'metadata_language' => DlsiteLanguage::English->value,
+            'localized_title' => $product->localizations()->where('locale', 'en')->value('title'),
             'sample_images_submitted' => '1',
         ])->assertRedirect()->assertSessionHasNoErrors();
         $this->recoverCommittedImagePromotion();
@@ -404,7 +411,8 @@ class ProductImageEditorTest extends TestCase
 
         $this->post(route('products.update', $product), [
             'work_name' => $product->work_name,
-            'work_name_english' => $product->titleForLocale('en'),
+            'metadata_language' => DlsiteLanguage::English->value,
+            'localized_title' => $product->localizations()->where('locale', 'en')->value('title'),
             'remove_work_image' => '1',
             'work_image' => UploadedFile::fake()->create('attempt.txt', 1, 'text/plain'),
             'sample_images' => [UploadedFile::fake()->create('attempt.txt', 1, 'text/plain')],
@@ -426,7 +434,8 @@ class ProductImageEditorTest extends TestCase
 
         app(LibraryMutationLock::class)->run(fn() => $this->post(route('products.update', $product), [
             'work_name' => $product->work_name,
-            'work_name_english' => $product->titleForLocale('en'),
+            'metadata_language' => DlsiteLanguage::English->value,
+            'localized_title' => $product->localizations()->where('locale', 'en')->value('title'),
             'sample_image_order' => [],
         ])->assertRedirect()->assertSessionHasNoErrors());
     }
@@ -446,7 +455,8 @@ class ProductImageEditorTest extends TestCase
 
         app(LibraryMutationLock::class)->run(fn() => $this->post(route('products.update', $product), [
             'work_name' => $product->work_name,
-            'work_name_english' => $product->titleForLocale('en'),
+            'metadata_language' => DlsiteLanguage::English->value,
+            'localized_title' => $product->localizations()->where('locale', 'en')->value('title'),
             'sample_image_order' => [
                 'existing:storage/Works/RJ123467/sample_2.jpg',
                 'existing:storage/Works/RJ123467/sample_1.jpg',
@@ -471,7 +481,8 @@ class ProductImageEditorTest extends TestCase
 
         app(LibraryMutationLock::class)->run(fn() => $this->post(route('products.update', $product), [
             'work_name' => $product->work_name,
-            'work_name_english' => $product->titleForLocale('en'),
+            'metadata_language' => DlsiteLanguage::English->value,
+            'localized_title' => $product->localizations()->where('locale', 'en')->value('title'),
             'sample_images' => [UploadedFile::fake()->image('sample.jpg')],
         ])->assertSessionHasErrors(['sample_images'])
             ->assertSessionDoesntHaveErrors(['work_image']));
@@ -489,7 +500,8 @@ class ProductImageEditorTest extends TestCase
 
         app(LibraryMutationLock::class)->run(fn() => $this->post(route('products.update', $product), [
             'work_name' => $product->work_name,
-            'work_name_english' => $product->titleForLocale('en'),
+            'metadata_language' => DlsiteLanguage::English->value,
+            'localized_title' => $product->localizations()->where('locale', 'en')->value('title'),
             'work_image' => UploadedFile::fake()->image('replacement.jpg'),
         ])->assertSessionHasErrors(['work_image'])
             ->assertSessionDoesntHaveErrors(['sample_images']));
@@ -593,6 +605,7 @@ class ProductImageEditorTest extends TestCase
     public function test_invalid_uploaded_images_are_rejected_by_normal_form_validation(): void
     {
         $response = $this->from(route('products.create.custom'))->post(route('products.store.custom'), [
+            'metadata_language' => DlsiteLanguage::English->value,
             'id' => 'RJ123464',
             'work_name' => 'Invalid image',
             'age_category' => 'ALL_AGES',

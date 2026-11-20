@@ -4,7 +4,7 @@ namespace App\Models;
 
 use App\Enums\AutocompleteOrder;
 use App\Enums\ContentFocus;
-use App\Enums\FetchedTagLanguage;
+use App\Enums\DlsiteLanguage;
 use App\Enums\ProductIndexSortField;
 use App\Enums\RatingScale;
 use App\Enums\RatingVisualStyle;
@@ -23,9 +23,11 @@ class Option extends Model
 {
     public const UI_LANGUAGE = 'ui_language';
 
-    public const FETCHED_TAG_LANGUAGE_FOLLOWS_UI = 'fetched_tag_language_follows_ui';
+    public const DLSITE_METADATA_LANGUAGE_FOLLOWS_UI = 'dlsite_metadata_language_follows_ui';
 
-    public const FETCHED_TAG_LANGUAGE = 'fetched_tag_language';
+    public const DLSITE_METADATA_LANGUAGE = 'dlsite_metadata_language';
+
+    public const DLSITE_METADATA_FETCH_LANGUAGES = 'dlsite_metadata_fetch_languages';
 
     public const CONTENT_FOCUS = 'content_focus';
 
@@ -182,8 +184,9 @@ class Option extends Model
 
     private const DEFAULT_OPTION_KEYS = [
         self::UI_LANGUAGE,
-        self::FETCHED_TAG_LANGUAGE_FOLLOWS_UI,
-        self::FETCHED_TAG_LANGUAGE,
+        self::DLSITE_METADATA_LANGUAGE_FOLLOWS_UI,
+        self::DLSITE_METADATA_LANGUAGE,
+        self::DLSITE_METADATA_FETCH_LANGUAGES,
         self::CONTENT_FOCUS,
         self::EXPORT_PART_MIB,
         self::INDEX_PER_PAGE,
@@ -214,8 +217,9 @@ class Option extends Model
     private const RESETTABLE_OPTIONS = [
         self::EXPORT_PART_MIB,
         self::UI_LANGUAGE,
-        self::FETCHED_TAG_LANGUAGE_FOLLOWS_UI,
-        self::FETCHED_TAG_LANGUAGE,
+        self::DLSITE_METADATA_LANGUAGE_FOLLOWS_UI,
+        self::DLSITE_METADATA_LANGUAGE,
+        self::DLSITE_METADATA_FETCH_LANGUAGES,
         self::CONTENT_FOCUS,
         self::INDEX_PER_PAGE,
         self::INDEX_SEARCH_HIDDEN_DESCRIPTIONS_ENABLED,
@@ -284,8 +288,9 @@ class Option extends Model
 
         return match ($key) {
             self::UI_LANGUAGE => UiLanguage::English->value,
-            self::FETCHED_TAG_LANGUAGE_FOLLOWS_UI => true,
-            self::FETCHED_TAG_LANGUAGE => FetchedTagLanguage::English->value,
+            self::DLSITE_METADATA_LANGUAGE_FOLLOWS_UI => true,
+            self::DLSITE_METADATA_LANGUAGE => DlsiteLanguage::English->value,
+            self::DLSITE_METADATA_FETCH_LANGUAGES => [DlsiteLanguage::English->value],
             self::CONTENT_FOCUS => ContentFocus::General->value,
             self::EXPORT_PART_MIB => config('transfers.default_part_mib'),
             self::INDEX_PER_PAGE => self::DEFAULT_INDEX_PER_PAGE,
@@ -325,32 +330,69 @@ class Option extends Model
             ?? UiLanguage::from((string) self::defaultFor(self::UI_LANGUAGE));
     }
 
-    public static function fetchedTagLanguageFollowsUi(): bool
+    public static function dlsiteMetadataLanguageFollowsUi(): bool
     {
         return self::booleanValueFor(
-            self::FETCHED_TAG_LANGUAGE_FOLLOWS_UI,
-            self::defaultFor(self::FETCHED_TAG_LANGUAGE_FOLLOWS_UI),
+            self::DLSITE_METADATA_LANGUAGE_FOLLOWS_UI,
+            self::defaultFor(self::DLSITE_METADATA_LANGUAGE_FOLLOWS_UI),
         );
     }
 
-    public static function fetchedTagLanguage(): FetchedTagLanguage
+    public static function dlsiteMetadataLanguage(): DlsiteLanguage
     {
-        return FetchedTagLanguage::tryFrom((string) self::valueFor(self::FETCHED_TAG_LANGUAGE))
-            ?? FetchedTagLanguage::from((string) self::defaultFor(self::FETCHED_TAG_LANGUAGE));
+        return self::normalizeDlsiteLanguage(self::valueFor(self::DLSITE_METADATA_LANGUAGE));
     }
 
-    public static function effectiveFetchedTagLanguage(): FetchedTagLanguage
+    /**
+     * Explicit optional languages selected for fetching. Japanese is implicit.
+     *
+     * @return list<DlsiteLanguage>
+     */
+    public static function dlsiteMetadataFetchLanguages(): array
+    {
+        return self::normalizeDlsiteFetchLanguages(
+            self::jsonFromValue(self::valueFor(self::DLSITE_METADATA_FETCH_LANGUAGES)),
+        );
+    }
+
+    public static function effectiveDlsiteMetadataLanguage(): DlsiteLanguage
     {
         $values = self::query()
             ->whereIn('key', [
-                self::FETCHED_TAG_LANGUAGE_FOLLOWS_UI,
-                self::FETCHED_TAG_LANGUAGE,
+                self::UI_LANGUAGE,
+                self::DLSITE_METADATA_LANGUAGE_FOLLOWS_UI,
+                self::DLSITE_METADATA_LANGUAGE,
             ])
             ->pluck('value', 'key');
 
-        return self::effectiveFetchedTagLanguageFromValues(
-            $values->get(self::FETCHED_TAG_LANGUAGE_FOLLOWS_UI),
-            $values->get(self::FETCHED_TAG_LANGUAGE),
+        return self::effectiveDlsiteMetadataLanguageFromValues(
+            $values->get(self::DLSITE_METADATA_LANGUAGE_FOLLOWS_UI),
+            $values->get(self::DLSITE_METADATA_LANGUAGE),
+            $values->get(self::UI_LANGUAGE),
+        );
+    }
+
+    /**
+     * Japanese is always fetched; the displayed language is also always fetched.
+     *
+     * @return list<DlsiteLanguage>
+     */
+    public static function effectiveDlsiteMetadataFetchLanguages(): array
+    {
+        $values = self::query()
+            ->whereIn('key', [
+                self::UI_LANGUAGE,
+                self::DLSITE_METADATA_LANGUAGE_FOLLOWS_UI,
+                self::DLSITE_METADATA_LANGUAGE,
+                self::DLSITE_METADATA_FETCH_LANGUAGES,
+            ])
+            ->pluck('value', 'key');
+
+        return self::effectiveDlsiteMetadataFetchLanguagesFromValues(
+            $values->get(self::DLSITE_METADATA_LANGUAGE_FOLLOWS_UI),
+            $values->get(self::DLSITE_METADATA_LANGUAGE),
+            $values->get(self::DLSITE_METADATA_FETCH_LANGUAGES),
+            $values->get(self::UI_LANGUAGE),
         );
     }
 
@@ -391,24 +433,49 @@ class Option extends Model
         self::forget(self::UI_LANGUAGE);
     }
 
-    public static function setFetchedTagLanguageFollowsUi(bool $enabled): void
+    public static function setDlsiteMetadataLanguageFollowsUi(bool $enabled): void
     {
-        self::setBooleanValue(self::FETCHED_TAG_LANGUAGE_FOLLOWS_UI, $enabled);
+        self::setBooleanValue(self::DLSITE_METADATA_LANGUAGE_FOLLOWS_UI, $enabled);
     }
 
-    public static function setFetchedTagLanguage(FetchedTagLanguage|string $language): void
+    public static function setDlsiteMetadataLanguage(DlsiteLanguage|string $language): void
     {
-        $normalized = $language instanceof FetchedTagLanguage
-            ? $language
-            : (FetchedTagLanguage::tryFrom($language)
-                ?? FetchedTagLanguage::from((string) self::defaultFor(self::FETCHED_TAG_LANGUAGE)));
-
-        self::setValue(self::FETCHED_TAG_LANGUAGE, $normalized->value);
+        self::setValue(
+            self::DLSITE_METADATA_LANGUAGE,
+            self::normalizeDlsiteLanguage($language)->value,
+        );
     }
 
-    public static function resetFetchedTagLanguageSettingsToDefault(): void
+    /**
+     * @param list<DlsiteLanguage|string> $languages
+     */
+    public static function setDlsiteMetadataFetchLanguages(array $languages): void
     {
-        self::forget(self::FETCHED_TAG_LANGUAGE_FOLLOWS_UI, self::FETCHED_TAG_LANGUAGE);
+        $values = [];
+
+        foreach ($languages as $language) {
+            $language = $language instanceof DlsiteLanguage
+                ? $language
+                : DlsiteLanguage::from($language);
+
+            if ($language !== DlsiteLanguage::Japanese) {
+                $values[$language->value] = $language->value;
+            }
+        }
+
+        self::setValue(
+            self::DLSITE_METADATA_FETCH_LANGUAGES,
+            json_encode(array_values($values), JSON_THROW_ON_ERROR),
+        );
+    }
+
+    public static function resetDlsiteMetadataLanguageSettingsToDefault(): void
+    {
+        self::forget(
+            self::DLSITE_METADATA_LANGUAGE_FOLLOWS_UI,
+            self::DLSITE_METADATA_LANGUAGE,
+            self::DLSITE_METADATA_FETCH_LANGUAGES,
+        );
     }
 
     public static function setContentFocus(ContentFocus|string $focus): void
@@ -966,26 +1033,28 @@ class Option extends Model
                 self::PRODUCT_FORM_MODAL_COMPLETION_ACTION,
                 self::DLSITE_AGE_APPROPRIATE_LINKS_ENABLED,
                 self::DLSITE_ANNOUNCE_LINKS_ENABLED,
-                self::FETCHED_TAG_LANGUAGE_FOLLOWS_UI,
-                self::FETCHED_TAG_LANGUAGE,
+                self::UI_LANGUAGE,
+                self::DLSITE_METADATA_LANGUAGE_FOLLOWS_UI,
+                self::DLSITE_METADATA_LANGUAGE,
             ])
             ->pluck('value', 'key');
 
+        $metadataLanguage = self::effectiveDlsiteMetadataLanguageFromValues(
+            $values->get(self::DLSITE_METADATA_LANGUAGE_FOLLOWS_UI),
+            $values->get(self::DLSITE_METADATA_LANGUAGE),
+            $values->get(self::UI_LANGUAGE),
+        );
         $indexFieldLayout = self::fieldLayoutFromValue(
             $values->get(self::INDEX_FIELD_LAYOUT),
             ProductFieldLayout::SURFACE_INDEX,
         );
-        $indexColumns = ProductFieldLayout::indexColumns($indexFieldLayout);
+        $indexColumns = ProductFieldLayout::indexColumns($indexFieldLayout, $metadataLanguage);
         $filterFieldLayout = self::fieldLayoutFromValue(
             $values->get(self::FILTER_FIELD_LAYOUT),
             ProductFieldLayout::SURFACE_FILTER,
         );
         $indexSortFieldLayout = self::indexSortFieldLayoutFromValue(
             $values->get(self::INDEX_SORT_FIELD_LAYOUT),
-        );
-        $fetchedTagLanguage = self::effectiveFetchedTagLanguageFromValues(
-            $values->get(self::FETCHED_TAG_LANGUAGE_FOLLOWS_UI),
-            $values->get(self::FETCHED_TAG_LANGUAGE),
         );
 
         return new ProductIndexSettings(
@@ -995,7 +1064,7 @@ class Option extends Model
             visibleIndexFields: array_column($indexColumns, 'field'),
             titleNotesVisible: ProductFieldLayout::indexTitleNotesVisible($indexFieldLayout),
             filterFieldLayout: $filterFieldLayout,
-            filterFields: ProductFieldLayout::filterFields($filterFieldLayout),
+            filterFields: ProductFieldLayout::filterFields($filterFieldLayout, $metadataLanguage),
             indexSortFieldLayout: $indexSortFieldLayout,
             indexSortFieldOptions: ProductIndexSortField::optionsFromLayout($indexSortFieldLayout),
             contentOverflow: ProductIndexContentOverflow::normalize(
@@ -1037,7 +1106,7 @@ class Option extends Model
                 $values->get(self::DLSITE_ANNOUNCE_LINKS_ENABLED),
                 self::defaultFor(self::DLSITE_ANNOUNCE_LINKS_ENABLED),
             ),
-            fetchedTagLanguage: $fetchedTagLanguage->value,
+            metadataLanguage: $metadataLanguage->value,
         );
     }
 
@@ -1086,19 +1155,88 @@ class Option extends Model
         self::setValue($key, $enabled ? '1' : '0');
     }
 
-    private static function effectiveFetchedTagLanguageFromValues(
+    private static function effectiveDlsiteMetadataLanguageFromValues(
         mixed $followsUi,
         mixed $language,
-    ): FetchedTagLanguage {
+        mixed $uiLanguage,
+    ): DlsiteLanguage {
         if (self::normalizeBoolean(
             $followsUi,
-            self::defaultFor(self::FETCHED_TAG_LANGUAGE_FOLLOWS_UI),
+            self::defaultFor(self::DLSITE_METADATA_LANGUAGE_FOLLOWS_UI),
         )) {
-            return FetchedTagLanguage::forUiLanguage(UiLanguage::current());
+            $ui = UiLanguage::tryFrom((string) $uiLanguage) ?? UiLanguage::English;
+
+            return $ui->dlsiteLanguage() ?? DlsiteLanguage::English;
         }
 
-        return FetchedTagLanguage::tryFrom((string) $language)
-            ?? FetchedTagLanguage::from((string) self::defaultFor(self::FETCHED_TAG_LANGUAGE));
+        return self::normalizeDlsiteLanguage($language);
+    }
+
+    /**
+     * @return list<DlsiteLanguage>
+     */
+    private static function effectiveDlsiteMetadataFetchLanguagesFromValues(
+        mixed $followsUi,
+        mixed $language,
+        mixed $fetchLanguages,
+        mixed $uiLanguage,
+    ): array {
+        $displayLanguage = self::effectiveDlsiteMetadataLanguageFromValues(
+            $followsUi,
+            $language,
+            $uiLanguage,
+        );
+
+        $languages = [
+            DlsiteLanguage::Japanese->value => DlsiteLanguage::Japanese,
+        ];
+
+        foreach (
+            self::normalizeDlsiteFetchLanguages(
+                self::jsonFromValue(is_string($fetchLanguages) ? $fetchLanguages : null),
+            ) as $language
+        ) {
+            $languages[$language->value] = $language;
+        }
+
+        $languages[$displayLanguage->value] = $displayLanguage;
+
+        return array_values($languages);
+    }
+
+    private static function normalizeDlsiteLanguage(mixed $language): DlsiteLanguage
+    {
+        if ($language instanceof DlsiteLanguage) {
+            return $language;
+        }
+
+        return (is_string($language) ? DlsiteLanguage::tryFrom($language) : null)
+            ?? DlsiteLanguage::English;
+    }
+
+    /**
+     * Japanese is implicit and therefore omitted from the persisted optional-language list.
+     *
+     * @param mixed $languages
+     * @return list<DlsiteLanguage>
+     */
+    private static function normalizeDlsiteFetchLanguages(mixed $languages): array
+    {
+        $values = is_array($languages)
+            ? $languages
+            : self::defaultFor(self::DLSITE_METADATA_FETCH_LANGUAGES);
+
+        $languages = [];
+
+        foreach ($values as $value) {
+            $language = is_string($value) ? DlsiteLanguage::tryFrom($value) : null;
+
+            if ($language !== null && $language !== DlsiteLanguage::Japanese) {
+                $languages[$language->value] = $language;
+            }
+        }
+
+        return array_values($languages);
     }
 
     private static function normalizeBoolean(mixed $value, bool $default): bool

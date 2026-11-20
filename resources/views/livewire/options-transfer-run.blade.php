@@ -154,7 +154,7 @@
         <section class="panel">
             <h2>{{ __('Review changes') }}</h2>
             <div class="refetch-review">
-                @if ($run->reviewable())
+                @if ($reviewable)
                     <div class="option-actions">
                         @foreach ($decisionOptions as $decision => $label)
                             <div class="transfer-decision-option">
@@ -228,7 +228,7 @@
                         <div>
                             <h2>{{ $labels[$category] }}</h2>
                         </div>
-                        @if ($run->reviewable())
+                        @if ($reviewable)
                             <label>{{ __('Tab choice') }}
                                 <select class="option-control" wire:change="decideMany($event.target.value)">
                                     @foreach ($tabDecisionOptions as $decision => $label)
@@ -241,89 +241,133 @@
                     </header>
                     <div class="refetch-change-list"
                         @if ($category === 'new_works') id="new-work-panel" role="tabpanel" aria-labelledby="new-work-tab-{{ $newWorkCategory }}" @endif>
-                        @forelse ($items as $item)
-                            <article class="result-card"
-                                wire:key="review-item-{{ $item->id }}-{{ $category === 'new_works' ? $newWorkCategory : $category }}">
-                                <header>
-                                    <strong>{{ $itemLabels[$item->id] }}</strong>
-                                    @if ($category === 'new_works')
-                                        <span>{{ __('New work import') }}</span>
-                                    @elseif ($section === 'works')
-                                        <span>{{ $item->metadata['title'] ?? '' }}</span>
+                        @if ($reviewGroups !== [])
+                            @foreach ($reviewGroups as $group)
+                                <article class="result-card refetch-review-card"
+                                    wire:key="review-group-{{ $category }}-{{ $group['entity_key'] }}">
+                                    <header>
+                                        <strong>{{ $group['entity_key'] }}</strong>
+                                        <span>{{ $group['title'] }}</span>
+                                    </header>
+
+                                    @if ($group['japanese'])
+                                        @include('livewire.partials.transfer-localized-review-row', [
+                                            'row' => $group['japanese'],
+                                            'showFieldHeading' => true,
+                                        ])
                                     @endif
-                                </header>
-                                @if ($section === 'works' && $category !== 'new_works')
-                                    <h3>{{ $labels[$item->metadata['field'] ?? $category] }}</h3>
-                                @endif
-                                @if ($warning = $item->displayWarning())
-                                    <div class="notice" role="status">{{ $warning }}</div>
-                                @endif
-                                @if ($category === 'new_works')
-                                    @forelse ($newWorkChanges[$item->id] ?? [] as $change)
-                                        <div class="stack transfer-new-work-change">
-                                            <h3>{{ $change['label'] }}</h3>
-                                            <div class="refetch-change-comparison">
-                                                <div>
-                                                    <strong>{{ __('Current') }}</strong>
-                                                    <span
-                                                        class="empty-state">{{ __('No existing local work') }}</span>
-                                                </div>
-                                                <div>
-                                                    <strong>{{ __('Imported') }}</strong>
-                                                    <x-options.refetch-value :value="$change['preview']['value']" :image="$change['preview']['image']" />
-                                                </div>
+
+                                    @if ($group['localized'] !== [])
+                                        <section class="refetch-localized-block">
+                                            <div class="refetch-localized-header">
+                                                <strong>{{ $group['localized_label'] }}</strong>
+                                                <span>{{ trans_choice(':count language|:count languages', count($group['localized']), ['count' => count($group['localized'])]) }}</span>
                                             </div>
-                                        </div>
-                                    @empty
-                                        @if (!$item->error)
-                                            <p class="empty-state">{{ __('No new works include this category.') }}
-                                            </p>
+                                            <div class="refetch-localized-list">
+                                                @foreach ($group['localized'] as $row)
+                                                    <div class="refetch-localized-row">
+                                                        <div class="refetch-locale-header">
+                                                            <h4>{{ $row['language_label'] }}</h4>
+                                                        </div>
+                                                        @include(
+                                                            'livewire.partials.transfer-localized-review-row',
+                                                            [
+                                                                'row' => $row,
+                                                                'showFieldHeading' => false,
+                                                            ]
+                                                        )
+                                                    </div>
+                                                @endforeach
+                                            </div>
+                                        </section>
+                                    @endif
+                                </article>
+                            @endforeach
+                        @else
+                            @forelse ($items as $item)
+                                <article class="result-card"
+                                    wire:key="review-item-{{ $item->id }}-{{ $category === 'new_works' ? $newWorkCategory : $category }}">
+                                    <header>
+                                        <strong>{{ $itemLabels[$item->id] }}</strong>
+                                        @if ($category === 'new_works')
+                                            <span>{{ __('New work import') }}</span>
+                                        @elseif ($section === 'works')
+                                            <span>{{ $item->metadata['title'] ?? '' }}</span>
                                         @endif
-                                    @endforelse
-                                @else
-                                    <div class="refetch-change-comparison">
-                                        @foreach ($previews[$item->id] ?? [] as $label => $preview)
-                                            <div>
-                                                <strong>{{ __($label) }}</strong>
-                                                @if ($section === 'user_css')
-                                                    <pre class="transfer-css-preview">{{ $preview['value'] }}</pre>
-                                                @else
-                                                    <x-options.refetch-value :value="$preview['value']" :image="$preview['image']" />
-                                                @endif
+                                    </header>
+                                    @if ($section === 'works' && $category !== 'new_works')
+                                        <h3>{{ $labels[$item->metadata['field'] ?? $category] }}</h3>
+                                    @endif
+                                    @if ($warning = $item->displayWarning())
+                                        <div class="notice" role="status">{{ $warning }}</div>
+                                    @endif
+                                    @if ($category === 'new_works')
+                                        @forelse ($newWorkChanges[$item->id] ?? [] as $change)
+                                            <div class="stack transfer-new-work-change">
+                                                <h3>{{ $change['label'] }}</h3>
+                                                <div class="refetch-change-comparison">
+                                                    <div>
+                                                        <strong>{{ __('Current') }}</strong>
+                                                        <span
+                                                            class="empty-state">{{ __('No existing local work') }}</span>
+                                                    </div>
+                                                    <div>
+                                                        <strong>{{ __('Imported') }}</strong>
+                                                        <x-options.refetch-value :value="$change['preview']['value']" :image="$change['preview']['image']" />
+                                                    </div>
+                                                </div>
                                             </div>
-                                        @endforeach
-                                    </div>
-                                @endif
-                                @if ($run->reviewable())
-                                    <label
-                                        class="option-field">{{ __($category === 'new_works' ? 'This work' : 'This change') }}
-                                        <select class="option-control"
-                                            wire:change="decide({{ $item->id }}, $event.target.value)"
-                                            @disabled(!$run->reviewable() || !$item->status->isPending())>
-                                            <option value="inherit" @selected(!$item->decision_override)>
-                                                {{ __('Use tab choice') }}</option>
-                                            @foreach ($tabDecisionOptions as $decision => $label)
-                                                <option value="{{ $decision }}" @selected($item->decision_override && $item->decision->value === $decision)>
-                                                    {{ __($label) }}</option>
+                                        @empty
+                                            @if (!$item->error)
+                                                <p class="empty-state">
+                                                    {{ __('No new works include this category.') }}</p>
+                                            @endif
+                                        @endforelse
+                                    @else
+                                        <div class="refetch-change-comparison">
+                                            @foreach ($previews[$item->id] ?? [] as $label => $preview)
+                                                <div>
+                                                    <strong>{{ __($label) }}</strong>
+                                                    @if ($section === 'user_css')
+                                                        <pre class="transfer-css-preview">{{ $preview['value'] }}</pre>
+                                                    @else
+                                                        <x-options.refetch-value :value="$preview['value']" :image="$preview['image']" />
+                                                    @endif
+                                                </div>
                                             @endforeach
-                                        </select>
-                                    </label>
-                                @endif
-                            </article>
-                        @empty
-                            <p class="empty-state">
-                                {{ __(
-                                    $run->busy()
-                                        ? 'Review is unavailable while background processing is running.'
-                                        : ($category === 'new_works'
-                                            ? 'No new works include this category.'
-                                            : 'No review items in this category.'),
-                                ) }}
-                            </p>
-                        @endforelse
+                                        </div>
+                                    @endif
+                                    @if ($reviewable)
+                                        <label
+                                            class="option-field">{{ __($category === 'new_works' ? 'This work' : 'This change') }}
+                                            <select class="option-control"
+                                                wire:change="decide({{ $item->id }}, $event.target.value)"
+                                                @disabled(!$item->status->isPending())>
+                                                <option value="inherit" @selected(!$item->decision_override)>
+                                                    {{ __('Use tab choice') }}</option>
+                                                @foreach ($tabDecisionOptions as $decision => $label)
+                                                    <option value="{{ $decision }}" @selected($item->decision_override && $item->decision->value === $decision)>
+                                                        {{ __($label) }}</option>
+                                                @endforeach
+                                            </select>
+                                        </label>
+                                    @endif
+                                </article>
+                            @empty
+                                <p class="empty-state">
+                                    {{ __(
+                                        $run->busy()
+                                            ? 'Review is unavailable while background processing is running.'
+                                            : ($category === 'new_works'
+                                                ? 'No new works include this category.'
+                                                : 'No review items in this category.'),
+                                    ) }}
+                                </p>
+                            @endforelse
+                        @endif
                     </div>
-                    {{ $items->links('livewire.index-pagination-links', ['scrollTo' => 'transfer-review-panel']) }}
-                    @if ($run->reviewable())
+                    {{ $pagination->links('livewire.index-pagination-links', ['scrollTo' => 'transfer-review-panel']) }}
+                    @if ($reviewable)
                         <button class="tag tag--gradient tag--lg is-clickable" type="button"
                             wire:click="ask('apply')">{{ __($category === 'new_works' ? 'Apply All New Works Tabs' : 'Apply Tab') }}</button>
                     @endif

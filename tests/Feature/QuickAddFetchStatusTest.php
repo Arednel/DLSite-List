@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use App\Enums\DlsiteLanguage;
 use App\Models\Option;
 use DOMDocument;
 use DOMElement;
@@ -71,7 +72,7 @@ class QuickAddFetchStatusTest extends TestCase
     {
         $response = $this->followingRedirects()
             ->from('/create')
-            ->post('/store', ['id' => 'not-a-product'])
+            ->post('/store', ['metadata_language' => DlsiteLanguage::English->value, 'id' => 'not-a-product'])
             ->assertOk()
             ->assertSee('Could not find a product code (RJ, BJ or VJ followed by numbers) in your input.');
         $xpath = $this->htmlXPath($response->getContent());

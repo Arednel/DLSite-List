@@ -2,12 +2,12 @@
 
 namespace App\Support\DLSite;
 
+use App\Enums\DlsiteLanguage;
 use App\Enums\ProductContributorRole;
 use App\Enums\ProductField;
 use App\Enums\ProductFormat;
 use App\Models\Genre;
 use App\Models\Product;
-use App\Models\ProductLocalization;
 use App\Support\ProductContributorSync;
 use App\Support\ProductGenreSync;
 use Closure;
@@ -35,6 +35,8 @@ final class DLSiteProductImporter
                 $workId,
                 Storage::disk('local')->path("Works/{$workId}.json"),
                 Storage::disk('public')->path("Works/{$workId}"),
+                null,
+                $input->fetchLanguages,
             );
         } catch (RuntimeException $exception) {
             throw DLSiteProductImportException::fromFetchFailure($exception);
@@ -42,7 +44,12 @@ final class DLSiteProductImporter
 
         $workData = $fetchResult->workData;
         $productId = $workData->productId;
-        [$workName, $englishWorkName] = $this->titleValues($input, $workData);
+        $workName = $this->textOverride(
+            $input,
+            ProductField::Title,
+            'work_name',
+            $workData->workName,
+        );
         $circle = $this->textOverride(
             $input,
             ProductField::Circle,
@@ -57,7 +64,42 @@ final class DLSiteProductImporter
             'maker_id',
             $workData->makerId,
         );
-        [$description, $englishDescription] = $this->descriptionValues($input, $workData);
+        $description = $this->textOverride(
+            $input,
+            ProductField::DescriptionJapanese,
+            'description',
+            $workData->description,
+        );
+        $localizedMetadata = $workData->localizedMetadata;
+        $metadataLanguage = $input->metadataLanguage;
+
+        if ($metadataLanguage !== DlsiteLanguage::Japanese) {
+            $locale = $metadataLanguage->value;
+            $localizedTitle = $this->textOverride(
+                $input,
+                ProductField::Title,
+                'localized_title',
+                $workData->titleForLocale($metadataLanguage),
+            );
+            $localizedDescription = $this->textOverride(
+                $input,
+                ProductField::DescriptionLocalized,
+                'description_localized',
+                $workData->descriptionForLocale($metadataLanguage),
+            );
+
+            if (
+                array_key_exists($locale, $localizedMetadata)
+                || $input->fieldSubmitted(ProductField::Title, 'localized_title')
+                || $input->fieldSubmitted(ProductField::DescriptionLocalized, 'description_localized')
+            ) {
+                $localizedMetadata[$locale] = [
+                    ...($localizedMetadata[$locale] ?? ['genres' => []]),
+                    'title' => $localizedTitle,
+                    'description' => $localizedDescription,
+                ];
+            }
+        }
         $contributorsByRole = $this->contributorsByRole($input, $workData, $circle);
         $customGenres = $input->fieldVisible(ProductField::Tags)
             ? (array) $input->value('genre_custom', [])
@@ -79,13 +121,12 @@ final class DLSiteProductImporter
             $workData,
             $productId,
             $workName,
-            $englishWorkName,
+            $localizedMetadata,
             $circle,
             $publisher,
             $brand,
             $makerId,
             $description,
-            $englishDescription,
             $contributorsByRole,
             $customGenres,
             $productFormat,
@@ -148,18 +189,26 @@ final class DLSiteProductImporter
                 throw new DLSiteProductAlreadyExistsException;
             }
 
-            Product::withoutTouching(fn() => $product->syncLocalization(
-                ProductLocalization::LOCALE_ENGLISH,
-                [
-                    'title' => blank($englishWorkName) ? null : $englishWorkName,
-                    'description' => blank($englishDescription) ? null : $englishDescription,
-                ],
-            ));
+            Product::withoutTouching(function () use ($product, $localizedMetadata): void {
+                foreach ($localizedMetadata as $locale => $metadata) {
+                    if ($locale === DlsiteLanguage::Japanese->value) {
+                        continue;
+                    }
 
-            $this->genreSync->sync($product, [
-                Genre::LANGUAGE_JAPANESE => Genre::resolveIdsFromTitles($workData->japaneseGenres),
-                Genre::LANGUAGE_ENGLISH => Genre::resolveIdsFromTitles($workData->englishGenres),
-            ], Genre::resolveIdsFromTitles($customGenres));
+                    $product->syncLocalization($locale, [
+                        'title' => blank($metadata['title'] ?? null) ? null : $metadata['title'],
+                        'description' => blank($metadata['description'] ?? null) ? null : $metadata['description'],
+                    ]);
+                }
+            });
+
+            $this->genreSync->sync(
+                $product,
+                collect($workData->genresByLocale())
+                    ->map(fn(array $genres): array => Genre::resolveIdsFromTitles($genres))
+                    ->all(),
+                Genre::resolveIdsFromTitles($customGenres),
+            );
 
             $this->contributorSync->sync($product, $contributorsByRole, $makerId);
 
@@ -173,25 +222,6 @@ final class DLSiteProductImporter
             product: $product,
             warning: $fetchResult->imageFailureMessage(),
         );
-    }
-
-    /** @return array{0: ?string, 1: ?string} */
-    private function titleValues(DLSiteProductImportInput $input, DLSiteWorkData $workData): array
-    {
-        $workName = $this->textOverride(
-            $input,
-            ProductField::Title,
-            'work_name',
-            $workData->workName,
-        );
-        $englishWorkName = $this->textOverride(
-            $input,
-            ProductField::Title,
-            'work_name_english',
-            $workData->englishWorkName,
-        );
-
-        return [$workName, $englishWorkName === $workName ? null : $englishWorkName];
     }
 
     private function textOverride(
@@ -258,25 +288,6 @@ final class DLSiteProductImporter
             $ratingProvided ? $manual->rating10 : $workData->rating->rating10,
             $countProvided ? $manual->count : $workData->rating->count,
         );
-    }
-
-    /** @return array{0: ?string, 1: ?string} */
-    private function descriptionValues(DLSiteProductImportInput $input, DLSiteWorkData $workData): array
-    {
-        $description = $this->textOverride(
-            $input,
-            ProductField::DescriptionJapanese,
-            'description',
-            $workData->description,
-        );
-        $englishDescription = $this->textOverride(
-            $input,
-            ProductField::DescriptionEnglish,
-            'description_english',
-            $workData->englishDescription,
-        );
-
-        return [$description, $englishDescription === $description ? null : $englishDescription];
     }
 
     /** @return array<string, list<string>> */

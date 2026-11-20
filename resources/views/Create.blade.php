@@ -65,6 +65,8 @@
                                             @if ($isCustomCreate) enctype="multipart/form-data" @endif
                                             @if (!$isCustomCreate && !$isBulkImport) data-dlsite-fetch-form @endif>
                                             @csrf
+                                            <input type="hidden" name="metadata_language"
+                                                value="{{ $metadataLanguageValue }}">
                                             @if ($isModal)
                                                 <input type="hidden" name="modal" value="1">
                                             @endif
@@ -88,7 +90,7 @@
                                                             <x-fields.create-configurable-row :field="$field"
                                                                 :is-custom-create="$isCustomCreate" :age-category-options="$ageCategoryOptions" :month-labels="$monthLabels"
                                                                 :days="$days" :years="$years" :progress-options="$progressOptions"
-                                                                :rating-scale="$ratingScale" />
+                                                                :rating-scale="$ratingScale" :localized-title-label="$localizedTitleLabel" :localized-description-label="$localizedDescriptionLabel" />
                                                         @endif
                                                     @endforeach
                                                 </tbody>

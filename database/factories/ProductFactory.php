@@ -2,8 +2,8 @@
 
 namespace Database\Factories;
 
+use App\Enums\DlsiteLanguage;
 use App\Models\Product;
-use App\Models\ProductLocalization;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
 /**
@@ -47,7 +47,7 @@ class ProductFactory extends Factory
     {
         return $this->afterCreating(function (Product $product): void {
             Product::withoutTouching(fn() => $product->syncLocalization(
-                ProductLocalization::LOCALE_ENGLISH,
+                DlsiteLanguage::English->value,
                 [
                     'title' => 'WORK_EN_' . $product->id,
                     'description' => 'Description English',
@@ -67,7 +67,7 @@ class ProductFactory extends Factory
     {
         return $this->afterCreating(function (Product $product) use ($english): void {
             Product::withoutTouching(fn() => $product->syncLocalization(
-                ProductLocalization::LOCALE_ENGLISH,
+                DlsiteLanguage::English->value,
                 ['title' => blank($english) ? null : $english],
             ));
         });
@@ -77,7 +77,7 @@ class ProductFactory extends Factory
     {
         return $this->afterCreating(function (Product $product) use ($english): void {
             Product::withoutTouching(fn() => $product->syncLocalization(
-                ProductLocalization::LOCALE_ENGLISH,
+                DlsiteLanguage::English->value,
                 ['description' => blank($english) ? null : $english],
             ));
         });

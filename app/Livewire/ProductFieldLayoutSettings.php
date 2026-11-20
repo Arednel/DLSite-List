@@ -154,6 +154,10 @@ class ProductFieldLayoutSettings extends Component
     public function fieldLayoutHelp(string $layout, string $field): ?string
     {
         return match ([$layout, $field]) {
+            ['index', ProductField::Title->value],
+            ['filter', ProductField::Title->value] => __('Shows the Japanese title plus the title for the selected DLsite metadata language. The localized title is hidden when Japanese is selected.'),
+            ['index', ProductField::DescriptionLocalized->value],
+            ['filter', ProductField::DescriptionLocalized->value] => __('Shows the description for the selected DLsite metadata language. This field is hidden when Japanese is selected.'),
             ['index', ProductField::Rating->value] => __('Shows DLsite work rating and your personal Score in one column.'),
             ['index', ProductField::Score->value] => __('Shows your score/rating. Your Score is always entered and stored from 1 to 10.'),
             ['index', ProductField::DLSiteRating->value] => __('Shows the DLsite work rating.'),

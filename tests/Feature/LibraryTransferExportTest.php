@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use App\Enums\DlsiteLanguage;
 use App\Enums\LibraryTransferAction;
 use App\Enums\LibraryTransferOperation;
 use App\Enums\LibraryTransferRunStatus;
@@ -13,7 +14,6 @@ use App\Models\Genre;
 use App\Models\LibraryTransferRun;
 use App\Models\Option;
 use App\Models\Product;
-use App\Models\ProductLocalization;
 use App\Support\ProductContributorSync;
 use App\Support\ProductGenreSync;
 use App\Support\Transfers\LibraryData;
@@ -157,25 +157,53 @@ class LibraryTransferExportTest extends TestCase
         $japanese = Genre::resolveByTitle('Japanese only');
         $english = Genre::resolveByTitle('English only');
         app(ProductGenreSync::class)->sync($first, [
-            Genre::LANGUAGE_JAPANESE => [$shared->id, $japanese->id],
-            Genre::LANGUAGE_ENGLISH => [$shared->id, $english->id],
+            DlsiteLanguage::Japanese->value => [$shared->id, $japanese->id],
+            DlsiteLanguage::English->value => [$shared->id, $english->id],
         ], [$customZ->id, $customA->id]);
         $first->customGenres()->detach();
         $first->customGenres()->attach([
             $customZ->id => ['source' => Genre::PIVOT_SOURCE_CUSTOM],
             $customA->id => ['source' => Genre::PIVOT_SOURCE_CUSTOM],
         ]);
+        app(ProductGenreSync::class)->sync($products[1], [
+            DlsiteLanguage::English->value => [$shared->id],
+        ], []);
+        $unsupported = Genre::resolveByTitle('Unsupported locale only');
+        $unclassified = Genre::resolveByTitle('Fetched without membership');
+        $first->genres()->attach([
+            $unsupported->id => ['source' => Genre::PIVOT_SOURCE_FETCHED],
+            $unclassified->id => ['source' => Genre::PIVOT_SOURCE_FETCHED],
+        ]);
+        $attachmentIds = DB::table('genre_product')->where('product_id', $first->id)->pluck('id', 'genre_id');
+        DB::table('genre_product_languages')->insert([
+            ['genre_product_id' => $attachmentIds[$unsupported->id], 'language' => 'fr'],
+            ['genre_product_id' => $attachmentIds[$customZ->id], 'language' => 'ja'],
+            ['genre_product_id' => $attachmentIds[$customZ->id], 'language' => 'en'],
+        ]);
+
+        $data = app(LibraryData::class);
+        $this->assertSame([], $data->tagBucketsForProducts([]));
+        $tagBuckets = $data->tagBucketsForProducts($products->modelKeys());
+        $this->assertSame([
+            'custom' => ['Custom Z', 'Custom A'],
+            'ja' => ['Shared fetched tag', 'Japanese only'],
+            'en' => ['Shared fetched tag', 'English only'],
+        ], $tagBuckets[$first->id]);
+        $this->assertSame(['custom' => [], 'ja' => [], 'en' => ['Shared fetched tag']], $tagBuckets[$products[1]->id]);
+        $this->assertSame(['custom' => [], 'ja' => [], 'en' => []], $tagBuckets[$products[2]->id]);
+        $this->assertSame(
+            [$products[1]->id => $tagBuckets[$products[1]->id]],
+            $data->tagBucketsForProducts([$products[1]->id]),
+        );
+        foreach ($products as $product) {
+            $this->assertSame($data->category($product, 'tags'), $tagBuckets[$product->id]);
+        }
         Contributor::resolveByName('Voice A');
         Contributor::resolveByName('Voice Z');
         app(ProductContributorSync::class)->sync($first, [
             'voice_actor' => ['Voice Z', 'Voice A'],
             'scenario' => ['Voice A'],
         ]);
-        $expected = $products->mapWithKeys(fn(Product $product): array => [
-            $product->id => app(WorkArchiveData::class)->exportSnapshot($product->fresh())['work'],
-        ]);
-        $this->assertSame(['Custom Z', 'Custom A'], $expected[$first->id]['dlsite_list']['custom_tags']);
-        $this->assertSame(['Voice Z', 'Voice A'], $expected[$first->id]['japanese']['voice_actor']);
         $run = $this->service()->export(['works'], 'all', []);
         $queries = [];
 
@@ -188,6 +216,8 @@ class LibraryTransferExportTest extends TestCase
                 || str_contains($sql, 'from "product_localizations"')
                 || str_contains($sql, 'from `contributors`')
                 || str_contains($sql, 'from `genres`')
+                || str_contains($sql, 'from `genre_product`')
+                || str_contains($sql, 'from "genre_product"')
             ) {
                 $queries[] = $sql;
             }
@@ -206,24 +236,32 @@ class LibraryTransferExportTest extends TestCase
 
         $this->assertCount(1, $productQueries);
         $this->assertCount(1, $localizationQueries);
-        $this->assertCount(6, $queries);
+        $this->assertCount(4, $queries, implode("\n", $queries));
+        $this->assertCount(1, array_filter($queries, fn(string $sql): bool => str_contains($sql, 'genre_product_languages')));
 
-        foreach ($run->entries()->where('section', 'works')->get() as $entry) {
-            $actual = json_decode(Storage::disk('local')->get($entry->source_path), true, flags: JSON_THROW_ON_ERROR);
-            $this->assertSame($expected[$entry->logical_key], $actual);
+        $entries = $run->entries()->where('section', 'works')->get()->keyBy('logical_key');
+        $this->assertEqualsCanonicalizing($products->modelKeys(), $entries->keys()->all());
+        foreach ($products as $product) {
+            $entry = $entries[$product->id];
+            $work = json_decode(Storage::disk('local')->get($entry->source_path), true, flags: JSON_THROW_ON_ERROR);
+            $this->assertSame($product->work_name, $work['locales']['ja']['work_name']);
+            $this->assertSame('WORK_EN_' . $product->id, $work['locales']['en']['work_name']);
+            $this->assertSame($tagBuckets[$product->id]['ja'], $work['locales']['ja']['genre']);
+            $this->assertSame($tagBuckets[$product->id]['en'], $work['locales']['en']['genre']);
+            $this->assertSame($tagBuckets[$product->id]['custom'], $work['dlsite_list']['custom_tags']);
+            if ($product->is($first)) {
+                $this->assertSame(['Voice Z', 'Voice A'], $work['locales']['ja']['voice_actor']);
+            }
         }
     }
 
-    public function test_preordered_export_snapshot_requires_all_expected_relations_to_be_loaded(): void
+    public function test_prepared_export_snapshot_requires_localizations_and_contributors_to_be_loaded(): void
     {
         $product = Product::factory()->create();
         $archive = app(WorkArchiveData::class);
         $requiredRelations = [
-            'englishLocalization' => 'Preordered English localization export relation is not loaded.',
+            'localizations' => 'Preordered localization export relation is not loaded.',
             'contributors' => 'Preordered contributor export relation is not loaded.',
-            'customGenres' => 'Preordered customGenres export relation is not loaded.',
-            'japaneseGenres' => 'Preordered japaneseGenres export relation is not loaded.',
-            'englishGenres' => 'Preordered englishGenres export relation is not loaded.',
         ];
 
         foreach ($requiredRelations as $missingRelation => $expectedMessage) {
@@ -231,7 +269,7 @@ class LibraryTransferExportTest extends TestCase
             $candidate->load(array_values(array_diff(array_keys($requiredRelations), [$missingRelation])));
 
             try {
-                $archive->exportSnapshotFromPreorderedRelations($candidate);
+                $archive->exportSnapshotFromLoadedData($candidate, ['custom' => [], 'ja' => [], 'en' => []]);
                 $this->fail("Preordered export should require the {$missingRelation} relation.");
             } catch (\LogicException $exception) {
                 $this->assertSame($expectedMessage, $exception->getMessage());
@@ -239,20 +277,43 @@ class LibraryTransferExportTest extends TestCase
         }
     }
 
-    public function test_ordinary_export_reads_remain_fresh_even_when_export_relations_are_loaded(): void
+    public function test_transfer_internals_and_work_exports_use_canonical_tag_locale_keys(): void
+    {
+        $product = Product::factory()->create(['id' => 'RJ123456']);
+        $japanese = Genre::resolveByTitle('Japanese fetched');
+        $english = Genre::resolveByTitle('English fetched');
+        app(ProductGenreSync::class)->sync($product, [
+            DlsiteLanguage::Japanese->value => [$japanese->id],
+            DlsiteLanguage::English->value => [$english->id],
+        ], []);
+
+        $tags = app(LibraryData::class)->category($product, 'tags');
+        $this->assertSame(['Japanese fetched'], $tags['ja']);
+        $this->assertSame(['English fetched'], $tags['en']);
+        $this->assertArrayNotHasKey('jp', $tags);
+
+        $work = $this->exportedWorkDocument($this->exported(), $product->id);
+        $this->assertSame(['Japanese fetched'], $work['locales']['ja']['genre']);
+        $this->assertSame(['English fetched'], $work['locales']['en']['genre']);
+        $this->assertSame(DlsiteLanguage::values(), array_keys($work['locales']));
+        $this->assertArrayNotHasKey('japanese', $work);
+        $this->assertArrayNotHasKey('english', $work);
+    }
+
+    public function test_transfer_reads_current_metadata_after_relations_were_loaded(): void
     {
         $product = Product::factory()->withEnglishTitle('Original English')->create();
         $sync = app(ProductContributorSync::class);
         $sync->syncRole($product, 'voice_actor', ['Original voice']);
-        $product->load('englishLocalization', 'contributors', 'customGenres');
+        $product->load('localizations', 'contributors', 'customGenres');
         $sync->syncRole($product, 'voice_actor', ['Updated voice']);
         $tag = Genre::resolveByTitle('New custom tag');
         $product->customGenres()->attach($tag->id, ['source' => Genre::PIVOT_SOURCE_CUSTOM]);
-        $product->syncLocalization(ProductLocalization::LOCALE_ENGLISH, ['title' => 'Updated English']);
+        $product->syncLocalization(DlsiteLanguage::English->value, ['title' => 'Updated English']);
         $data = app(LibraryData::class);
-        $snapshot = app(WorkArchiveData::class)->exportSnapshot($product);
+        $work = $this->exportedWorkDocument($this->exported(), $product->id);
 
-        $this->assertSame('Updated English', $snapshot['work']['english']['work_name']);
+        $this->assertSame('Updated English', $work['locales']['en']['work_name']);
         $this->assertSame(['Updated voice'], $data->category($product, 'contributors')['voice_actor']);
         $this->assertSame(['New custom tag'], $data->category($product, 'tags')['custom']);
         $this->assertSame(['Updated voice'], $data->category($product, 'contributors', lock: true)['voice_actor']);
@@ -285,6 +346,9 @@ class LibraryTransferExportTest extends TestCase
             ['title' => 'Future locale transfer token'],
         );
         Product::factory()->create(['id' => 'RJ222222', 'work_name' => 'Beta']);
+        Option::setDlsiteMetadataLanguageFollowsUi(false);
+        Option::setDlsiteMetadataLanguage(DlsiteLanguage::English);
+
         Livewire::test(OptionsTransfers::class)
             ->set('mode', 'selected')
             ->set('search', 'Future locale transfer')
@@ -520,7 +584,7 @@ class LibraryTransferExportTest extends TestCase
             $export = $this->exported(['user_css']);
             $part = $export->parts()->where('kind', 'data')->firstOrFail();
 
-            $this->assertSame(3, $part->manifest['schema_version']);
+            $this->assertSame(4, $part->manifest['schema_version']);
             $this->assertSame(['user_css'], $part->manifest['scopes']);
             $entry = $part->manifest['entries'][0];
             $this->assertSame('user.css', $entry['path']);
@@ -598,12 +662,12 @@ class LibraryTransferExportTest extends TestCase
         $this->saveImage('Works/RJ123456/sample_2.jpeg');
         $export = $this->exported(['works', 'images']);
         $data = $export->parts()->where('kind', 'data')->firstOrFail();
-        $this->assertSame(3, $data->manifest['schema_version']);
+        $this->assertSame(4, $data->manifest['schema_version']);
         foreach ($data->manifest['entries'] as $entry) {
             $this->assertSame(explode('/', $entry['path'])[1], $entry['product_code']);
             $this->assertArrayNotHasKey('rj_code', $entry);
         }
-        $this->assertSame('dlsite-async+dlsite-list', $data->manifest['work_entry_format']);
+        $this->assertSame('dlsite-async-locales+dlsite-list', $data->manifest['work_entry_format']);
         $this->assertSame(
             ['works/RJ123456/work.json', 'works/RJ000002/work.json'],
             array_column($data->manifest['entries'], 'path'),
@@ -612,7 +676,7 @@ class LibraryTransferExportTest extends TestCase
         $this->assertTrue($zip->open(Storage::disk('local')->path($data->path)));
         $work = json_decode($zip->getFromName('works/RJ123456/work.json'), true);
         $zip->close();
-        $this->assertSame(['japanese', 'english', 'dlsite_list'], array_keys($work));
+        $this->assertSame(['locales', 'dlsite_list'], array_keys($work));
         $this->assertSame([
             'product_id',
             'site_id',
@@ -647,8 +711,8 @@ class LibraryTransferExportTest extends TestCase
             'work_name_masked',
             'title_name',
             'title_name_masked',
-        ], array_keys($work['japanese']));
-        $this->assertSame(array_keys($work['japanese']), array_keys($work['english']));
+        ], array_keys($work['locales']['ja']));
+        $this->assertSame(array_keys($work['locales']['ja']), array_keys($work['locales']['en']));
         $this->assertSame([
             'notes',
             'score',
@@ -668,24 +732,24 @@ class LibraryTransferExportTest extends TestCase
             'created_at',
             'updated_at',
         ], array_keys($work['dlsite_list']));
-        $this->assertSame(['_value_', '_name_'], array_keys($work['japanese']['age_category']));
-        $this->assertSame([3, 'R18'], array_values($work['japanese']['age_category']));
-        $this->assertSame('home', $work['japanese']['site_id']);
-        $this->assertSame('home', $work['english']['site_id']);
-        foreach (['japanese', 'english'] as $locale) {
-            $this->assertSame('Independent Publisher', $work[$locale]['publisher']);
-            $this->assertSame('Independent Brand', $work[$locale]['brand']);
+        $this->assertSame(['_value_', '_name_'], array_keys($work['locales']['ja']['age_category']));
+        $this->assertSame([3, 'R18'], array_values($work['locales']['ja']['age_category']));
+        $this->assertSame('home', $work['locales']['ja']['site_id']);
+        $this->assertSame('home', $work['locales']['en']['site_id']);
+        foreach (DlsiteLanguage::cases() as $language) {
+            $this->assertSame('Independent Publisher', $work['locales'][$language->value]['publisher']);
+            $this->assertSame('Independent Brand', $work['locales'][$language->value]['brand']);
         }
         $this->assertSame('home', $work['dlsite_list']['site_id']);
         $this->assertSame('4.97', $work['dlsite_list']['dlsite_rating_5']);
         $this->assertSame('9.93', $work['dlsite_list']['dlsite_rating_10']);
         $this->assertSame(1330, $work['dlsite_list']['dlsite_rating_count']);
-        $this->assertSame(['MOV', 'MV2', 'SND', 'MS2', 'custom:Audiobook'], $work['japanese']['product_format']);
-        $this->assertSame(['MOV', 'MV2', 'SND', 'MS2', 'custom:Audiobook'], $work['english']['product_format']);
-        $this->assertSame('2026-09-24 00:00:00', $work['japanese']['announce_date']);
-        $this->assertSame('2026-09-24 00:00:00', $work['english']['announce_date']);
-        $this->assertSame('works/RJ123456/images/cover.png', $work['japanese']['work_image']);
-        $this->assertSame(['works/RJ123456/images/sample_1.jpeg'], $work['japanese']['sample_images']);
+        $this->assertSame(['MOV', 'MV2', 'SND', 'MS2', 'custom:Audiobook'], $work['locales']['ja']['product_format']);
+        $this->assertSame(['MOV', 'MV2', 'SND', 'MS2', 'custom:Audiobook'], $work['locales']['en']['product_format']);
+        $this->assertSame('2026-09-24 00:00:00', $work['locales']['ja']['announce_date']);
+        $this->assertSame('2026-09-24 00:00:00', $work['locales']['en']['announce_date']);
+        $this->assertSame('works/RJ123456/images/cover.png', $work['locales']['ja']['work_image']);
+        $this->assertSame(['works/RJ123456/images/sample_1.jpeg'], $work['locales']['ja']['sample_images']);
         $this->assertStringNotContainsString('storage/', json_encode($work, JSON_THROW_ON_ERROR));
         $paths = array_column($export->parts()->where('kind', 'images')->first()->manifest['entries'], 'path');
         $this->assertSame(['works/RJ123456/images/cover.png', 'works/RJ123456/images/sample_1.jpeg'], $paths);

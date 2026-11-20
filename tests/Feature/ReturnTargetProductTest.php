@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use App\Enums\DlsiteLanguage;
 use App\Enums\RatingScale;
 use App\Enums\UiLanguage;
 use App\Models\Genre;
@@ -228,8 +229,8 @@ class ReturnTargetProductTest extends TestCase
         $sharedGenre = Genre::resolveByTitle('Return Target Shared Tag');
 
         app(ProductGenreSync::class)->sync($product, [
-            Genre::LANGUAGE_ENGLISH => [$englishGenre->getKey(), $sharedGenre->getKey()],
-            Genre::LANGUAGE_JAPANESE => [$japaneseGenre->getKey(), $sharedGenre->getKey()],
+            DlsiteLanguage::English->value => [$englishGenre->getKey(), $sharedGenre->getKey()],
+            DlsiteLanguage::Japanese->value => [$japaneseGenre->getKey(), $sharedGenre->getKey()],
         ], [$customGenre->getKey()]);
 
         $targetForGenre = function (Genre $genre) use ($product): string {
@@ -240,6 +241,7 @@ class ReturnTargetProductTest extends TestCase
         $keptUrl = fn(Genre $genre): string => '/?genre=' . $genre->getKey() . '#RJ000000001';
 
         App::setLocale(UiLanguage::English->value);
+        Option::setUiLanguage(UiLanguage::English);
 
         $this->assertSame($keptUrl($customGenre), $targetForGenre($customGenre));
         $this->assertSame($keptUrl($englishGenre), $targetForGenre($englishGenre));
@@ -247,6 +249,7 @@ class ReturnTargetProductTest extends TestCase
         $this->assertSame('/#RJ000000001', $targetForGenre($japaneseGenre));
 
         App::setLocale(UiLanguage::Japanese->value);
+        Option::setUiLanguage(UiLanguage::Japanese);
 
         $this->assertSame($keptUrl($customGenre), $targetForGenre($customGenre));
         $this->assertSame($keptUrl($japaneseGenre), $targetForGenre($japaneseGenre));

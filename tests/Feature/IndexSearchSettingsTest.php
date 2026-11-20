@@ -19,7 +19,7 @@ class IndexSearchSettingsTest extends TestCase
         Livewire::test(IndexSearchSettings::class)
             ->assertSet('searchHiddenDescriptions', true)
             ->assertSee('Search hidden descriptions')
-            ->assertSee('When enabled, general Index search can match Japanese and English description text even when both description columns are hidden.')
+            ->assertSee('When enabled, general Index search can match Japanese and all stored localized description text even when description columns are hidden.')
             ->set('searchHiddenDescriptions', false)
             ->call('save')
             ->assertHasNoErrors()

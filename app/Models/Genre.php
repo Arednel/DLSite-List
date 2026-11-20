@@ -19,10 +19,6 @@ class Genre extends Model
 
     public const TYPE_CUSTOM = 'custom';
 
-    public const LANGUAGE_ENGLISH = 'en';
-
-    public const LANGUAGE_JAPANESE = 'jp';
-
     public const PIVOT_SOURCE_FETCHED = 'fetched';
 
     public const PIVOT_SOURCE_CUSTOM = 'custom';

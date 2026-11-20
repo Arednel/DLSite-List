@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use App\Enums\DlsiteLanguage;
 use App\Enums\ProductField;
 use App\Jobs\ImportBulkWorkJob;
 use App\Models\Option;
@@ -46,7 +47,7 @@ class TranslatedWorkCircleTest extends TestCase
                 ['field' => ProductField::ProductCode->value, 'visible' => true],
                 ['field' => ProductField::Circle->value, 'visible' => true],
             ]);
-            $this->post('/store', ['id' => 'RJ01689827', ...$values])->assertSessionHasNoErrors();
+            $this->post('/store', ['metadata_language' => DlsiteLanguage::English->value, 'id' => 'RJ01689827', ...$values])->assertSessionHasNoErrors();
         } else {
             $run = app(BulkImportService::class)->start(['RJ01689827'], new DLSiteProductImportInput(
                 values: $values,
@@ -74,7 +75,7 @@ class TranslatedWorkCircleTest extends TestCase
         $service = app(RefetchService::class);
         $run = $service->createRun([$product->id], false);
         $result = $run->results()->firstOrFail();
-        $service->fetchAndRecordResult($result);
+        $service->fetchAndRecordResult($result, ['ja', 'en']);
 
         $changes = $result->fresh()->changes;
         $this->assertSame(['RaRo'], $changes['circle']['circle']['new']);

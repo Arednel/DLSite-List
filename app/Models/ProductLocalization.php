@@ -7,14 +7,6 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class ProductLocalization extends Model
 {
-    public const LOCALE_JAPANESE = 'ja';
-
-    public const LOCALE_ENGLISH = 'en';
-
-    public const SEARCHABLE_TITLE_LOCALES = [
-        self::LOCALE_ENGLISH,
-    ];
-
     protected $touches = ['product'];
 
     protected $fillable = [

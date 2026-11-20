@@ -2,6 +2,7 @@
 
 namespace Tests\Unit\Support;
 
+use App\Enums\DlsiteLanguage;
 use App\Models\Genre;
 use App\Support\GenreSyncPayload;
 use PHPUnit\Framework\TestCase;
@@ -35,11 +36,11 @@ class GenreSyncPayloadTest extends TestCase
     public function test_it_builds_language_map_for_fetched_language_buckets(): void
     {
         $this->assertSame([
-            10 => [Genre::LANGUAGE_JAPANESE, Genre::LANGUAGE_ENGLISH],
-            20 => [Genre::LANGUAGE_ENGLISH],
+            10 => [DlsiteLanguage::Japanese->value, DlsiteLanguage::English->value],
+            20 => [DlsiteLanguage::English->value],
         ], GenreSyncPayload::languageMap([
-            Genre::LANGUAGE_JAPANESE => [10, 10],
-            Genre::LANGUAGE_ENGLISH => [10, 20],
+            DlsiteLanguage::Japanese->value => [10, 10],
+            DlsiteLanguage::English->value => [10, 20],
         ]));
     }
 }

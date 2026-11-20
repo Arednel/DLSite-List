@@ -98,6 +98,35 @@ class OptionStylesheetTest extends TestCase
         $this->assertStringNotContainsString('.header-title.score', $css);
     }
 
+    public function test_localized_description_migration_regenerates_the_stylesheet_in_both_directions(): void
+    {
+        DB::table('options')->insert([
+            'key' => Option::INDEX_FIELD_LAYOUT,
+            'value' => json_encode([[
+                'field' => 'description_english',
+                'visible' => true,
+                'width_mode' => 'custom',
+                'width' => '320px',
+            ]], JSON_THROW_ON_ERROR),
+        ]);
+        $path = app(OptionStylesheet::class)->path();
+        file_put_contents($path, '.header-title.description-english { width: 320px; }');
+
+        $migration = require database_path('migrations/2026_11_19_000001_rename_localized_description_field_in_saved_layouts.php');
+        $migration->up();
+
+        $css = file_get_contents($path);
+        $this->assertStringContainsString(".header-title.description-localized {\n    width: 320px;", $css);
+        $this->assertStringNotContainsString('.header-title.description-english', $css);
+
+        file_put_contents($path, '/* stale stylesheet */');
+        $migration->down();
+
+        $css = file_get_contents($path);
+        $this->assertStringNotContainsString('/* stale stylesheet */', $css);
+        $this->assertStringNotContainsString('.header-title.description-localized', $css);
+    }
+
     public function test_extended_rating_style_keeps_combined_rating_and_preceding_image_on_separate_mobile_rows(): void
     {
         Option::setRatingVisualStyle(RatingVisualStyle::ExtendedDLSite);

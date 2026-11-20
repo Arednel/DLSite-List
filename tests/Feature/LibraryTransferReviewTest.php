@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use App\Enums\DlsiteLanguage;
 use App\Enums\LibraryImportDecision;
 use App\Enums\LibraryImportItemStatus;
 use App\Enums\LibraryTransferAction;
@@ -14,15 +15,16 @@ use App\Models\LibraryImportItem;
 use App\Models\LibraryTransferRun;
 use App\Models\Option;
 use App\Models\Product;
-use App\Models\ProductLocalization;
 use App\Support\LibraryMutationLock;
 use App\Support\OptionStylesheet;
 use App\Support\ProductContributorSync;
 use App\Support\ProductImagePromotion;
+use App\Support\ProductGenreSync;
 use App\Support\Transfers\ImportReview;
 use App\Support\Transfers\ImportValue;
 use App\Support\Transfers\LibraryData;
 use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\Storage;
@@ -35,6 +37,44 @@ use ZipArchive;
 class LibraryTransferReviewTest extends TestCase
 {
     use InteractsWithLibraryTransfers;
+
+    public function test_existing_work_metadata_headings_follow_the_ui_language(): void
+    {
+        $product = Product::factory()
+            ->withTitles('Stored JP title', 'Stored EN title')
+            ->withEnglishDescription('Stored EN description')
+            ->create(['description' => 'Stored JP description']);
+        $record = app(LibraryData::class)->work($product);
+        $record['titles'] = ['ja' => 'Imported JP title', 'en' => 'Imported EN title'];
+        $record['descriptions'] = ['ja' => 'Imported JP description', 'en' => 'Imported EN description'];
+        $run = LibraryTransferRun::create(['direction' => 'import', 'status' => 'review', 'settings' => []]);
+        $this->review()->stage($run, 'works', $record, []);
+
+        foreach (
+            [
+                'en' => ['Japanese Title', 'Localized titles', 'English', 'Japanese Description', 'Localized descriptions'],
+                'ja' => ['日本語タイトル', 'ローカライズ済みタイトル', '英語', '日本語の説明', 'ローカライズ済み説明'],
+                'zh_TW' => ['日文標題', '本地化標題', '英文', '日文說明', '本地化說明'],
+            ] as $locale => [$japaneseTitle, $localizedTitles, $english, $japaneseDescription, $localizedDescriptions]
+        ) {
+            Option::setUiLanguage($locale);
+            app()->setLocale($locale);
+
+            Livewire::test(OptionsTransferRun::class, ['run' => $run])
+                ->call('tab', 'works', 'titles')
+                ->assertSee($japaneseTitle)
+                ->assertSee($localizedTitles)
+                ->assertSee($english)
+                ->assertSee('Imported JP title')
+                ->assertSee('Imported EN title')
+                ->call('tab', 'works', 'descriptions')
+                ->assertSee($japaneseDescription)
+                ->assertSee($localizedDescriptions)
+                ->assertSee($english)
+                ->assertSee('Imported JP description')
+                ->assertSee('Imported EN description');
+        }
+    }
 
     public function test_review_values_and_natural_fields_are_not_duplicated_in_json(): void
     {
@@ -108,7 +148,7 @@ class LibraryTransferReviewTest extends TestCase
                 'dlsite_rating_10' => '9.93',
                 'dlsite_rating_count' => 1330,
             ],
-            ['title' => $product->titleForLocale('ja'), 'domain' => 'details'],
+            ['title' => $product->work_name, 'domain' => 'details'],
         );
 
         Livewire::test(OptionsTransferRun::class, ['run' => $run])
@@ -129,15 +169,15 @@ class LibraryTransferReviewTest extends TestCase
 
         foreach (
             [
-                ['product_code' => 'RJ123456', 'titles' => ['work_name' => 'Absent rating']],
+                ['product_code' => 'RJ123456', 'titles' => ['ja' => 'Absent rating']],
                 [
                     'product_code' => 'RJ123457',
-                    'titles' => ['work_name' => 'Explicit null rating'],
+                    'titles' => ['ja' => 'Explicit null rating'],
                     'details' => ['dlsite_rating_5' => null, 'dlsite_rating_10' => null, 'dlsite_rating_count' => null],
                 ],
                 [
                     'product_code' => 'RJ123458',
-                    'titles' => ['work_name' => 'Zero vote count'],
+                    'titles' => ['ja' => 'Zero vote count'],
                     'details' => ['dlsite_rating_count' => 0],
                 ],
             ] as $record
@@ -178,7 +218,7 @@ class LibraryTransferReviewTest extends TestCase
         $run = $this->imported($export);
         $product->update(['work_name' => 'Newer local title']);
         $this->apply($run);
-        $this->assertSame('Newer local title', $product->fresh()->titleForLocale('ja'));
+        $this->assertSame('Newer local title', $product->fresh()->work_name);
         $this->assertNull($product->fresh()->notes);
         $conflicts = $run->items()->where('status', 'conflict')->count();
         $this->assertGreaterThan(1, $conflicts);
@@ -351,6 +391,32 @@ class LibraryTransferReviewTest extends TestCase
         $this->assertSame(now()->toDateString(), $product->fresh()->updated_at->toDateString());
     }
 
+    public function test_importing_a_new_work_with_empty_translations_skips_localization_queries(): void
+    {
+        $run = LibraryTransferRun::create(['direction' => 'import', 'status' => 'review', 'settings' => []]);
+        $review = $this->review();
+        $review->stage($run, 'works', [
+            'product_code' => 'RJ123456',
+            'titles' => ['ja' => 'Japanese title', 'en' => null],
+            'descriptions' => ['en' => ''],
+        ], []);
+        $item = $run->items()->sole();
+        $item->update(['decision' => LibraryImportDecision::Merge]);
+
+        DB::flushQueryLog();
+        DB::enableQueryLog();
+        try {
+            $review->applyWorkItems(collect([$item]));
+            $queries = DB::getQueryLog();
+        } finally {
+            DB::disableQueryLog();
+        }
+
+        $this->assertSame(LibraryImportItemStatus::Applied, $item->fresh()->status);
+        $this->assertDatabaseHas('products', ['id' => 'RJ123456', 'work_name' => 'Japanese title']);
+        $this->assertStringNotContainsString('product_localizations', implode("\n", array_column($queries, 'query')));
+    }
+
     public function test_new_work_tag_dependencies_do_not_make_its_tag_metadata_stale(): void
     {
         $tag = Genre::create(['title' => 'Archive tag', 'description' => 'Metadata']);
@@ -498,7 +564,7 @@ class LibraryTransferReviewTest extends TestCase
         Product::factory()->create(['work_name' => 'Before', 'id' => 'RJ123456']);
         $run = $this->imported($this->exported());
         $title = $run->items()->where('metadata->field', 'work_name')->first();
-        $english = $run->items()->where('metadata->field', 'work_name_english')->first();
+        $english = $run->items()->where('metadata->field', 'localization:en:title')->first();
         $view = Livewire::test(OptionsTransferRun::class, ['run' => $run])->call('tab', 'works', 'titles')
             ->call('decide', $title->id, 'ignore')->call('decideMany', 'overwrite', true)->assertHasNoErrors();
         $this->assertSame(LibraryImportDecision::Ignore, $title->fresh()->decision);
@@ -520,9 +586,9 @@ class LibraryTransferReviewTest extends TestCase
         $run = $this->service()->startImport();
         $review = $this->review();
         $record = app(LibraryData::class)->work($product);
-        $record['titles']['work_name_english'] = 'Imported EN';
+        $record['titles']['en'] = 'Imported EN';
         $review->stage($run, 'works', $record, []);
-        $item = $run->items()->where('metadata->field', 'work_name_english')->firstOrFail();
+        $item = $run->items()->where('metadata->field', 'localization:en:title')->firstOrFail();
         $item->update(['decision' => 'overwrite']);
 
         $item = $item->fresh();
@@ -546,7 +612,7 @@ class LibraryTransferReviewTest extends TestCase
         $this->assertCount(1, $localizationReads);
         $this->assertSame(
             'Imported EN',
-            $product->fresh()->titleForLocale(ProductLocalization::LOCALE_ENGLISH),
+            $product->localizations()->where('locale', DlsiteLanguage::English->value)->value('title'),
         );
     }
 
@@ -564,9 +630,9 @@ class LibraryTransferReviewTest extends TestCase
             'settings' => [],
         ]);
         $mergeRecord = app(LibraryData::class)->work($product);
-        $mergeRecord['descriptions']['description_english'] = 'Imported English Description';
+        $mergeRecord['descriptions']['en'] = 'Imported English Description';
         $review->stage($mergeRun, 'works', $mergeRecord, []);
-        $mergeItem = $mergeRun->items()->where('metadata->field', 'description_english')->firstOrFail();
+        $mergeItem = $mergeRun->items()->where('metadata->field', 'localization:en:description')->firstOrFail();
         $mergeItem->update(['decision' => 'merge']);
 
         $review->applyWorkItems(collect([$mergeItem->fresh()]));
@@ -574,11 +640,11 @@ class LibraryTransferReviewTest extends TestCase
         $product = $product->fresh();
         $this->assertSame(
             'Local English Description',
-            $product->descriptionForLocale(ProductLocalization::LOCALE_ENGLISH),
+            $product->localizations()->where('locale', DlsiteLanguage::English->value)->value('description'),
         );
         $this->assertSame(
             'Existing English Title',
-            $product->titleForLocale(ProductLocalization::LOCALE_ENGLISH),
+            $product->localizations()->where('locale', DlsiteLanguage::English->value)->value('title'),
         );
 
         $overwriteRun = LibraryTransferRun::create([
@@ -587,9 +653,9 @@ class LibraryTransferReviewTest extends TestCase
             'settings' => [],
         ]);
         $overwriteRecord = app(LibraryData::class)->work($product);
-        $overwriteRecord['descriptions']['description_english'] = 'Imported English Description';
+        $overwriteRecord['descriptions']['en'] = 'Imported English Description';
         $review->stage($overwriteRun, 'works', $overwriteRecord, []);
-        $overwriteItem = $overwriteRun->items()->where('metadata->field', 'description_english')->firstOrFail();
+        $overwriteItem = $overwriteRun->items()->where('metadata->field', 'localization:en:description')->firstOrFail();
         $overwriteItem->update(['decision' => 'overwrite']);
 
         $review->applyWorkItems(collect([$overwriteItem->fresh()]));
@@ -597,12 +663,276 @@ class LibraryTransferReviewTest extends TestCase
         $product = $product->fresh();
         $this->assertSame(
             'Imported English Description',
-            $product->descriptionForLocale(ProductLocalization::LOCALE_ENGLISH),
+            $product->localizations()->where('locale', DlsiteLanguage::English->value)->value('description'),
         );
         $this->assertSame(
             'Existing English Title',
-            $product->titleForLocale(ProductLocalization::LOCALE_ENGLISH),
+            $product->localizations()->where('locale', DlsiteLanguage::English->value)->value('title'),
         );
+    }
+
+    public function test_title_review_rejects_a_localized_description_field_before_writing(): void
+    {
+        $product = Product::factory()
+            ->withTitles('Stored JP title', 'Stored EN title')
+            ->withEnglishDescription('Stored EN description')
+            ->create([
+                'id' => 'RJ123460',
+                'description' => 'Stored JP description',
+            ]);
+        $run = LibraryTransferRun::create(['direction' => 'import', 'status' => 'review', 'settings' => []]);
+        $item = $this->review()->item(
+            $run,
+            'works',
+            'titles',
+            $product->id,
+            'Stored EN title',
+            'Should not become a description',
+            ['field' => 'localization:en:description'],
+        );
+        $item->update(['decision' => LibraryImportDecision::Overwrite]);
+
+        $this->review()->applyWorkItems(collect([$item->fresh()]));
+
+        $product->refresh();
+        $this->assertSame(LibraryImportItemStatus::Failed, $item->fresh()->status);
+        $this->assertSame('transfer.review.invalid_localized_field', $item->fresh()->error);
+        $this->assertSame('Stored EN title', $product->localizations()->where('locale', DlsiteLanguage::English->value)->value('title'));
+        $this->assertSame('Stored EN description', $product->localizations()->where('locale', DlsiteLanguage::English->value)->value('description'));
+    }
+
+    public function test_description_review_rejects_a_japanese_title_field_before_writing(): void
+    {
+        $product = Product::factory()->create([
+            'id' => 'RJ123461',
+            'work_name' => 'Stored JP title',
+            'description' => 'Stored JP description',
+        ]);
+        $run = LibraryTransferRun::create(['direction' => 'import', 'status' => 'review', 'settings' => []]);
+        $item = $this->review()->item(
+            $run,
+            'works',
+            'descriptions',
+            $product->id,
+            'Stored JP description',
+            'Should not become a title',
+            ['field' => 'work_name'],
+        );
+        $item->update(['decision' => LibraryImportDecision::Overwrite]);
+
+        $this->review()->applyWorkItems(collect([$item->fresh()]));
+
+        $product->refresh();
+        $this->assertSame(LibraryImportItemStatus::Failed, $item->fresh()->status);
+        $this->assertSame('transfer.review.invalid_localized_field', $item->fresh()->error);
+        $this->assertSame('Stored JP title', $product->work_name);
+        $this->assertSame('Stored JP description', $product->description);
+    }
+
+    public function test_localized_review_pagination_counts_works_instead_of_language_rows(): void
+    {
+        $run = LibraryTransferRun::create(['direction' => 'import', 'status' => 'review', 'settings' => []]);
+        $review = $this->review();
+
+        for ($index = 1; $index <= 60; $index++) {
+            $key = sprintf('RJ%06d', $index);
+            $review->item($run, 'works', 'titles', $key, 'Current JP', 'Imported JP', [
+                'field' => 'work_name',
+                'title' => $key,
+            ]);
+            $review->item($run, 'works', 'titles', $key, 'Current EN', 'Imported EN', [
+                'field' => 'localization:en:title',
+                'title' => $key,
+            ]);
+        }
+
+        Livewire::test(OptionsTransferRun::class, ['run' => $run])
+            ->call('tab', 'works', 'titles')
+            ->assertViewHas('pagination', fn($pagination): bool => $pagination->total() === 60 && $pagination->lastPage() === 1)
+            ->assertViewHas('items', fn($items): bool => $items->count() === 120)
+            ->assertViewHas('reviewGroups', fn(array $groups): bool => count($groups) === 60)
+            ->assertSee('Showing 1-60 of 60');
+    }
+
+    public function test_localized_review_pagination_keeps_every_locale_for_the_work_on_page_two(): void
+    {
+        $run = LibraryTransferRun::create(['direction' => 'import', 'status' => 'review', 'settings' => []]);
+        $review = $this->review();
+
+        for ($index = 1; $index <= 101; $index++) {
+            $key = sprintf('RJ%06d', $index);
+            $review->item($run, 'works', 'titles', $key, 'Current JP', 'Imported JP', [
+                'field' => 'work_name',
+                'title' => $key,
+            ]);
+            $review->item($run, 'works', 'titles', $key, 'Current EN', 'Imported EN', [
+                'field' => 'localization:en:title',
+                'title' => $key,
+            ]);
+        }
+
+        Livewire::test(OptionsTransferRun::class, ['run' => $run])
+            ->call('tab', 'works', 'titles')
+            ->assertViewHas('pagination', fn($pagination): bool => $pagination->total() === 101 && $pagination->currentPage() === 1)
+            ->assertViewHas('items', fn($items): bool => $items->count() === 200)
+            ->assertSee('Showing 1-100 of 101')
+            ->call('nextPage')
+            ->assertViewHas('pagination', fn($pagination): bool => $pagination->currentPage() === 2 && $pagination->total() === 101)
+            ->assertViewHas('items', fn($items): bool => $items->count() === 2)
+            ->assertSee('Showing 101-101 of 101')
+            ->assertViewHas('reviewGroups', function (array $groups): bool {
+                if (count($groups) !== 1) {
+                    return false;
+                }
+
+                return $groups[0]['japanese'] !== null
+                    && count($groups[0]['localized']) === 1
+                    && $groups[0]['localized'][0]['locale'] === DlsiteLanguage::English->value;
+            });
+    }
+
+    public function test_tag_preview_diff_normalizes_case_skips_blank_and_preserves_zero_and_duplicate_display_values(): void
+    {
+        $run = LibraryTransferRun::create([
+            'direction' => 'import',
+            'status' => 'review',
+            'settings' => [],
+        ]);
+        $this->review()->item(
+            $run,
+            'works',
+            'tags',
+            'RJ123459',
+            ['Case Shared', 'Current only', '0', 'Duplicate Current', 'duplicate current', '   '],
+            ['case shared', 'Added', '0', 'Duplicate Incoming', 'duplicate incoming', ''],
+            [
+                'domain' => 'tags',
+                'bucket' => DlsiteLanguage::Japanese->value,
+                'title' => 'RJ123459',
+            ],
+        );
+
+        Livewire::test(OptionsTransferRun::class, ['run' => $run])
+            ->call('tab', 'works', 'tags')
+            ->assertViewHas('reviewGroups', function (array $groups): bool {
+                $japanese = $groups[0]['japanese'] ?? null;
+                if (! is_array($japanese)) {
+                    return false;
+                }
+
+                return collect($japanese['added'] ?? [])->pluck('value')->all() === ['Added', 'duplicate incoming']
+                    && collect($japanese['current_only'] ?? [])->pluck('value')->all() === ['Current only', 'duplicate current'];
+            });
+    }
+
+    public function test_fetched_tag_import_decisions_apply_independently_per_locale(): void
+    {
+        $product = Product::factory()->create(['id' => 'RJ123460']);
+        $oldJapanese = Genre::resolveByTitle('Old Japanese fetched');
+        $oldEnglish = Genre::resolveByTitle('Old English fetched');
+        $zero = Genre::resolveByTitle('0');
+        app(ProductGenreSync::class)->sync($product, [
+            DlsiteLanguage::Japanese->value => [$oldJapanese->id, $zero->id],
+            DlsiteLanguage::English->value => [$oldEnglish->id],
+        ], []);
+
+        $record = app(LibraryData::class)->work($product);
+        $record['tags'][DlsiteLanguage::Japanese->value] = ['Imported Japanese fetched', '0'];
+        $record['tags'][DlsiteLanguage::English->value] = ['Imported English fetched'];
+
+        $run = LibraryTransferRun::create([
+            'direction' => 'import',
+            'status' => 'review',
+            'settings' => [],
+        ]);
+        $review = $this->review();
+        $review->stage($run, 'works', $record, []);
+
+        $tagItems = $run->items()
+            ->where('category', 'tags')
+            ->orderBy('id')
+            ->get();
+
+        $this->assertCount(2, $tagItems);
+        $this->assertSame(2, $tagItems->pluck('identity_hash')->unique()->count());
+        $this->assertEqualsCanonicalizing(
+            [DlsiteLanguage::Japanese->value, DlsiteLanguage::English->value],
+            $tagItems->pluck('metadata')->pluck('bucket')->all(),
+        );
+
+        $review->stage($run, 'works', $record, []);
+        $this->assertSame(2, $run->items()->where('category', 'tags')->count());
+
+        $tagItems = $run->items()
+            ->where('category', 'tags')
+            ->orderBy('id')
+            ->get()
+            ->keyBy(fn(LibraryImportItem $item): string => $item->metadata['bucket']);
+
+        Livewire::test(OptionsTransferRun::class, ['run' => $run->fresh()])
+            ->call('tab', 'works', 'tags')
+            ->assertSee(DlsiteLanguage::Japanese->label())
+            ->assertSee(DlsiteLanguage::English->label())
+            ->assertSee('Added from archive')
+            ->assertSee('Current-only')
+            ->assertSee('Old Japanese fetched')
+            ->assertSee('Imported Japanese fetched')
+            ->assertSee('Old English fetched')
+            ->assertSee('Imported English fetched')
+            ->assertViewHas('reviewGroups', function (array $groups): bool {
+                $japanese = $groups[0]['japanese'] ?? null;
+                if (! is_array($japanese)) {
+                    return false;
+                }
+
+                $added = collect($japanese['added'] ?? [])->pluck('value')->all();
+                $currentOnly = collect($japanese['current_only'] ?? [])->pluck('value')->all();
+
+                return ! in_array('0', $added, true)
+                    && ! in_array('0', $currentOnly, true);
+            });
+
+        foreach (
+            [
+                'ja' => ['アーカイブから追加', '現在のみ', '1言語'],
+                'zh_TW' => ['從封存檔新增', '僅目前資料', '1 種語言'],
+            ] as $locale => [$addedLabel, $currentOnlyLabel, $languageCount]
+        ) {
+            Option::setUiLanguage($locale);
+            app()->setLocale($locale);
+
+            Livewire::test(OptionsTransferRun::class, ['run' => $run->fresh()])
+                ->call('tab', 'works', 'tags')
+                ->assertSee($addedLabel)
+                ->assertSee($currentOnlyLabel)
+                ->assertSee($languageCount)
+                ->assertSee('Imported English fetched');
+        }
+
+        Option::setUiLanguage('en');
+        app()->setLocale('en');
+
+        $japaneseItem = $tagItems->get(DlsiteLanguage::Japanese->value);
+        $englishItem = $tagItems->get(DlsiteLanguage::English->value);
+        $this->assertNotNull($japaneseItem);
+        $this->assertNotNull($englishItem);
+
+        $japaneseItem->update(['decision' => LibraryImportDecision::Ignore]);
+        $englishItem->update(['decision' => LibraryImportDecision::Overwrite]);
+
+        $review->applyWorkItems(collect([$japaneseItem->fresh(), $englishItem->fresh()]));
+
+        $product->refresh();
+        $this->assertEqualsCanonicalizing(
+            ['Old Japanese fetched', '0'],
+            $product->fetchedGenresForLanguage(DlsiteLanguage::Japanese)->pluck('title')->all(),
+        );
+        $this->assertSame(
+            ['Imported English fetched'],
+            $product->fetchedGenresForLanguage(DlsiteLanguage::English)->pluck('title')->all(),
+        );
+        $this->assertSame(LibraryImportItemStatus::Ignored, $japaneseItem->fresh()->status);
+        $this->assertSame(LibraryImportItemStatus::Applied, $englishItem->fresh()->status);
     }
 
     public function test_work_review_uses_refetch_tabs_and_separate_dlsite_list_fields(): void
@@ -655,7 +985,8 @@ class LibraryTransferReviewTest extends TestCase
             $component->call('tab', 'works', $category)
                 ->assertSet('section', 'works')
                 ->assertSet('category', $category)
-                ->assertViewHas('items', fn($items): bool => $items->isNotEmpty()
+                ->assertViewHas('items', fn($items): bool => $items instanceof \Illuminate\Support\Collection
+                    && $items->isNotEmpty()
                     && $items->every(fn($item): bool => $item->section === 'works' && $item->category === $category));
         }
     }
@@ -699,8 +1030,10 @@ class LibraryTransferReviewTest extends TestCase
         foreach ([['Incoming Voice'], []] as $voices) {
             $export = $this->exported();
             $this->rewriteWorkData($export->parts()->first(), fn() => [
-                'japanese' => ['product_id' => $product->id, 'work_name' => $product->titleForLocale('ja'), 'voice_actor' => $voices],
-                'english' => [],
+                'locales' => [
+                    'ja' => ['product_id' => $product->id, 'work_name' => $product->work_name, 'voice_actor' => $voices],
+                    'en' => [],
+                ],
             ]);
             $run = $this->imported($export);
             $this->assertSame(['voice_actor'], $run->items()->whereIn('category', array_keys($original))->pluck('category')->all());
@@ -733,21 +1066,23 @@ class LibraryTransferReviewTest extends TestCase
 
         $export = $this->exported();
         $this->rewriteWorkData($export->parts()->firstOrFail(), fn() => [
-            'japanese' => [
-                'product_id' => $product->id,
-                'work_name' => $product->titleForLocale('ja'),
-            ],
-            'english' => [
-                'site_id' => 'maniax',
-                'maker_id' => 'RG999',
-                'publisher' => 'English Publisher',
-                'brand' => 'English Brand',
-                'title_name' => 'English Series',
-                'age_category' => ['_value_' => 1, '_name_' => 'ALL_AGES'],
-                'product_format' => ['INVALID'],
-                'announce_date' => [],
-                'circle' => 'English Circle',
-                'voice_actor' => ['English Voice'],
+            'locales' => [
+                'ja' => [
+                    'product_id' => $product->id,
+                    'work_name' => $product->work_name,
+                ],
+                'en' => [
+                    'site_id' => 'maniax',
+                    'maker_id' => 'RG999',
+                    'publisher' => 'English Publisher',
+                    'brand' => 'English Brand',
+                    'title_name' => 'English Series',
+                    'age_category' => ['_value_' => 1, '_name_' => 'ALL_AGES'],
+                    'product_format' => ['INVALID'],
+                    'announce_date' => [],
+                    'circle' => 'English Circle',
+                    'voice_actor' => ['English Voice'],
+                ],
             ],
         ]);
 
@@ -1000,35 +1335,235 @@ class LibraryTransferReviewTest extends TestCase
         $this->assertSame(2, $items->pluck('identity_hash')->unique()->count());
     }
 
-    public function test_work_tag_import_preserves_zero_and_skips_blank_titles(): void
+    public function test_bucketed_tag_current_read_only_loads_the_reviewed_bucket(): void
     {
-        $product = Product::factory()->create(['id' => 'RJ123460']);
-        $run = LibraryTransferRun::create([
-            'direction' => 'import',
-            'status' => 'review',
-            'settings' => [],
-        ]);
-        $review = $this->review();
-        $baseline = app(LibraryData::class)->category($product, 'tags');
-        $incoming = $baseline;
-        $incoming['jp'] = ['0', '', '   '];
+        $product = Product::factory()->create(['id' => 'RJ123497']);
+        app(ProductGenreSync::class)->sync($product, [
+            'ja' => Genre::resolveIdsFromTitles(['Japanese Existing']),
+            'en' => Genre::resolveIdsFromTitles(['English Existing']),
+        ], Genre::resolveIdsFromTitles(['Custom Existing']));
+        $run = LibraryTransferRun::create(['direction' => 'import', 'status' => 'review', 'settings' => []]);
+        $item = $this->review()->item(
+            $run,
+            'works',
+            'tags',
+            $product->id,
+            ['English Existing'],
+            ['English Incoming'],
+            ['domain' => 'tags', 'bucket' => 'en'],
+        );
 
+        DB::flushQueryLog();
+        DB::enableQueryLog();
+        $this->assertSame(['English Existing'], $this->review()->current($item, $product->fresh()));
+        $queries = DB::getQueryLog();
+        DB::disableQueryLog();
+
+        $bindings = collect($queries)->flatMap(fn(array $query): array => $query['bindings'] ?? [])->all();
+        $this->assertContains(Genre::PIVOT_SOURCE_FETCHED, $bindings);
+        $this->assertContains(DlsiteLanguage::English->value, $bindings);
+        $this->assertNotContains(DlsiteLanguage::Japanese->value, $bindings);
+        $this->assertNotContains(Genre::PIVOT_SOURCE_CUSTOM, $bindings);
+    }
+
+    public function test_bucketed_tag_overwrite_apply_does_not_pre_read_the_reviewed_tag_titles(): void
+    {
+        $product = Product::factory()->create(['id' => 'RJ123495']);
+        app(ProductGenreSync::class)->sync($product, [
+            'ja' => Genre::resolveIdsFromTitles(['Japanese Existing']),
+            'en' => Genre::resolveIdsFromTitles(['English Existing']),
+        ], Genre::resolveIdsFromTitles(['Custom Existing']));
+        $run = LibraryTransferRun::create(['direction' => 'import', 'status' => 'review', 'settings' => []]);
+        $review = $this->review();
         $item = $review->item(
             $run,
             'works',
             'tags',
             $product->id,
-            $baseline,
-            $incoming,
-            ['title' => $product->work_name, 'domain' => 'tags'],
+            ['English Existing'],
+            ['English Incoming'],
+            ['domain' => 'tags', 'bucket' => 'en'],
         );
         $item->update(['decision' => LibraryImportDecision::Overwrite]);
 
-        $review->applyWorkItems(collect([$item->fresh()]));
+        DB::flushQueryLog();
+        DB::enableQueryLog();
+        $method = new \ReflectionMethod(ImportReview::class, 'applyWork');
+        $method->invoke($review, $item->fresh(), $product->fresh());
+        $queries = DB::getQueryLog();
+        DB::disableQueryLog();
+
+        $reviewedBucketReads = collect($queries)->filter(function (array $query): bool {
+            $sql = strtolower($query['query']);
+            $bindings = array_map('strval', $query['bindings'] ?? []);
+
+            return str_starts_with($sql, 'select')
+                && str_contains($sql, 'genre_product_languages')
+                && in_array(DlsiteLanguage::English->value, $bindings, true);
+        });
+
+        $this->assertCount(0, $reviewedBucketReads);
+        $this->assertSame(
+            ['English Incoming'],
+            $product->fresh()->fetchedGenresForLanguage(DlsiteLanguage::English)->pluck('genres.title')->all(),
+        );
+        $this->assertSame(
+            ['Japanese Existing'],
+            $product->fresh()->fetchedGenresForLanguage(DlsiteLanguage::Japanese)->pluck('genres.title')->all(),
+        );
+        $this->assertSame(['Custom Existing'], $product->fresh()->customGenres()->pluck('genres.title')->all());
+    }
+
+    public function test_bucketed_tag_stale_change_conflicts_before_apply(): void
+    {
+        $product = Product::factory()->create(['id' => 'RJ123498']);
+        app(ProductGenreSync::class)->sync($product, [
+            'ja' => [],
+            'en' => Genre::resolveIdsFromTitles(['English Baseline']),
+        ], []);
+        $run = LibraryTransferRun::create(['direction' => 'import', 'status' => 'review', 'settings' => []]);
+        $item = $this->review()->item(
+            $run,
+            'works',
+            'tags',
+            $product->id,
+            ['English Baseline'],
+            ['English Incoming'],
+            ['domain' => 'tags', 'bucket' => 'en'],
+        );
+        app(ProductGenreSync::class)->syncEditableTagBuckets(
+            $product,
+            DlsiteLanguage::English,
+            Genre::resolveIdsFromTitles(['English Changed After Review']),
+            null,
+        );
+        $item->update(['decision' => LibraryImportDecision::Overwrite]);
+
+        $this->review()->applyWorkItems(collect([$item->fresh()]));
+
+        $this->assertSame(LibraryImportItemStatus::Conflict, $item->fresh()->status);
+        $this->assertSame(
+            ['English Changed After Review'],
+            $product->fresh()->fetchedGenresForLanguage('en')->pluck('genres.title')->all(),
+        );
+    }
+
+    public function test_bucket_merge_reads_fresh_state_after_an_aggregate_tag_row_and_aggregate_rows_remain_supported(): void
+    {
+        $product = Product::factory()->create(['id' => 'RJ123496']);
+        app(ProductGenreSync::class)->sync($product, [
+            'ja' => Genre::resolveIdsFromTitles(['Japanese Existing']),
+            'en' => Genre::resolveIdsFromTitles(['English Existing']),
+        ], Genre::resolveIdsFromTitles(['Custom Existing']));
+        $run = LibraryTransferRun::create(['direction' => 'import', 'status' => 'review', 'settings' => []]);
+        $review = $this->review();
+        $current = app(LibraryData::class)->category($product, 'tags');
+        $aggregate = $review->item(
+            $run,
+            'works',
+            'tags',
+            $product->id,
+            Arr::only($current, ['en']),
+            ['en' => ['Aggregate English']],
+            ['domain' => 'tags'],
+        );
+        $bucket = $review->item(
+            $run,
+            'works',
+            'tags',
+            $product->id,
+            ['English Existing'],
+            ['Bucket English'],
+            ['domain' => 'tags', 'bucket' => 'en'],
+        );
+        $custom = $review->item(
+            $run,
+            'works',
+            'custom_tags',
+            $product->id,
+            ['Custom Existing'],
+            ['Custom Incoming'],
+            ['domain' => 'tags', 'bucket' => 'custom'],
+        );
+        $aggregate->update(['decision' => LibraryImportDecision::Overwrite]);
+        $bucket->update(['decision' => LibraryImportDecision::Merge]);
+        $custom->update(['decision' => LibraryImportDecision::Overwrite]);
+
+        $review->applyWorkItems(collect([$aggregate->fresh(), $bucket->fresh(), $custom->fresh()]));
 
         $this->assertSame(
-            ['0'],
-            $product->fresh()->japaneseGenres()->pluck('genres.title')->all(),
+            ['Aggregate English', 'Bucket English'],
+            $product->fresh()->fetchedGenresForLanguage('en')->pluck('genres.title')->all(),
         );
+        $this->assertSame(
+            ['Japanese Existing'],
+            $product->fresh()->fetchedGenresForLanguage('ja')->pluck('genres.title')->all(),
+        );
+        $this->assertSame(['Custom Incoming'], $product->fresh()->customGenres()->pluck('genres.title')->all());
+        $this->assertSame(LibraryImportItemStatus::Applied, $aggregate->fresh()->status);
+        $this->assertSame(LibraryImportItemStatus::Applied, $bucket->fresh()->status);
+        $this->assertSame(LibraryImportItemStatus::Applied, $custom->fresh()->status);
+    }
+
+    public function test_existing_work_tag_import_updates_only_the_reviewed_bucket_and_preserves_unregistered_locales(): void
+    {
+        $product = Product::factory()->create(['id' => 'RJ123499']);
+        $japanese = Genre::resolveByTitle('Japanese Existing');
+        $english = Genre::resolveByTitle('English Existing');
+        $shared = Genre::resolveByTitle('Shared English Korean');
+        $korean = Genre::resolveByTitle('Korean Existing');
+        $custom = Genre::resolveByTitle('Custom Existing');
+        app(ProductGenreSync::class)->sync($product, [
+            'ja' => [$japanese->id],
+            'en' => [$english->id, $shared->id],
+            'ko' => [$korean->id, $shared->id],
+        ], [$custom->id]);
+
+        $applyBucket = function (string $category, string $bucket, array $incoming, LibraryImportDecision $decision) use ($product): void {
+            $run = LibraryTransferRun::create([
+                'direction' => 'import',
+                'status' => 'review',
+                'settings' => [],
+            ]);
+            $current = app(LibraryData::class)->category($product->fresh(), 'tags');
+            $item = $this->review()->item(
+                $run,
+                'works',
+                $category,
+                $product->id,
+                $current[$bucket] ?? [],
+                $incoming,
+                ['domain' => 'tags', 'bucket' => $bucket],
+            );
+            $item->update(['decision' => $decision]);
+
+            $this->review()->applyWorkItems(collect([$item->fresh()]));
+            $this->assertSame(LibraryImportItemStatus::Applied, $item->fresh()->status);
+        };
+
+        $applyBucket('custom_tags', 'custom', ['0'], LibraryImportDecision::Overwrite);
+        $this->assertSame(['0'], $product->fresh()->customGenres()->pluck('genres.title')->all());
+        $this->assertEqualsCanonicalizing(
+            ['Shared English Korean', 'Korean Existing'],
+            $product->fresh()->fetchedGenresForLanguage('ko')->pluck('genres.title')->all(),
+        );
+
+        $applyBucket('tags', 'en', ['English Added'], LibraryImportDecision::Merge);
+        $this->assertEqualsCanonicalizing(
+            ['English Existing', 'Shared English Korean', 'English Added'],
+            $product->fresh()->fetchedGenresForLanguage('en')->pluck('genres.title')->all(),
+        );
+        $this->assertEqualsCanonicalizing(
+            ['Shared English Korean', 'Korean Existing'],
+            $product->fresh()->fetchedGenresForLanguage('ko')->pluck('genres.title')->all(),
+        );
+
+        $applyBucket('tags', 'en', [], LibraryImportDecision::Overwrite);
+        $this->assertSame([], $product->fresh()->fetchedGenresForLanguage('en')->pluck('genres.title')->all());
+        $this->assertEqualsCanonicalizing(
+            ['Shared English Korean', 'Korean Existing'],
+            $product->fresh()->fetchedGenresForLanguage('ko')->pluck('genres.title')->all(),
+        );
+        $this->assertDatabaseHas('genres', ['title' => 'Shared English Korean']);
     }
 }

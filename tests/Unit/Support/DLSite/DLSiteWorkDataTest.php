@@ -2,13 +2,14 @@
 
 namespace Tests\Unit\Support\DLSite;
 
+use App\Enums\DlsiteLanguage;
 use App\Enums\ProductContributorRole;
 use App\Support\DLSite\DLSiteWorkData;
 use Tests\TestCase;
 
 class DLSiteWorkDataTest extends TestCase
 {
-    public function test_it_extracts_product_metadata_and_collapses_duplicate_english_values(): void
+    public function test_it_extracts_product_metadata_and_preserves_explicit_localized_values_equal_to_japanese(): void
     {
         $data = DLSiteWorkData::fromArray([
             'japanese' => [
@@ -41,18 +42,118 @@ class DLSiteWorkDataTest extends TestCase
         $this->assertSame('maniax', $data->siteId);
         $this->assertSame('RG123', $data->makerId);
         $this->assertSame('JP Title', $data->workName);
-        $this->assertNull($data->englishWorkName);
+        $this->assertSame('JP Title', $data->titleForLocale(DlsiteLanguage::English));
         $this->assertSame('R18', $data->ageCategory);
         $this->assertSame(['MOV', 'SND', 'MS2'], $data->productFormat);
         $this->assertSame('2026-09-24 00:00:00', $data->announceDate);
         $this->assertSame('Circle Name', $data->circle);
-        $this->assertNull($data->englishDescription);
+        $this->assertSame('Same Description', $data->descriptionForLocale(DlsiteLanguage::English));
         $this->assertSame('Series Name', $data->autoSeries());
         $this->assertSame('cover.jpg', $data->workImage);
         $this->assertSame(['sample_1.jpg', 'sample_2.jpg'], $data->sampleImages);
         $this->assertSame(['Writer'], $data->contributorsByRole[ProductContributorRole::Scenario->value]);
         $this->assertSame(['Voice One', 'Voice Two'], $data->contributorsByRole[ProductContributorRole::VoiceActor->value]);
         $this->assertSame(['Circle Name'], $data->contributorsByRole[ProductContributorRole::Circle->value]);
+    }
+
+    public function test_locale_keyed_payload_exposes_localized_title_description_and_tags(): void
+    {
+        $data = DLSiteWorkData::fromArray([
+            'locales' => [
+                'ja' => [
+                    'product_id' => 'RJ123456',
+                    'work_name' => '日本語タイトル',
+                    'description' => '日本語説明',
+                    'genre' => ['JP Tag'],
+                ],
+                'en' => [
+                    'product_id' => 'RJ123456',
+                    'work_name' => 'English Title',
+                    'description' => 'English Description',
+                    'genre' => ['EN Tag'],
+                ],
+            ],
+        ]);
+
+        $this->assertSame('日本語タイトル', $data->titleForLocale(DlsiteLanguage::Japanese));
+        $this->assertSame('English Title', $data->titleForLocale(DlsiteLanguage::English));
+        $this->assertSame('English Description', $data->descriptionForLocale(DlsiteLanguage::English));
+        $this->assertSame([
+            'ja' => ['JP Tag'],
+            'en' => ['EN Tag'],
+        ], $data->genresByLocale());
+
+        $normalized = DLSiteWorkData::normalizePayload([
+            'locales' => [
+                'ja' => ['product_id' => 'RJ123456'],
+                'en' => ['product_id' => 'RJ123456'],
+            ],
+        ]);
+        $this->assertArrayNotHasKey('japanese', $normalized);
+        $this->assertArrayNotHasKey('english', $normalized);
+    }
+
+    public function test_normalizing_locale_keyed_japanese_only_payload_does_not_invent_english_locale(): void
+    {
+        $normalized = DLSiteWorkData::normalizePayload([
+            'locales' => [
+                'ja' => [
+                    'product_id' => 'RJ123456',
+                    'work_name' => '日本語タイトル',
+                ],
+            ],
+        ]);
+
+        $this->assertSame(['ja'], array_keys($normalized['locales']));
+        $this->assertArrayNotHasKey('japanese', $normalized);
+        $this->assertArrayNotHasKey('english', $normalized);
+        $this->assertSame($normalized, DLSiteWorkData::normalizePayload($normalized));
+
+        $work = DLSiteWorkData::fromArray($normalized);
+        $this->assertArrayNotHasKey('en', $work->localizedMetadata);
+        $this->assertArrayNotHasKey('en', $work->genresByLocale());
+
+        $normalized['locales']['en'] = [];
+        $emptyEnglish = DLSiteWorkData::fromArray($normalized);
+        $this->assertSame(
+            ['title' => null, 'description' => null, 'genres' => []],
+            $emptyEnglish->localizedMetadata['en'],
+        );
+    }
+
+    public function test_locale_keyed_payload_normalizes_historical_jp_key(): void
+    {
+        $data = DLSiteWorkData::fromArray([
+            'locales' => [
+                'jp' => [
+                    'product_id' => 'RJ123456',
+                    'work_name' => '日本語タイトル',
+                ],
+            ],
+        ]);
+
+        $this->assertSame('日本語タイトル', $data->workName);
+        $this->assertSame('日本語タイトル', $data->titleForLocale(DlsiteLanguage::Japanese));
+    }
+
+    public function test_historical_payload_normalizes_to_locale_map_without_legacy_aliases(): void
+    {
+        $normalized = DLSiteWorkData::normalizePayload([
+            'japanese' => [
+                'product_id' => 'RJ123456',
+                'work_name' => '日本語タイトル',
+            ],
+            'english' => [
+                'product_id' => 'RJ123456',
+                'work_name' => 'English Title',
+            ],
+        ]);
+
+        $this->assertSame('日本語タイトル', $normalized['locales']['ja']['work_name']);
+        $this->assertSame('English Title', $normalized['locales']['en']['work_name']);
+        $this->assertArrayNotHasKey('japanese', $normalized);
+        $this->assertArrayNotHasKey('english', $normalized);
+        $this->assertSame($normalized, DLSiteWorkData::normalizePayload($normalized));
     }
 
     public function test_circle_publisher_and_brand_use_japanese_metadata_only(): void
@@ -184,11 +285,11 @@ class DLSiteWorkDataTest extends TestCase
         ]);
 
         $this->assertSame('Japanese Title', $data->workName);
-        $this->assertSame('English Title', $data->englishWorkName);
+        $this->assertSame('English Title', $data->titleForLocale(DlsiteLanguage::English));
         $this->assertSame('Japanese Description', $data->description);
-        $this->assertSame('English Description', $data->englishDescription);
-        $this->assertSame(['Japanese Tag'], $data->japaneseGenres);
-        $this->assertSame(['English Tag'], $data->englishGenres);
+        $this->assertSame('English Description', $data->descriptionForLocale(DlsiteLanguage::English));
+        $this->assertSame(['Japanese Tag'], $data->genresForLocale(DlsiteLanguage::Japanese));
+        $this->assertSame(['English Tag'], $data->genresForLocale(DlsiteLanguage::English));
     }
 
     public function test_it_uses_fallback_product_id_when_json_does_not_include_one(): void
@@ -252,7 +353,7 @@ class DLSiteWorkDataTest extends TestCase
         ]);
 
         $this->assertSame('【狂気的な愛】×4を体験してみない?', $work->description);
-        $this->assertSame('English description', $work->englishDescription);
+        $this->assertSame('English description', $work->descriptionForLocale(DlsiteLanguage::English));
         $this->assertSame(['タツタアゲ学長'], $work->contributorsByRole['author']);
     }
 
@@ -413,15 +514,18 @@ class DLSiteWorkDataTest extends TestCase
         $this->assertSame(1000, $work->rating->count);
     }
 
-    public function test_tag_normalization_keeps_zero_as_a_valid_tag(): void
+    public function test_locale_tag_normalization_keeps_zero_as_a_valid_tag(): void
     {
         $data = DLSiteWorkData::fromArray([
-            'japanese' => [
-                'product_id' => 'RJ123456',
-                'genre' => ['0', '', null],
+            'locales' => [
+                'ja' => [
+                    'product_id' => 'RJ123456',
+                    'work_name' => 'Title',
+                    'genre' => ['0', '', null],
+                ],
             ],
         ]);
 
-        $this->assertSame(['0'], $data->japaneseGenres);
+        $this->assertSame(['0'], $data->genresByLocale()['ja']);
     }
 }

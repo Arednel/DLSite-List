@@ -2,7 +2,7 @@
 
 namespace Tests\Feature;
 
-use App\Enums\FetchedTagLanguage;
+use App\Enums\DlsiteLanguage;
 use App\Enums\UiLanguage;
 use App\Livewire\TagLibraryManager;
 use App\Models\Genre;
@@ -26,16 +26,16 @@ class TagLibraryManagerTest extends TestCase
 
     public function test_render_resolves_fetched_tag_language_once(): void
     {
-        Option::setFetchedTagLanguageFollowsUi(false);
-        Option::setFetchedTagLanguage(FetchedTagLanguage::Japanese);
+        Option::setDlsiteMetadataLanguageFollowsUi(false);
+        Option::setDlsiteMetadataLanguage(DlsiteLanguage::Japanese);
 
         $fetchedLanguageOptionQueries = [];
         DB::listen(function ($query) use (&$fetchedLanguageOptionQueries): void {
             $bindings = array_map('strval', $query->bindings);
 
             if (array_intersect([
-                Option::FETCHED_TAG_LANGUAGE_FOLLOWS_UI,
-                Option::FETCHED_TAG_LANGUAGE,
+                Option::DLSITE_METADATA_LANGUAGE_FOLLOWS_UI,
+                Option::DLSITE_METADATA_LANGUAGE,
             ], $bindings) !== []) {
                 $fetchedLanguageOptionQueries[] = $query->sql;
             }
@@ -105,15 +105,15 @@ class TagLibraryManagerTest extends TestCase
         app(ProductGenreSync::class)->syncCustom($customProduct, [$customGenre->getKey()]);
         foreach (range(1, 2) as $_) {
             app(ProductGenreSync::class)->sync(Product::factory()->create(), [
-                Genre::LANGUAGE_ENGLISH => [$englishGenre->getKey()],
+                DlsiteLanguage::English->value => [$englishGenre->getKey()],
             ], []);
         }
         app(ProductGenreSync::class)->sync($japaneseProduct, [
-            Genre::LANGUAGE_JAPANESE => [$japaneseGenre->getKey()],
+            DlsiteLanguage::Japanese->value => [$japaneseGenre->getKey()],
         ], []);
         app(ProductGenreSync::class)->sync($sharedProduct, [
-            Genre::LANGUAGE_ENGLISH => [$sharedGenre->getKey()],
-            Genre::LANGUAGE_JAPANESE => [$sharedGenre->getKey()],
+            DlsiteLanguage::English->value => [$sharedGenre->getKey()],
+            DlsiteLanguage::Japanese->value => [$sharedGenre->getKey()],
         ], []);
 
         $this->assertTagLibraryUsesFetchedLanguage(
@@ -624,7 +624,7 @@ class TagLibraryManagerTest extends TestCase
         $fetchedProduct = Product::factory()->create();
         $customProduct = Product::factory()->create();
         app(ProductGenreSync::class)->sync($fetchedProduct, [
-            Genre::LANGUAGE_ENGLISH => [$tag->getKey()],
+            DlsiteLanguage::English->value => [$tag->getKey()],
         ], []);
         app(ProductGenreSync::class)->syncCustom($customProduct, [$tag->getKey()]);
 
@@ -671,7 +671,7 @@ class TagLibraryManagerTest extends TestCase
         ]);
         $this->assertDatabaseHas('genre_product_languages', [
             'genre_product_id' => $fetchedPivot->id,
-            'language' => Genre::LANGUAGE_ENGLISH,
+            'language' => DlsiteLanguage::English->value,
         ]);
         $this->assertDatabaseHas('genre_product', [
             'id' => $customPivot->id,
@@ -1477,7 +1477,7 @@ class TagLibraryManagerTest extends TestCase
 
         foreach (range(1, 3) as $_) {
             app(ProductGenreSync::class)->sync(Product::factory()->create(), [
-                Genre::LANGUAGE_JAPANESE => [$rawHeavy->getKey()],
+                DlsiteLanguage::Japanese->value => [$rawHeavy->getKey()],
             ], []);
         }
 
@@ -1632,6 +1632,7 @@ class TagLibraryManagerTest extends TestCase
         int $currentCount,
     ): void {
         App::setLocale($language->value);
+        Option::setUiLanguage($language);
 
         $visibleGenres = [$customGenre, $currentGenre, $sharedGenre, $emptyGenre];
         $groups = Livewire::test(TagLibraryManager::class)
@@ -1689,15 +1690,15 @@ class TagLibraryManagerTest extends TestCase
     private function attachGenres(Product $product, array $genres): void
     {
         $fetchedByLanguage = [
-            Genre::LANGUAGE_JAPANESE => [],
-            Genre::LANGUAGE_ENGLISH => [],
+            DlsiteLanguage::Japanese->value => [],
+            DlsiteLanguage::English->value => [],
         ];
         $customGenreIds = [];
 
         foreach ($genres as $genre) {
             match ($genre->getAttribute('type')) {
-                Genre::TYPE_AUTO_GENERATED_JAPANESE => $fetchedByLanguage[Genre::LANGUAGE_JAPANESE][] = $genre->getKey(),
-                Genre::TYPE_AUTO_GENERATED_ENGLISH => $fetchedByLanguage[Genre::LANGUAGE_ENGLISH][] = $genre->getKey(),
+                Genre::TYPE_AUTO_GENERATED_JAPANESE => $fetchedByLanguage[DlsiteLanguage::Japanese->value][] = $genre->getKey(),
+                Genre::TYPE_AUTO_GENERATED_ENGLISH => $fetchedByLanguage[DlsiteLanguage::English->value][] = $genre->getKey(),
                 default => $customGenreIds[] = $genre->getKey(),
             };
         }

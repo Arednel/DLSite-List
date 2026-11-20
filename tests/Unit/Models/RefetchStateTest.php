@@ -78,6 +78,36 @@ class RefetchStateTest extends TestCase
         );
     }
 
+    public function test_work_result_resolves_tag_actions_and_promotions_from_one_rule_set(): void
+    {
+        $result = new RefetchWorkResult([
+            'changes' => [
+                RefetchCategory::Tags->value => [
+                    'tags' => [
+                        'details' => [
+                            'changed_locales' => ['ja', 'en'],
+                            'custom_to_fetched' => [
+                                'ja' => ['Shared', 'Japanese only'],
+                                'en' => ['shared', 'English only'],
+                            ],
+                        ],
+                    ],
+                ],
+            ],
+        ]);
+
+        $actions = $result->resolvedTagActions(
+            ['ja' => RefetchWorkResult::ACTION_INHERIT, 'en' => RefetchWorkResult::ACTION_DETAILED],
+            RefetchWorkResult::ACTION_OVERWRITE,
+        );
+
+        $this->assertSame([
+            'ja' => RefetchWorkResult::ACTION_OVERWRITE,
+            'en' => RefetchWorkResult::ACTION_DETAILED,
+        ], $actions);
+        $this->assertSame(['shared', 'English only'], $result->promotableCustomTags($actions));
+    }
+
     public function test_run_detects_applied_decisions_from_results(): void
     {
         $run = new RefetchRun;
