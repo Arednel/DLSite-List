@@ -188,7 +188,7 @@ Covers the full Refetch workflow, including
 - localized Product Format review values
 - incremental application
 - lifecycle locking
-- independent Title, Description, and Tag decisions per language, including ignoring all Tag changes and promoting Custom Tags during Detailed review
+- independent Title, Description, and Tag decisions for every registered metadata language, including ignoring all Tag changes and promoting Custom Tags during Detailed review
 - preservation and overwrite of contributor roles
 - canonical JSON promotion
 - nonfatal original-work JSON copy/check failures, missing originals, and continued promotion of other works
@@ -358,7 +358,7 @@ Covers the main product HTTP workflows:
 - tag/contributor synchronization
 - metadata and partial-date updates
 - automatic Series
-- Custom Tags and fetched tags for the selected language
+- Quick Add storage for every registered metadata language and Edit updates that preserve other languages and Custom Tags
 - Index-aware return navigation
 - modal completion responses
 - deletion and cleanup-error handling, including associated original-work JSON files and directory listing failures that must not block product deletion
@@ -445,7 +445,7 @@ Covers derived numeric product-code and partial-date sort keys, supported-prefix
 
 #### `tests/Feature/ProductSurfaceLocalizationTest.php`
 
-Covers localization across Index/Create/Edit product surfaces, including grouped UI/error catalog parity and placeholder consistency, plus:
+Covers localization across Index/Create/Edit product surfaces, including:
 - document language
 - field/help/accessibility text
 - delete confirmation
@@ -495,7 +495,7 @@ Covers Tag Library behavior:
 
 #### `tests/Feature/UiLanguageSettingsTest.php`
 
-Covers saving, resetting, and validating the UI and metadata language settings, including automatic selection, manual selection, additional fetch languages, and localized save notices.
+Covers saving each registered UI language and loading the Options page in that language, automatic and manual metadata selection, additional fetch languages, validation, and reset.
 
 #### `tests/Feature/WorkFormModalTest.php`
 
@@ -529,7 +529,10 @@ Covers server-rendered Add/Edit modal completion fallback output and conditional
 - Covers localized transfer progress, upload failures, diagnostics, and metadata field labels in all three UI languages. Checks that unknown diagnostics and user-supplied names display verbatim.
 
 `tests/Unit/TraditionalChineseCatalogTest.php`
-- Covers full Traditional Chinese UI/error key coverage, parameter preservation, plural rendering, Laravel missing-key output for unknown diagnostics, and framework validation-message coverage.
+- Covers Traditional Chinese plural rendering, missing-key output for unknown diagnostics, and translated framework validation messages.
+
+`tests/Unit/Localization/CatalogTest.php`
+- Checks every registered UI language for matching UI and error keys, nonblank messages, placeholders, framework validation rules, and project overrides. Also checks the English display overrides.
 
 #### Enums
 
@@ -543,7 +546,7 @@ Covers server-rendered Add/Edit modal completion fallback output and conditional
 - Covers valid Index sort fields (including DLsite Rating, DLsite Rating Count, Publisher, Brand, and the virtual combined Maker sort), labels/backend metadata, and sort-dropdown behavior.
 
 `tests/Unit/Enums/DlsiteLanguageTest.php`
-- Covers metadata language codes, localized labels, upstream API locales, supported DLsite languages, and UI-language mapping.
+- Checks metadata language codes and their labels in every UI language. When adding a metadata language, add its expected DLsite API locale here. The workflow tests pick up the new enum case automatically.
 
 `tests/Unit/Enums/UiLanguageTest.php`
 - Covers UI language values, labels, and locale fallback.

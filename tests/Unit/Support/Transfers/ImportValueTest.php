@@ -8,6 +8,8 @@ use App\Models\LibraryImportItem;
 use App\Support\Transfers\ImportReview;
 use App\Support\Transfers\ImportValue;
 use Illuminate\Support\Facades\File;
+use PHPUnit\Framework\Attributes\DataProviderExternal;
+use Tests\LanguageCases;
 use Tests\TestCase;
 
 class ImportValueTest extends TestCase
@@ -36,23 +38,17 @@ class ImportValueTest extends TestCase
         }
     }
 
-    public function test_localized_metadata_labels_follow_the_current_ui_catalog(): void
+    #[DataProviderExternal(LanguageCases::class, 'ui')]
+    public function test_localized_metadata_labels_follow_the_current_ui_catalog(UiLanguage $ui): void
     {
-        foreach (
-            [
-                'en' => ['Japanese', 'English', 'Japanese Title', 'English Title', 'Japanese Description', 'English Description'],
-                'ja' => ['日本語', '英語', '日本語タイトル', '英語タイトル', '日本語の説明', '英語の説明'],
-                'zh_TW' => ['日文', '英文', '日文標題', '英文標題', '日文說明', '英文說明'],
-            ] as $locale => [$japanese, $english, $japaneseTitle, $englishTitle, $japaneseDescription, $englishDescription]
-        ) {
-            app()->setLocale($locale);
-
-            $this->assertSame($japanese, ImportValue::label('ja'));
-            $this->assertSame($english, ImportValue::label('en'));
-            $this->assertSame($japaneseTitle, ImportValue::label('work_name'));
-            $this->assertSame($englishTitle, ImportValue::label('localization:en:title'));
-            $this->assertSame($japaneseDescription, ImportValue::label('description'));
-            $this->assertSame($englishDescription, ImportValue::label('localization:en:description'));
+        app()->setLocale($ui->value);
+        foreach (DlsiteLanguage::cases() as $language) {
+            $code = $language->value;
+            $title = $language === DlsiteLanguage::Japanese ? 'work_name' : "localization:{$code}:title";
+            $description = $language === DlsiteLanguage::Japanese ? 'description' : "localization:{$code}:description";
+            $this->assertSame($language->label(), ImportValue::label($code));
+            $this->assertSame($language->titleLabel(), ImportValue::label($title));
+            $this->assertSame($language->descriptionLabel(), ImportValue::label($description));
         }
     }
 
@@ -73,35 +69,27 @@ class ImportValueTest extends TestCase
         }
     }
 
-    public function test_new_work_title_and_description_labels_are_translated_in_each_ui_language(): void
+    #[DataProviderExternal(LanguageCases::class, 'ui')]
+    public function test_new_work_previews_label_every_metadata_language_and_preserve_its_text(UiLanguage $ui): void
     {
-        $item = new LibraryImportItem([
-            'library_transfer_run_id' => 42,
-            'incoming' => [
-                'titles' => ['ja' => 'Japanese title', 'en' => 'English title'],
-                'descriptions' => ['ja' => 'Japanese description', 'en' => 'English description'],
-            ],
-        ]);
+        app()->setLocale($ui->value);
+        $incoming = [];
+        foreach (DlsiteLanguage::cases() as $language) {
+            $incoming['titles'][$language->value] = "Title [{$language->value}]";
+            $incoming['descriptions'][$language->value] = "Description [{$language->value}]";
+        }
+        $item = new LibraryImportItem(['library_transfer_run_id' => 42, 'incoming' => $incoming]);
 
-        foreach (
-            [
-                'en' => ['Japanese Title', 'English Title', 'Japanese Description', 'English Description'],
-                'ja' => ['日本語タイトル', '英語タイトル', '日本語の説明', '英語の説明'],
-                'zh_TW' => ['日文標題', '英文標題', '日文說明', '英文說明'],
-            ] as $locale => $labels
-        ) {
-            app()->setLocale($locale);
-
-            $changes = [
-                ...ImportValue::newWorkChanges($item, 'titles'),
-                ...ImportValue::newWorkChanges($item, 'descriptions'),
-            ];
-
-            $this->assertSame($labels, array_column($changes, 'label'));
-            $this->assertSame(
-                ['Japanese title', 'English title', 'Japanese description', 'English description'],
-                array_column(array_column($changes, 'preview'), 'value'),
-            );
+        foreach ($incoming as $category => $values) {
+            $changes = ImportValue::newWorkChanges($item, $category);
+            $this->assertSame(array_keys($values), array_column($changes, 'key'));
+            foreach ($changes as $change) {
+                $code = $change['key'];
+                $language = DlsiteLanguage::from($code);
+                $label = $category === 'titles' ? $language->titleLabel() : $language->descriptionLabel();
+                $this->assertSame($label, $change['label']);
+                $this->assertSame($values[$code], $change['preview']['value']);
+            }
         }
     }
 

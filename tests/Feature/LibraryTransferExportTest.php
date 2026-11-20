@@ -176,7 +176,7 @@ class LibraryTransferExportTest extends TestCase
         ]);
         $attachmentIds = DB::table('genre_product')->where('product_id', $first->id)->pluck('id', 'genre_id');
         DB::table('genre_product_languages')->insert([
-            ['genre_product_id' => $attachmentIds[$unsupported->id], 'language' => 'fr'],
+            ['genre_product_id' => $attachmentIds[$unsupported->id], 'language' => 'x-test'],
             ['genre_product_id' => $attachmentIds[$customZ->id], 'language' => 'ja'],
             ['genre_product_id' => $attachmentIds[$customZ->id], 'language' => 'en'],
         ]);
@@ -184,14 +184,15 @@ class LibraryTransferExportTest extends TestCase
         $data = app(LibraryData::class);
         $this->assertSame([], $data->tagBucketsForProducts([]));
         $tagBuckets = $data->tagBucketsForProducts($products->modelKeys());
+        $emptyBuckets = array_fill_keys(['custom', ...DlsiteLanguage::values()], []);
         $this->assertSame([
+            ...$emptyBuckets,
             'custom' => ['Custom Z', 'Custom A'],
             'ja' => ['Shared fetched tag', 'Japanese only'],
             'en' => ['Shared fetched tag', 'English only'],
-            'zh_TW' => [],
         ], $tagBuckets[$first->id]);
-        $this->assertSame(['custom' => [], 'ja' => [], 'en' => ['Shared fetched tag'], 'zh_TW' => []], $tagBuckets[$products[1]->id]);
-        $this->assertSame(['custom' => [], 'ja' => [], 'en' => [], 'zh_TW' => []], $tagBuckets[$products[2]->id]);
+        $this->assertSame([...$emptyBuckets, 'en' => ['Shared fetched tag']], $tagBuckets[$products[1]->id]);
+        $this->assertSame($emptyBuckets, $tagBuckets[$products[2]->id]);
         $this->assertSame(
             [$products[1]->id => $tagBuckets[$products[1]->id]],
             $data->tagBucketsForProducts([$products[1]->id]),
@@ -270,7 +271,7 @@ class LibraryTransferExportTest extends TestCase
             $candidate->load(array_values(array_diff(array_keys($requiredRelations), [$missingRelation])));
 
             try {
-                $archive->exportSnapshotFromLoadedData($candidate, ['custom' => [], 'ja' => [], 'en' => [], 'zh_TW' => []]);
+                $archive->exportSnapshotFromLoadedData($candidate, ['custom' => []]);
                 $this->fail("Preordered export should require the {$missingRelation} relation.");
             } catch (\LogicException $exception) {
                 $this->assertSame($expectedMessage, $exception->getMessage());
@@ -447,7 +448,7 @@ class LibraryTransferExportTest extends TestCase
         config(['transfers.fragment_bytes' => 600]);
         Product::factory()->count(11)->create();
         $run = $this->service()->export(['works'], 'all', []);
-        $run->update(['settings' => [...$run->settings, 'part_bytes' => 10_240]]);
+        $this->limitExportToOneWorkPerPart($run);
         do {
             $archive->plan($run->fresh());
         } while ($run->fresh()->status === LibraryTransferRunStatus::Planning);

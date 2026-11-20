@@ -30,11 +30,15 @@ use League\Flysystem\UnableToCopyFile;
 use Livewire\Livewire;
 use Mockery;
 use PHPUnit\Framework\Attributes\DataProvider;
+use PHPUnit\Framework\Attributes\DataProviderExternal;
 use RuntimeException;
+use Tests\Feature\Concerns\InteractsWithLocalizedWorks;
+use Tests\LanguageCases;
 use Tests\TestCase;
 
 class FullRefetchTest extends TestCase
 {
+    use InteractsWithLocalizedWorks;
     use RefreshDatabase;
 
     public function test_start_creates_a_full_refetch_batch_for_custom_and_dlsite_works(): void
@@ -467,6 +471,35 @@ class FullRefetchTest extends TestCase
         $this->assertFalse(
             Storage::disk('local')->exists("Works/{$product->id}.json")
         );
+    }
+
+    #[DataProviderExternal(LanguageCases::class, 'metadata')]
+    public function test_refetch_applies_title_description_and_tags_only_for_the_selected_language(DlsiteLanguage $selected): void
+    {
+        Storage::fake('local');
+        Process::fake(['*' => Process::result(output: '{"failed_images":[]}')])->preventStrayProcesses();
+        $stored = $this->workLocales('RJ123456', 'Stored');
+        $product = $this->createLocalizedWork($stored);
+        $incoming = $this->workLocales($product->id, 'Fetched');
+        $service = app(RefetchService::class);
+        $run = $service->createRun([$product->id], false);
+        $result = $run->results()->firstOrFail();
+        Storage::disk('local')->put($this->stagedJsonPath($run, $product), json_encode(['locales' => $incoming], JSON_THROW_ON_ERROR));
+        $service->fetchAndRecordResult($result, array_keys($incoming));
+        $this->assertSame(RefetchRun::STATUS_REVIEW, $run->refresh()->status);
+
+        $code = $selected->value;
+        $title = $selected === DlsiteLanguage::Japanese ? 'work_name' : "localization:{$code}:title";
+        $description = $selected === DlsiteLanguage::Japanese ? 'description' : "localization:{$code}:description";
+        $service->applyAll($run, [], [
+            'titles' => [$result->id => [$title => 'overwrite']],
+            'descriptions' => [$result->id => [$description => 'overwrite']],
+            'tags' => [$result->id => [$code => 'overwrite']],
+        ]);
+
+        $stored[$code] = $incoming[$code];
+        $this->assertStoredWorkLocales($product, $stored);
+        $this->assertSame(['Custom tag'], $product->customGenres()->pluck('title')->all());
     }
 
     public function test_image_failures_keep_metadata_reviewable_and_disable_only_failed_image_categories(): void

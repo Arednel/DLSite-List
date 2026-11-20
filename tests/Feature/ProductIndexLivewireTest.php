@@ -26,10 +26,12 @@ use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\App;
 use Illuminate\Support\Facades\DB;
 use Livewire\Livewire;
+use Tests\Feature\Concerns\InteractsWithLocalizedWorks;
 use Tests\TestCase;
 
 class ProductIndexLivewireTest extends TestCase
 {
+    use InteractsWithLocalizedWorks;
     use RefreshDatabase;
 
     public function test_index_uses_default_page_size_when_no_option_exists(): void
@@ -2877,19 +2879,30 @@ class ProductIndexLivewireTest extends TestCase
         Option::setDlsiteMetadataLanguageFollowsUi(false);
         Option::setDlsiteMetadataLanguage(DlsiteLanguage::Japanese);
 
-        $product = $this->createProduct(1, [
-            'work_name' => 'ALL_LOCALIZED_TITLES_SEARCH_WORK',
-            'localized_title' => 'ALL_LOCALIZED_TITLES_EN_TOKEN',
-        ]);
-        $product->syncLocalization('zh_TW', [
-            'title' => 'ALL_LOCALIZED_TITLES_ZH_TOKEN',
-        ]);
-
-        foreach (['ALL_LOCALIZED_TITLES_EN_TOKEN', 'ALL_LOCALIZED_TITLES_ZH_TOKEN'] as $search) {
+        $locales = $this->workLocales('RJ123456', 'Search');
+        $product = $this->createLocalizedWork($locales);
+        foreach ($locales as $fields) {
             Livewire::test(ProductIndex::class)
-                ->set('searchInput', $search)
+                ->set('searchInput', $fields['work_name'])
                 ->call('applySearch')
-                ->assertSee($product->work_name);
+                ->assertViewHas('products', fn($rows): bool => $rows->modelKeys() === [$product->id]);
+        }
+    }
+
+    public function test_title_filter_searches_only_japanese_and_the_preferred_language(): void
+    {
+        Option::setDlsiteMetadataLanguageFollowsUi(false);
+        $locales = $this->workLocales('RJ123456', 'Filter');
+        $product = $this->createLocalizedWork($locales);
+        foreach (DlsiteLanguage::cases() as $selected) {
+            Option::setDlsiteMetadataLanguage($selected);
+            $component = Livewire::test(ProductIndex::class);
+            foreach ($locales as $code => $fields) {
+                $expected = $code === 'ja' || $code === $selected->value ? [$product->id] : [];
+                $component->set('draft.title', $fields['work_name'])
+                    ->call('applyFilters')
+                    ->assertViewHas('products', fn($rows): bool => $rows->modelKeys() === $expected);
+            }
         }
     }
 

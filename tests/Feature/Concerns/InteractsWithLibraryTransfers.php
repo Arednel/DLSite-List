@@ -53,6 +53,22 @@ trait InteractsWithLibraryTransfers
         return $run->fresh();
     }
 
+    private function limitExportToOneWorkPerPart(LibraryTransferRun $run): int
+    {
+        $archive = $this->archive();
+        do {
+            $archive->plan($run);
+            $run->refresh();
+        } while ($run->settings['planning']['phase'] === 'works');
+
+        $entries = $run->entries()->where('section', 'works')->get(['path', 'bytes']);
+        $this->assertNotEmpty($entries);
+        $limit = $entries->max(fn($entry): int => $archive->bound([$entry]));
+        $run->update(['settings' => [...$run->settings, 'part_bytes' => $limit]]);
+
+        return $limit;
+    }
+
     private function review(): ImportReview
     {
         return app(ImportReview::class);

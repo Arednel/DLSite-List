@@ -10,22 +10,22 @@ class UiLanguageTest extends TestCase
 {
     public function test_it_exposes_supported_language_options(): void
     {
-        $this->assertSame([
-            UiLanguage::English->value => 'English',
-            UiLanguage::Japanese->value => '日本語',
-            UiLanguage::TraditionalChinese->value => '繁體中文',
-        ], UiLanguage::options());
+        $options = UiLanguage::options();
+        $this->assertSame(array_column(UiLanguage::cases(), 'value'), array_keys($options));
+        $this->assertSame('English', $options['en']);
+        $this->assertSame('日本語', $options['ja']);
+        $this->assertSame('繁體中文', $options['zh_TW']);
+        foreach ($options as $label) {
+            $this->assertNotSame('', trim($label));
+        }
     }
 
     public function test_current_resolves_the_application_locale_with_english_fallback(): void
     {
-        App::setLocale(UiLanguage::Japanese->value);
-
-        $this->assertSame(UiLanguage::Japanese, UiLanguage::current());
-
-        App::setLocale(UiLanguage::TraditionalChinese->value);
-
-        $this->assertSame(UiLanguage::TraditionalChinese, UiLanguage::current());
+        foreach (UiLanguage::cases() as $language) {
+            App::setLocale($language->value);
+            $this->assertSame($language, UiLanguage::current());
+        }
 
         App::setLocale('unsupported');
 

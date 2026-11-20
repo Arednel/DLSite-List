@@ -7,7 +7,10 @@ use App\Enums\UiLanguage;
 use App\Livewire\UiLanguageSettings;
 use App\Models\Option;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\File;
 use Livewire\Livewire;
+use PHPUnit\Framework\Attributes\DataProviderExternal;
+use Tests\LanguageCases;
 use Tests\TestCase;
 
 class UiLanguageSettingsTest extends TestCase
@@ -29,10 +32,31 @@ class UiLanguageSettingsTest extends TestCase
             ->assertSee('class="metadata-language-block"', false)
             ->assertSee('class="field-layout-section field-layout-collapsible metadata-language-nested"', false)
             ->assertSee('Fetched languages')
-            ->assertSee('English')
-            ->assertSee('Traditional Chinese')
-            ->assertSee('日本語')
-            ->assertSee('繁體中文');
+            ->assertSee(array_values(UiLanguage::options()))
+            ->assertSee(array_values(DlsiteLanguage::options()));
+    }
+
+    #[DataProviderExternal(LanguageCases::class, 'ui')]
+    public function test_saved_ui_language_localizes_the_page_and_selects_matching_metadata(UiLanguage $ui): void
+    {
+        Livewire::test(UiLanguageSettings::class)
+            ->set('language', $ui->value)
+            ->set('fetchLanguages', [])
+            ->call('save')
+            ->assertHasNoErrors();
+
+        $matching = DlsiteLanguage::tryFrom($ui->value);
+        $this->assertSame($ui, Option::uiLanguage());
+        $this->assertSame($matching, $ui->dlsiteLanguage());
+        $this->assertSame($matching ?? DlsiteLanguage::English, Option::effectiveDlsiteMetadataLanguage());
+        $this->assertContains($matching ?? DlsiteLanguage::English, Option::effectiveDlsiteMetadataFetchLanguages());
+
+        $catalog = File::json(lang_path("{$ui->value}.json"));
+        $htmlLanguage = str_replace('_', '-', $ui->value);
+        $this->get(route('options.index', ['tab' => 'general']))
+            ->assertOk()
+            ->assertSee('<html lang="' . $htmlLanguage . '">', false)
+            ->assertSee($catalog['Language settings saved.']);
     }
 
     public function test_follow_mode_uses_the_current_ui_language_for_display_and_fetch(): void
@@ -85,12 +109,13 @@ class UiLanguageSettingsTest extends TestCase
         $this->assertDatabaseMissing('options', ['key' => Option::DLSITE_METADATA_FETCH_LANGUAGES]);
     }
 
-    public function test_save_can_select_metadata_language_independently_from_the_ui_language(): void
+    #[DataProviderExternal(LanguageCases::class, 'metadata')]
+    public function test_save_can_select_metadata_language_independently_from_the_ui_language(DlsiteLanguage $language): void
     {
         Livewire::test(UiLanguageSettings::class)
             ->set('language', UiLanguage::Japanese->value)
             ->set('followUiLanguage', false)
-            ->set('metadataLanguage', DlsiteLanguage::English->value)
+            ->set('metadataLanguage', $language->value)
             ->set('fetchLanguages', [])
             ->call('save')
             ->assertHasNoErrors()
@@ -98,10 +123,10 @@ class UiLanguageSettingsTest extends TestCase
 
         $this->assertSame(UiLanguage::Japanese, Option::uiLanguage());
         $this->assertFalse(Option::dlsiteMetadataLanguageFollowsUi());
-        $this->assertSame(DlsiteLanguage::English, Option::dlsiteMetadataLanguage());
-        $this->assertSame(DlsiteLanguage::English, Option::effectiveDlsiteMetadataLanguage());
+        $this->assertSame($language, Option::dlsiteMetadataLanguage());
+        $this->assertSame($language, Option::effectiveDlsiteMetadataLanguage());
         $this->assertSame(
-            [DlsiteLanguage::Japanese, DlsiteLanguage::English],
+            $language === DlsiteLanguage::Japanese ? [$language] : [DlsiteLanguage::Japanese, $language],
             Option::effectiveDlsiteMetadataFetchLanguages(),
         );
         $this->assertSame('Language settings saved.', session('language_settings_notice'));

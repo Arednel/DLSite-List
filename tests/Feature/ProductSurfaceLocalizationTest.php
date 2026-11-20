@@ -14,7 +14,6 @@ use App\Models\Product;
 use App\Support\ProductContributorSync;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
-use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\App;
 use Illuminate\Support\Facades\Storage;
 use Livewire\Livewire;
@@ -320,58 +319,5 @@ class ProductSurfaceLocalizationTest extends TestCase
             'DLsite作品データに作品IDがありません。',
             __('errors.dlsite.work.missing_product_id'),
         );
-    }
-
-    public function test_translation_catalogs_have_matching_keys_placeholders_and_supported_english_overrides(): void
-    {
-        $english = json_decode(file_get_contents(lang_path('en.json')), true, 512, JSON_THROW_ON_ERROR);
-        $japanese = json_decode(file_get_contents(lang_path('ja.json')), true, 512, JSON_THROW_ON_ERROR);
-        $englishErrors = Arr::dot(require lang_path('en/errors.php'));
-        $japaneseErrors = Arr::dot(require lang_path('ja/errors.php'));
-        $englishDisplayOverrides = [
-            'Custom->Fetched' => 'Custom -> Fetched',
-            'Custom->Fetched JP' => 'Custom -> Fetched JP',
-            'Custom->Fetched EN' => 'Custom -> Fetched EN',
-            'This work Custom->Fetched' => 'This work Custom -> Fetched',
-            'Announcement Date from' => 'Scheduled release date from',
-            'Announcement Date to' => 'Scheduled release date to',
-            'Announcement Date' => 'Scheduled release date',
-        ];
-        $actualEnglishOverrides = [];
-        $placeholders = static function (string $value): array {
-            preg_match_all('/:[A-Za-z_][A-Za-z0-9_]*/', $value, $matches);
-            $placeholders = array_values(array_unique($matches[0]));
-            sort($placeholders);
-
-            return $placeholders;
-        };
-
-        $this->assertEqualsCanonicalizing(array_keys($english), array_keys($japanese));
-        $this->assertArrayNotHasKey('errors', $english);
-        $this->assertArrayNotHasKey('errors', $japanese);
-
-        foreach ($english as $key => $value) {
-            if ($key !== $value) {
-                $actualEnglishOverrides[$key] = $value;
-            }
-
-            $this->assertNotSame('', trim($japanese[$key]));
-            $this->assertSame($placeholders($key), $placeholders($japanese[$key]), $key);
-        }
-
-        // DlsiteLanguageTest checks the display label for every metadata language.
-        $this->assertEquals(
-            $englishDisplayOverrides,
-            Arr::except($actualEnglishOverrides, array_column(DlsiteLanguage::cases(), 'name')),
-        );
-
-        $this->assertEqualsCanonicalizing(array_keys($englishErrors), array_keys($japaneseErrors));
-        $this->assertSame([], array_values(array_intersect(array_keys($english), array_keys($englishErrors))));
-
-        foreach ($englishErrors as $key => $value) {
-            $this->assertMatchesRegularExpression('/\A[a-z0-9_]+(?:\.[a-z0-9_]+)*\z/', $key);
-            $this->assertNotSame('', trim($japaneseErrors[$key]));
-            $this->assertSame($placeholders($value), $placeholders($japaneseErrors[$key]), $key);
-        }
     }
 }

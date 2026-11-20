@@ -67,16 +67,18 @@ class DLSiteWorkFetcherTest extends TestCase
         ]);
     }
 
-    public static function requestedLanguageLists(): array
+    public static function requestedLanguageLists(): iterable
     {
-        return [
-            'default' => [null, ['ja' => null, 'en' => 'en_US']],
-            'empty means Japanese only' => [[], ['ja' => null]],
-            'English only' => [['en'], ['ja' => null, 'en' => 'en_US']],
-            'Japanese and English' => [['ja', 'en'], ['ja' => null, 'en' => 'en_US']],
-            'Traditional Chinese only' => [['zh_TW'], ['ja' => null, 'zh_TW' => 'zh_TW']],
-            'English and Traditional Chinese' => [['en', 'zh_TW'], ['ja' => null, 'en' => 'en_US', 'zh_TW' => 'zh_TW']],
-        ];
+        yield 'default' => [null, ['ja' => null, 'en' => 'en_US']];
+        yield 'empty means Japanese only' => [[], ['ja' => null]];
+
+        $all = [];
+        foreach (DlsiteLanguage::cases() as $language) {
+            $all[$language->value] = $language->apiLocale();
+            yield $language->value => [[$language->value], ['ja' => null, $language->value => $language->apiLocale()]];
+        }
+
+        yield 'all languages' => [array_keys($all), $all];
     }
 
     public function test_it_rejects_an_unsupported_internal_language(): void

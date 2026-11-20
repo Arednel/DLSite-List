@@ -2,6 +2,7 @@
 
 namespace Tests\Unit\Support\Transfers;
 
+use App\Enums\DlsiteLanguage;
 use App\Support\Transfers\LibraryWorkValidator;
 use Illuminate\Validation\ValidationException;
 use PHPUnit\Framework\Attributes\DataProvider;
@@ -38,7 +39,7 @@ class LibraryWorkValidatorTest extends TestCase
             'null English title' => [['titles' => ['ja' => 'Title', 'en' => null]], null],
             'empty English title' => [['titles' => ['ja' => 'Title', 'en' => '']], null],
             'non-string English title' => [['titles' => ['ja' => 'Title', 'en' => []]], 'titles.en'],
-            'unsupported title locale' => [['titles' => ['ja' => 'Title', 'fr' => 'Title']], 'titles'],
+            'unsupported title locale' => [['titles' => ['ja' => 'Title', 'x-test' => 'Title']], 'titles'],
             'maximum Japanese title' => [['titles' => ['ja' => str_repeat('あ', 1000)]], null],
             'oversized Japanese title' => [['titles' => ['ja' => str_repeat('あ', 1001)]], 'titles.ja'],
             'maximum English title' => [['titles' => ['ja' => 'Title', 'en' => str_repeat('x', 1000)]], null],
@@ -47,7 +48,7 @@ class LibraryWorkValidatorTest extends TestCase
             'null descriptions' => [['titles' => ['ja' => 'Title'], 'descriptions' => ['ja' => null, 'en' => null]], null],
             'empty description values' => [['titles' => ['ja' => 'Title'], 'descriptions' => ['ja' => '', 'en' => '']], null],
             'non-string description' => [['titles' => ['ja' => 'Title'], 'descriptions' => ['en' => []]], 'descriptions.en'],
-            'unsupported description locale' => [['titles' => ['ja' => 'Title'], 'descriptions' => ['fr' => 'Description']], 'descriptions'],
+            'unsupported description locale' => [['titles' => ['ja' => 'Title'], 'descriptions' => ['x-test' => 'Description']], 'descriptions'],
             'maximum ASCII description' => [['titles' => ['ja' => 'Title'], 'descriptions' => ['en' => str_repeat('x', 65535)]], null],
             'oversized ASCII description' => [['titles' => ['ja' => 'Title'], 'descriptions' => ['en' => str_repeat('x', 65536)]], 'descriptions.en'],
             'maximum multibyte description' => [['titles' => ['ja' => 'Title'], 'descriptions' => ['ja' => str_repeat('あ', 21845)]], null],
@@ -73,29 +74,17 @@ class LibraryWorkValidatorTest extends TestCase
         }
     }
 
-    public function test_normalized_transfer_records_use_canonical_tag_locale_keys(): void
+    public function test_normalized_transfer_records_preserve_metadata_for_every_supported_language(): void
     {
-        $validated = app(LibraryWorkValidator::class)->validate([
-            'product_code' => 'RJ123456',
-            'titles' => ['ja' => 'Test work', 'en' => 'English work', 'zh_TW' => '繁體中文作品'],
-            'descriptions' => ['ja' => 'Japanese description', 'en' => 'English description', 'zh_TW' => '繁體中文說明'],
-            'tags' => [
-                'custom' => ['Custom'],
-                'ja' => ['Japanese'],
-                'en' => ['English'],
-                'zh_TW' => ['繁體中文'],
-            ],
-        ]);
+        $record = ['product_code' => 'RJ123456', 'tags' => ['custom' => ['Custom']]];
+        foreach (DlsiteLanguage::cases() as $language) {
+            $code = $language->value;
+            $record['titles'][$code] = "Title [{$code}]";
+            $record['descriptions'][$code] = "Description [{$code}]";
+            $record['tags'][$code] = ["Tag [{$code}]"];
+        }
 
-        $this->assertSame(['ja' => 'Test work', 'en' => 'English work', 'zh_TW' => '繁體中文作品'], $validated['titles']);
-        $this->assertSame(
-            ['ja' => 'Japanese description', 'en' => 'English description', 'zh_TW' => '繁體中文說明'],
-            $validated['descriptions'],
-        );
-        $this->assertSame(['Custom'], $validated['tags']['custom']);
-        $this->assertSame(['Japanese'], $validated['tags']['ja']);
-        $this->assertSame(['English'], $validated['tags']['en']);
-        $this->assertSame(['繁體中文'], $validated['tags']['zh_TW']);
+        $this->assertSame($record, app(LibraryWorkValidator::class)->validate($record));
     }
 
     public function test_tags_reject_unsupported_locale_keys(): void
@@ -105,7 +94,7 @@ class LibraryWorkValidatorTest extends TestCase
         app(LibraryWorkValidator::class)->validate([
             'product_code' => 'RJ123456',
             'titles' => ['ja' => 'Test work'],
-            'tags' => ['fr' => ['Unsupported']],
+            'tags' => ['x-test' => ['Unsupported']],
         ]);
     }
 

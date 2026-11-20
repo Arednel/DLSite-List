@@ -1502,13 +1502,13 @@ class LibraryTransferReviewTest extends TestCase
         $product = Product::factory()->create(['id' => 'RJ123499']);
         $japanese = Genre::resolveByTitle('Japanese Existing');
         $english = Genre::resolveByTitle('English Existing');
-        $shared = Genre::resolveByTitle('Shared English Korean');
-        $korean = Genre::resolveByTitle('Korean Existing');
+        $shared = Genre::resolveByTitle('Shared across locales');
+        $unregistered = Genre::resolveByTitle('Unregistered locale tag');
         $custom = Genre::resolveByTitle('Custom Existing');
         app(ProductGenreSync::class)->sync($product, [
             'ja' => [$japanese->id],
             'en' => [$english->id, $shared->id],
-            'ko' => [$korean->id, $shared->id],
+            'x-test' => [$unregistered->id, $shared->id],
         ], [$custom->id]);
 
         $applyBucket = function (string $category, string $bucket, array $incoming, LibraryImportDecision $decision) use ($product): void {
@@ -1536,26 +1536,26 @@ class LibraryTransferReviewTest extends TestCase
         $applyBucket('custom_tags', 'custom', ['0'], LibraryImportDecision::Overwrite);
         $this->assertSame(['0'], $product->fresh()->customGenres()->pluck('genres.title')->all());
         $this->assertEqualsCanonicalizing(
-            ['Shared English Korean', 'Korean Existing'],
-            $product->fresh()->fetchedGenresForLanguage('ko')->pluck('genres.title')->all(),
+            ['Shared across locales', 'Unregistered locale tag'],
+            $product->fresh()->fetchedGenresForLanguage('x-test')->pluck('genres.title')->all(),
         );
 
         $applyBucket('tags', 'en', ['English Added'], LibraryImportDecision::Merge);
         $this->assertEqualsCanonicalizing(
-            ['English Existing', 'Shared English Korean', 'English Added'],
+            ['English Existing', 'Shared across locales', 'English Added'],
             $product->fresh()->fetchedGenresForLanguage('en')->pluck('genres.title')->all(),
         );
         $this->assertEqualsCanonicalizing(
-            ['Shared English Korean', 'Korean Existing'],
-            $product->fresh()->fetchedGenresForLanguage('ko')->pluck('genres.title')->all(),
+            ['Shared across locales', 'Unregistered locale tag'],
+            $product->fresh()->fetchedGenresForLanguage('x-test')->pluck('genres.title')->all(),
         );
 
         $applyBucket('tags', 'en', [], LibraryImportDecision::Overwrite);
         $this->assertSame([], $product->fresh()->fetchedGenresForLanguage('en')->pluck('genres.title')->all());
         $this->assertEqualsCanonicalizing(
-            ['Shared English Korean', 'Korean Existing'],
-            $product->fresh()->fetchedGenresForLanguage('ko')->pluck('genres.title')->all(),
+            ['Shared across locales', 'Unregistered locale tag'],
+            $product->fresh()->fetchedGenresForLanguage('x-test')->pluck('genres.title')->all(),
         );
-        $this->assertDatabaseHas('genres', ['title' => 'Shared English Korean']);
+        $this->assertDatabaseHas('genres', ['title' => 'Shared across locales']);
     }
 }

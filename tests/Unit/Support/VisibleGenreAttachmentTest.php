@@ -11,36 +11,29 @@ use App\Support\VisibleGenreAttachment;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\App;
 use Illuminate\Support\Facades\DB;
-use PHPUnit\Framework\Attributes\DataProvider;
+use PHPUnit\Framework\Attributes\DataProviderExternal;
+use Tests\LanguageCases;
 use Tests\TestCase;
 
 class VisibleGenreAttachmentTest extends TestCase
 {
     use RefreshDatabase;
 
-    #[DataProvider('localeVisibilityProvider')]
-    public function test_default_visibility_returns_custom_and_followed_ui_language_fetched_attachments(
-        UiLanguage $uiLanguage,
-        string $expectedFetchedTitle,
-    ): void {
-        App::setLocale($uiLanguage->value);
-        Option::setUiLanguage($uiLanguage);
-
+    #[DataProviderExternal(LanguageCases::class, 'ui')]
+    public function test_default_visibility_returns_custom_and_followed_ui_language_fetched_attachments(UiLanguage $ui): void
+    {
+        App::setLocale($ui->value);
+        Option::setUiLanguage($ui);
         $product = Product::factory()->create();
         $custom = Genre::query()->create(['title' => 'Custom Visible']);
-        $english = Genre::query()->create(['title' => 'English Fetched']);
-        $japanese = Genre::query()->create(['title' => 'Japanese Fetched']);
-        $traditionalChinese = Genre::query()->create(['title' => 'Traditional Chinese Fetched']);
-
         $this->attachGenre($product, $custom, Genre::PIVOT_SOURCE_CUSTOM);
-        $this->attachGenre($product, $english, Genre::PIVOT_SOURCE_FETCHED, [DlsiteLanguage::English->value]);
-        $this->attachGenre($product, $japanese, Genre::PIVOT_SOURCE_FETCHED, [DlsiteLanguage::Japanese->value]);
-        $this->attachGenre($product, $traditionalChinese, Genre::PIVOT_SOURCE_FETCHED, [DlsiteLanguage::TraditionalChinese->value]);
+        foreach (DlsiteLanguage::cases() as $language) {
+            $genre = Genre::query()->create(['title' => "Fetched {$language->value}"]);
+            $this->attachGenre($product, $genre, Genre::PIVOT_SOURCE_FETCHED, [$language->value]);
+        }
 
-        $this->assertSame([
-            'Custom Visible',
-            $expectedFetchedTitle,
-        ], $this->visibleTitlesFor($product));
+        $locale = ($ui->dlsiteLanguage() ?? DlsiteLanguage::English)->value;
+        $this->assertSame(['Custom Visible', "Fetched {$locale}"], $this->visibleTitlesFor($product));
     }
 
     public function test_manual_fetched_tag_language_can_differ_from_the_ui_language(): void
@@ -103,13 +96,6 @@ class VisibleGenreAttachmentTest extends TestCase
         $this->attachGenre($product, $otherSource, 'other', [DlsiteLanguage::English->value]);
 
         $this->assertSame([], $this->visibleTitlesFor($product, DlsiteLanguage::English->value));
-    }
-
-    public static function localeVisibilityProvider(): iterable
-    {
-        yield 'English' => [UiLanguage::English, 'English Fetched'];
-        yield 'Japanese' => [UiLanguage::Japanese, 'Japanese Fetched'];
-        yield 'Traditional Chinese' => [UiLanguage::TraditionalChinese, 'Traditional Chinese Fetched'];
     }
 
     /**

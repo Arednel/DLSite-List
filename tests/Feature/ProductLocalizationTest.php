@@ -462,7 +462,7 @@ class ProductLocalizationTest extends TestCase
     public function test_title_filter_uses_canonical_japanese_and_requested_localization(): void
     {
         $product = Product::factory()->withTitles('Japanese searchable title', 'English searchable title')->create();
-        $product->syncLocalization('fr', [
+        $product->syncLocalization('x-test', [
             'title' => 'Future locale only token',
         ]);
 
@@ -479,7 +479,7 @@ class ProductLocalizationTest extends TestCase
             ->whereKey($product->getKey())
             ->exists());
         $this->assertTrue(Product::query()
-            ->filterTitle('Future locale only', 'fr')
+            ->filterTitle('Future locale only', 'x-test')
             ->whereKey($product->getKey())
             ->exists());
     }
@@ -487,7 +487,7 @@ class ProductLocalizationTest extends TestCase
     public function test_general_search_uses_canonical_japanese_and_all_stored_localized_titles(): void
     {
         $product = Product::factory()->withTitles('Japanese searchable title', 'English searchable title')->create();
-        $product->syncLocalization('fr', [
+        $product->syncLocalization('x-test', [
             'title' => 'Future locale only token',
         ]);
 
@@ -543,7 +543,7 @@ class ProductLocalizationTest extends TestCase
             'notes' => 'Shared token notes',
         ]);
         $unmatched = Product::factory()->create(['work_name' => 'Another title']);
-        $unmatched->syncLocalization('fr', [
+        $unmatched->syncLocalization('x-test', [
             'title' => 'Shared token French',
         ]);
 

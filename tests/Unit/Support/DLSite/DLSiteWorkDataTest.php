@@ -58,39 +58,22 @@ class DLSiteWorkDataTest extends TestCase
 
     public function test_locale_keyed_payload_exposes_localized_title_description_and_tags(): void
     {
-        $data = DLSiteWorkData::fromArray([
-            'locales' => [
-                'ja' => [
-                    'product_id' => 'RJ123456',
-                    'work_name' => '日本語タイトル',
-                    'description' => '日本語説明',
-                    'genre' => ['JP Tag'],
-                ],
-                'en' => [
-                    'product_id' => 'RJ123456',
-                    'work_name' => 'English Title',
-                    'description' => 'English Description',
-                    'genre' => ['EN Tag'],
-                ],
-                'zh_TW' => [
-                    'product_id' => 'RJ123456',
-                    'work_name' => '繁體中文標題',
-                    'description' => '繁體中文說明',
-                    'genre' => ['繁體中文標籤'],
-                ],
-            ],
-        ]);
-
-        $this->assertSame('日本語タイトル', $data->titleForLocale(DlsiteLanguage::Japanese));
-        $this->assertSame('English Title', $data->titleForLocale(DlsiteLanguage::English));
-        $this->assertSame('English Description', $data->descriptionForLocale(DlsiteLanguage::English));
-        $this->assertSame('繁體中文標題', $data->titleForLocale(DlsiteLanguage::TraditionalChinese));
-        $this->assertSame('繁體中文說明', $data->descriptionForLocale(DlsiteLanguage::TraditionalChinese));
-        $this->assertSame([
-            'ja' => ['JP Tag'],
-            'en' => ['EN Tag'],
-            'zh_TW' => ['繁體中文標籤'],
-        ], $data->genresByLocale());
+        $locales = [];
+        foreach (DlsiteLanguage::cases() as $language) {
+            $code = $language->value;
+            $locales[$code] = [
+                'product_id' => 'RJ123456',
+                'work_name' => "作品 [{$code}]",
+                'description' => "説明 [{$code}]",
+                'genre' => ["標籤 [{$code}]"],
+            ];
+        }
+        $data = DLSiteWorkData::fromArray(['locales' => $locales]);
+        foreach ($locales as $code => $fields) {
+            $this->assertSame($fields['work_name'], $data->titleForLocale($code));
+            $this->assertSame($fields['description'], $data->descriptionForLocale($code));
+        }
+        $this->assertSame(array_map(fn(array $fields): array => $fields['genre'], $locales), $data->genresByLocale());
 
         $normalized = DLSiteWorkData::normalizePayload([
             'locales' => [

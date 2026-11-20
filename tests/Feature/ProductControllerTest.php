@@ -32,10 +32,12 @@ use League\Flysystem\UnableToListContents;
 use Livewire\Livewire;
 use Mockery;
 use PHPUnit\Framework\Attributes\DataProvider;
+use Tests\Feature\Concerns\InteractsWithLocalizedWorks;
 use Tests\TestCase;
 
 class ProductControllerTest extends TestCase
 {
+    use InteractsWithLocalizedWorks;
     use RefreshDatabase;
 
     public function test_index_filters_by_age_category_progress_series_and_genre(): void
@@ -1412,9 +1414,9 @@ class ProductControllerTest extends TestCase
 
         $product = Product::factory()->withTitles('Japanese title', 'Old English title')->create();
         $product->syncLocalization('en', ['description' => 'Old English description']);
-        $product->syncLocalization('ko', [
-            'title' => 'Future Korean title',
-            'description' => 'Future Korean description',
+        $product->syncLocalization('x-test', [
+            'title' => 'Unregistered title',
+            'description' => 'Unregistered description',
         ]);
 
         $this->post("/update/{$product->id}", [
@@ -1427,8 +1429,8 @@ class ProductControllerTest extends TestCase
         $product->refresh();
         $this->assertSame('New English title', $product->localizations()->where('locale', 'en')->value('title'));
         $this->assertSame('New English description', $product->localizations()->where('locale', 'en')->value('description'));
-        $this->assertSame('Future Korean title', $product->localizations()->where('locale', 'ko')->value('title'));
-        $this->assertSame('Future Korean description', $product->localizations()->where('locale', 'ko')->value('description'));
+        $this->assertSame('Unregistered title', $product->localizations()->where('locale', 'x-test')->value('title'));
+        $this->assertSame('Unregistered description', $product->localizations()->where('locale', 'x-test')->value('description'));
     }
 
     public function test_update_preserves_explicit_localized_description_equal_to_japanese(): void
@@ -1534,38 +1536,56 @@ class ProductControllerTest extends TestCase
     }
 
     #[DataProvider('fetchedTagRenderingProvider')]
-    public function test_edit_renders_only_the_selected_fetched_tags(
-        UiLanguage $uiLanguage,
-        bool $editable,
-        string $expectedLabel,
-        string $expectedFetchedLanguage,
-    ): void {
-        Option::setUiLanguage($uiLanguage);
-        $this->setTagEditLayout(visible: true, customEditable: true, fetchedEditable: $editable);
-
-        $englishGenre = $this->createGenre('CURRENT_FETCHED_EN_TOKEN', Genre::TYPE_AUTO_GENERATED_ENGLISH);
-        $japaneseGenre = $this->createGenre('CURRENT_FETCHED_JP_TOKEN', Genre::TYPE_AUTO_GENERATED_JAPANESE);
-        $product = Product::factory()->create();
-        $this->attachGenres($product, [$englishGenre, $japaneseGenre]);
-
-        $visibleGenre = $expectedFetchedLanguage === DlsiteLanguage::English->value ? $englishGenre : $japaneseGenre;
-        $hiddenGenre = $expectedFetchedLanguage === DlsiteLanguage::English->value ? $japaneseGenre : $englishGenre;
+    public function test_edit_shows_the_selected_metadata_and_saves_only_that_language(DlsiteLanguage $selected, bool $editable): void
+    {
+        Option::setDlsiteMetadataLanguageFollowsUi(false);
+        Option::setDlsiteMetadataLanguage($selected);
+        Option::setEditFieldLayout([
+            ['field' => ProductField::Title->value, 'visible' => true, 'editable' => true],
+            ['field' => ProductField::DescriptionJapanese->value, 'visible' => true, 'editable' => true],
+            ['field' => ProductField::DescriptionLocalized->value, 'visible' => true, 'editable' => true],
+            ['field' => ProductField::Tags->value, 'visible' => true, 'editable' => false],
+            ['field' => ProductField::FetchedTags->value, 'visible' => true, 'editable' => $editable],
+        ]);
+        $locales = $this->workLocales('RJ123456', 'Stored');
+        $product = $this->createLocalizedWork($locales);
+        $code = $selected->value;
         $response = $this->get("/edit/{$product->id}")
             ->assertOk()
-            ->assertSee($expectedLabel)
-            ->assertSee($visibleGenre->title)
-            ->assertDontSee($hiddenGenre->title);
-
-        $response->assertSeeInOrder([
-            'name="metadata_language"',
-            'value="' . $expectedFetchedLanguage . '"',
-        ], false);
-
-        if ($editable) {
-            $response->assertSee('name="genre_fetched"', false);
-        } else {
-            $response->assertDontSee('name="genre_fetched"', false);
+            ->assertSee('Fetched Tags')
+            ->assertSee('Custom tag')
+            ->assertSeeInOrder(['name="metadata_language"', 'value="' . $code . '"'], false);
+        foreach ($locales as $locale => $fields) {
+            if ($locale === $code) {
+                $response->assertSee($fields['genre'][0])->assertSee($fields['work_name'])->assertSee($fields['description']);
+            } else {
+                $response->assertDontSee($fields['genre'][0]);
+            }
         }
+        if (! $editable) {
+            $response->assertDontSee('name="genre_fetched"', false);
+
+            return;
+        }
+
+        $response->assertSee('name="genre_fetched"', false);
+        $replacement = $this->workLocales($product->id, 'Edited')[$code];
+        $changes = $selected === DlsiteLanguage::Japanese
+            ? ['work_name' => $replacement['work_name'], 'description' => $replacement['description']]
+            : [
+                'work_name' => $product->work_name,
+                'localized_title' => $replacement['work_name'],
+                'description_localized' => $replacement['description'],
+            ];
+        $this->post("/update/{$product->id}", [
+            ...$changes,
+            'metadata_language' => $code,
+            'genre_fetched' => $replacement['genre'][0],
+        ])->assertSessionHasNoErrors();
+
+        $locales[$code] = $replacement;
+        $this->assertStoredWorkLocales($product, $locales);
+        $this->assertSame(['Custom tag'], $product->customGenres()->pluck('title')->all());
     }
 
     public function test_edit_readonly_tags_use_colors_only_when_surface_is_enabled(): void
@@ -2534,24 +2554,20 @@ class ProductControllerTest extends TestCase
             ['field' => ProductField::DescriptionLocalized->value, 'visible' => false],
         ]);
 
+        Option::setDlsiteMetadataFetchLanguages(DlsiteLanguage::cases());
         $workId = Product::factory()->make()->id;
-        Storage::disk('local')->put("Works/{$workId}.json", json_encode($this->scrapedWorkPayload($workId, [
-            'description' => 'SCRAPED_HIDDEN_SPLIT_JP_DESCRIPTION',
-        ], [
-            'description' => 'SCRAPED_HIDDEN_SPLIT_EN_DESCRIPTION',
-        ])));
+        $locales = $this->workLocales($workId, 'Scraped');
+        Storage::disk('local')->put("Works/{$workId}.json", json_encode(['locales' => $locales], JSON_THROW_ON_ERROR));
 
         $this->post('/store', [
             'metadata_language' => DlsiteLanguage::English->value,
             'id' => $workId,
-            'description' => 'VISIBLE_SPLIT_JP_OVERRIDE',
-            'description_localized' => 'MALICIOUS_HIDDEN_SPLIT_EN_OVERRIDE',
+            'description' => 'Visible Japanese override',
+            'description_localized' => 'Hidden override',
         ])->assertSessionHasNoErrors();
 
-        $product = Product::query()->whereKey($workId)->firstOrFail();
-
-        $this->assertSame('VISIBLE_SPLIT_JP_OVERRIDE', $product->description);
-        $this->assertSame('SCRAPED_HIDDEN_SPLIT_EN_DESCRIPTION', $product->localizations()->where('locale', DlsiteLanguage::English->value)->value('description'));
+        $locales['ja']['description'] = 'Visible Japanese override';
+        $this->assertStoredWorkLocales(Product::findOrFail($workId), $locales);
     }
 
     public function test_store_keeps_manual_series_when_title_name_is_fetched(): void
@@ -4863,10 +4879,10 @@ class ProductControllerTest extends TestCase
 
     public static function fetchedTagRenderingProvider(): iterable
     {
-        yield 'English readonly' => [UiLanguage::English, false, 'Fetched Tags', DlsiteLanguage::English->value];
-        yield 'Japanese readonly' => [UiLanguage::Japanese, false, '取得タグ', DlsiteLanguage::Japanese->value];
-        yield 'English editable' => [UiLanguage::English, true, 'Fetched Tags', DlsiteLanguage::English->value];
-        yield 'Japanese editable' => [UiLanguage::Japanese, true, '取得タグ', DlsiteLanguage::Japanese->value];
+        foreach (DlsiteLanguage::cases() as $language) {
+            yield "{$language->value} readonly" => [$language, false];
+            yield "{$language->value} editable" => [$language, true];
+        }
     }
 
     private function attachGenres(Product $product, array $genres): void

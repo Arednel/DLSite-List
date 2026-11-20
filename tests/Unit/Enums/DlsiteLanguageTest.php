@@ -5,49 +5,52 @@ namespace Tests\Unit\Enums;
 use App\Enums\DlsiteLanguage;
 use App\Enums\UiLanguage;
 use Illuminate\Support\Facades\App;
+use Illuminate\Support\Facades\File;
+use PHPUnit\Framework\Attributes\DataProviderExternal;
+use Tests\LanguageCases;
 use Tests\TestCase;
 
 class DlsiteLanguageTest extends TestCase
 {
-    public function test_values_returns_canonical_language_codes_in_case_order(): void
+    public function test_supported_codes_and_upstream_api_locales(): void
     {
-        $this->assertSame(['ja', 'en', 'zh_TW'], DlsiteLanguage::values());
-    }
+        $expected = ['ja' => null, 'en' => 'en_US', 'zh_TW' => 'zh_TW'];
 
-    public function test_it_exposes_currently_supported_dlsite_languages(): void
-    {
-        $this->assertSame([
-            DlsiteLanguage::Japanese->value => 'Japanese',
-            DlsiteLanguage::English->value => 'English',
-            DlsiteLanguage::TraditionalChinese->value => 'Traditional Chinese',
-        ], DlsiteLanguage::options());
-    }
-
-    public function test_it_exposes_the_upstream_api_locale_mapping(): void
-    {
-        $this->assertNull(DlsiteLanguage::Japanese->apiLocale());
-        $this->assertSame('en_US', DlsiteLanguage::English->apiLocale());
-        $this->assertSame('zh_TW', DlsiteLanguage::TraditionalChinese->apiLocale());
-    }
-
-    public function test_labels_follow_the_current_ui_locale(): void
-    {
-        foreach (
-            [
-                UiLanguage::English->value => ['ja' => 'Japanese', 'en' => 'English', 'zh_TW' => 'Traditional Chinese'],
-                UiLanguage::Japanese->value => ['ja' => '日本語', 'en' => '英語', 'zh_TW' => '繁体字中国語'],
-                UiLanguage::TraditionalChinese->value => ['ja' => '日文', 'en' => '英文', 'zh_TW' => '繁體中文'],
-            ] as $locale => $expected
-        ) {
-            App::setLocale($locale);
-            $this->assertSame($expected, DlsiteLanguage::options());
+        $this->assertEqualsCanonicalizing(array_keys($expected), DlsiteLanguage::values());
+        $this->assertSame(array_column(DlsiteLanguage::cases(), 'value'), DlsiteLanguage::values());
+        foreach ($expected as $locale => $apiLocale) {
+            $this->assertSame($apiLocale, DlsiteLanguage::from($locale)->apiLocale(), $locale);
         }
     }
 
-    public function test_ui_languages_map_only_when_dlsite_support_is_enabled(): void
+    #[DataProviderExternal(LanguageCases::class, 'ui')]
+    public function test_options_use_the_display_names_in_the_selected_catalog(UiLanguage $ui): void
     {
-        $this->assertSame(DlsiteLanguage::English, UiLanguage::English->dlsiteLanguage());
-        $this->assertSame(DlsiteLanguage::Japanese, UiLanguage::Japanese->dlsiteLanguage());
-        $this->assertSame(DlsiteLanguage::TraditionalChinese, UiLanguage::TraditionalChinese->dlsiteLanguage());
+        App::setLocale($ui->value);
+        $catalog = File::json(lang_path("{$ui->value}.json"));
+        $expected = [];
+        foreach (DlsiteLanguage::cases() as $language) {
+            $expected[$language->value] = $catalog[$language->name];
+        }
+
+        $this->assertSame($expected, DlsiteLanguage::options());
+    }
+
+    public function test_metadata_language_options_use_the_reviewed_labels(): void
+    {
+        $reviewedLabels = [
+            'en' => ['ja' => 'Japanese', 'en' => 'English', 'zh_TW' => 'Traditional Chinese'],
+            'ja' => ['ja' => '日本語', 'en' => '英語', 'zh_TW' => '繁体字中国語'],
+            'zh_TW' => ['ja' => '日文', 'en' => '英文', 'zh_TW' => '繁體中文'],
+        ];
+
+        foreach ($reviewedLabels as $uiLocale => $labels) {
+            App::setLocale($uiLocale);
+            $options = DlsiteLanguage::options();
+
+            foreach ($labels as $code => $label) {
+                $this->assertSame($label, $options[$code] ?? null, "{$uiLocale} label for {$code}");
+            }
+        }
     }
 }

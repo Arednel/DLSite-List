@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use App\Enums\UiLanguage;
 use App\Models\Option;
 use App\Models\User;
 use Illuminate\Database\Events\QueryExecuted;
@@ -381,13 +382,13 @@ class AuthenticationTest extends TestCase
 
         foreach ($pages as $page => [$routeName, $requiresAdmin, $recoveryEnabled, $title, $content]) {
             foreach (['cherry', 'black'] as $theme) {
-                foreach (['en', 'ja', 'zh_TW'] as $locale) {
-                    yield "{$page}-{$theme}-{$locale}" => [
+                foreach (UiLanguage::cases() as $language) {
+                    yield "{$page}-{$theme}-{$language->value}" => [
                         $routeName,
                         $requiresAdmin,
                         $recoveryEnabled,
                         $theme,
-                        $locale,
+                        $language->value,
                         $title,
                         $content,
                     ];

@@ -176,20 +176,20 @@ class ProductGenreSyncTest extends TestCase
     {
         $product = Product::factory()->create();
         $canonicalJapanese = Genre::query()->create(['title' => 'Canonical Japanese']);
-        $future = Genre::query()->create(['title' => 'Future Korean']);
+        $unregistered = Genre::query()->create(['title' => 'Unregistered']);
         $custom = Genre::query()->create(['title' => 'Custom']);
         $sync = app(ProductGenreSync::class);
 
         $sync->sync($product, [
             'ja' => [$canonicalJapanese->id],
-            'ko' => [$future->id],
+            'x-test' => [$unregistered->id],
         ], [$custom->id]);
 
         $this->assertFalse($sync->syncCustom($product, [$custom->id]));
 
         $this->assertSame([
             'ja' => [$canonicalJapanese->id],
-            'ko' => [$future->id],
+            'x-test' => [$unregistered->id],
         ], $sync->currentFetchedGenreIdsByLanguage($product));
     }
 

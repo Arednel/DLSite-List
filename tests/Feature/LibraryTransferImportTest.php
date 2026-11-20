@@ -1170,7 +1170,7 @@ class LibraryTransferImportTest extends TestCase
 
         return [
             'missing Japanese' => [4, ['locales' => ['en' => $japanese]], 'invalid_work_json'],
-            'unsupported locale' => [4, ['locales' => $valid + ['fr' => []]], 'invalid_work_json'],
+            'unsupported locale' => [4, ['locales' => $valid + ['x-test' => []]], 'invalid_work_json'],
             'historical alias in new format' => [4, ['locales' => $valid + ['jp' => []]], 'invalid_work_json'],
             'mixed formats' => [4, ['locales' => $valid, 'japanese' => $japanese], 'invalid_work_json'],
             'legacy shape in v4' => [4, ['japanese' => $japanese, 'english' => []], 'invalid_work_json'],
@@ -1633,8 +1633,7 @@ class LibraryTransferImportTest extends TestCase
         config(['transfers.fragment_bytes' => 600]);
         Product::factory()->count(3)->create();
         $export = $this->service()->export(['works'], 'all', []);
-        $partBytes = 10_240;
-        $export->update(['settings' => [...$export->settings, 'part_bytes' => $partBytes]]);
+        $partBytes = $this->limitExportToOneWorkPerPart($export);
         $this->planExport($export);
         $this->assertSame(3, $export->parts()->count());
         foreach ($export->parts()->get() as $part) {
@@ -1834,7 +1833,7 @@ class LibraryTransferImportTest extends TestCase
         config(['transfers.fragment_bytes' => 600]);
         Product::factory()->count(12)->create();
         $export = $this->service()->export(['works'], 'all', []);
-        $export->update(['settings' => [...$export->settings, 'part_bytes' => 10_240]]);
+        $this->limitExportToOneWorkPerPart($export);
         $this->planExport($export);
         $this->assertSame(LibraryTransferRunStatus::AwaitingConfirmation, $export->fresh()->status);
         $this->service()->action($export->fresh(), LibraryTransferAction::ContinueExport);
