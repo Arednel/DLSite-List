@@ -735,42 +735,55 @@ class FullRefetchTest extends TestCase
         $this->assertTrue(data_get($result->decisions, 'titles.localization:en:title.changed'));
     }
 
-    public function test_generic_english_identifiers_can_clear_both_localized_fields_without_changing_japanese(): void
+    public function test_refetch_can_apply_a_distinct_fetched_title_while_keeping_the_matching_stored_japanese_title(): void
     {
         Storage::fake('local');
-        [$run, $product, $result] = $this->reviewRun();
-        $product->syncLocalization(DlsiteLanguage::English, [
-            'title' => 'Optional English title',
-            'description' => 'Optional English description',
-        ]);
-        $result->forceFill(['changes' => [
-            'titles' => [
-                'localization:en:title' => [
-                    'label' => 'English Title',
-                    'old' => 'Optional English title',
-                    'new' => null,
-                ],
-            ],
-            'descriptions' => [
-                'localization:en:description' => [
-                    'label' => 'English Description',
-                    'old' => 'Optional English description',
-                    'new' => null,
-                ],
-            ],
-        ]])->save();
-        Storage::disk('local')->put($this->stagedJsonPath($run, $product), '{}');
+        Process::fake(['*' => Process::result(output: '{"failed_images":[]}')])->preventStrayProcesses();
+        $product = Product::factory()->withTitles('Previous title', null)->create();
         $service = app(RefetchService::class);
+        $run = $service->createRun([$product->id], false);
+        $result = $run->results()->firstOrFail();
+        Storage::disk('local')->put($this->stagedJsonPath($run, $product), json_encode(['locales' => [
+            'en' => ['work_name' => 'Previous title'],
+            'ja' => ['product_id' => $product->id, 'work_name' => 'New Japanese title'],
+        ]], JSON_THROW_ON_ERROR));
 
-        $service->applyTab($run, RefetchCategory::Titles, RefetchService::ACTION_OVERWRITE);
-        $this->assertNull($product->localizations()->where('locale', 'en')->value('title'));
-        $this->assertSame('Optional English description', $product->localizations()->where('locale', 'en')->value('description'));
+        $service->fetchAndRecordResult($result, ['ja', 'en']);
+        $service->applyTab($run->refresh(), RefetchCategory::Titles, RefetchService::ACTION_IGNORE, [
+            $result->id => ['localization:en:title' => RefetchService::ACTION_OVERWRITE],
+        ]);
+        $this->assertSame('Previous title', $product->fresh()->work_name);
+        $this->assertSame('Previous title', $product->localizations()->where('locale', 'en')->value('title'));
+    }
 
+    public function test_refetch_clears_localized_fields_matching_japanese_when_approved(): void
+    {
+        Storage::fake('local');
+        Process::fake(['*' => Process::result(output: '{"failed_images":[]}')])->preventStrayProcesses();
+        $product = Product::factory()->withTitles('Old Title', 'Optional English title')
+            ->withEnglishDescription('Optional English description')->create(['description' => 'Old Description']);
+        $fields = ['work_name' => 'Old Title', 'description' => 'Old Description'];
+        $service = app(RefetchService::class);
+        $run = $service->createRun([$product->id], false);
+        $result = $run->results()->firstOrFail();
+        Storage::disk('local')->put($this->stagedJsonPath($run, $product), json_encode(['locales' => [
+            'ja' => ['product_id' => $product->id] + $fields,
+            'en' => $fields,
+        ]], JSON_THROW_ON_ERROR));
+        $service->fetchAndRecordResult($result, ['ja', 'en']);
+        $run->refresh();
+        $changes = $result->refresh()->changes;
+        $this->assertNull($changes['titles']['localization:en:title']['new']);
+        $this->assertNull($changes['descriptions']['localization:en:description']['new']);
+
+        $service->applyTab($run, RefetchCategory::Titles, RefetchService::ACTION_IGNORE);
         $service->applyTab($run->fresh(), RefetchCategory::Descriptions, RefetchService::ACTION_OVERWRITE);
-        $this->assertFalse($product->localizations()->where('locale', 'en')->exists());
+        $localization = $product->localizations()->where('locale', 'en')->sole();
+        $this->assertSame('Optional English title', $localization->title);
+        $this->assertNull($localization->description);
         $this->assertSame('Old Title', $product->fresh()->work_name);
         $this->assertSame('Old Description', $product->fresh()->description);
-        $this->assertTrue(data_get($result->fresh()->decisions, 'titles.localization:en:title.changed'));
+        $this->assertFalse(data_get($result->fresh()->decisions, 'titles.localization:en:title.changed'));
         $this->assertTrue(data_get($result->fresh()->decisions, 'descriptions.localization:en:description.changed'));
     }
 

@@ -5,11 +5,13 @@ namespace Tests\Unit\Support\DLSite;
 use App\Enums\DlsiteLanguage;
 use App\Enums\ProductContributorRole;
 use App\Support\DLSite\DLSiteWorkData;
+use PHPUnit\Framework\Attributes\DataProviderExternal;
+use Tests\LanguageCases;
 use Tests\TestCase;
 
 class DLSiteWorkDataTest extends TestCase
 {
-    public function test_it_extracts_product_metadata_and_preserves_explicit_localized_values_equal_to_japanese(): void
+    public function test_it_extracts_product_metadata_and_discards_translated_text_equal_to_japanese(): void
     {
         $data = DLSiteWorkData::fromArray([
             'japanese' => [
@@ -42,18 +44,35 @@ class DLSiteWorkDataTest extends TestCase
         $this->assertSame('maniax', $data->siteId);
         $this->assertSame('RG123', $data->makerId);
         $this->assertSame('JP Title', $data->workName);
-        $this->assertSame('JP Title', $data->titleForLocale(DlsiteLanguage::English));
+        $this->assertNull($data->titleForLocale(DlsiteLanguage::English));
         $this->assertSame('R18', $data->ageCategory);
         $this->assertSame(['MOV', 'SND', 'MS2'], $data->productFormat);
         $this->assertSame('2026-09-24 00:00:00', $data->announceDate);
         $this->assertSame('Circle Name', $data->circle);
-        $this->assertSame('Same Description', $data->descriptionForLocale(DlsiteLanguage::English));
+        $this->assertNull($data->descriptionForLocale(DlsiteLanguage::English));
+        $this->assertSame(['EN Tag'], $data->genresForLocale(DlsiteLanguage::English));
         $this->assertSame('Series Name', $data->autoSeries());
         $this->assertSame('cover.jpg', $data->workImage);
         $this->assertSame(['sample_1.jpg', 'sample_2.jpg'], $data->sampleImages);
         $this->assertSame(['Writer'], $data->contributorsByRole[ProductContributorRole::Scenario->value]);
         $this->assertSame(['Voice One', 'Voice Two'], $data->contributorsByRole[ProductContributorRole::VoiceActor->value]);
         $this->assertSame(['Circle Name'], $data->contributorsByRole[ProductContributorRole::Circle->value]);
+    }
+
+    #[DataProviderExternal(LanguageCases::class, 'metadata')]
+    public function test_each_fetched_text_field_is_compared_with_japanese_independently(DlsiteLanguage $language): void
+    {
+        $japanese = ['work_name' => 'Title', 'description' => 'Description'];
+        foreach ([['work_name' => 'Title'], ['description' => 'Description'], $japanese] as $matching) {
+            $fields = $matching + ['work_name' => 'TITLE', 'description' => 'DESCRIPTION'];
+            $locales = ['ja' => $japanese, $language->value => $fields + ['genre' => ['Tag']]];
+            $work = DLSiteWorkData::fromArray(['locales' => $locales], 'RJ123456');
+
+            $translated = $language !== DlsiteLanguage::Japanese;
+            $this->assertSame($translated && isset($matching['work_name']) ? null : $fields['work_name'], $work->titleForLocale($language));
+            $this->assertSame($translated && isset($matching['description']) ? null : $fields['description'], $work->descriptionForLocale($language));
+            $this->assertSame(['Tag'], $work->genresForLocale($language));
+        }
     }
 
     public function test_locale_keyed_payload_exposes_localized_title_description_and_tags(): void

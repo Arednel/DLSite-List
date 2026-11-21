@@ -65,7 +65,7 @@ The main DLsite `Product Format` is stored first; only SND (Voice), MS2 (Music),
 
 `DlsiteLanguage` defines the supported metadata languages and maps each to its `dlsite-async` locale. PHP always requests Japanese and tells the Python scraper which additional locales to fetch. The scraper writes one document per language under `locales` and uses Japanese for images. PHP also reads the historical `japanese` and `english` sections in saved scraper responses.
 
-`DLSiteWorkData` maps the scraper response to Product fields. Shared metadata comes from the Japanese document. Title, Description, and fetched Tags come from each fetched locale.
+`DLSiteWorkData` maps the scraper response to Product fields. Shared metadata comes from the Japanese document. Title, Description, and fetched Tags come from each fetched locale. A fetched title or description that matches its Japanese counterpart is treated as a missing translation.
 
 - Japanese `maker_name` is used as Circle, Publisher, or Brand when `maker_id` starts with `RG`, `BG`, or `VG` respectively
 - each locale's Description uses the first nonempty value from `intro_masked`, `intro_s`, then `intro` when `description` is absent

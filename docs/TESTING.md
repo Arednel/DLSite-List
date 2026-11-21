@@ -634,7 +634,7 @@ Covers server-rendered Add/Edit modal completion fallback output and conditional
 - Covers original-work ID resolution from Japanese `language_editions`, with `translation_info.original_workno` as fallback.
 - Covers original Circle and Maker ID precedence from Japanese maker metadata and preservation of the translated work's other fields.
 - Covers Circle/Publisher/Brand mapping, description selection, Author fallback, explicit fields taking precedence, translation-provider Circles, and removal of the trailing `+09:00` from announcement dates.
-- Covers current and historical scraper payloads, Japanese shared metadata, and per-language titles, descriptions, and tags. Tests distinguish unfetched and empty locales and preserve explicit translations equal to Japanese. Other cases cover Product Format, ratings, and product IDs.
+- Covers current and historical scraper payloads, Japanese shared metadata, and per-language titles, descriptions, and tags. Tests distinguish unfetched and empty locales and check that fetched titles and descriptions are compared independently with Japanese. Other cases cover Product Format, ratings, and product IDs.
 
 `tests/Unit/Support/DLSite/DLSiteWorkFetcherTest.php`
 - Covers fetch retries, manifest and JSON validation, stale results, required Japanese fetching, and additional locale requests.

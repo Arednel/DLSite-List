@@ -48,7 +48,7 @@ final readonly class DLSiteWorkData
         $description = self::text($japanese['description'] ?? null);
         $circle = self::text($japanese['circle'] ?? null);
         $makerId = self::text($japanese['maker_id'] ?? null);
-        $localizedMetadata = self::localizedMetadata($workData);
+        $localizedMetadata = self::localizedMetadata($workData, $workName, $description);
 
         // The original maker takes precedence even when the translation has an explicit Circle.
         if ($original = self::originalMaker($originalWorkData ?? [])) {
@@ -251,7 +251,7 @@ final readonly class DLSiteWorkData
     /**
      * @return array<string, array{title: ?string, description: ?string, genres: list<string>}>
      */
-    private static function localizedMetadata(array $workData): array
+    private static function localizedMetadata(array $workData, ?string $japaneseTitle, ?string $japaneseDescription): array
     {
         $metadata = [];
         foreach ($workData['locales'] as $locale => $payload) {
@@ -263,9 +263,10 @@ final readonly class DLSiteWorkData
             $title = self::text($payload['work_name'] ?? null);
             $description = self::text($payload['description'] ?? null);
 
+            $translated = $language !== DlsiteLanguage::Japanese;
             $metadata[$language->value] = [
-                'title' => $title,
-                'description' => $description,
+                'title' => $translated && $title === $japaneseTitle ? null : $title,
+                'description' => $translated && $description === $japaneseDescription ? null : $description,
                 'genres' => self::list($payload['genre'] ?? []),
             ];
         }

@@ -2483,6 +2483,35 @@ class ProductControllerTest extends TestCase
         );
     }
 
+    public function test_quick_add_discards_fetched_duplicate_text_and_keeps_explicit_overrides(): void
+    {
+        Storage::fake('local');
+        Process::fake(['*' => Process::result(output: '{"failed_images":[]}')])->preventStrayProcesses();
+        Option::setQuickAddFieldLayout([
+            ['field' => ProductField::Title->value, 'visible' => true],
+            ['field' => ProductField::DescriptionLocalized->value, 'visible' => true],
+        ]);
+
+        $fields = ['work_name' => 'Shared title', 'description' => 'Shared description'];
+        foreach (['RJ123456' => '', 'RJ123457' => 'Shared title'] as $id => $titleOverride) {
+            $payload = $this->scrapedWorkPayload($id, $fields, $fields);
+            Storage::disk('local')->put("Works/{$id}.json", json_encode($payload, JSON_THROW_ON_ERROR));
+            $this->post('/store', [
+                'id' => $id,
+                'metadata_language' => DlsiteLanguage::English->value,
+                'localized_title' => $titleOverride,
+                'description_localized' => 'Shared description',
+            ])->assertSessionHasNoErrors();
+
+            $product = Product::findOrFail($id);
+            $this->assertSame('Shared title', $product->work_name);
+            $this->assertSame('Shared description', $product->description);
+            $localization = $product->localizations()->where('locale', DlsiteLanguage::English->value)->sole();
+            $this->assertSame($titleOverride === '' ? null : $titleOverride, $localization->title);
+            $this->assertSame('Shared description', $localization->description);
+        }
+    }
+
     public function test_store_uses_visible_quick_add_metadata_overrides_and_preserves_hidden_scraped_metadata(): void
     {
         Storage::fake('local');
