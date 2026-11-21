@@ -1325,6 +1325,11 @@ button.tag-library-tag {
         width: 100%;
     }
 
+    .tag-library-group-create-form {
+        width: 100%;
+        margin-left: 0;
+    }
+
     .tag-library-order-buttons button {
         flex: 1;
     }

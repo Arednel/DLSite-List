@@ -4,6 +4,10 @@ All notable changes to this project are documented in this file.
 
 ## Unreleased
 
+## 2.4.0 - 2026-11-21
+
+*Localization & Interface Improvements*
+
 ### Upgrade notes
 
 For existing Docker and manual installations:
@@ -16,7 +20,7 @@ For existing manual installations:
 
 ### Added
 
-* Added the Edit action to Field Layouts so it can be reordered or hidden.
+* Added the Edit action to Field Layouts, allowing it to be reordered or hidden.
 * Added DLsite metadata support for Traditional Chinese.
 * Added UI and DLsite metadata support for Simplified Chinese, Korean, German, French, Spanish, Italian, Portuguese, Swedish, Indonesian, Thai, and Vietnamese.
 * Added UI support for Belarusian, Dutch, Filipino, Polish, Romanian, Russian, Turkish, and Ukrainian.
@@ -25,7 +29,7 @@ For existing manual installations:
 
 * Reworked application error localization so user-facing errors are translated more consistently across the application.
 * Changed the Edit column to use only half of the row instead of the full row on mobile.
-* Expanded DLsite language support from Tags to Titles and Descriptions across Quick Add, Edit, the Index, and work selectors. The preferred language can follow the UI language or be selected separately, while Japanese is always fetched for shared metadata.
+* Expanded DLsite language support from Tags to Titles and Descriptions across Quick Add, Edit, the Index, and work selectors. The preferred metadata language can follow the UI language or be selected separately, while Japanese is always fetched for shared metadata.
 * Updated Refetch Review and Import Review to show localized changes by language and allow separate choices for each language.
 * Updated the Import / Export archive schema to v4.
 
