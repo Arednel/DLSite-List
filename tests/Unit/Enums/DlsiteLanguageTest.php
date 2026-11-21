@@ -8,6 +8,7 @@ use Illuminate\Support\Facades\App;
 use Illuminate\Support\Facades\File;
 use PHPUnit\Framework\Attributes\DataProviderExternal;
 use Tests\Fixtures\DlsiteLanguageLabels;
+use Tests\LanguageCases;
 use Tests\TestCase;
 
 class DlsiteLanguageTest extends TestCase
@@ -56,7 +57,14 @@ class DlsiteLanguageTest extends TestCase
         $this->assertSame($reviewedLabels, DlsiteLanguage::options(), $uiLocale);
 
         $metadataLanguage = $uiLanguage->dlsiteLanguage();
-        $this->assertNotNull($metadataLanguage, $uiLocale);
-        $this->assertSame($uiLanguage->label(), $reviewedLabels[$metadataLanguage->value], $uiLocale);
+        if ($metadataLanguage !== null) {
+            $this->assertSame($uiLanguage->label(), $reviewedLabels[$metadataLanguage->value], $uiLocale);
+        }
+    }
+
+    #[DataProviderExternal(LanguageCases::class, 'uiOnly')]
+    public function test_ui_only_languages_have_no_dlsite_metadata_mapping(UiLanguage $language): void
+    {
+        $this->assertNull($language->dlsiteLanguage());
     }
 }

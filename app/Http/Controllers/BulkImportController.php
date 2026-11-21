@@ -108,9 +108,11 @@ class BulkImportController extends Controller
             'redirectUrl' => $redirectUrl,
             'warning' => null,
             'completionStatus' => __('Bulk import started'),
-            'completionDescription' => __(':count works were queued. Import continues in the background.', [
-                'count' => $run->total_count,
-            ]),
+            'completionDescription' => trans_choice(
+                ':count works were queued. Import continues in the background.',
+                $run->total_count,
+                ['count' => $run->total_count],
+            ),
         ]);
     }
 }

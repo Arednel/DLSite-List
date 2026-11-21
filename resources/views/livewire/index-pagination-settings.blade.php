@@ -4,7 +4,7 @@
         <select id="index-per-page" class="option-control option-control-select" wire:model.change.live="mode">
             @foreach ($fixedOptions as $value => $label)
                 <option value="{{ $value }}">
-                    {{ __(':count works per page', ['count' => $label]) }}
+                    {{ trans_choice(':count works per page', (int) $label, ['count' => $label]) }}
                 </option>
             @endforeach
             <option value="custom">{{ __('Custom value') }}</option>

@@ -674,6 +674,14 @@ Temporary-file sweeps hold the per-run upload lock throughout reference lookup a
 | Indonesian | `id` | Machine translated and LLM-reviewed using DLsite terminology | Supported | Machine translated and LLM-reviewed | Framework messages based on [Laravel-Lang](https://github.com/Laravel-Lang) where available; project-specific labels use the UI catalog |
 | Thai | `th` | Machine translated and LLM-reviewed using DLsite terminology | Supported | Machine translated and LLM-reviewed | Framework messages based on [Laravel-Lang](https://github.com/Laravel-Lang) where available; project-specific labels use the UI catalog |
 | Vietnamese | `vi` | Machine translated and LLM-reviewed using DLsite terminology | Supported | Machine translated and LLM-reviewed | Framework messages based on [Laravel-Lang](https://github.com/Laravel-Lang) where available; project-specific labels use the UI catalog |
+| Belarusian | `be` | Machine translated and LLM-reviewed | Not supported (English metadata fallback) | Machine translated and LLM-reviewed | Framework messages based on [Laravel-Lang](https://github.com/Laravel-Lang) where available; project-specific labels use the UI catalog |
+| Dutch | `nl` | Machine translated and LLM-reviewed | Not supported (English metadata fallback) | Machine translated and LLM-reviewed | Framework messages based on [Laravel-Lang](https://github.com/Laravel-Lang) where available; project-specific labels use the UI catalog |
+| Filipino | `fil` | Machine translated and LLM-reviewed | Not supported (English metadata fallback) | Machine translated and LLM-reviewed | Framework messages based on [Laravel-Lang](https://github.com/Laravel-Lang) where available; project-specific labels use the UI catalog |
+| Polish | `pl` | Machine translated and LLM-reviewed | Not supported (English metadata fallback) | Machine translated and LLM-reviewed | Framework messages based on [Laravel-Lang](https://github.com/Laravel-Lang) where available; project-specific labels use the UI catalog |
+| Romanian | `ro` | Machine translated and LLM-reviewed | Not supported (English metadata fallback) | Machine translated and LLM-reviewed | Framework messages based on [Laravel-Lang](https://github.com/Laravel-Lang) where available; project-specific labels use the UI catalog |
+| Russian | `ru` | Machine translated and LLM-reviewed | Not supported (English metadata fallback) | Machine translated and LLM-reviewed | Framework messages based on [Laravel-Lang](https://github.com/Laravel-Lang) where available; project-specific labels use the UI catalog |
+| Turkish | `tr` | Machine translated and LLM-reviewed | Not supported (English metadata fallback) | Machine translated and LLM-reviewed | Framework messages based on [Laravel-Lang](https://github.com/Laravel-Lang) where available; project-specific labels use the UI catalog |
+| Ukrainian | `uk` | Machine translated and LLM-reviewed | Not supported (English metadata fallback) | Machine translated and LLM-reviewed | Framework messages based on [Laravel-Lang](https://github.com/Laravel-Lang) where available; project-specific labels use the UI catalog |
 
 DLsite metadata is fetched directly from DLsite and is not translated by DLSite List.
 
@@ -687,7 +695,7 @@ Laravel’s built-in validation messages use `lang/{locale}/validation.php`.
 
 Blade uses `str_replace('_', '-', app()->getLocale())` because HTML language tags use hyphens (`zh-TW`, `pt-BR`), while some application locales use underscores (`zh_TW`, `pt_BR`). This only formats the HTML `lang` attribute; it does not change which translations Laravel loads.
 
-`UiLanguage` and `DlsiteLanguage` use matching locale values for all supported languages, so `Follow UI language automatically` selects the matching metadata language without special-case mappings. `SetUiLocale` applies the saved UI language to web requests. See [UI Language](CONFIGURATION.md#ui-language) for the display and fetch settings.
+UI locales with a matching `DlsiteLanguage` select that metadata language directly when `Follow UI language automatically` is enabled. UI-only locales have no `DlsiteLanguage` mapping, so the existing English metadata fallback is used instead. `SetUiLocale` applies the saved UI language to web requests. See [UI Language](CONFIGURATION.md#ui-language) for the display and fetch settings.
 
 Localized display labels are generated for enums, field layouts, and settings, while backed enum values, routes, query values, stored data, and user content remain stable.
 

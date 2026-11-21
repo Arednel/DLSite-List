@@ -6,6 +6,7 @@ use App\Enums\DlsiteLanguage;
 use App\Enums\LibraryTransferAction;
 use App\Enums\LibraryTransferOperation;
 use App\Enums\LibraryTransferRunStatus;
+use App\Enums\UiLanguage;
 use App\Jobs\LibraryTransferJob;
 use App\Livewire\OptionsTransferRun;
 use App\Livewire\OptionsTransfers;
@@ -21,6 +22,7 @@ use App\Support\Transfers\SourceChanged;
 use App\Support\Transfers\TransferArchive;
 use App\Support\Transfers\WorkArchiveData;
 use App\Support\UserStylesheet;
+use Illuminate\Support\Facades\App;
 use Illuminate\Support\Facades\Bus;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
@@ -390,6 +392,24 @@ class LibraryTransferExportTest extends TestCase
         $withImages = $this->service()->export(['works', 'images'], 'all', []);
         $this->archive()->plan($withImages->fresh());
         $this->assertStringContainsString('and its images for export', $withImages->fresh()->stage);
+    }
+
+    public function test_export_confirmation_uses_locale_pluralization(): void
+    {
+        Option::setUiLanguage(UiLanguage::Belarusian);
+        App::setLocale(UiLanguage::Belarusian->value);
+
+        $run = LibraryTransferRun::create([
+            'direction' => 'export',
+            'status' => 'awaiting_confirmation',
+            'settings' => ['parts' => ['data' => 5, 'images' => 0]],
+            'total' => 5,
+        ]);
+
+        Livewire::test(OptionsTransferRun::class, ['run' => $run])
+            ->call('ask', LibraryTransferAction::ContinueExport->value)
+            ->assertSee('Стварыць 5 асобных ZIP-файлаў?')
+            ->assertDontSee('Стварыць 5 асобны ZIP-файл?|Стварыць 5 асобныя ZIP-файлы?|Стварыць 5 асобных ZIP-файлаў?');
     }
 
     public function test_data_only_export_confirmation_omits_image_counts(): void

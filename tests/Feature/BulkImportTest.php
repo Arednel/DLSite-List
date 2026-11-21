@@ -38,6 +38,22 @@ class BulkImportTest extends TestCase
 {
     use RefreshDatabase;
 
+    public function test_modal_completion_uses_locale_pluralization_for_queued_works(): void
+    {
+        Bus::fake();
+        Option::setUiLanguage(UiLanguage::Romanian);
+
+        $this->post(route('products.store.bulk'), [
+            'product_code_list' => "RJ000000101\nRJ000000102",
+            'metadata_language' => DlsiteLanguage::English->value,
+            'modal' => '1',
+        ])
+            ->assertOk()
+            ->assertViewIs('WorkFormCompleted')
+            ->assertSee('2 lucrări au fost adăugate în coadă. Importul continuă în fundal.')
+            ->assertDontSee('2 lucrare a fost adăugată în coadă. Importul continuă în fundal.|2 lucrări au fost adăugate în coadă. Importul continuă în fundal.|2 de lucrări au fost adăugate în coadă. Importul continuă în fundal.');
+    }
+
     public function test_current_fetch_language_snapshot_round_trips_without_repair(): void
     {
         $input = new DLSiteProductImportInput(

@@ -26,7 +26,7 @@ It supports DLsite works with RJ, BJ, and VJ codes - Voice / ASMR, Games, Manga,
 - **UI Wording:** Choose general or content-focused UI wording for listening, reading, games, video, music, and artwork.
 - **Custom CSS:** Paste in your own CSS to customize the interface beyond the built-in options.
 - **Authentication:** Optional single-user authentication.
-- **Languages:** UI and DLsite metadata support for 14 languages currently supported by DLsite. Metadata includes Title, Description, and fetched Tags. See [Languages](docs/ARCHITECTURE.md#languages).
+- **Languages:** UI support for 22 languages and metadata support for 14 languages currently supported by DLsite. Metadata includes Title, Description, and fetched Tags. See [Languages](docs/ARCHITECTURE.md#languages).
 
 ## Screenshots
 

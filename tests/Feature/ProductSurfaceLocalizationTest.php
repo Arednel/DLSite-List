@@ -292,6 +292,18 @@ class ProductSurfaceLocalizationTest extends TestCase
             ->assertSee('全2件を表示');
     }
 
+    public function test_unlimited_belarusian_count_uses_locale_pluralization(): void
+    {
+        Product::factory()->count(5)->create();
+        Option::setIndexPerPage(Option::INDEX_PER_PAGE_UNLIMITED);
+        Option::setUiLanguage(UiLanguage::Belarusian);
+        App::setLocale(UiLanguage::Belarusian->value);
+
+        Livewire::test(ProductIndex::class)
+            ->assertSee('Паказана 5 прац')
+            ->assertDontSee('Паказана 5 праца|Паказаны 5 працы|Паказана 5 прац');
+    }
+
     public function test_missing_user_facing_labels_have_japanese_translations(): void
     {
         App::setLocale(UiLanguage::Japanese->value);

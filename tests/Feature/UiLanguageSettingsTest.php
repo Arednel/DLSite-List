@@ -59,6 +59,28 @@ class UiLanguageSettingsTest extends TestCase
             ->assertSee($catalog['Language settings saved.']);
     }
 
+    #[DataProviderExternal(LanguageCases::class, 'uiOnly')]
+    public function test_ui_only_languages_follow_ui_with_english_metadata_fallback(UiLanguage $ui): void
+    {
+        Livewire::test(UiLanguageSettings::class)
+            ->set('language', $ui->value)
+            ->set('followUiLanguage', true)
+            ->set('metadataLanguage', DlsiteLanguage::Japanese->value)
+            ->set('fetchLanguages', [DlsiteLanguage::English->value])
+            ->call('save')
+            ->assertHasNoErrors();
+
+        $this->assertSame($ui, Option::uiLanguage());
+        $this->assertTrue(Option::dlsiteMetadataLanguageFollowsUi());
+        $this->assertSame(DlsiteLanguage::Japanese, Option::dlsiteMetadataLanguage());
+        $this->assertSame([DlsiteLanguage::English], Option::dlsiteMetadataFetchLanguages());
+        $this->assertSame(DlsiteLanguage::English, Option::effectiveDlsiteMetadataLanguage());
+        $this->assertSame(
+            [DlsiteLanguage::Japanese, DlsiteLanguage::English],
+            Option::effectiveDlsiteMetadataFetchLanguages(),
+        );
+    }
+
     public function test_follow_mode_uses_the_current_ui_language_for_display_and_fetch(): void
     {
         Livewire::test(UiLanguageSettings::class)

@@ -482,6 +482,14 @@ Choices:
 - `Bahasa Indonesia` (`id`)
 - `ภาษาไทย` (`th`)
 - `Tiếng Việt` (`vi`)
+- `Беларуская` (`be`)
+- `Nederlands` (`nl`)
+- `Filipino` (`fil`)
+- `Polski` (`pl`)
+- `Română` (`ro`)
+- `Русский` (`ru`)
+- `Türkçe` (`tr`)
+- `Українська` (`uk`)
 
 `UI Language` sets the interface language for the whole application.
 
@@ -500,6 +508,14 @@ Choices:
 - `Bahasa Indonesia` (`id`) → Indonesian metadata
 - `ภาษาไทย` (`th`) → Thai metadata
 - `Tiếng Việt` (`vi`) → Vietnamese metadata
+- `Беларуская` (`be`) → English metadata (fallback)
+- `Nederlands` (`nl`) → English metadata (fallback)
+- `Filipino` (`fil`) → English metadata (fallback)
+- `Polski` (`pl`) → English metadata (fallback)
+- `Română` (`ro`) → English metadata (fallback)
+- `Русский` (`ru`) → English metadata (fallback)
+- `Türkçe` (`tr`) → English metadata (fallback)
+- `Українська` (`uk`) → English metadata (fallback)
 
 Turn off automatic selection to choose `Preferred metadata language` independently.
 

@@ -486,7 +486,7 @@
         @elseif ($isUnlimited)
             <div class="index-pagination">
                 <div class="index-pagination__summary">
-                    {{ __('Showing all :count works', ['count' => $totalProducts]) }}
+                    {{ trans_choice('Showing all :count works', $totalProducts, ['count' => $totalProducts]) }}
                 </div>
             </div>
         @endif

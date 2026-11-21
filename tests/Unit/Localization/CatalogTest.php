@@ -42,6 +42,34 @@ class CatalogTest extends TestCase
         $this->assertCatalogMatches($expected, Arr::only(Arr::dot($actual), array_keys($expected)));
     }
 
+    #[DataProviderExternal(LanguageCases::class, 'uiOnly')]
+    public function test_ui_only_validation_attributes_match_reviewed_ui_terminology(UiLanguage $language): void
+    {
+        $ui = File::json(lang_path("{$language->value}.json"));
+        $attributes = (require lang_path("{$language->value}/validation.php"))['attributes'];
+        $sharedLabels = [
+            'work_name' => 'Japanese Title',
+            'product_code' => 'Product Code',
+            'product_ids' => 'Works',
+            'product_format' => 'Product Format',
+            'maker_id' => 'Maker ID',
+            'genre_custom' => 'Custom Tags',
+            'work_image' => 'Cover Image',
+            'sample_images' => 'Sample Images',
+            'description_japanese' => 'Japanese Description',
+            'description_localized' => 'Localized Description',
+            'notes' => 'Notes',
+            'finish_date' => 'Finish Date',
+            'language' => 'UI Language',
+            're_listen_value' => 'Re-listen Value',
+            'focus' => 'UI Wording',
+        ];
+
+        foreach ($sharedLabels as $attribute => $uiKey) {
+            $this->assertSame($ui[$uiKey], $attributes[$attribute], "{$language->value}: {$attribute}");
+        }
+    }
+
     #[DataProviderExternal(LanguageCases::class, 'translatedUi')]
     public function test_translated_validation_catalogs_use_the_same_project_attribute_keys(UiLanguage $language): void
     {

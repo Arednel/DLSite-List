@@ -19,6 +19,7 @@ For existing manual installations:
 * Added the Edit action to Field Layouts so it can be reordered or hidden.
 * Added DLsite metadata support for Traditional Chinese.
 * Added UI and DLsite metadata support for Simplified Chinese, Korean, German, French, Spanish, Italian, Portuguese, Swedish, Indonesian, Thai, and Vietnamese.
+* Added UI support for Belarusian, Dutch, Filipino, Polish, Romanian, Russian, Turkish, and Ukrainian.
 
 ### Changed
 

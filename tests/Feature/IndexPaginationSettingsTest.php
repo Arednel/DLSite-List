@@ -2,9 +2,11 @@
 
 namespace Tests\Feature;
 
+use App\Enums\UiLanguage;
 use App\Livewire\IndexPaginationSettings;
 use App\Models\Option;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\App;
 use Livewire\Livewire;
 use PHPUnit\Framework\Attributes\DataProvider;
 use Tests\TestCase;
@@ -213,6 +215,16 @@ class IndexPaginationSettingsTest extends TestCase
         Livewire::test(IndexPaginationSettings::class)
             ->assertViewHas('fixedOptions', Option::fixedIndexPerPageOptions())
             ->assertViewHas('unlimitedValue', Option::INDEX_PER_PAGE_UNLIMITED);
+    }
+
+    public function test_fixed_page_size_labels_use_locale_pluralization(): void
+    {
+        Option::setUiLanguage(UiLanguage::Belarusian);
+        App::setLocale(UiLanguage::Belarusian->value);
+
+        Livewire::test(IndexPaginationSettings::class)
+            ->assertSee('100 прац на старонку')
+            ->assertDontSee('100 праца на старонку|100 працы на старонку|100 прац на старонку');
     }
 
     public static function fixedPageSizeProvider(): iterable

@@ -23,6 +23,14 @@ enum UiLanguage: string
     case Indonesian = 'id';
     case Thai = 'th';
     case Vietnamese = 'vi';
+    case Belarusian = 'be';
+    case Dutch = 'nl';
+    case Filipino = 'fil';
+    case Polish = 'pl';
+    case Romanian = 'ro';
+    case Russian = 'ru';
+    case Turkish = 'tr';
+    case Ukrainian = 'uk';
 
     public function label(): string
     {
@@ -41,6 +49,14 @@ enum UiLanguage: string
             self::Indonesian => 'Bahasa Indonesia',
             self::Thai => 'ภาษาไทย',
             self::Vietnamese => 'Tiếng Việt',
+            self::Belarusian => 'Беларуская',
+            self::Dutch => 'Nederlands',
+            self::Filipino => 'Filipino',
+            self::Polish => 'Polski',
+            self::Romanian => 'Română',
+            self::Russian => 'Русский',
+            self::Turkish => 'Türkçe',
+            self::Ukrainian => 'Українська',
         };
     }
 

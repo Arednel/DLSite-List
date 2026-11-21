@@ -782,7 +782,7 @@ class OptionsTransferRun extends Component
                 'loading' => 'Continuing without images...',
             ],
             'continue_export' => [
-                'confirmation' => __('Build :count individual ZIP files?', ['count' => $run->total]),
+                'confirmation' => trans_choice('Build :count individual ZIP files?', $run->total, ['count' => $run->total]),
                 'loading' => 'Preparing export...',
             ],
             'apply' => $this->confirmationSection === null

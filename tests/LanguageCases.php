@@ -23,6 +23,15 @@ final class LanguageCases
         }
     }
 
+    public static function uiOnly(): iterable
+    {
+        foreach (UiLanguage::cases() as $language) {
+            if ($language->dlsiteLanguage() === null) {
+                yield $language->value => [$language];
+            }
+        }
+    }
+
     public static function metadata(): iterable
     {
         foreach (DlsiteLanguage::cases() as $language) {

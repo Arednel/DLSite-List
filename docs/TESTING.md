@@ -497,7 +497,7 @@ Covers Tag Library behavior:
 
 #### `tests/Feature/UiLanguageSettingsTest.php`
 
-Covers saving each registered UI language and loading the Options page in that language, automatic and manual metadata selection, additional fetch languages, validation, and reset.
+Covers saving each registered UI language and loading the Options page in that language, automatic and manual metadata selection, UI-only language fallback to English metadata, additional fetch languages, validation, and reset.
 
 #### `tests/Feature/WorkFormModalTest.php`
 
@@ -548,7 +548,7 @@ Covers server-rendered Add/Edit modal completion fallback output and conditional
 - Covers valid Index sort fields (including DLsite Rating, DLsite Rating Count, Publisher, Brand, and the virtual combined Maker sort), labels/backend metadata, and sort-dropdown behavior.
 
 `tests/Unit/Enums/DlsiteLanguageTest.php`
-- Checks metadata language codes, upstream API locales, the reviewed 14-language label matrix in every UI catalog, native UI/metadata label matching, and automatic UI-to-metadata mapping. Workflow tests pick up new enum cases automatically.
+- Checks metadata language codes, upstream API locales, the reviewed 14-metadata-language label matrix in every UI catalog, native labels for directly mapped UI/metadata locales, and null metadata mappings for UI-only locales. Workflow tests pick up new enum cases automatically.
 
 `tests/Unit/Enums/UiLanguageTest.php`
 - Covers UI language values, labels, and locale fallback.
@@ -634,7 +634,7 @@ Covers server-rendered Add/Edit modal completion fallback output and conditional
 - Covers original-work ID resolution from Japanese `language_editions`, with `translation_info.original_workno` as fallback.
 - Covers original Circle and Maker ID precedence from Japanese maker metadata and preservation of the translated work's other fields.
 - Covers Circle/Publisher/Brand mapping, description selection, Author fallback, explicit fields taking precedence, translation-provider Circles, and removal of the trailing `+09:00` from announcement dates.
-- Covers current and historical scraper payloads, Japanese shared metadata, and per-language titles, descriptions, and tags. Tests distinguish unfetched and empty locales and check that fetched titles and descriptions are compared independently with Japanese. Other cases cover Product Format, ratings, and product IDs.
+- Covers current and historical scraper payloads, Japanese shared metadata, and per-language titles, descriptions, and tags. Tests distinguish unfetched and empty locales and discard translated Title and Description values that match Japanese fallback values as missing translations. Other cases cover Product Format, ratings, and product IDs.
 
 `tests/Unit/Support/DLSite/DLSiteWorkFetcherTest.php`
 - Covers fetch retries, manifest and JSON validation, stale results, required Japanese fetching, and additional locale requests.
