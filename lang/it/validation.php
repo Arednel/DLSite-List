@@ -1,6 +1,21 @@
 <?php
 
+// Laravel validation messages are based on the Italian translations maintained by Laravel-Lang (https://github.com/Laravel-Lang/lang/tree/main/locales/it).
+// Project-specific attribute translations were generated using machine translation and reviewed by an LLM for consistency with existing project and DLsite terminology.
+
 return [
+
+    /*
+    |--------------------------------------------------------------------------
+    | Validation Language Lines
+    |--------------------------------------------------------------------------
+    |
+    | The following language lines contain the default error messages used by
+    | the validator class. Some of these rules have multiple versions such
+    | as the size rules. Feel free to tweak each of these messages here.
+    |
+    */
+
     'accepted' => ':attribute deve essere accettato.',
     'accepted_if' => ':attribute deve essere accettato quando :other è :value.',
     'active_url' => ':attribute non è un URL valido.',
@@ -154,6 +169,18 @@ return [
     'url' => 'Il formato del campo :attribute non è valido.',
     'ulid' => ':attribute deve essere un ULID valido.',
     'uuid' => ':attribute deve essere un UUID valido.',
+
+    /*
+    |--------------------------------------------------------------------------
+    | Custom Validation Language Lines
+    |--------------------------------------------------------------------------
+    |
+    | Here you may specify custom validation messages for attributes using the
+    | convention "attribute.rule" to name the lines. This makes it quick to
+    | specify a specific custom language line for a given attribute rule.
+    |
+    */
+
     'custom' => [
         'indexFields.*.width' => [
             'required' => 'È richiesta una larghezza di colonna personalizzata.',
@@ -164,6 +191,18 @@ return [
             'in' => 'La modalità di larghezza colonna selezionata non è valida.',
         ],
     ],
+
+    /*
+    |--------------------------------------------------------------------------
+    | Custom Validation Attributes
+    |--------------------------------------------------------------------------
+    |
+    | The following language lines are used to swap our attribute placeholder
+    | with something more reader friendly such as "E-Mail Address" instead
+    | of "email". This simply helps us make our message more expressive.
+    |
+    */
+
     'attributes' => [
         'username' => 'Nome utente',
         'remember' => 'Ricordami',
@@ -187,11 +226,18 @@ return [
         'genre_custom' => 'Tag personalizzati',
         'description' => 'Descrizione giapponese',
         'end_date' => 'Data di fine',
+        'add.start_date.year' => 'Anno di inizio',
+        'add.start_date.month' => 'Mese di inizio',
+        'add.start_date.day' => 'Giorno di inizio',
+        'add.finish_date.year' => 'Anno di completamento',
+        'add.finish_date.month' => 'Mese di completamento',
+        'add.finish_date.day' => 'Giorno di completamento',
         'num_re_listen_times' => 'Totale riascolti',
         'currentPassword' => 'Password attuale',
         'newPassword' => 'Nuova password',
         'newPasswordConfirmation' => 'Conferma nuova password',
         'followFetchedTagsLanguage' => 'Segui automaticamente la lingua dell’interfaccia',
+        'enabled' => 'Impostazione abilitata',
         'customValue' => 'Valore personalizzato',
         'newTagTitle' => 'Titolo nuovo tag',
         'editingTagTitle' => 'Titolo tag',
@@ -200,6 +246,8 @@ return [
         'product_ids' => 'Opere',
         'product_ids.*' => 'Opere',
         'title' => 'Titolo',
+        'name' => 'Nome',
+        'email' => 'Indirizzo e-mail',
         'password' => 'Password',
         'password_confirmation' => 'Conferma password',
         'current_password' => 'Password attuale',
@@ -210,6 +258,7 @@ return [
         'work_image' => 'Immagine di copertina',
         'sample_images' => 'Immagini di esempio',
         'sample_images.*' => 'Immagini di esempio',
+        'sample_image_order' => 'Ordine immagini di esempio',
         'description_japanese' => 'Descrizione giapponese',
         'description_localized' => 'Descrizione localizzata',
         'tags' => 'Tag',
@@ -219,23 +268,13 @@ return [
         're_listen_value' => 'Valore riascolto',
         'priority' => 'Priorità',
         'newGroupTitle' => 'Titolo nuovo gruppo',
-        'theme' => 'Tema',
-        'enabled' => 'Impostazione abilitata',
-        'name' => 'Nome',
-        'email' => 'Indirizzo e-mail',
-        'sample_image_order' => 'Ordine immagini di esempio',
         'mode' => 'Modalità di visualizzazione',
+        'theme' => 'Tema',
         'sizeChoice' => 'Dimensione parti ZIP',
         'customMib' => 'Dimensione massima per ZIP (MiB)',
         'tagOrder' => 'Ordine tag',
         'seriesOrder' => 'Ordine serie',
         'focus' => 'Tipo di contenuto',
         'archive' => 'File ZIP',
-        'add.start_date.year' => 'Anno di inizio',
-        'add.start_date.month' => 'Mese di inizio',
-        'add.start_date.day' => 'Giorno di inizio',
-        'add.finish_date.year' => 'Anno di completamento',
-        'add.finish_date.month' => 'Mese di completamento',
-        'add.finish_date.day' => 'Giorno di completamento',
     ],
 ];

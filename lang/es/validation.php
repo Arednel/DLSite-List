@@ -1,6 +1,21 @@
 <?php
 
+// Laravel validation messages are based on the Spanish translations maintained by Laravel-Lang (https://github.com/Laravel-Lang/lang/tree/main/locales/es).
+// Project-specific attribute translations were generated using machine translation and reviewed by an LLM for consistency with existing project and DLsite terminology.
+
 return [
+
+    /*
+    |--------------------------------------------------------------------------
+    | Validation Language Lines
+    |--------------------------------------------------------------------------
+    |
+    | The following language lines contain the default error messages used by
+    | the validator class. Some of these rules have multiple versions such
+    | as the size rules. Feel free to tweak each of these messages here.
+    |
+    */
+
     'accepted' => 'El campo :attribute debe ser aceptado.',
     'accepted_if' => 'El campo :attribute debe ser aceptado cuando :other sea :value.',
     'active_url' => 'El campo :attribute debe ser una URL válida.',
@@ -154,6 +169,18 @@ return [
     'url' => 'El campo :attribute debe ser una URL válida.',
     'ulid' => 'El campo :attribute debe ser un ULID válido.',
     'uuid' => 'El campo :attribute debe ser un UUID válido.',
+
+    /*
+    |--------------------------------------------------------------------------
+    | Custom Validation Language Lines
+    |--------------------------------------------------------------------------
+    |
+    | Here you may specify custom validation messages for attributes using the
+    | convention "attribute.rule" to name the lines. This makes it quick to
+    | specify a specific custom language line for a given attribute rule.
+    |
+    */
+
     'custom' => [
         'indexFields.*.width' => [
             'required' => 'Se requiere un ancho de columna personalizado.',
@@ -164,6 +191,18 @@ return [
             'in' => 'El modo de ancho de columna seleccionado no es válido.',
         ],
     ],
+
+    /*
+    |--------------------------------------------------------------------------
+    | Custom Validation Attributes
+    |--------------------------------------------------------------------------
+    |
+    | The following language lines are used to swap our attribute placeholder
+    | with something more reader friendly such as "E-Mail Address" instead
+    | of "email". This simply helps us make our message more expressive.
+    |
+    */
+
     'attributes' => [
         'username' => 'Nombre de usuario',
         'remember' => 'Recordarme',
@@ -187,11 +226,18 @@ return [
         'genre_custom' => 'Etiquetas personalizadas',
         'description' => 'Descripción japonesa',
         'end_date' => 'Fecha de finalización',
+        'add.start_date.year' => 'Año de inicio',
+        'add.start_date.month' => 'Mes de inicio',
+        'add.start_date.day' => 'Día de inicio',
+        'add.finish_date.year' => 'Año de finalización',
+        'add.finish_date.month' => 'Mes de finalización',
+        'add.finish_date.day' => 'Día de finalización',
         'num_re_listen_times' => 'Total de veces vuelto a escuchar',
         'currentPassword' => 'Contraseña actual',
         'newPassword' => 'Nueva contraseña',
         'newPasswordConfirmation' => 'Confirmar nueva contraseña',
         'followFetchedTagsLanguage' => 'Seguir automáticamente el idioma de la interfaz',
+        'enabled' => 'Ajuste activado',
         'customValue' => 'Valor personalizado',
         'newTagTitle' => 'Título de nueva etiqueta',
         'editingTagTitle' => 'Título de etiqueta',
@@ -200,6 +246,8 @@ return [
         'product_ids' => 'Obras',
         'product_ids.*' => 'Obras',
         'title' => 'Título',
+        'name' => 'Nombre',
+        'email' => 'Dirección de correo',
         'password' => 'Contraseña',
         'password_confirmation' => 'Confirmar contraseña',
         'current_password' => 'Contraseña actual',
@@ -210,6 +258,7 @@ return [
         'work_image' => 'Imagen de portada',
         'sample_images' => 'Imágenes de muestra',
         'sample_images.*' => 'Imágenes de muestra',
+        'sample_image_order' => 'Orden de imágenes de muestra',
         'description_japanese' => 'Descripción japonesa',
         'description_localized' => 'Descripción localizada',
         'tags' => 'Etiquetas',
@@ -219,23 +268,13 @@ return [
         're_listen_value' => 'Valor de reescucha',
         'priority' => 'Prioridad',
         'newGroupTitle' => 'Título de nuevo grupo',
-        'theme' => 'Tema',
-        'enabled' => 'Ajuste activado',
-        'name' => 'Nombre',
-        'email' => 'Dirección de correo',
-        'sample_image_order' => 'Orden de imágenes de muestra',
         'mode' => 'Modo de visualización',
+        'theme' => 'Tema',
         'sizeChoice' => 'Tamaño de partes ZIP',
         'customMib' => 'Tamaño máximo por ZIP (MiB)',
         'tagOrder' => 'Orden de etiquetas',
         'seriesOrder' => 'Orden de series',
         'focus' => 'Tipo de contenido',
         'archive' => 'Archivo ZIP',
-        'add.start_date.year' => 'Año de inicio',
-        'add.start_date.month' => 'Mes de inicio',
-        'add.start_date.day' => 'Día de inicio',
-        'add.finish_date.year' => 'Año de finalización',
-        'add.finish_date.month' => 'Mes de finalización',
-        'add.finish_date.day' => 'Día de finalización',
     ],
 ];

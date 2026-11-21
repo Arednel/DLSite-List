@@ -1,6 +1,21 @@
 <?php
 
+// Laravel validation messages are based on the Swedish translations maintained by Laravel-Lang (https://github.com/Laravel-Lang/lang/tree/main/locales/sv).
+// Project-specific attribute translations were generated using machine translation and reviewed by an LLM for consistency with existing project and DLsite terminology.
+
 return [
+
+    /*
+    |--------------------------------------------------------------------------
+    | Validation Language Lines
+    |--------------------------------------------------------------------------
+    |
+    | The following language lines contain the default error messages used by
+    | the validator class. Some of these rules have multiple versions such
+    | as the size rules. Feel free to tweak each of these messages here.
+    |
+    */
+
     'accepted' => ':attribute måste accepteras.',
     'accepted_if' => ':attribute måste accepteras när :other är :value.',
     'active_url' => ':attribute är inte en giltig webbadress.',
@@ -154,6 +169,18 @@ return [
     'url' => ':attribute har ett ogiltigt format.',
     'ulid' => ':attribute måste vara en giltig ULID.',
     'uuid' => ':attribute måste vara ett giltigt UUID.',
+
+    /*
+    |--------------------------------------------------------------------------
+    | Custom Validation Language Lines
+    |--------------------------------------------------------------------------
+    |
+    | Here you may specify custom validation messages for attributes using the
+    | convention "attribute.rule" to name the lines. This makes it quick to
+    | specify a specific custom language line for a given attribute rule.
+    |
+    */
+
     'custom' => [
         'indexFields.*.width' => [
             'required' => 'En anpassad kolumnbredd krävs.',
@@ -164,6 +191,18 @@ return [
             'in' => 'Det valda kolumnbreddsläget är ogiltigt.',
         ],
     ],
+
+    /*
+    |--------------------------------------------------------------------------
+    | Custom Validation Attributes
+    |--------------------------------------------------------------------------
+    |
+    | The following language lines are used to swap our attribute placeholder
+    | with something more reader friendly such as "E-Mail Address" instead
+    | of "email". This simply helps us make our message more expressive.
+    |
+    */
+
     'attributes' => [
         'username' => 'Användarnamn',
         'remember' => 'Kom ihåg mig',
@@ -187,11 +226,18 @@ return [
         'genre_custom' => 'Anpassade taggar',
         'description' => 'Japansk beskrivning',
         'end_date' => 'Slutdatum',
+        'add.start_date.year' => 'Startår',
+        'add.start_date.month' => 'Startmånad',
+        'add.start_date.day' => 'Startdag',
+        'add.finish_date.year' => 'Slutår',
+        'add.finish_date.month' => 'Slutmånad',
+        'add.finish_date.day' => 'Slutdag',
         'num_re_listen_times' => 'Totalt antal återlyssningar',
         'currentPassword' => 'Nuvarande lösenord',
         'newPassword' => 'Nytt lösenord',
         'newPasswordConfirmation' => 'Bekräfta nytt lösenord',
         'followFetchedTagsLanguage' => 'Följ gränssnittsspråket automatiskt',
+        'enabled' => 'Aktiverad inställning',
         'customValue' => 'Anpassat värde',
         'newTagTitle' => 'Ny taggtitel',
         'editingTagTitle' => 'Taggtitel',
@@ -200,6 +246,8 @@ return [
         'product_ids' => 'Verk',
         'product_ids.*' => 'Verk',
         'title' => 'Titel',
+        'name' => 'Namn',
+        'email' => 'E-postadress',
         'password' => 'Lösenord',
         'password_confirmation' => 'Bekräfta lösenord',
         'current_password' => 'Nuvarande lösenord',
@@ -210,6 +258,7 @@ return [
         'work_image' => 'Omslagsbild',
         'sample_images' => 'Exempelbilder',
         'sample_images.*' => 'Exempelbilder',
+        'sample_image_order' => 'Ordning för exempelbilder',
         'description_japanese' => 'Japansk beskrivning',
         'description_localized' => 'Lokaliserad beskrivning',
         'tags' => 'Taggar',
@@ -219,23 +268,13 @@ return [
         're_listen_value' => 'Återlyssningsvärde',
         'priority' => 'Prioritet',
         'newGroupTitle' => 'Ny grupptitel',
-        'theme' => 'Tema',
-        'enabled' => 'Aktiverad inställning',
-        'name' => 'Namn',
-        'email' => 'E-postadress',
-        'sample_image_order' => 'Ordning för exempelbilder',
         'mode' => 'Visningsläge',
+        'theme' => 'Tema',
         'sizeChoice' => 'ZIP-delstorlek',
         'customMib' => 'Maximal storlek per ZIP (MiB)',
         'tagOrder' => 'Taggordning',
         'seriesOrder' => 'Serieordning',
         'focus' => 'Innehållstyp',
         'archive' => 'ZIP-fil',
-        'add.start_date.year' => 'Startår',
-        'add.start_date.month' => 'Startmånad',
-        'add.start_date.day' => 'Startdag',
-        'add.finish_date.year' => 'Slutår',
-        'add.finish_date.month' => 'Slutmånad',
-        'add.finish_date.day' => 'Slutdag',
     ],
 ];

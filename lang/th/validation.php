@@ -1,6 +1,21 @@
 <?php
 
+// Laravel validation messages are based on the Thai translations maintained by Laravel-Lang (https://github.com/Laravel-Lang/lang/tree/main/locales/th).
+// Project-specific attribute translations were generated using machine translation and reviewed by an LLM for consistency with existing project and DLsite terminology.
+
 return [
+
+    /*
+    |--------------------------------------------------------------------------
+    | Validation Language Lines
+    |--------------------------------------------------------------------------
+    |
+    | The following language lines contain the default error messages used by
+    | the validator class. Some of these rules have multiple versions such
+    | as the size rules. Feel free to tweak each of these messages here.
+    |
+    */
+
     'accepted' => 'ข้อมูล :attribute ต้องผ่านการยอมรับก่อน',
     'accepted_if' => 'ข้อมูล :attribute ต้องผ่านการยอมรับ เมื่อ :other เป็น :value',
     'active_url' => 'ข้อมูล :attribute ไม่ใช่ URL ที่ถูกรูปแบบ',
@@ -154,6 +169,18 @@ return [
     'url' => 'ข้อมูล :attribute ต้องเป็น URL ที่ถูกรูปแบบ',
     'ulid' => ':attribute ต้องเป็น ULID ที่ถูกต้อง',
     'uuid' => 'ข้อมูล :attribute ต้องเป็นค่า UUID ที่ถูกรูปแบบ',
+
+    /*
+    |--------------------------------------------------------------------------
+    | Custom Validation Language Lines
+    |--------------------------------------------------------------------------
+    |
+    | Here you may specify custom validation messages for attributes using the
+    | convention "attribute.rule" to name the lines. This makes it quick to
+    | specify a specific custom language line for a given attribute rule.
+    |
+    */
+
     'custom' => [
         'indexFields.*.width' => [
             'required' => 'ต้องระบุความกว้างคอลัมน์แบบกำหนดเอง',
@@ -164,6 +191,18 @@ return [
             'in' => 'โหมดความกว้างคอลัมน์ที่เลือกไม่ถูกต้อง',
         ],
     ],
+
+    /*
+    |--------------------------------------------------------------------------
+    | Custom Validation Attributes
+    |--------------------------------------------------------------------------
+    |
+    | The following language lines are used to swap our attribute placeholder
+    | with something more reader friendly such as "E-Mail Address" instead
+    | of "email". This simply helps us make our message more expressive.
+    |
+    */
+
     'attributes' => [
         'username' => 'ชื่อผู้ใช้',
         'remember' => 'จำฉันไว้',
@@ -187,11 +226,18 @@ return [
         'genre_custom' => 'แท็กกำหนดเอง',
         'description' => 'คำอธิบายภาษาญี่ปุ่น',
         'end_date' => 'วันที่สิ้นสุด',
+        'add.start_date.year' => 'ปีที่เริ่ม',
+        'add.start_date.month' => 'เดือนที่เริ่ม',
+        'add.start_date.day' => 'วันที่เริ่ม',
+        'add.finish_date.year' => 'ปีที่เสร็จ',
+        'add.finish_date.month' => 'เดือนที่เสร็จ',
+        'add.finish_date.day' => 'วันที่เสร็จ',
         'num_re_listen_times' => 'จำนวนครั้งที่ฟังซ้ำทั้งหมด',
         'currentPassword' => 'รหัสผ่านปัจจุบัน',
         'newPassword' => 'รหัสผ่านใหม่',
         'newPasswordConfirmation' => 'ยืนยันรหัสผ่านใหม่',
         'followFetchedTagsLanguage' => 'ตามภาษา UI โดยอัตโนมัติ',
+        'enabled' => 'การตั้งค่าที่เปิดใช้',
         'customValue' => 'ค่ากำหนดเอง',
         'newTagTitle' => 'ชื่อแท็กใหม่',
         'editingTagTitle' => 'ชื่อแท็ก',
@@ -200,6 +246,8 @@ return [
         'product_ids' => 'ผลงาน',
         'product_ids.*' => 'ผลงาน',
         'title' => 'ชื่อเรื่อง',
+        'name' => 'ชื่อ',
+        'email' => 'ที่อยู่อีเมล',
         'password' => 'รหัสผ่าน',
         'password_confirmation' => 'ยืนยันรหัสผ่าน',
         'current_password' => 'รหัสผ่านปัจจุบัน',
@@ -210,6 +258,7 @@ return [
         'work_image' => 'ภาพปก',
         'sample_images' => 'รูปภาพตัวอย่าง',
         'sample_images.*' => 'รูปภาพตัวอย่าง',
+        'sample_image_order' => 'ลำดับรูปตัวอย่าง',
         'description_japanese' => 'คำอธิบายภาษาญี่ปุ่น',
         'description_localized' => 'คำอธิบายที่แปลแล้ว',
         'tags' => 'แท็ก',
@@ -219,23 +268,13 @@ return [
         're_listen_value' => 'ค่าการฟังซ้ำ',
         'priority' => 'ลำดับความสำคัญ',
         'newGroupTitle' => 'ชื่อกลุ่มใหม่',
-        'theme' => 'ธีม',
-        'enabled' => 'การตั้งค่าที่เปิดใช้',
-        'name' => 'ชื่อ',
-        'email' => 'ที่อยู่อีเมล',
-        'sample_image_order' => 'ลำดับรูปตัวอย่าง',
         'mode' => 'โหมดการแสดงผล',
+        'theme' => 'ธีม',
         'sizeChoice' => 'ขนาดส่วน ZIP',
         'customMib' => 'ขนาดสูงสุดต่อ ZIP (MiB)',
         'tagOrder' => 'ลำดับแท็ก',
         'seriesOrder' => 'ลำดับซีรีส์',
         'focus' => 'ประเภทเนื้อหา',
         'archive' => 'ไฟล์ ZIP',
-        'add.start_date.year' => 'ปีที่เริ่ม',
-        'add.start_date.month' => 'เดือนที่เริ่ม',
-        'add.start_date.day' => 'วันที่เริ่ม',
-        'add.finish_date.year' => 'ปีที่เสร็จ',
-        'add.finish_date.month' => 'เดือนที่เสร็จ',
-        'add.finish_date.day' => 'วันที่เสร็จ',
     ],
 ];

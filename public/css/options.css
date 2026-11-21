@@ -390,7 +390,7 @@ body.options-page {
 }
 
 .options-page .metadata-language-select {
-    width: min(100%, 22rem);
+    width: 100%;
 }
 
 .options-page .metadata-language-nested {

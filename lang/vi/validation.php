@@ -1,6 +1,21 @@
 <?php
 
+// Laravel validation messages are based on the Vietnamese translations maintained by Laravel-Lang (https://github.com/Laravel-Lang/lang/tree/main/locales/vi).
+// Project-specific attribute translations were generated using machine translation and reviewed by an LLM for consistency with existing project and DLsite terminology.
+
 return [
+
+    /*
+    |--------------------------------------------------------------------------
+    | Validation Language Lines
+    |--------------------------------------------------------------------------
+    |
+    | The following language lines contain the default error messages used by
+    | the validator class. Some of these rules have multiple versions such
+    | as the size rules. Feel free to tweak each of these messages here.
+    |
+    */
+
     'accepted' => 'Trường :attribute phải được chấp nhận.',
     'accepted_if' => 'Trường :attribute phải được chấp nhận khi :other là :value.',
     'active_url' => 'Trường :attribute không phải là một URL hợp lệ.',
@@ -154,6 +169,18 @@ return [
     'url' => 'Trường :attribute không giống với định dạng một URL.',
     'ulid' => 'Trường :attribute phải là một ULID hợp lệ.',
     'uuid' => 'Trường :attribute phải là một chuỗi UUID hợp lệ.',
+
+    /*
+    |--------------------------------------------------------------------------
+    | Custom Validation Language Lines
+    |--------------------------------------------------------------------------
+    |
+    | Here you may specify custom validation messages for attributes using the
+    | convention "attribute.rule" to name the lines. This makes it quick to
+    | specify a specific custom language line for a given attribute rule.
+    |
+    */
+
     'custom' => [
         'indexFields.*.width' => [
             'required' => 'Cần có chiều rộng cột tùy chỉnh.',
@@ -164,6 +191,18 @@ return [
             'in' => 'Chế độ chiều rộng cột đã chọn không hợp lệ.',
         ],
     ],
+
+    /*
+    |--------------------------------------------------------------------------
+    | Custom Validation Attributes
+    |--------------------------------------------------------------------------
+    |
+    | The following language lines are used to swap our attribute placeholder
+    | with something more reader friendly such as "E-Mail Address" instead
+    | of "email". This simply helps us make our message more expressive.
+    |
+    */
+
     'attributes' => [
         'username' => 'Tên người dùng',
         'remember' => 'Ghi nhớ tôi',
@@ -187,11 +226,18 @@ return [
         'genre_custom' => 'Thẻ tùy chỉnh',
         'description' => 'Mô tả tiếng Nhật',
         'end_date' => 'Ngày kết thúc',
+        'add.start_date.year' => 'Năm bắt đầu',
+        'add.start_date.month' => 'Tháng bắt đầu',
+        'add.start_date.day' => 'Ngày bắt đầu',
+        'add.finish_date.year' => 'Năm hoàn thành',
+        'add.finish_date.month' => 'Tháng hoàn thành',
+        'add.finish_date.day' => 'Ngày hoàn thành',
         'num_re_listen_times' => 'Tổng số lần nghe lại',
         'currentPassword' => 'Mật khẩu hiện tại',
         'newPassword' => 'Mật khẩu mới',
         'newPasswordConfirmation' => 'Xác nhận mật khẩu mới',
         'followFetchedTagsLanguage' => 'Tự động theo ngôn ngữ giao diện',
+        'enabled' => 'Cài đặt đã bật',
         'customValue' => 'Giá trị tùy chỉnh',
         'newTagTitle' => 'Tiêu đề thẻ mới',
         'editingTagTitle' => 'Tiêu đề thẻ',
@@ -200,6 +246,8 @@ return [
         'product_ids' => 'Tác phẩm',
         'product_ids.*' => 'Tác phẩm',
         'title' => 'Tiêu đề',
+        'name' => 'Tên',
+        'email' => 'Địa chỉ email',
         'password' => 'Mật khẩu',
         'password_confirmation' => 'Xác nhận mật khẩu',
         'current_password' => 'Mật khẩu hiện tại',
@@ -210,6 +258,7 @@ return [
         'work_image' => 'Ảnh bìa',
         'sample_images' => 'Hình ảnh mẫu',
         'sample_images.*' => 'Hình ảnh mẫu',
+        'sample_image_order' => 'Thứ tự ảnh mẫu',
         'description_japanese' => 'Mô tả tiếng Nhật',
         'description_localized' => 'Mô tả bản địa hóa',
         'tags' => 'Thẻ',
@@ -219,23 +268,13 @@ return [
         're_listen_value' => 'Giá trị nghe lại',
         'priority' => 'Ưu tiên',
         'newGroupTitle' => 'Tiêu đề nhóm mới',
-        'theme' => 'Chủ đề',
-        'enabled' => 'Cài đặt đã bật',
-        'name' => 'Tên',
-        'email' => 'Địa chỉ email',
-        'sample_image_order' => 'Thứ tự ảnh mẫu',
         'mode' => 'Chế độ hiển thị',
+        'theme' => 'Chủ đề',
         'sizeChoice' => 'Kích thước phần ZIP',
         'customMib' => 'Kích thước tối đa mỗi ZIP (MiB)',
         'tagOrder' => 'Thứ tự thẻ',
         'seriesOrder' => 'Thứ tự sê-ri',
         'focus' => 'Loại nội dung',
         'archive' => 'Tệp ZIP',
-        'add.start_date.year' => 'Năm bắt đầu',
-        'add.start_date.month' => 'Tháng bắt đầu',
-        'add.start_date.day' => 'Ngày bắt đầu',
-        'add.finish_date.year' => 'Năm hoàn thành',
-        'add.finish_date.month' => 'Tháng hoàn thành',
-        'add.finish_date.day' => 'Ngày hoàn thành',
     ],
 ];

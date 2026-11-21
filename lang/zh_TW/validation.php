@@ -1,5 +1,8 @@
 <?php
 
+// Laravel validation messages were manually translated.
+// Project-specific attribute translations were generated using machine translation and reviewed by an LLM for consistency with existing project and DLsite terminology.
+
 return [
 
     /*
@@ -166,6 +169,7 @@ return [
     'url' => ':attribute 欄位必須是有效的 URL。',
     'ulid' => ':attribute 欄位必須是有效的 ULID。',
     'uuid' => ':attribute 欄位必須是有效的 UUID。',
+
     /*
     |--------------------------------------------------------------------------
     | Custom Validation Language Lines
@@ -185,9 +189,6 @@ return [
         'indexFields.*.width_mode' => [
             'required' => '欄寬模式為必填。',
             'in' => '選取的欄寬模式無效。',
-        ],
-        'attribute-name' => [
-            'rule-name' => '自訂訊息',
         ],
     ],
 
@@ -276,5 +277,4 @@ return [
         'focus' => '內容類型',
         'archive' => 'ZIP 檔案',
     ],
-
 ];

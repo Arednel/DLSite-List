@@ -1,6 +1,21 @@
 <?php
 
+// Laravel validation messages are based on the Indonesian translations maintained by Laravel-Lang (https://github.com/Laravel-Lang/lang/tree/main/locales/id).
+// Project-specific attribute translations were generated using machine translation and reviewed by an LLM for consistency with existing project and DLsite terminology.
+
 return [
+
+    /*
+    |--------------------------------------------------------------------------
+    | Validation Language Lines
+    |--------------------------------------------------------------------------
+    |
+    | The following language lines contain the default error messages used by
+    | the validator class. Some of these rules have multiple versions such
+    | as the size rules. Feel free to tweak each of these messages here.
+    |
+    */
+
     'accepted' => ':attribute harus diterima.',
     'accepted_if' => ':attribute harus diterima ketika :other berisi :value.',
     'active_url' => ':attribute bukan URL yang valid.',
@@ -154,6 +169,18 @@ return [
     'url' => 'Format :attribute tidak valid.',
     'ulid' => ':attribute harus merupakan ULID yang valid.',
     'uuid' => ':attribute harus merupakan UUID yang valid.',
+
+    /*
+    |--------------------------------------------------------------------------
+    | Custom Validation Language Lines
+    |--------------------------------------------------------------------------
+    |
+    | Here you may specify custom validation messages for attributes using the
+    | convention "attribute.rule" to name the lines. This makes it quick to
+    | specify a specific custom language line for a given attribute rule.
+    |
+    */
+
     'custom' => [
         'indexFields.*.width' => [
             'required' => 'Lebar kolom khusus wajib diisi.',
@@ -164,6 +191,18 @@ return [
             'in' => 'Mode lebar kolom yang dipilih tidak valid.',
         ],
     ],
+
+    /*
+    |--------------------------------------------------------------------------
+    | Custom Validation Attributes
+    |--------------------------------------------------------------------------
+    |
+    | The following language lines are used to swap our attribute placeholder
+    | with something more reader friendly such as "E-Mail Address" instead
+    | of "email". This simply helps us make our message more expressive.
+    |
+    */
+
     'attributes' => [
         'username' => 'Nama pengguna',
         'remember' => 'Ingat Saya',
@@ -187,11 +226,18 @@ return [
         'genre_custom' => 'Tag Kustom',
         'description' => 'Deskripsi Jepang',
         'end_date' => 'Tanggal Selesai',
+        'add.start_date.year' => 'Tahun mulai',
+        'add.start_date.month' => 'Bulan mulai',
+        'add.start_date.day' => 'Hari mulai',
+        'add.finish_date.year' => 'Tahun selesai',
+        'add.finish_date.month' => 'Bulan selesai',
+        'add.finish_date.day' => 'Hari selesai',
         'num_re_listen_times' => 'Total Kali Didengarkan Ulang',
         'currentPassword' => 'Kata sandi saat ini',
         'newPassword' => 'Kata sandi baru',
         'newPasswordConfirmation' => 'Konfirmasi kata sandi baru',
         'followFetchedTagsLanguage' => 'Ikuti bahasa UI secara otomatis',
+        'enabled' => 'Pengaturan aktif',
         'customValue' => 'Nilai kustom',
         'newTagTitle' => 'Judul tag baru',
         'editingTagTitle' => 'Judul tag',
@@ -200,6 +246,8 @@ return [
         'product_ids' => 'Karya',
         'product_ids.*' => 'Karya',
         'title' => 'Judul',
+        'name' => 'Nama',
+        'email' => 'Alamat email',
         'password' => 'Kata sandi',
         'password_confirmation' => 'Konfirmasi kata sandi',
         'current_password' => 'Kata sandi saat ini',
@@ -210,6 +258,7 @@ return [
         'work_image' => 'Gambar Sampul',
         'sample_images' => 'Gambar Sampel',
         'sample_images.*' => 'Gambar Sampel',
+        'sample_image_order' => 'Urutan gambar sampel',
         'description_japanese' => 'Deskripsi Jepang',
         'description_localized' => 'Deskripsi terlokalisasi',
         'tags' => 'Tag',
@@ -219,23 +268,13 @@ return [
         're_listen_value' => 'Nilai Dengarkan Ulang',
         'priority' => 'Prioritas',
         'newGroupTitle' => 'Judul grup baru',
-        'theme' => 'Tema',
-        'enabled' => 'Pengaturan aktif',
-        'name' => 'Nama',
-        'email' => 'Alamat email',
-        'sample_image_order' => 'Urutan gambar sampel',
         'mode' => 'Mode tampilan',
+        'theme' => 'Tema',
         'sizeChoice' => 'Ukuran bagian ZIP',
         'customMib' => 'Ukuran maksimum per ZIP (MiB)',
         'tagOrder' => 'Urutan tag',
         'seriesOrder' => 'Urutan seri',
         'focus' => 'Jenis konten',
         'archive' => 'File ZIP',
-        'add.start_date.year' => 'Tahun mulai',
-        'add.start_date.month' => 'Bulan mulai',
-        'add.start_date.day' => 'Hari mulai',
-        'add.finish_date.year' => 'Tahun selesai',
-        'add.finish_date.month' => 'Bulan selesai',
-        'add.finish_date.day' => 'Hari selesai',
     ],
 ];

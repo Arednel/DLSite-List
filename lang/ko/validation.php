@@ -1,6 +1,21 @@
 <?php
 
+// Laravel validation messages are based on the Korean translations maintained by Laravel-Lang (https://github.com/Laravel-Lang/lang/tree/main/locales/ko).
+// Project-specific attribute translations were generated using machine translation and reviewed by an LLM for consistency with existing project and DLsite terminology.
+
 return [
+
+    /*
+    |--------------------------------------------------------------------------
+    | Validation Language Lines
+    |--------------------------------------------------------------------------
+    |
+    | The following language lines contain the default error messages used by
+    | the validator class. Some of these rules have multiple versions such
+    | as the size rules. Feel free to tweak each of these messages here.
+    |
+    */
+
     'accepted' => ':attribute을(를) 동의해야 합니다.',
     'accepted_if' => ':attribute을(를) :other이(가) :value이면 동의해야 합니다.',
     'active_url' => ':attribute은(는) 유효한 URL이 아닙니다.',
@@ -154,6 +169,18 @@ return [
     'url' => ':attribute은(는) 형식은 올바르지 않습니다.',
     'ulid' => ':attribute은 유효한 ULID여야 합니다.',
     'uuid' => ':attribute은(는) 유효한UUID여야합니다.',
+
+    /*
+    |--------------------------------------------------------------------------
+    | Custom Validation Language Lines
+    |--------------------------------------------------------------------------
+    |
+    | Here you may specify custom validation messages for attributes using the
+    | convention "attribute.rule" to name the lines. This makes it quick to
+    | specify a specific custom language line for a given attribute rule.
+    |
+    */
+
     'custom' => [
         'indexFields.*.width' => [
             'required' => '사용자 지정 열 너비는 필수입니다.',
@@ -164,6 +191,18 @@ return [
             'in' => '선택한 열 너비 모드가 올바르지 않습니다.',
         ],
     ],
+
+    /*
+    |--------------------------------------------------------------------------
+    | Custom Validation Attributes
+    |--------------------------------------------------------------------------
+    |
+    | The following language lines are used to swap our attribute placeholder
+    | with something more reader friendly such as "E-Mail Address" instead
+    | of "email". This simply helps us make our message more expressive.
+    |
+    */
+
     'attributes' => [
         'username' => '사용자 이름',
         'remember' => '로그인 유지',
@@ -187,11 +226,18 @@ return [
         'genre_custom' => '사용자 지정 태그',
         'description' => '일본어 설명',
         'end_date' => '완료일',
+        'add.start_date.year' => '시작 연도',
+        'add.start_date.month' => '시작 월',
+        'add.start_date.day' => '시작 일',
+        'add.finish_date.year' => '완료 연도',
+        'add.finish_date.month' => '완료 월',
+        'add.finish_date.day' => '완료 일',
         'num_re_listen_times' => '재청취 총 횟수',
         'currentPassword' => '현재 비밀번호',
         'newPassword' => '새 비밀번호',
         'newPasswordConfirmation' => '새 비밀번호 확인',
         'followFetchedTagsLanguage' => 'UI 언어 자동으로 따르기',
+        'enabled' => '활성화 설정',
         'customValue' => '사용자 지정 값',
         'newTagTitle' => '새 태그 제목',
         'editingTagTitle' => '태그 제목',
@@ -200,6 +246,8 @@ return [
         'product_ids' => '작품',
         'product_ids.*' => '작품',
         'title' => '제목',
+        'name' => '이름',
+        'email' => '이메일 주소',
         'password' => '비밀번호',
         'password_confirmation' => '비밀번호 확인',
         'current_password' => '현재 비밀번호',
@@ -210,6 +258,7 @@ return [
         'work_image' => '표지 이미지',
         'sample_images' => '샘플 이미지',
         'sample_images.*' => '샘플 이미지',
+        'sample_image_order' => '샘플 이미지 순서',
         'description_japanese' => '일본어 설명',
         'description_localized' => '현지화 설명',
         'tags' => '태그',
@@ -219,23 +268,13 @@ return [
         're_listen_value' => '재청취 값',
         'priority' => '우선순위',
         'newGroupTitle' => '새 그룹 제목',
-        'theme' => '테마',
-        'enabled' => '활성화 설정',
-        'name' => '이름',
-        'email' => '이메일 주소',
-        'sample_image_order' => '샘플 이미지 순서',
         'mode' => '표시 모드',
+        'theme' => '테마',
         'sizeChoice' => 'ZIP 분할 크기',
         'customMib' => 'ZIP당 최대 크기 (MiB)',
         'tagOrder' => '태그 순서',
         'seriesOrder' => '시리즈 순서',
         'focus' => '콘텐츠 유형',
         'archive' => 'ZIP 파일',
-        'add.start_date.year' => '시작 연도',
-        'add.start_date.month' => '시작 월',
-        'add.start_date.day' => '시작 일',
-        'add.finish_date.year' => '완료 연도',
-        'add.finish_date.month' => '완료 월',
-        'add.finish_date.day' => '완료 일',
     ],
 ];

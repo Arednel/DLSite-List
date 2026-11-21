@@ -190,9 +190,6 @@ return [
             'required' => '列幅モードは必須です。',
             'in' => '選択した列幅モードは無効です。',
         ],
-        'attribute-name' => [
-            'rule-name' => 'カスタムメッセージ',
-        ],
     ],
 
     /*
@@ -280,5 +277,4 @@ return [
         'focus' => 'UIの表現',
         'archive' => 'ZIPファイル',
     ],
-
 ];

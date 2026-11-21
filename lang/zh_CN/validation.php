@@ -1,5 +1,8 @@
 <?php
 
+// Laravel validation messages are based on the Simplified Chinese translations maintained by Laravel-Lang (https://github.com/Laravel-Lang/lang/tree/main/locales/zh_CN).
+// Project-specific attribute translations were generated using machine translation and reviewed by an LLM for consistency with existing project and DLsite terminology.
+
 return [
 
     /*
@@ -166,6 +169,7 @@ return [
     'url' => ':attribute 格式不正确。',
     'ulid' => ':attribute 必须是有效的 ULID。',
     'uuid' => ':attribute 必须是有效的 UUID。',
+
     /*
     |--------------------------------------------------------------------------
     | Custom Validation Language Lines
@@ -185,9 +189,6 @@ return [
         'indexFields.*.width_mode' => [
             'required' => '必须选择列宽模式。',
             'in' => '所选的列宽模式无效。',
-        ],
-        'attribute-name' => [
-            'rule-name' => '自定义消息',
         ],
     ],
 
@@ -276,5 +277,4 @@ return [
         'focus' => '内容类型',
         'archive' => 'ZIP 文件',
     ],
-
 ];

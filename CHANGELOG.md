@@ -6,6 +6,8 @@ All notable changes to this project are documented in this file.
 
 ### Upgrade notes
 
+For existing Docker and manual installations:
+
 * Before upgrading, let Bulk Imports finish and complete or cancel unfinished Refetches and Library Transfers, including pending reviews.
 
 For existing manual installations:
@@ -15,13 +17,13 @@ For existing manual installations:
 ### Added
 
 * Added the Edit action to Field Layouts so it can be reordered or hidden.
-* Added Traditional Chinese DLsite metadata language support.
+* Added DLsite metadata support for Traditional Chinese.
 * Added UI and DLsite metadata support for Simplified Chinese, Korean, German, French, Spanish, Italian, Portuguese, Swedish, Indonesian, Thai, and Vietnamese.
 
 ### Changed
 
 * Reworked application error localization so user-facing errors are translated more consistently across the application.
-* Changed the mobile Edit column to use only half of the row instead of the full row.
+* Changed the Edit column to use only half of the row instead of the full row on mobile.
 * Expanded DLsite language support from Tags to Titles and Descriptions across Quick Add, Edit, the Index, and work selectors. The preferred language can follow the UI language or be selected separately, while Japanese is always fetched for shared metadata.
 * Updated Refetch Review and Import Review to show localized changes by language and allow separate choices for each language.
 * Updated the Import / Export archive schema to v4.
@@ -32,8 +34,8 @@ For existing manual installations:
 * Improved Index return navigation performance by avoiding redundant visibility checks when a single filter hides the affected Product.
 * Improved Library Transfer export planning performance by batch-loading work titles, contributors, and tags.
 * Improved Library Transfer Import Review performance by avoiding a redundant translated-title read during overwrite.
-* Improved Options work-selector performance by avoiding redundant Product existence queries when selector results already determine whether works are available.
 * Improved Library Transfer Import Review performance by loading all fetched Tag language memberships in one query per existing work.
+* Improved Options work-selector performance by avoiding redundant Product existence queries when selector results already determine whether works are available.
 
 ### Fixed
 
