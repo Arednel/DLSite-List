@@ -3,7 +3,7 @@
 This document explains how to run and configure DLSite List.
 
 For runtime architecture and data flow, see [ARCHITECTURE.md](ARCHITECTURE.md).  
-For test setup, commands, and the current tests, see [TESTING.md](TESTING.md).
+For test setup, commands, and coverage, see [TESTING.md](TESTING.md).
 
 ## Run the Application
 
@@ -58,7 +58,7 @@ Local builds use the `dlsite-list-dev` Compose project name by default, keeping 
 
 The test database/services are behind the Compose `test` profile and do not start with the normal application command.
 
-Docker accepts individual Import / Export ZIP files up to 256 MiB by default. PHP uses `upload_max_filesize = 256M` and `post_max_size = 260M`, while Nginx uses `client_max_body_size 260M`. If larger import files are needed, raise the PHP and Nginx limits together and keep the request/post limit above the file-size limit.
+Docker supports individual import ZIP parts up to 256 MiB by default. See [Docker Import Limits](#docker-import-limits) for configuration details.
 
 #### Docker Secrets
 
@@ -322,7 +322,7 @@ It deliberately skips:
 - nested files
 - non-image files
 
-Normal create/update/refetch flows already perform their own image cleanup where applicable. This command is for maintenance/recovery.
+Normal create/update/refetch flows perform their own image cleanup where applicable. This command is for maintenance/recovery.
 
 ### Refetch Cleanup
 
@@ -1046,7 +1046,7 @@ The export part-size setting is reset by `Reset All Options`.
 - PHP `post_max_size` - `260M`
 - Nginx `client_max_body_size` - `260M`
 
-The supplied Docker configuration supports individual import ZIP parts up to `256 MiB`. Increase all relevant limits when importing larger parts.
+The supplied Docker configuration supports individual import ZIP parts up to `256 MiB`. When importing larger parts, increase the PHP and Nginx limits together, keeping `post_max_size` and `client_max_body_size` above `upload_max_filesize`.
 
 ### Bulk Imports
 

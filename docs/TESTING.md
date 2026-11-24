@@ -1,6 +1,6 @@
 # Testing
 
-This document describes how to run the project's existing tests and what each current test file covers.
+This document describes test environment setup, test commands, automated coverage, and manual verification procedures.
 
 For runtime architecture and data flow, see [ARCHITECTURE.md](ARCHITECTURE.md).  
 For installation, environment variables, Options settings, recovery commands, and other configuration, see [CONFIGURATION.md](CONFIGURATION.md).
@@ -66,7 +66,7 @@ From the project root:
 php artisan test
 ```
 
-This is the normal Laravel test command for the project's Unit and Feature coverage.
+This command runs the Unit and Feature suites configured in `phpunit.xml`.
 
 Docker initializer tests run on Linux and they are skipped on other operating systems.
 
@@ -86,7 +86,7 @@ php artisan test --testsuite=Performance --do-not-fail-on-phpunit-warning
 
 ### Weekly Logging and Python Runner Focused Run
 
-Existing focused command:
+Focused command:
 
 ```bash
 php artisan test tests/Unit/Logging tests/Unit/Support/DLSite/DLSitePythonRunnerTest.php
@@ -122,386 +122,312 @@ docker compose --env-file docker/.env.docker -f compose.dev.yaml --profile test 
 
 The Docker `tests` service is one-off and does not start during normal application startup.
 
-## Current Automated Test Inventory
+## Automated Test Inventory
 
 ### Feature Tests
 
-#### `tests/Feature/AdminCommandTest.php`
-
-Covers the existing administrator console recovery commands:
-- password reset prompts/validation
-- zero/multiple-user refusal
-- full user reset confirmation/cancellation
-
-#### `tests/Feature/AdminRecoveryTest.php`
-
-Covers trusted-environment `ADMIN_PASSWORD_RESET` recovery, including enabled/disabled states, one-time consumption, restart/flag removal behavior, password validation, rollback, and unsupported account counts.
-
-#### `tests/Feature/AuthenticationSettingsTest.php`
-
-Covers the Authentication Options tab:
-- enable/disable flow
-- account state
-- password change
-- current-password validation
-- remember-token rotation
-- logout after password change
-- authentication enablement exclusion from global Options reset
-- authentication changes preserve the Authentication Page Theme setting
-
-
-#### `tests/Feature/AuthenticationTest.php`
-
-Covers optional administrator authentication:
-- default-off behavior
-- setup/login/logout
-- single-account setup
-- exact-case usernames
-- protected routes/mutations/Livewire requests
-- public auth/help routes
-- throttling and localized authentication failures through the operational error catalog, including English singular/plural and Japanese login-throttle messages
-- intended redirects
-- themes/locales
-- Remember me persistence
-
-#### `tests/Feature/PublicStorageTest.php`
-
-Covers Laravel-served `storage/app/public` files, including authentication-off guest access, HTTP 401 for unauthenticated access when authentication is enabled, authenticated access, nested storage paths, directory rejection, missing files, traversal rejection, and preventing unauthenticated guests from probing file existence when authentication is enabled.
-
-#### `tests/Feature/AutocompleteControllerTest.php`
-
-Covers tag/series autocomplete endpoints, matching/order rules, result limits, tag color payloads, group-over-tag color precedence, and the rendered autocomplete script/field contract on Index, Create, and Edit surfaces.
-
-#### `tests/Feature/AutocompleteSettingsTest.php`
-
-Covers independent persisted ordering settings for tag and series autocomplete.
-
-#### `tests/Feature/FullRefetchTest.php`
-
-Covers the full Refetch workflow, including
-- all/selected runs
-- run creation and batch/result rows
-- staging fetched data with the language settings captured when the run starts
-- image-check choice
-- review categories, including DLsite Rating review with both cached scales and staged-file promotion
-- apply/ignore/reject behavior, including Product Format, announcement-date, and Site ID Overwrite/Ignore
-- localized Product Format review values
-- incremental application
-- lifecycle locking
-- independent Title, Description, and Tag decisions for every registered metadata language, including ignoring all Tag changes and promoting Custom Tags during Detailed review
-- preservation and overwrite of contributor roles
-- canonical JSON promotion
-- nonfatal original-work JSON copy/check failures, missing originals, and continued promotion of other works
-- cover/sample promotion and rollback
-- obsolete-image cleanup
-- Updated Date behavior
-
-#### `tests/Feature/RefetchQueueFailureTest.php`
-
-Covers cancellation, individual job failures, transactional rollback, lifecycle locks, and recovery of cancelled batches. Checks that each work fails on timeout before the queue retry window expires.
-
-#### `tests/Feature/BulkImportTest.php`
-
-Covers product-code validation, queued item processing, skips, failures, and transactional run completion. Bulk Import reads the fetch languages from Options when the run starts and includes the metadata language submitted with the form. Tests check that queued jobs keep the run's language settings and rating scale, and that the form uses the current metadata language after a validation error. Import cases cover Product Format overrides, announcement dates, Site IDs, and failed image downloads.
-
-Busy-start coverage checks the wrapped cache lock timeout and ensures unrelated dispatch exceptions with the same message are not misclassified as lock contention.
-
-#### `tests/Feature/OptionsBulkImportsTest.php`
-
-Covers Bulk Import history, progress/errors, imported-work titles and fallback product codes, 10-run pagination, cleanup availability, and active-run-only polling through the refresh handler. Error/warning coverage verifies known semantic operational errors use the dedicated error catalog in the current UI locale, while unknown/raw errors and specialized raw warnings remain unchanged.
-
-#### `tests/Feature/LibraryTransferTest.php`
-
-Covers core transfer contracts, route/review smoke coverage, transfer error rendering, portable Options, new-work round trips, controlled downloads, and the shared library-mutation lock.
-
-#### `tests/Feature/LibraryTransferExportTest.php`
-
-Covers export planning, deterministic work and image inventories, multipart manifests, downloads, and localized failures. Checks exported Product Format, announcement dates, DLsite ratings, and the raw Custom CSS entry.
-
-Work export tests verify a fixed query count per Product batch and the resulting archive contents, including tag order, tags shared across languages, and custom tags.
-
-Regression coverage injects failures after successor-job insertion in every planning phase, verifies transaction rollback and successful retry, and checks stale planning calls. Empty-library and empty-selection export errors are checked in English and Japanese, including that no transfer is started.
-
-#### `tests/Feature/LibraryTransferImportTest.php`
-
-Covers multipart upload and validation, archive integrity, analysis retries, incomplete images, and data-only imports. Compatibility cases cover v1 through v3 archives, historical Option keys and layouts, and v4 round trips across every supported DLsite metadata language.
-
-Work import tests distinguish omitted fields from explicit clears, preserve explicit v4 translations equal to Japanese, and reject malformed locale documents and fetch-language settings. Other cases cover scraper aliases, Product Format, Series, notes, dates, Site IDs, and DLsite ratings. Custom CSS tests cover review, overwrite, rollback, and recovery after interruption.
-
-#### `tests/Feature/TranslatedWorkCircleTest.php`
-
-Covers original-Circle resolution from Japanese `language_editions` through Quick Add and Bulk Import, user overrides, and Refetch comparisons. `FullRefetchTest.php` also checks that associated original-work JSON is promoted only when Refetch changes are applied.
-
-#### `tests/Feature/LibraryTransferReviewTest.php`
-
-Covers Ignore, Overwrite, and Merge across works, tags, groups, relationships, and Options. Tests also cover stale decisions, atomic updates, image recovery, Custom CSS decisions, timestamps, and completed reviews.
-
-Existing-work review coverage verifies that all Tag language memberships are loaded with one baseline query, independent of the number of supported metadata languages.
-
-Localized review cases verify headings in English, Japanese, and Traditional Chinese, pagination that keeps a work’s languages together, and independent decisions for translated text and fetched tags. Tag tests check that applying one language preserves shared tags and other memberships. New-work cases cover blank translations and missing, null, or zero rating values.
-
-Partial work-document coverage verifies that canonical Japanese contributor values overwrite existing values, omitted roles survive Overwrite, explicitly empty roles can still be cleared, and English-only canonical metadata is ignored without validation or staging clears. Announcement-date review checks use matching date formats for unchanged imported values.
-
-#### `tests/Feature/LibraryTransferLifecycleTest.php`
-
-Covers supersession/cancellation, active-transfer guards, history cleanup, queued checkpoints/retries, generation and operation tokens, late callbacks, publication recovery, browser-started imports, transfer-storage cleanup, selector Product-existence query avoidance, and semantic fallback errors when queue failures have empty exception messages.
-
-Storage cleanup coverage holds the upload lock before database registration to verify that a sweep skips active uploads and later removes only unreferenced files.
-
-#### `tests/Feature/LibraryTransferConcurrencyTest.php`
-
-Covers stale-value detection for canonical Product fields, translated-title localization rows, and typed Options using two MySQL connections and an older `REPEATABLE READ` snapshot. Never run this test against production.
-
-#### `tests/Feature/GenreGroupRelationshipTest.php`
-
-Covers:
-- group-to-tag ordering and pivot data
-- tag-to-group ordering
-- Index-visible/hidden scopes
-- persistence and clearing of tag/group background and text colors
-
-#### `tests/Feature/IndexContentOverflowSettingsTest.php`
-
-Covers saving/resetting Index Notes/Tags overflow settings and their validation/default behavior.
-
-#### `tests/Feature/IndexImageViewerTest.php`
-
-Covers the Image Viewer option and Index viewer rendering/data:
-- Index viewer always uses Cherry styling independently of the Form Page Theme
-- enable/disable behavior
-- image ordering/path handling
-- Index placeholder and sample-only/empty galleries for works without cover paths
-- accessible controls
-- safe full-image links
-- conditional script/dialog output
-
-#### `tests/Feature/IndexPaginationSettingsTest.php`
-
-Covers fixed, custom, and unlimited Index pagination settings and reset/default behavior.
-
-#### `tests/Feature/IndexSearchSettingsTest.php`
-
-Covers general Index search with visible and hidden description columns, including matches in stored languages other than the preferred one.
-
-#### `tests/Feature/ListMenuFloatLocalizationTest.php`
-
-Covers localized copy in the shared floating/drawer navigation and shared menu UI.
-
-#### `tests/Feature/LocalizedPhpUiTest.php`
-
-Covers localized PHP-rendered display state, including:
-- localized month labels with stable numeric values
-- Progress display delegated to localized labels, with stable selection and active-filter values
-- localized Age/Progress enum display without changing stored/backed values
-
-#### `tests/Feature/OptionalProductStatusesTest.php`
-
-Covers On Hold/Dropped configuration across Add/Edit forms, Index progress navigation, filters, existing product values, and all enabled/disabled combinations.
-
-#### `tests/Feature/OptionsGeneralTest.php`
-
-Covers:
-- General-tab rendering and default selection
-- active-tab accessibility state
-- invalid-tab fallback
-- Refetch empty/latest-run presentation
-- shared Quick Add modal configuration
-
-#### `tests/Feature/OptionsRefetchCleanupTest.php`
-
-Covers Refetch cleanup:
-- confirmation/cancellation
-- database cascade removal
-- private/public staged-file cleanup
-- preserved Refetch roots/canonical Works
-- active-run blocking
-- lifecycle lock
-- database-first failure behavior
-
-#### `tests/Feature/OptionsRefetchLocalizationTest.php`
-
-Covers:
-- localized Options/Refetch UI
-- stable persisted/action values across locales
-- Japanese and English Title and Description labels on the same saved Refetch review after switching among English, Japanese, and Traditional Chinese, alongside the original fetched text
-- unchanged raw scraped details where appropriate
-- localized validation
-- reset navigation behavior
-
-#### `tests/Feature/OptionsRefetchProgressTest.php`
-
-Covers Livewire Refetch progress polling, running/cancelling state, counts, Cancel visibility, and redirect to review.
-
-#### `tests/Feature/OptionsRefetchReviewTest.php`
-
-Covers review tabs, accessible panels, localized warnings, per-change choices, overwrite presets, confirmations, and read-only reviews. Pagination tests check that localized title changes share one card per work and that choices survive page and tab changes and apply across the run.
-
-#### `tests/Feature/OptionsWorkSearchTest.php`
-
-Covers selected-work search by Japanese and preferred-language titles, product code ordering, and keeping selections while filtering. Query checks cover title projections in Japanese mode and whole-library selectors.
-
-#### `tests/Feature/ProductLocalizationTest.php`
-
-Covers migration and rollback of English titles and descriptions, including cleanup across batch boundaries. Model tests cover translation reads and writes, concurrent creation, parent timestamps, and removal of empty translations. Search tests distinguish the preferred-language Title filter from general search across all stored titles.
-
-#### `tests/Feature/ProductControllerTest.php`
-
-Covers the main product HTTP workflows:
-- Index filtering/sorting/display
-- all-tags pattern matching, overlapping matches, missing tags, and per-attachment language/custom-source visibility
-- Create/Edit field order using submitted input names, product binding, controller-prepared translated Title/Description values, and return-navigation data, including rejection of unsafe (non-http(s)) `return_url` values
-- preservation of hidden and read-only fields, rendered-language snapshots on successful submissions, current-language reloads with persisted fetched tags after validation redirects, and metadata-language lookups on Edit
-- focused DLsite Rating input/read-only display across both scales, read-only mutation protection, canonical Score input, validation restoration, manual conversion, vote-count updates that preserve independently rounded ratings, and conditional Rating Scale lookups for form rendering and manual submissions
-- DLsite Rating clearing and omission semantics, independent vote-count preservation, and unchanged Updated Date when already-null ratings are submitted again
-- DLsite Quick Add fetch/store/error behavior and shared importer regression coverage
-- Product Format Edit/Custom Quick Add input, fetched Quick Add fallback, visible override, blank fallback, and localized validation
-- Custom Quick Add/Edit browser-local image editor rendering and normal multipart uploads
-- cover/sample add, remove, readonly, mixed existing/new ordering, and optional-cover behavior
-- tag/contributor synchronization
-- metadata and partial-date updates
-- automatic Series
-- Quick Add storage for every registered metadata language and Edit updates that preserve other languages and Custom Tags
-- Index-aware return navigation
-- modal completion responses
-- deletion and cleanup-error handling, including associated original-work JSON files and directory listing failures that must not block product deletion
-
-#### `tests/Feature/ProductGenreMigrationTest.php`
-
-Covers migration of legacy product genre data into normalized tag/product relationships, including collision-safe `jp`/`ja` language-code normalization and rollback when both rows already exist.
-
-#### `tests/Feature/ProductImageCleanupTest.php`
-
-Covers `works:cleanup-images`, including preservation of referenced images and protection of orphan/unknown/nested/non-image files.
-
-#### `tests/Feature/ProductImageEditorTest.php`
-
-Covers Custom Quick Add and Edit image handling: optional covers, add/replace/remove cover states, multi-file sample selection, removal and reordering, mixed existing/new images, old-input restoration, readonly/hidden field handling, validation, destination collisions, recovery, and rollback behavior.
-
-The tests cover the server-side multipart contract and rendered form structure. Browser previews, multi-file card creation, reordering, and native drag-and-drop are handled by `public/scripts/product-image-editor.js`. Newly selected files are lost after a full validation redirect as expected for native file inputs, while existing-image removal and order are restored through Laravel old input.
-
-#### `tests/Feature/ProductIndexLivewireTest.php`
-
-Covers the Livewire Index:
-- pagination/query-string state
-- Japanese and preferred-language titles and descriptions without loading separate localization models
-- general search across stored titles, visible and hidden description search, locale-scoped filters, and inclusive Scheduled Release Date ranges
-- Product Format display, partial label/custom search, exact-code matching, JSON-element boundaries, and special-character search escaping
-- sort behavior, including Product Format sorting by its first stored value, scale-aware DLsite Rating sorting/filtering with nulls last, and announcement-date sorting with nulls last
-- separate and combined rating rendering across both scales and all visual styles, with focused cases for upward half-star rounding, independent star rounding, missing ratings, zero/absent vote counts, and scale-adjusted Score filter labels that retain canonical values
-- individual/combined maker links, comma-separated combined display, and SQL sorting with first-nonblank Circle/Publisher/Brand fallback, case-insensitive comparison, blanks last, primary/secondary priorities, and global page-location checks
-- narrow hydration, including rating-column selection for visible fields/styles while rating/count filtering and sorting remain independent of selected attributes
-- one request-batched Index settings lookup with fresh metadata-language state on later Livewire requests
-- field visibility and order, localized Description behavior in Japanese and Traditional Chinese UI modes, optional-column sorting, and Site ID filtering
-- timestamps
-- DLsite links using Site ID with age-based fallback, including `announce/` selection independent of site
-- Image Viewer
-- Add/Edit modal links
-- tags/colors/group ordering
-- optional statuses
-- content overflow
-- return/query behavior
-
-#### `tests/Feature/AnnouncementDateMigrationTest.php`
-
-Covers backfilling existing scraper JSON, missing/corrupt files, and propagation of database update errors.
-
-#### `tests/Feature/ProductMetadataMigrationTest.php`
-
-Runs the historical metadata backfill against its original schema, then applies the later localization migrations. Checks Japanese field precedence, English description fallback handling, contributor identities and role memberships, timestamps, missing or corrupt JSON, and database-write failures.
-
-#### `tests/Feature/ProductMetadataSettingsTest.php`
-
-Covers metadata-related UI settings:
-- field layouts, including the reorderable/hideable Index Edit action column, Index column-width modes, localized width and width-mode validation errors from Laravel's validation catalogs in English, Japanese, and Traditional Chinese, combined validation errors and correction, collapsed section rendering, and sortable-control interaction isolation
-- Series Metadata
-- DLsite Links, including the age-based fallback, default-on announcement toggle, save/reset behavior, and tooltip
-- Display tab composition and manual section order, including Tag Library
-- consolidated Theme settings, including Authentication Page Theme and Form Page Theme load/save/validation/reset behavior and semantic radio-group/heading structure
-- Add/Edit Modals
-- Index Table Width
-- Overflow
-- UI wording profile previews in English and Japanese, selection changes without saving, persistence after submission, and reset behavior
-- General/Display reset behavior
-
-#### `tests/Feature/OptionStylesheetTest.php`
-
-Covers generated Index dimension and column-width CSS, save/reset regeneration, committed and rolled-back portable imports, unchanged-content writes, migration generation/rollback behavior, write-failure preservation, optional authentication, and the static `filemtime`-versioned stylesheet link. Existing Index tests also verify overflow target hooks, layout classes, and the batched Options lookup.
-
-#### `tests/Feature/UserStylesheetTest.php`
-
-Covers application-wide Custom CSS, including loading saved CSS as Livewire state without raw HTML rendering, verbatim `user.css` saves, individual clearing, direct `Option::resetVisibleSettingsToDefault()` clearing, Reset All clearing, unauthenticated stylesheet serving, stylesheet loading/order across every visible standalone HTML page, and migration creation/rollback cleanup.
-
-#### `tests/Unit/Support/Transfers/PortableOptionsTest.php`
-
-Covers import, merge, and overwrite of portable metadata language settings, including empty fetch-language selections. Compatibility cases cover legacy Option keys, the `jp` locale code, and older Field Layout identifiers.
-
-Covers column-width import validation, including older layouts without width settings, supported units, missing custom widths, and invalid supplied widths or modes.
-
-#### `tests/Unit/Support/Transfers/LibraryWorkValidatorTest.php`
-
-Covers required Japanese titles, optional/null/empty localized text, supported locale keys, title character limits, description character/byte limits, canonical fetched Tag locale keys, and paired DLsite rating scales.
-
-#### `tests/Feature/ProductSortKeysTest.php`
-
-Covers derived numeric product-code and partial-date sort keys, supported-prefix extraction, deterministic ordering for shared numeric suffixes, and exact series sorting behavior.
-
-#### `tests/Feature/ProductSurfaceLocalizationTest.php`
-
-Covers localization across Index/Create/Edit product surfaces, including:
-- document language
-- field/help/accessibility text
-- delete confirmation
-- modal completion behavior
-- validation messages
-- content-focus UI wording on Index/filter/status/score surfaces without changing stored status values
-
-#### `tests/Feature/QuickAddFetchStatusTest.php`
-
-Covers the server-rendered DLSite Quick Add fetching-status contract across standalone/modal and locale variants, including status accessibility semantics and the required frontend script; confirms Custom Quick Add excludes both the DLSite status hooks and script.
-
-#### `tests/Feature/ReturnTargetProductTest.php`
-
-Covers product-aware Index return URLs, visibility checks, pagination/page cleanup, filters, hidden-description behavior, selected-language tag filtering, the no-Options-query fast path for ordinary returns, single-filter cleanup without a redundant visibility recheck using Laravel's query-count assertion for progress and paired date bounds, and scale-aware DLsite-rating return-page calculations.
-
-#### `tests/Feature/SetUiLocaleTest.php`
-
-Covers request middleware locale selection and fallback.
-
-#### `tests/Feature/TagLibraryDisplaySettingsTest.php`
-
-Covers Tag Library expanded/collapsed default, Index group-ordering setting, and tag-color surface configuration.
-
-#### `tests/Feature/TagLibraryLocalizationTest.php`
-
-Covers localized Tag Library labels, controls, selected-language behavior, and duplicate-tag warnings without creating duplicate records; notices retain their canonical text and translate at display time.
-
-#### `tests/Feature/TraditionalChineseUiTest.php`
-
-Covers application-wide Traditional Chinese selection, matching Traditional Chinese DLsite metadata with a preserved manual Japanese metadata choice, translated review/count/help controls, primary pages and review surfaces, administrator form validation, and unchanged stored titles, tags, statuses, and canonical diagnostics.
-
-#### `tests/Feature/TagLibraryManagerTest.php`
-
-Covers Tag Library behavior:
-- Custom Tags, unused tags, and fetched tags for the selected language
-- create/rename/delete
-- groups and multi-group membership
-- saved ordering
-- Index visibility
-- background/text colors
-- Edit Tags mode and accessible visibility/edit-mode switch semantics
-- group assignment UI
-- parent/child relationships and cycle rejection
-- ancestor backfill
-- session filters/search/sorting
-- Index links/counts
-
-#### `tests/Feature/UiLanguageSettingsTest.php`
-
-Covers saving each registered UI language and loading the Options page in that language, automatic and manual metadata selection, UI-only language fallback to English metadata, additional fetch languages, validation, and reset.
-
-#### `tests/Feature/WorkFormModalTest.php`
-
-Covers server-rendered Add/Edit modal completion fallback output and conditional completion-script behavior.
+`tests/Feature/AdminCommandTest.php`
+- Covers the administrator console recovery commands:
+  - password reset prompts/validation
+  - zero/multiple-user refusal
+  - full user reset confirmation/cancellation
+
+`tests/Feature/AdminRecoveryTest.php`
+- Covers trusted-environment `ADMIN_PASSWORD_RESET` recovery, including enabled/disabled states, one-time consumption, restart/flag removal behavior, password validation, rollback, and unsupported account counts.
+
+`tests/Feature/AuthenticationSettingsTest.php`
+- Covers the Authentication Options tab:
+  - enable/disable flow
+  - account state
+  - password change
+  - current-password validation
+  - remember-token rotation
+  - logout after password change
+  - authentication enablement exclusion from global Options reset
+  - authentication changes preserve the Authentication Page Theme setting
+
+`tests/Feature/AuthenticationTest.php`
+- Covers optional administrator authentication:
+  - default-off behavior
+  - setup/login/logout
+  - single-account setup
+  - exact-case usernames
+  - protected routes/mutations/Livewire requests
+  - public auth/help routes
+  - throttling and localized authentication failures through the operational error catalog, including English singular/plural and Japanese login-throttle messages
+  - intended redirects
+  - themes/locales
+  - Remember me persistence
+
+`tests/Feature/PublicStorageTest.php`
+- Covers Laravel-served `storage/app/public` files, including authentication-off guest access, HTTP 401 for unauthenticated access when authentication is enabled, authenticated access, nested storage paths, directory rejection, missing files, traversal rejection, and preventing unauthenticated guests from probing file existence when authentication is enabled.
+
+`tests/Feature/AutocompleteControllerTest.php`
+- Covers tag/series autocomplete endpoints, matching/order rules, result limits, tag color payloads, group-over-tag color precedence, and the rendered autocomplete script/field contract on Index, Create, and Edit surfaces.
+
+`tests/Feature/AutocompleteSettingsTest.php`
+- Covers independent persisted ordering settings for tag and series autocomplete.
+
+`tests/Feature/FullRefetchTest.php`
+- Covers the full Refetch workflow, including:
+  - all/selected runs
+  - run creation and batch/result rows
+  - staging fetched data with the language settings captured when the run starts
+  - image-check choice
+  - review categories, including DLsite Rating review with both cached scales and staged-file promotion
+  - apply/ignore/reject behavior, including Product Format, announcement-date, and Site ID Overwrite/Ignore
+  - localized Product Format review values
+  - incremental application
+  - lifecycle locking
+  - independent Title, Description, and Tag decisions for every registered metadata language, including ignoring all Tag changes and promoting Custom Tags during Detailed review
+  - preservation and overwrite of contributor roles
+  - canonical JSON promotion
+  - nonfatal original-work JSON copy/check failures, missing originals, and continued promotion of other works
+  - cover/sample promotion and rollback
+  - obsolete-image cleanup
+  - Updated Date behavior
+
+`tests/Feature/RefetchQueueFailureTest.php`
+- Covers cancellation, individual job failures, transactional rollback, lifecycle locks, and recovery of cancelled batches. Checks that each work fails on timeout before the queue retry window expires.
+
+`tests/Feature/BulkImportTest.php`
+- Covers product-code validation, queued item processing, skips, failures, and transactional run completion. Bulk Import reads the fetch languages from Options when the run starts and includes the metadata language submitted with the form. Tests check that queued jobs keep the run's language settings and rating scale, and that the form uses the current metadata language after a validation error. Import cases cover Product Format overrides, announcement dates, Site IDs, and failed image downloads.
+- Busy-start coverage checks the wrapped cache lock timeout and ensures unrelated dispatch exceptions with the same message are not misclassified as lock contention.
+
+`tests/Feature/OptionsBulkImportsTest.php`
+- Covers Bulk Import history, progress/errors, imported-work titles and fallback product codes, 10-run pagination, cleanup availability, and active-run-only polling through the refresh handler. Error/warning coverage verifies known semantic operational errors use the dedicated error catalog in the current UI locale, while unknown/raw errors and specialized raw warnings remain unchanged.
+
+`tests/Feature/LibraryTransferTest.php`
+- Covers core transfer contracts, route/review smoke coverage, transfer error rendering, portable Options, new-work round trips, controlled downloads, and the shared library-mutation lock.
+
+`tests/Feature/LibraryTransferExportTest.php`
+- Covers export planning, deterministic work and image inventories, multipart manifests, downloads, and localized failures. Checks exported Product Format, announcement dates, DLsite ratings, and the raw Custom CSS entry.
+- Work export tests verify a fixed query count per Product batch and the resulting archive contents, including tag order, tags shared across languages, and custom tags.
+- Regression coverage injects failures after successor-job insertion in every planning phase, verifies transaction rollback and successful retry, and checks stale planning calls. Empty-library and empty-selection export errors are checked in English and Japanese, including that no transfer is started.
+
+`tests/Feature/LibraryTransferImportTest.php`
+- Covers multipart upload and validation, archive integrity, analysis retries, incomplete images, and data-only imports. Compatibility cases cover v1 through v3 archives, historical Option keys and layouts, and v4 round trips across every supported DLsite metadata language.
+- Work import tests distinguish omitted fields from explicit clears, preserve explicit v4 translations equal to Japanese, and reject malformed locale documents and fetch-language settings. Other cases cover scraper aliases, Product Format, Series, notes, dates, Site IDs, and DLsite ratings. Custom CSS tests cover review, overwrite, rollback, and recovery after interruption.
+
+`tests/Feature/TranslatedWorkCircleTest.php`
+- Covers original-Circle resolution from Japanese `language_editions` through Quick Add and Bulk Import, user overrides, and Refetch comparisons. `FullRefetchTest.php` also checks that associated original-work JSON is promoted only when Refetch changes are applied.
+
+`tests/Feature/LibraryTransferReviewTest.php`
+- Covers Ignore, Overwrite, and Merge across works, tags, groups, relationships, and Options. Tests also cover stale decisions, atomic updates, image recovery, Custom CSS decisions, timestamps, and completed reviews.
+- Existing-work review coverage verifies that all Tag language memberships are loaded with one baseline query, independent of the number of supported metadata languages.
+- Localized review cases verify headings in English, Japanese, and Traditional Chinese, pagination that keeps a work’s languages together, and independent decisions for translated text and fetched tags. Tag tests check that applying one language preserves shared tags and other memberships. New-work cases cover blank translations and missing, null, or zero rating values.
+- Partial work-document coverage verifies that canonical Japanese contributor values overwrite existing values, omitted roles survive Overwrite, explicitly empty roles can still be cleared, and English-only canonical metadata is ignored without validation or staging clears. Announcement-date review checks use matching date formats for unchanged imported values.
+
+`tests/Feature/LibraryTransferLifecycleTest.php`
+- Covers supersession/cancellation, active-transfer guards, history cleanup, queued checkpoints/retries, generation and operation tokens, late callbacks, publication recovery, browser-started imports, transfer-storage cleanup, selector Product-existence query avoidance, and semantic fallback errors when queue failures have empty exception messages.
+- Storage cleanup coverage holds the upload lock before database registration to verify that a sweep skips active uploads and later removes only unreferenced files.
+
+`tests/Feature/LibraryTransferConcurrencyTest.php`
+- Covers stale-value detection for canonical Product fields, translated-title localization rows, and typed Options using two MySQL connections and an older `REPEATABLE READ` snapshot. Never run this test against production.
+
+`tests/Feature/GenreGroupRelationshipTest.php`
+- Covers:
+  - group-to-tag ordering and pivot data
+  - tag-to-group ordering
+  - Index-visible/hidden scopes
+  - persistence and clearing of tag/group background and text colors
+
+`tests/Feature/IndexContentOverflowSettingsTest.php`
+- Covers saving/resetting Index Notes/Tags overflow settings and their validation/default behavior.
+
+`tests/Feature/IndexImageViewerTest.php`
+- Covers the Image Viewer option and Index viewer rendering/data:
+  - Index viewer always uses Cherry styling independently of the Form Page Theme
+  - enable/disable behavior
+  - image ordering/path handling
+  - Index placeholder and sample-only/empty galleries for works without cover paths
+  - accessible controls
+  - safe full-image links
+  - conditional script/dialog output
+
+`tests/Feature/IndexPaginationSettingsTest.php`
+- Covers fixed, custom, and unlimited Index pagination settings and reset/default behavior.
+
+`tests/Feature/IndexSearchSettingsTest.php`
+- Covers general Index search with visible and hidden description columns, including matches in stored languages other than the preferred one.
+
+`tests/Feature/ListMenuFloatLocalizationTest.php`
+- Covers localized copy in the shared floating/drawer navigation and shared menu UI.
+
+`tests/Feature/LocalizedPhpUiTest.php`
+- Covers localized PHP-rendered display state, including:
+  - localized month labels with stable numeric values
+  - Progress display delegated to localized labels, with stable selection and active-filter values
+  - localized Age/Progress enum display without changing stored/backed values
+
+`tests/Feature/OptionalProductStatusesTest.php`
+- Covers On Hold/Dropped configuration across Add/Edit forms, Index progress navigation, filters, existing product values, and all enabled/disabled combinations.
+
+`tests/Feature/OptionsGeneralTest.php`
+- Covers:
+  - General-tab rendering and default selection
+  - active-tab accessibility state
+  - invalid-tab fallback
+  - Refetch empty/latest-run presentation
+  - shared Quick Add modal configuration
+
+`tests/Feature/OptionsRefetchCleanupTest.php`
+- Covers Refetch cleanup:
+  - confirmation/cancellation
+  - database cascade removal
+  - private/public staged-file cleanup
+  - preserved Refetch roots/canonical Works
+  - active-run blocking
+  - lifecycle lock
+  - database-first failure behavior
+
+`tests/Feature/OptionsRefetchLocalizationTest.php`
+- Covers:
+  - localized Options/Refetch UI
+  - stable persisted/action values across locales
+  - Japanese and English Title and Description labels on the same saved Refetch review after switching among English, Japanese, and Traditional Chinese, alongside the original fetched text
+  - unchanged raw scraped details where appropriate
+  - localized validation
+  - reset navigation behavior
+
+`tests/Feature/OptionsRefetchProgressTest.php`
+- Covers Livewire Refetch progress polling, running/cancelling state, counts, Cancel visibility, and redirect to review.
+
+`tests/Feature/OptionsRefetchReviewTest.php`
+- Covers review tabs, accessible panels, localized warnings, per-change choices, overwrite presets, confirmations, and read-only reviews. Pagination tests check that localized title changes share one card per work and that choices survive page and tab changes and apply across the run.
+
+`tests/Feature/OptionsWorkSearchTest.php`
+- Covers selected-work search by Japanese and preferred-language titles, product code ordering, and keeping selections while filtering. Query checks cover title projections in Japanese mode and whole-library selectors.
+
+`tests/Feature/ProductLocalizationTest.php`
+- Covers migration and rollback of English titles and descriptions, including cleanup across batch boundaries. Model tests cover translation reads and writes, concurrent creation, parent timestamps, and removal of empty translations. Search tests distinguish the preferred-language Title filter from general search across all stored titles.
+
+`tests/Feature/ProductControllerTest.php`
+- Covers the main product HTTP workflows:
+  - Index filtering/sorting/display
+  - all-tags pattern matching, overlapping matches, missing tags, and per-attachment language/custom-source visibility
+  - Create/Edit field order using submitted input names, product binding, controller-prepared translated Title/Description values, and return-navigation data, including rejection of unsafe (non-http(s)) `return_url` values
+  - preservation of hidden and read-only fields, rendered-language snapshots on successful submissions, current-language reloads with persisted fetched tags after validation redirects, and metadata-language lookups on Edit
+  - focused DLsite Rating input/read-only display across both scales, read-only mutation protection, canonical Score input, validation restoration, manual conversion, vote-count updates that preserve independently rounded ratings, and conditional Rating Scale lookups for form rendering and manual submissions
+  - DLsite Rating clearing and omission semantics, independent vote-count preservation, and unchanged Updated Date when already-null ratings are submitted again
+  - DLsite Quick Add fetch/store/error behavior and shared importer regression coverage
+  - Product Format Edit/Custom Quick Add input, fetched Quick Add fallback, visible override, blank fallback, and localized validation
+  - Custom Quick Add/Edit browser-local image editor rendering and normal multipart uploads
+  - cover/sample add, remove, readonly, mixed existing/new ordering, and optional-cover behavior
+  - tag/contributor synchronization
+  - metadata and partial-date updates
+  - automatic Series
+  - Quick Add storage for every registered metadata language and Edit updates that preserve other languages and Custom Tags
+  - Index-aware return navigation
+  - modal completion responses
+  - deletion and cleanup-error handling, including associated original-work JSON files and directory listing failures that must not block product deletion
+
+`tests/Feature/ProductGenreMigrationTest.php`
+- Covers migration of legacy product genre data into normalized tag/product relationships, including collision-safe `jp`/`ja` language-code normalization and rollback when both rows already exist.
+
+`tests/Feature/ProductImageCleanupTest.php`
+- Covers `works:cleanup-images`, including preservation of referenced images and protection of orphan/unknown/nested/non-image files.
+
+`tests/Feature/ProductImageEditorTest.php`
+- Covers Custom Quick Add and Edit image handling: optional covers, add/replace/remove cover states, multi-file sample selection, removal and reordering, mixed existing/new images, old-input restoration, readonly/hidden field handling, validation, destination collisions, recovery, and rollback behavior.
+- The tests cover the server-side multipart contract and rendered form structure. Browser previews, multi-file card creation, reordering, and native drag-and-drop are handled by `public/scripts/product-image-editor.js`. Newly selected files are lost after a full validation redirect as expected for native file inputs, while existing-image removal and order are restored through Laravel old input.
+
+`tests/Feature/ProductIndexLivewireTest.php`
+- Covers the Livewire Index:
+  - pagination/query-string state
+  - Japanese and preferred-language titles and descriptions without loading separate localization models
+  - general search across stored titles, visible and hidden description search, locale-scoped filters, and inclusive Scheduled Release Date ranges
+  - Product Format display, partial label/custom search, exact-code matching, JSON-element boundaries, and special-character search escaping
+  - sort behavior, including Product Format sorting by its first stored value, scale-aware DLsite Rating sorting/filtering with nulls last, and announcement-date sorting with nulls last
+  - separate and combined rating rendering across both scales and all visual styles, with focused cases for upward half-star rounding, independent star rounding, missing ratings, zero/absent vote counts, and scale-adjusted Score filter labels that retain canonical values
+  - individual/combined maker links, comma-separated combined display, and SQL sorting with first-nonblank Circle/Publisher/Brand fallback, case-insensitive comparison, blanks last, primary/secondary priorities, and global page-location checks
+  - narrow hydration, including rating-column selection for visible fields/styles while rating/count filtering and sorting remain independent of selected attributes
+  - one request-batched Index settings lookup with fresh metadata-language state on later Livewire requests
+  - field visibility and order, localized Description behavior in Japanese and Traditional Chinese UI modes, optional-column sorting, and Site ID filtering
+  - timestamps
+  - DLsite links using Site ID with age-based fallback, including `announce/` selection independent of site
+  - Image Viewer
+  - Add/Edit modal links
+  - tags/colors/group ordering
+  - optional statuses
+  - content overflow
+  - return/query behavior
+
+`tests/Feature/AnnouncementDateMigrationTest.php`
+- Covers backfilling existing scraper JSON, missing/corrupt files, and propagation of database update errors.
+
+`tests/Feature/ProductMetadataMigrationTest.php`
+- Runs the historical metadata backfill against its original schema, then applies the later localization migrations. Checks Japanese field precedence, English description fallback handling, contributor identities and role memberships, timestamps, missing or corrupt JSON, and database-write failures.
+
+`tests/Feature/ProductMetadataSettingsTest.php`
+- Covers metadata-related UI settings:
+  - field layouts, including the reorderable/hideable Index Edit action column, Index column-width modes, localized width and width-mode validation errors from Laravel's validation catalogs in English, Japanese, and Traditional Chinese, combined validation errors and correction, collapsed section rendering, and sortable-control interaction isolation
+  - Series Metadata
+  - DLsite Links, including the age-based fallback, default-on announcement toggle, save/reset behavior, and tooltip
+  - Display tab composition and manual section order, including Tag Library
+  - consolidated Theme settings, including Authentication Page Theme and Form Page Theme load/save/validation/reset behavior and semantic radio-group/heading structure
+  - Add/Edit Modals
+  - Index Table Width
+  - Overflow
+  - UI wording profile previews in English and Japanese, selection changes without saving, persistence after submission, and reset behavior
+  - General/Display reset behavior
+
+`tests/Feature/OptionStylesheetTest.php`
+- Covers generated Index dimension and column-width CSS, save/reset regeneration, committed and rolled-back portable imports, unchanged-content writes, migration generation/rollback behavior, write-failure preservation, optional authentication, and the static `filemtime`-versioned stylesheet link. Index tests also verify overflow target hooks, layout classes, and the batched Options lookup.
+
+`tests/Feature/UserStylesheetTest.php`
+- Covers application-wide Custom CSS, including loading saved CSS as Livewire state without raw HTML rendering, verbatim `user.css` saves, individual clearing, direct `Option::resetVisibleSettingsToDefault()` clearing, Reset All clearing, unauthenticated stylesheet serving, stylesheet loading/order across every visible standalone HTML page, and migration creation/rollback cleanup.
+
+`tests/Feature/ProductSortKeysTest.php`
+- Covers derived numeric product-code and partial-date sort keys, supported-prefix extraction, deterministic ordering for shared numeric suffixes, and exact series sorting behavior.
+
+`tests/Feature/ProductSurfaceLocalizationTest.php`
+- Covers localization across Index/Create/Edit product surfaces, including:
+  - document language
+  - field/help/accessibility text
+  - delete confirmation
+  - modal completion behavior
+  - validation messages
+  - content-focus UI wording on Index/filter/status/score surfaces without changing stored status values
+
+`tests/Feature/QuickAddFetchStatusTest.php`
+- Covers the server-rendered DLSite Quick Add fetching-status contract across standalone/modal and locale variants, including status accessibility semantics and the required frontend script; confirms Custom Quick Add excludes both the DLSite status hooks and script.
+
+`tests/Feature/ReturnTargetProductTest.php`
+- Covers product-aware Index return URLs, visibility checks, pagination/page cleanup, filters, hidden-description behavior, selected-language tag filtering, the no-Options-query fast path for ordinary returns, single-filter cleanup without a redundant visibility recheck using Laravel's query-count assertion for progress and paired date bounds, and scale-aware DLsite-rating return-page calculations.
+
+`tests/Feature/SetUiLocaleTest.php`
+- Covers request middleware locale selection and fallback.
+
+`tests/Feature/TagLibraryDisplaySettingsTest.php`
+- Covers Tag Library expanded/collapsed default, Index group-ordering setting, and tag-color surface configuration.
+
+`tests/Feature/TagLibraryLocalizationTest.php`
+- Covers localized Tag Library labels, controls, selected-language behavior, and duplicate-tag warnings without creating duplicate records; notices retain their canonical text and translate at display time.
+
+`tests/Feature/TraditionalChineseUiTest.php`
+- Covers application-wide Traditional Chinese selection, matching Traditional Chinese DLsite metadata with a preserved manual Japanese metadata choice, translated review/count/help controls, primary pages and review surfaces, administrator form validation, and unchanged stored titles, tags, statuses, and canonical diagnostics.
+
+`tests/Feature/TagLibraryManagerTest.php`
+- Covers Tag Library behavior:
+  - Custom Tags, unused tags, and fetched tags for the selected language
+  - create/rename/delete
+  - groups and multi-group membership
+  - saved ordering
+  - Index visibility
+  - background/text colors
+  - Edit Tags mode and accessible visibility/edit-mode switch semantics
+  - group assignment UI
+  - parent/child relationships and cycle rejection
+  - ancestor backfill
+  - filters/search/sorting
+  - Index links/counts
+
+`tests/Feature/UiLanguageSettingsTest.php`
+- Covers saving each registered UI language and loading the Options page in that language, automatic and manual metadata selection, UI-only language fallback to English metadata, additional fetch languages, validation, and reset.
+
+`tests/Feature/WorkFormModalTest.php`
+- Covers server-rendered Add/Edit modal completion fallback output and conditional completion-script behavior.
 
 ### Unit Tests
 
@@ -607,6 +533,13 @@ Covers server-rendered Add/Edit modal completion fallback output and conditional
 `tests/Unit/Support/Transfers/ImportValueTest.php`
 - Covers localized metadata headings and fallback labels, unchanged imported preview text, and grouped DLsite ratings and vote counts in new-work reviews. Checks the JSON catalogs for every supported UI language.
 
+`tests/Unit/Support/Transfers/PortableOptionsTest.php`
+- Covers validation, import, merge, and overwrite of portable metadata language settings, including empty fetch-language selections, duplicate languages, and invalid language lists. Compatibility cases cover legacy Option keys, the `jp` locale code, and older Field Layout identifiers.
+- Covers Index column-width and table-width import validation, including older layouts without width settings, supported units, side margins, missing custom widths, and invalid supplied widths or modes.
+
+`tests/Unit/Support/Transfers/LibraryWorkValidatorTest.php`
+- Covers required Japanese titles, optional/null/empty localized text, supported locale keys, title character limits, description character/byte limits, canonical fetched Tag locale keys, and paired DLsite rating scales.
+
 `tests/Unit/Support/ProductIndexRowBuilderTest.php`
 - Covers Index rows built from selected Product columns, including missing translated titles, rating display, filter links, Edit return state, and age-aware DLsite URLs. `ProductSurfaceLocalizationTest` covers combined source labels.
 
@@ -685,6 +618,15 @@ Covers the Python scraper’s locale requests, Product Format handling, and seri
 - serialization of `translation_info`, including the fallback original work ID
 - known DLsite fetch failures map to stable semantic application error codes
 
+#### `python/tests/test_image_https.py`
+
+Covers image download URL handling:
+- normalization of protocol-relative and site-relative URLs to HTTPS
+- HTTPS requests and redirects without host restrictions
+- rejection of HTTP URLs, insecure redirects, and missing hostnames
+- failed-image reporting for rejected URLs
+- successful HTTPS image downloads
+
 #### `python/tests/test_weekly_logging.py`
 
 Covers Python weekly logging parity with Laravel:
@@ -697,9 +639,9 @@ Covers Python weekly logging parity with Laravel:
 - production handler interface
 - non-blocking cleanup failures
 
-## Existing Test Implementation Boundaries
+## Test Implementation Boundaries
 
-The current suite intentionally uses framework fakes for external/destructive boundaries:
+The suite intentionally uses framework fakes for external/destructive boundaries:
 
 - upload tests use `UploadedFile::fake()` and `Storage::fake('public')`
 - Refetch tests use `Bus::fake()`, `Process::fake()`, and fake storage
@@ -709,13 +651,13 @@ The current suite intentionally uses framework fakes for external/destructive bo
 - Livewire component tests use `Livewire::test()`
 - Feature tests use `RefreshDatabase`
 
-These are descriptions of the current suite, not additional setup steps.
+These are descriptions of the suite, not additional setup steps.
 
-The repository does not currently use a browser-layout automation harness. JavaScript execution, native dialog behavior, focus/mouse behavior, iframe messaging, and visual layout interactions remain manual checks where the PHP/HTML contract is already covered by automated tests.
+The repository does not use a browser-layout automation harness. JavaScript execution, native dialog behavior, focus/mouse behavior, iframe messaging, and visual layout interactions remain manual checks where the PHP/HTML contract is already covered by automated tests.
 
-## Existing Manual Browser Checks
+## Manual Browser Checks
 
-These checks remain manual because they depend on browser behavior, JavaScript execution, native dialog/focus handling, or visual responsive behavior that the current automated suite does not execute directly.
+These checks are manual because they depend on browser behavior, JavaScript execution, native dialog/focus handling, or visual responsive behavior that the automated suite does not execute directly.
 
 ### Authentication
 

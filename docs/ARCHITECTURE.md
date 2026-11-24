@@ -3,7 +3,7 @@
 This document describes how DLSite List works at runtime and how its major application pieces fit together.
 
 For installation, environment variables, Options settings, recovery commands, and other configuration, see [CONFIGURATION.md](CONFIGURATION.md).  
-For test commands and the current test inventory, see [TESTING.md](TESTING.md).
+For test commands and the test inventory, see [TESTING.md](TESTING.md).
 
 ## Main Application Flows
 
@@ -30,7 +30,7 @@ Index state is kept in the query string so filtered/sorted views can be linked a
 
 The Index reads Japanese text from `products` and selects the preferred translation with locale-scoped subqueries when the layout needs it. General search can match any stored title. The Title filter and work selectors search Japanese and the preferred language. Description search follows the [Index Search settings](CONFIGURATION.md#index-search).
 
-`ProductIndexSettings` loads the Index-related `options` values in one batched lookup per render. It prepares:
+`Option::productIndexSettings()` loads and normalizes the Index settings needed by `ProductIndex` with one database query. `ProductIndex` exposes the result as a read-only Livewire computed property. The settings include:
 - Index field layout
 - Filter layout
 - content overflow
@@ -141,8 +141,8 @@ Bulk Import history cleanup deletes all persisted run/item history and is unavai
 - Index tag visibility
 - tag/group background and text colors
 - parent/child tag relationships
-- session-only Tag Library filters and sorting
-- session-only Edit Tags mode
+- Tag Library filters and sorting
+- Edit Tags mode
 - links back to the Index tag filter
 
 Tag Library uses the same stored tag rows as products. Renaming a tag updates the existing tag rather than replacing it, so product attachments, group memberships, colors, and relationships remain attached.
@@ -308,7 +308,9 @@ Static application assets under `public/` remain directly web-accessible and are
 - Scraper: `python/DLSiteScraper.py`
 - Persistent application files: Laravel storage, with `storage/app/public` files served through Laravel
 
-Laravel remains the application boundary. Python is a scraper process invoked by Laravel, not a second web service.
+Laravel is the application boundary: it owns state, validation, persistence, authentication, HTTP handling, and background jobs. Livewire handles interactive UI state, Blade renders views, and JavaScript is limited to browser-side interactions.
+
+Python retrieves and prepares DLsite metadata and images. It runs as a subprocess invoked by Laravel rather than as an independent web service.
 
 ### Docker Startup
 
@@ -611,7 +613,7 @@ Canonical work images:
 storage/app/public/Works/{product_code}/...
 ```
 
-These files are addressed by the existing `/storage/...` application URLs but are served by `PublicStorageController` from the `public` filesystem disk. The controller serves files through Laravel's `public` disk (`storage/app/public`) and returns `404` for missing, malformed, or path-traversal requests.
+These files are addressed by the `/storage/...` application URLs but are served by `PublicStorageController` from the `public` filesystem disk. The controller serves files through Laravel's `public` disk (`storage/app/public`) and returns `404` for missing, malformed, or path-traversal requests.
 
 Staged Refetch metadata:
 
@@ -656,7 +658,7 @@ Temporary-file sweeps hold the per-run upload lock throughout reference lookup a
 ### Languages
 
 - **UI support** controls the application interface.
-- **DLsite metadata support** controls locale-specific **Title, Description, and fetched Tags** fetched from DLsite.
+- **DLsite metadata support** shows which languages DLsite provides for localized **Title, Description, and fetched Tags**.
 
 | Language | Locale | UI | DLsite metadata | Errors file | Validation file |
 | --- | --- | --- | --- | --- | --- |
@@ -695,7 +697,7 @@ Laravel’s built-in validation messages use `lang/{locale}/validation.php`.
 
 Blade uses `str_replace('_', '-', app()->getLocale())` because HTML language tags use hyphens (`zh-TW`, `pt-BR`), while some application locales use underscores (`zh_TW`, `pt_BR`). This only formats the HTML `lang` attribute; it does not change which translations Laravel loads.
 
-UI locales with a matching `DlsiteLanguage` select that metadata language directly when `Follow UI language automatically` is enabled. UI-only locales have no `DlsiteLanguage` mapping, so the existing English metadata fallback is used instead. `SetUiLocale` applies the saved UI language to web requests. See [UI Language](CONFIGURATION.md#ui-language) for the display and fetch settings.
+UI locales with a matching `DlsiteLanguage` select that metadata language directly when `Follow UI language automatically` is enabled. UI-only locales have no `DlsiteLanguage` mapping, so the English metadata fallback is used instead. `SetUiLocale` applies the saved UI language to web requests. See [UI Language](CONFIGURATION.md#ui-language) for the display and fetch settings.
 
 Localized display labels are generated for enums, field layouts, and settings, while backed enum values, routes, query values, stored data, and user content remain stable.
 
@@ -738,4 +740,4 @@ Project-specific Artisan commands are implemented under `app/Console/Commands`:
 - `admin:reset`
 - `works:cleanup-images`
 
-How and when to run them is documented in [CONFIGURATION.md](CONFIGURATION.md).
+How and when to run them is documented in [CONFIGURATION.md](CONFIGURATION.md#recovery-and-maintenance).

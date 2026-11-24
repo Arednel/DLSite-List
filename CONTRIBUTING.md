@@ -9,7 +9,7 @@ These resources are a good place to start:
 - [README](README.md) — project overview and quick start.
 - [Configuration](docs/CONFIGURATION.md) — installation, environments, and application settings.
 - [Architecture](docs/ARCHITECTURE.md) — how the application and its features work.
-- [Testing](docs/TESTING.md) — test setup, commands, and existing coverage.
+- [Testing](docs/TESTING.md) — test setup, commands, and coverage.
 
 You don't need to read everything to report a bug or suggest an idea. Check the relevant documentation if you're unsure how something is meant to work.
 
